@@ -8,9 +8,12 @@ use mls_rs::external_client::ExternalClient;
 use mls_rs::identity::basic::BasicIdentityProvider;
 use mls_rs_crypto_rustcrypto::RustCryptoProvider;
 
-use river_mls_protocol::mls_validation_response::*;
-use river_mls_protocol::mls_validation_request::*;
-use river_mls_protocol::MlsValidationResponse;
+use river_mls_protocol::{InitialGroupInfoRequest, 
+    InitialGroupInfoResponse, 
+    ExternalJoinRequest, 
+    ExternalJoinResponse, 
+    ValidationResult
+};
 
 type ExternalConfig = ExternalWithIdentityProvider<
     BasicIdentityProvider,
@@ -26,42 +29,42 @@ fn create_external_client() -> ExternalClient<ExternalConfig> {
     return external_client
 }
 
-pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> MlsValidationResponse {
+pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> InitialGroupInfoResponse {
     let external_client = create_external_client();
     let group_info_message = match MlsMessage::from_bytes(&request.group_info_message) {
         Ok(group_info_message) => group_info_message,
-        Err(_) => return MlsValidationResponse { result: ValidationResult::InvalidGroupInfo.into() }
+        Err(_) => return InitialGroupInfoResponse { result: ValidationResult::InvalidGroupInfo.into() }
     };
 
     let external_group_snapshot = match ExternalSnapshot::from_bytes(&request.external_group_snapshot) {
         Ok(external_group_snapshot) => external_group_snapshot,
-        Err(_) => return MlsValidationResponse {
+        Err(_) => return InitialGroupInfoResponse {
             result: ValidationResult::InvalidExternalGroup.into(),
         }
     };
 
     let external_group = match external_client.load_group(external_group_snapshot) {
         Ok(group) => group,
-        Err(_) => return MlsValidationResponse {
+        Err(_) => return InitialGroupInfoResponse {
             result: ValidationResult::InvalidExternalGroup.into(),
         }
     };
 
     let group_info = match group_info_message.into_group_info() {
         Some(group_info) => group_info,
-        None => return MlsValidationResponse {
+        None => return InitialGroupInfoResponse {
             result: ValidationResult::InvalidGroupInfo.into(),
         }
     };
 
     if group_info.group_context().epoch() != 0 {
-        return MlsValidationResponse {
+        return InitialGroupInfoResponse {
             result: ValidationResult::InvalidGroupInfoEpoch.into(),
         };
     }
 
     if external_group.group_context().epoch() != 0 {
-        return MlsValidationResponse {
+        return InitialGroupInfoResponse {
             result: ValidationResult::InvalidExternalGroupEpoch.into(),
         };
     }
@@ -72,14 +75,14 @@ pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> 
                 Some(_) => {}
                 None => {
                     println!("no external pub extension");
-                    return MlsValidationResponse {
+                    return InitialGroupInfoResponse {
                         result: ValidationResult::InvalidGroupInfoMissingPubKeyExtension.into(),
                     };
                 }
             }
         }
         Err(_) => {
-            return MlsValidationResponse {
+            return InitialGroupInfoResponse {
                 result: ValidationResult::InvalidGroupInfo.into(),
             };
         }
@@ -88,30 +91,30 @@ pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> 
     match external_group.export_tree() {
         Ok(_) => {}
         Err(_) => {
-            return MlsValidationResponse {
+            return InitialGroupInfoResponse {
                 result: ValidationResult::InvalidExternalGroupMissingTree.into(),
             };
         }
     }
-    return MlsValidationResponse {
+    return InitialGroupInfoResponse {
         result: ValidationResult::Valid.into(),
     };
 }
 
-pub fn validate_external_join_request(request: ExternalJoinRequest) -> MlsValidationResponse {
+pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJoinResponse {
 
     let external_client = create_external_client();
 
     let external_group_snapshot = match ExternalSnapshot::from_bytes(&request.external_group_snapshot) {
         Ok(external_group_snapshot) => external_group_snapshot,
-        Err(_) => return MlsValidationResponse {
+        Err(_) => return ExternalJoinResponse {
             result: ValidationResult::InvalidExternalGroup.into(),
         }
     };
 
     let mut external_group = match external_client.load_group(external_group_snapshot) {
         Ok(group) => group,
-        Err(_) => return MlsValidationResponse {
+        Err(_) => return ExternalJoinResponse {
             result: ValidationResult::InvalidExternalGroup.into(),
         }
     };
@@ -119,13 +122,13 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> MlsValida
     for commit_bytes in request.commits {
         let commit = match MlsMessage::from_bytes(&commit_bytes) {
             Ok(commit) => commit,
-            Err(_) => return MlsValidationResponse {
+            Err(_) => return ExternalJoinResponse {
                 result: ValidationResult::InvalidCommit.into(),
             }
         };
 
         if external_group.process_incoming_message(commit).is_err() {
-            return MlsValidationResponse {
+            return ExternalJoinResponse {
                 result: ValidationResult::InvalidCommit.into(),
             };
         }
@@ -133,38 +136,38 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> MlsValida
 
     let proposed_group_info_mls_message = match MlsMessage::from_bytes(&request.proposed_external_join_info_message) {
         Ok(group_info_message) => group_info_message,
-        Err(_) => return MlsValidationResponse {
+        Err(_) => return ExternalJoinResponse {
             result: ValidationResult::InvalidGroupInfo.into(),
         }
     };
 
     let proposed_group_info_message = match proposed_group_info_mls_message.into_group_info() {
         Some(group_info) => group_info,
-        None => return MlsValidationResponse {
+        None => return ExternalJoinResponse {
             result: ValidationResult::InvalidGroupInfo.into(),
         }
     };
 
     if proposed_group_info_message.group_context().epoch() != external_group.group_context().epoch() + 1 {
-        return MlsValidationResponse {
+        return ExternalJoinResponse {
             result: ValidationResult::InvalidExternalGroupEpoch.into(),
         };
     }
 
     let proposed_external_join_commit = match MlsMessage::from_bytes(&request.proposed_external_join_commit) {
         Ok(commit) => commit,
-        Err(_) => return MlsValidationResponse {
+        Err(_) => return ExternalJoinResponse {
             result: ValidationResult::InvalidCommit.into(),
         }
     };
 
     if proposed_external_join_commit.epoch() != Some(external_group.group_context().epoch()) {
-        return MlsValidationResponse {
+        return ExternalJoinResponse {
             result: ValidationResult::InvalidExternalGroupEpoch.into(),
         };
     }
 
-    return MlsValidationResponse {
+    return ExternalJoinResponse {
         result: ValidationResult::Valid.into(),
     };
 }
@@ -184,7 +187,6 @@ mod tests {
     };
     const CIPHERSUITE: CipherSuite = CipherSuite::P256_AES128;
     use mls_rs::mls_rules::{CommitOptions, DefaultMlsRules};
-    use river_mls_protocol::mls_validation_request;
     type ClientConfig = WithIdentityProvider<BasicIdentityProvider, WithCryptoProvider<RustCryptoProvider, BaseConfig>>;
     type ProviderCipherSuite = <RustCryptoProvider as CryptoProvider>::CipherSuiteProvider;
     
@@ -308,7 +310,7 @@ mod tests {
 
         let alice = create_client("alice".to_string());
         let (alice_group_info_message, alice_commit) = perform_external_join(external_group_snapshot.clone(), commits.clone(), latest_group_info_message_without_tree, alice);
-        let request = mls_validation_request::ExternalJoinRequest {
+        let request = ExternalJoinRequest {
             external_group_snapshot: external_group_snapshot.to_bytes().unwrap(),
             commits: commits.iter().map(|commit| commit.to_bytes().unwrap()).collect(),
             proposed_external_join_info_message: alice_group_info_message.to_bytes().unwrap(),

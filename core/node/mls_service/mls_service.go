@@ -17,7 +17,7 @@ func InfoRequest() (*mls_tools.InfoResponse, error) {
 	}
 	defer client.Close()
 
-	mlsClient := mls_tools.NewMslClient(client)
+	mlsClient := mls_tools.NewMlsClient(client)
 	info, err := mlsClient.Info(context.Background(), &mls_tools.InfoRequest{})
 
 	if err != nil {

@@ -19,139 +19,139 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Msl_Info_FullMethodName             = "/mls_tools.Msl/Info"
-	Msl_InitialGroupInfo_FullMethodName = "/mls_tools.Msl/InitialGroupInfo"
+	Mls_Info_FullMethodName             = "/mls_tools.Mls/Info"
+	Mls_InitialGroupInfo_FullMethodName = "/mls_tools.Mls/InitialGroupInfo"
 )
 
-// MslClient is the client API for Msl service.
+// MlsClient is the client API for Mls service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type MslClient interface {
+type MlsClient interface {
 	Info(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoResponse, error)
 	InitialGroupInfo(ctx context.Context, in *InitialGroupInfoRequest, opts ...grpc.CallOption) (*InitialGroupInfoResponse, error)
 }
 
-type mslClient struct {
+type mlsClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewMslClient(cc grpc.ClientConnInterface) MslClient {
-	return &mslClient{cc}
+func NewMlsClient(cc grpc.ClientConnInterface) MlsClient {
+	return &mlsClient{cc}
 }
 
-func (c *mslClient) Info(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoResponse, error) {
+func (c *mlsClient) Info(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(InfoResponse)
-	err := c.cc.Invoke(ctx, Msl_Info_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Mls_Info_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *mslClient) InitialGroupInfo(ctx context.Context, in *InitialGroupInfoRequest, opts ...grpc.CallOption) (*InitialGroupInfoResponse, error) {
+func (c *mlsClient) InitialGroupInfo(ctx context.Context, in *InitialGroupInfoRequest, opts ...grpc.CallOption) (*InitialGroupInfoResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(InitialGroupInfoResponse)
-	err := c.cc.Invoke(ctx, Msl_InitialGroupInfo_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Mls_InitialGroupInfo_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// MslServer is the server API for Msl service.
-// All implementations must embed UnimplementedMslServer
+// MlsServer is the server API for Mls service.
+// All implementations must embed UnimplementedMlsServer
 // for forward compatibility.
-type MslServer interface {
+type MlsServer interface {
 	Info(context.Context, *InfoRequest) (*InfoResponse, error)
 	InitialGroupInfo(context.Context, *InitialGroupInfoRequest) (*InitialGroupInfoResponse, error)
-	mustEmbedUnimplementedMslServer()
+	mustEmbedUnimplementedMlsServer()
 }
 
-// UnimplementedMslServer must be embedded to have
+// UnimplementedMlsServer must be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
 // pointer dereference when methods are called.
-type UnimplementedMslServer struct{}
+type UnimplementedMlsServer struct{}
 
-func (UnimplementedMslServer) Info(context.Context, *InfoRequest) (*InfoResponse, error) {
+func (UnimplementedMlsServer) Info(context.Context, *InfoRequest) (*InfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Info not implemented")
 }
-func (UnimplementedMslServer) InitialGroupInfo(context.Context, *InitialGroupInfoRequest) (*InitialGroupInfoResponse, error) {
+func (UnimplementedMlsServer) InitialGroupInfo(context.Context, *InitialGroupInfoRequest) (*InitialGroupInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InitialGroupInfo not implemented")
 }
-func (UnimplementedMslServer) mustEmbedUnimplementedMslServer() {}
-func (UnimplementedMslServer) testEmbeddedByValue()             {}
+func (UnimplementedMlsServer) mustEmbedUnimplementedMlsServer() {}
+func (UnimplementedMlsServer) testEmbeddedByValue()             {}
 
-// UnsafeMslServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to MslServer will
+// UnsafeMlsServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to MlsServer will
 // result in compilation errors.
-type UnsafeMslServer interface {
-	mustEmbedUnimplementedMslServer()
+type UnsafeMlsServer interface {
+	mustEmbedUnimplementedMlsServer()
 }
 
-func RegisterMslServer(s grpc.ServiceRegistrar, srv MslServer) {
-	// If the following call pancis, it indicates UnimplementedMslServer was
+func RegisterMlsServer(s grpc.ServiceRegistrar, srv MlsServer) {
+	// If the following call pancis, it indicates UnimplementedMlsServer was
 	// embedded by pointer and is nil.  This will cause panics if an
 	// unimplemented method is ever invoked, so we test this at initialization
 	// time to prevent it from happening at runtime later due to I/O.
 	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
 		t.testEmbeddedByValue()
 	}
-	s.RegisterService(&Msl_ServiceDesc, srv)
+	s.RegisterService(&Mls_ServiceDesc, srv)
 }
 
-func _Msl_Info_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Mls_Info_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(InfoRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MslServer).Info(ctx, in)
+		return srv.(MlsServer).Info(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Msl_Info_FullMethodName,
+		FullMethod: Mls_Info_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MslServer).Info(ctx, req.(*InfoRequest))
+		return srv.(MlsServer).Info(ctx, req.(*InfoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Msl_InitialGroupInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Mls_InitialGroupInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(InitialGroupInfoRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MslServer).InitialGroupInfo(ctx, in)
+		return srv.(MlsServer).InitialGroupInfo(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Msl_InitialGroupInfo_FullMethodName,
+		FullMethod: Mls_InitialGroupInfo_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MslServer).InitialGroupInfo(ctx, req.(*InitialGroupInfoRequest))
+		return srv.(MlsServer).InitialGroupInfo(ctx, req.(*InitialGroupInfoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// Msl_ServiceDesc is the grpc.ServiceDesc for Msl service.
+// Mls_ServiceDesc is the grpc.ServiceDesc for Mls service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var Msl_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "mls_tools.Msl",
-	HandlerType: (*MslServer)(nil),
+var Mls_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "mls_tools.Mls",
+	HandlerType: (*MlsServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "Info",
-			Handler:    _Msl_Info_Handler,
+			Handler:    _Mls_Info_Handler,
 		},
 		{
 			MethodName: "InitialGroupInfo",
-			Handler:    _Msl_InitialGroupInfo_Handler,
+			Handler:    _Mls_InitialGroupInfo_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

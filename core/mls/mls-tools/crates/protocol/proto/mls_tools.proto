@@ -2,45 +2,16 @@ syntax = "proto3";
 package mls_tools;
 option go_package = "./mls_tools";
 
-message MlsValidationRequest {
-
-    // for testing purposes, always returns valid
-    message Passthrough {}
-
-    message InitialGroupInfoRequest {
-        bytes group_info_message = 1;
-        bytes external_group_snapshot = 2;
-    }
-
-    message ExternalJoinRequest {
-        bytes external_group_snapshot = 1;
-        repeated bytes commits = 2;
-        bytes proposed_external_join_info_message = 3;
-        bytes proposed_external_join_commit = 4;
-    }
-
-    oneof payload {
-        Passthrough passthrough = 1;
-        InitialGroupInfoRequest initial_group_info_request = 2;
-        ExternalJoinRequest external_join_request = 3;
-    }
-}
-
-message MlsValidationResponse {
-
-    enum ValidationResult {
-        UNKNOWN = 0;
-        VALID = 1;
-        INVALID_GROUP_INFO = 2;
-        INVALID_EXTERNAL_GROUP = 3;
-        INVALID_EXTERNAL_GROUP_EPOCH = 4;
-        INVALID_EXTERNAL_GROUP_MISSING_TREE = 5;
-        INVALID_GROUP_INFO_EPOCH = 6;
-        INVALID_GROUP_INFO_MISSING_PUB_KEY_EXTENSION = 7;
-        INVALID_COMMIT = 8;
-    }
-
-    ValidationResult result = 1;
+enum ValidationResult {
+    UNKNOWN = 0;
+    VALID = 1;
+    INVALID_GROUP_INFO = 2;
+    INVALID_EXTERNAL_GROUP = 3;
+    INVALID_EXTERNAL_GROUP_EPOCH = 4;
+    INVALID_EXTERNAL_GROUP_MISSING_TREE = 5;
+    INVALID_GROUP_INFO_EPOCH = 6;
+    INVALID_GROUP_INFO_MISSING_PUB_KEY_EXTENSION = 7;
+    INVALID_COMMIT = 8;
 }
 
 message InitialGroupInfoRequest {
@@ -48,7 +19,21 @@ message InitialGroupInfoRequest {
     bytes external_group_snapshot = 2;
 }
 
-message InitialGroupInfoResponse {}
+message InitialGroupInfoResponse {
+    ValidationResult result = 1;
+}
+
+message ExternalJoinRequest {
+    bytes external_group_snapshot = 1;
+    repeated bytes commits = 2;
+    bytes proposed_external_join_info_message = 3;
+    bytes proposed_external_join_commit = 4;
+}
+
+message ExternalJoinResponse {
+    ValidationResult result = 1;
+}
+
 message InfoRequest {}
 message InfoResponse {
     string graffiti = 1;
@@ -58,4 +43,5 @@ message InfoResponse {
 service Mls {
     rpc Info(InfoRequest) returns(InfoResponse) {}
     rpc InitialGroupInfo(InitialGroupInfoRequest)  returns(InitialGroupInfoResponse) {}
+    rpc ExternalJoin(ExternalJoinRequest) returns(ExternalJoinResponse) {}
 }

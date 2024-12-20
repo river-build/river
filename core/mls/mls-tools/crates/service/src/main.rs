@@ -31,6 +31,12 @@ impl river_mls_protocol::mls_server::Mls for MlsService {
         Ok(Response::new(reply))
     }
 
+    async fn external_join(&self, _: Request<river_mls_protocol::ExternalJoinRequest>)
+        -> Result<Response<river_mls_protocol::ExternalJoinResponse>, Status> {
+        let reply = river_mls_protocol::ExternalJoinResponse::default();
+        Ok(Response::new(reply))
+    }
+
     async fn info(&self, _: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
         let mut reply = InfoResponse::default();
         reply.graffiti = "MLS Service welcomes you".to_string();
