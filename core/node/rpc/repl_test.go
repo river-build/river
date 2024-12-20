@@ -100,7 +100,7 @@ func TestReplMiniblock(t *testing.T) {
 // that were created when the node was down.
 func TestStreamReconciliationFromGenesis(t *testing.T) {
 	var (
-		opts    = serviceTesterOpts{numNodes: 5, replicationFactor: 5, start: false, printTestLogs: true}
+		opts    = serviceTesterOpts{numNodes: 5, replicationFactor: 5, start: false}
 		tt      = newServiceTester(t, opts)
 		client  = tt.testClient(2)
 		ctx     = tt.ctx

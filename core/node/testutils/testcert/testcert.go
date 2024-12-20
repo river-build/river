@@ -4,10 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"net"
 	"net/http"
 	"strings"
-
-	"golang.org/x/net/http2"
+	"time"
 
 	"github.com/river-build/river/core/config"
 )
@@ -96,12 +96,25 @@ func GetHttp2LocalhostTLSConfig() *tls.Config {
 	}
 }
 
+var dialTimeout = 100 * time.Millisecond
+
 func GetHttp2LocalhostTLSClient(ctx context.Context, cfg *config.Config) (*http.Client, error) {
 	return &http.Client{
-		Transport: &http2.Transport{
+		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				RootCAs: LocalhostCertPool,
 			},
+			DialContext: (&net.Dialer{
+				Timeout:   100 * time.Millisecond,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+
+			TLSHandshakeTimeout:   100 * time.Millisecond,
+			ResponseHeaderTimeout: 100 * time.Millisecond,
+			ExpectContinueTimeout: 1 * time.Second,
+
+			// ForceAttemptHTTP2 ensures the transport negotiates HTTP/2 if possible
+			ForceAttemptHTTP2: true,
 		},
 	}, nil
 }
