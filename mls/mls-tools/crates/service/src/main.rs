@@ -40,13 +40,16 @@ impl river_mls_protocol::mls_server::Mls for MlsService {
 #[cfg(unix)]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let path = "/tmp/mls_service";
+
+    let socket_name = std::env::args().nth(1).expect("expected socket name, for example /tmp/mls_service");
+    let path = socket_name.as_str();
     std::fs::remove_file(path).unwrap_or_default();
     std::fs::create_dir_all(Path::new(path).parent().unwrap())?;
 
     let mls_service = MlsService::default();
     let uds = UnixListener::bind(path)?;
     let uds_stream = UnixListenerStream::new(uds);
+    println!("MLS Service listening on {}", path);
 
     Server::builder()
         .add_service(MlsServer::new(mls_service))
