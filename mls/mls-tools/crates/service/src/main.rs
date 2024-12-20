@@ -16,12 +16,7 @@ pub struct MlsService {}
 impl river_mls_protocol::mls_server::Mls for MlsService {
     async fn initial_group_info(&self, request: Request<InitialGroupInfoRequest>)
         -> Result<Response<InitialGroupInfoResponse>, Status> {
-
         let request = request.into_inner();
-
-        println!("request.group_info_message: ${:?}", request.group_info_message);
-        println!("request.external_group_snapshot: ${:?}", request.external_group_snapshot);
-
         let response = river_mls::validate_initial_group_info_request(request);
         Ok(Response::new(response))
     }
@@ -37,7 +32,6 @@ impl river_mls_protocol::mls_server::Mls for MlsService {
         let mut reply = InfoResponse::default();
         reply.graffiti = "MLS Service welcomes you".to_string();
         reply.git = env!("GIT_HASH").to_string();
-
         Ok(Response::new(reply))
     }
 }
