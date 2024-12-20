@@ -22,19 +22,15 @@ impl river_mls_protocol::mls_server::Mls for MlsService {
         println!("request.group_info_message: ${:?}", request.group_info_message);
         println!("request.external_group_snapshot: ${:?}", request.external_group_snapshot);
 
-        // Erik, this doesn't work because it used a wrapped request with a oneof field
-        // while this is a root message. I think it is better that use a root message for
-        // the request instead of single one with oneof.
-        // let result = river_mls::validate_initial_group_info_request(request)
-        let reply = InitialGroupInfoResponse::default();
-
-        Ok(Response::new(reply))
+        let response = river_mls::validate_initial_group_info_request(request);
+        Ok(Response::new(response))
     }
 
-    async fn external_join(&self, _: Request<river_mls_protocol::ExternalJoinRequest>)
+    async fn external_join(&self, request: Request<river_mls_protocol::ExternalJoinRequest>)
         -> Result<Response<river_mls_protocol::ExternalJoinResponse>, Status> {
-        let reply = river_mls_protocol::ExternalJoinResponse::default();
-        Ok(Response::new(reply))
+        let request = request.into_inner();
+        let response = river_mls::validate_external_join_request(request);
+        Ok(Response::new(response))
     }
 
     async fn info(&self, _: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
