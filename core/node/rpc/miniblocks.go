@@ -6,7 +6,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
@@ -20,9 +19,6 @@ func (s *Service) GetMbProposal(
 	streamId StreamId,
 	forceSnapshot bool,
 ) (*MiniblockProposal, error) {
-	log := dlog.FromCtx(ctx)
-	log.Error("server.GetMbProposal", "node", node)
-	defer log.Error("Exiting server.GetMbProposal", "node", node)
 	stub, err := s.nodeRegistry.GetNodeToNodeClientForAddress(node)
 	if err != nil {
 		return nil, err

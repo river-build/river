@@ -39,7 +39,6 @@ func (q *QuorumPool) GoRemotes(
 	ctx context.Context,
 	nodes []common.Address,
 	f func(ctx context.Context, node common.Address) error,
-	name string,
 ) {
 	if len(nodes) == 0 {
 		return
@@ -48,7 +47,7 @@ func (q *QuorumPool) GoRemotes(
 	q.remotes += len(nodes)
 	for _, node := range nodes {
 		ctx := context.WithoutCancel(ctx)
-		go q.executeRemote(ctx, node, f, name)
+		go q.executeRemote(ctx, node, f)
 	}
 }
 
@@ -56,9 +55,7 @@ func (q *QuorumPool) executeRemote(
 	ctx context.Context,
 	node common.Address,
 	f func(ctx context.Context, node common.Address) error,
-	name string,
 ) {
-	dlog.FromCtx(ctx).Error("executeRemote", "node", node, "name", name)
 	err := f(ctx, node)
 	q.remoteErrChannel <- err
 
@@ -72,8 +69,6 @@ func (q *QuorumPool) executeRemote(
 		tags := []any{"error", err, "node", node}
 		tags = append(tags, q.tags...)
 		dlog.FromCtx(ctx).Warn("QuorumPool: GoRemotes: Error", tags...)
-	} else if err != nil {
-		dlog.FromCtx(ctx).Error("Context cancellation executeRemote", "node", node, "f", f)
 	}
 }
 

@@ -178,7 +178,6 @@ func (s *Service) start(opts *ServerStartOpts) error {
 	if err != nil {
 		return AsRiverError(err).Message("Failed to init store").LogError(s.defaultLogger)
 	}
-	dlog.FromCtx(s.serverCtx).Error("Store initialized")
 
 	err = s.initCacheAndSync(opts)
 	if err != nil {

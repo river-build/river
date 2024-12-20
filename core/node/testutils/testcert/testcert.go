@@ -96,8 +96,6 @@ func GetHttp2LocalhostTLSConfig() *tls.Config {
 	}
 }
 
-var dialTimeout = 100 * time.Millisecond
-
 func GetHttp2LocalhostTLSClient(ctx context.Context, cfg *config.Config) (*http.Client, error) {
 	return &http.Client{
 		Transport: &http.Transport{
@@ -110,7 +108,7 @@ func GetHttp2LocalhostTLSClient(ctx context.Context, cfg *config.Config) (*http.
 			// This setting limits the duration of attempting to establish a connection to
 			// another node to 100ms.
 			DialContext: (&net.Dialer{
-				Timeout:   100 * time.Millisecond,
+				Timeout:   500 * time.Millisecond,
 				KeepAlive: 30 * time.Second,
 			}).DialContext,
 

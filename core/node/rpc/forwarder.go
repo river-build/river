@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"google.golang.org/protobuf/encoding/protojson"
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
@@ -194,7 +193,6 @@ func executeConnectHandler[Req, Res any](
 				"nodeAddress", service.wallet.Address.Hex(),
 				"nodeUrl", service.config.Address,
 				"handler", methodName,
-				//				"req.Msg", req.Msg,
 				"elapsed", elapsed,
 			).
 			Func(methodName)
@@ -450,7 +448,6 @@ func (s *Service) addEventImpl(
 	ctx context.Context,
 	req *connect.Request[AddEventRequest],
 ) (*connect.Response[AddEventResponse], error) {
-	dlog.FromCtx(ctx).Error("AddEvent", "streamId", req.Msg.StreamId, "event", protojson.Format(req.Msg.Event))
 	streamId, err := shared.StreamIdFromBytes(req.Msg.StreamId)
 	if err != nil {
 		return nil, err
@@ -465,8 +462,6 @@ func (s *Service) addEventImpl(
 	if err != nil {
 		return nil, err
 	}
-
-	dlog.FromCtx(ctx).Debug("AddEvent", "hash", req.Msg.Event.Hash, "stream", req.Msg.StreamId)
 
 	if view != nil {
 		return s.localAddEvent(ctx, req, stream, view)

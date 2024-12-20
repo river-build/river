@@ -3,7 +3,9 @@ package events
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -682,10 +684,6 @@ func (s *streamImpl) GetMiniblocks(
 // AddEvent adds an event to the stream.
 // AddEvent is thread-safe.
 func (s *streamImpl) AddEvent(ctx context.Context, event *ParsedEvent) error {
-	log := dlog.FromCtx(ctx)
-	log.Error("localStream AddEvent", "stream", s.streamId, "event", event)
-	defer log.Error("localStream AddEvent complete", "stream", s.streamId, "event", event)
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.loadInternal(ctx); err != nil {
@@ -738,9 +736,16 @@ func (s *streamImpl) addEventLocked(ctx context.Context, event *ParsedEvent) err
 	// TODO: for some classes of errors, it's not clear if event was added or not
 	// for those, perhaps entire Stream structure should be scrapped and reloaded
 	if err != nil {
+		var sb strings.Builder
+		sb.WriteString("[\n")
+		for hash, event := range s.view().minipool.events.Map {
+			sb.WriteString(fmt.Sprintf("  %s %s,\n", hash, event.ShortDebugStr()))
+		}
+		sb.WriteString("]")
+
 		return AsRiverError(err, Err_DB_OPERATION_FAILURE).
 			Tag("inMemoryBlocks", len(s.view().blocks)).
-			Tag("inMemoryEvents", s.view().minipool.events)
+			Tag("inMemoryEvents", sb.String())
 	}
 
 	s.setView(newSV)

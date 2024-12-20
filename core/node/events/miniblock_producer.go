@@ -405,35 +405,17 @@ func gatherRemoteProposals(
 	var wg sync.WaitGroup
 	wg.Add(len(nodes))
 
-	log := dlog.FromCtx(ctx)
-	deadline, ok := ctx.Deadline()
-	log.Error(
-		"gatherRemoteProposals blocktime",
-		"blocktime",
-		params.RiverChain.Config.BlockTime(),
-		"deadline",
-		deadline,
-		"ok",
-		ok,
-		"now",
-		time.Now(),
-	)
-
 	for i, node := range nodes {
 		go func(i int, node common.Address) {
 			defer wg.Done()
-			defer log.Error("GetMBProposal terminated", "node", node)
 
-			log.Error("GetMBProposal", "node", node)
 			proposal, err := params.RemoteMiniblockProvider.GetMbProposal(ctx, node, streamId, forceSnapshot)
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
 				errs = append(errs, err)
-				log.Error("GetMBProposal added data", "node", node)
 			} else {
 				proposals = append(proposals, proposal)
-				log.Error("GetMBProposal added data", "node", node)
 			}
 		}(i, node)
 	}
@@ -470,7 +452,6 @@ func mbProduceCandidate(
 		return nil, RiverError(Err_INTERNAL, "mbProduceCandidate: stream is not local")
 	}
 
-	dlog.FromCtx(ctx).Error("About to make a candidate", "stream", stream.streamId)
 	mbInfo, err := mbProduceCandiate_Make(ctx, params, view, forceSnapshot, remoteNodes)
 	if err != nil {
 		return nil, err
@@ -479,7 +460,6 @@ func mbProduceCandidate(
 		return nil, nil
 	}
 
-	dlog.FromCtx(ctx).Error("About to save a candidate", "stream", stream.streamId)
 	err = mbProduceCandiate_Save(ctx, params, stream.streamId, mbInfo, remoteNodes)
 	if err != nil {
 		return nil, err
@@ -503,7 +483,6 @@ func mbProduceCandiate_Make(
 	if localProposal == nil {
 		return nil, nil
 	}
-	dlog.FromCtx(ctx).Error("Produced local candidate", "stream", view.streamId)
 
 	var combinedProposal *MiniblockProposal
 	if len(remoteNodes) > 0 {
@@ -517,8 +496,6 @@ func mbProduceCandiate_Make(
 		if err != nil {
 			return nil, err
 		}
-
-		dlog.FromCtx(ctx).Error("gathered proposals", "stream", view.streamId)
 
 		remoteQuorumNum := RemoteQuorumNum(len(remoteNodes), true)
 		if len(remoteProposals) < remoteQuorumNum {
@@ -588,13 +565,12 @@ func mbProduceCandiate_Save(
 
 	qp.GoRemotes(ctx, remoteNodes, func(ctx context.Context, node common.Address) error {
 		return params.RemoteMiniblockProvider.SaveMbCandidate(ctx, node, streamId, mbInfo.Proto)
-	}, "SaveMbCandidate")
+	})
 
 	return qp.Wait()
 }
 
 func (p *miniblockProducer) jobStart(ctx context.Context, j *mbJob, forceSnapshot bool) {
-	dlog.FromCtx(ctx).Error("jobStart", "stream", j.stream.streamId)
 	if ctx.Err() != nil {
 		p.jobDone(ctx, j)
 		return
@@ -603,7 +579,13 @@ func (p *miniblockProducer) jobStart(ctx context.Context, j *mbJob, forceSnapsho
 	candidate, err := mbProduceCandidate(ctx, p.streamCache.Params(), j.stream, forceSnapshot)
 	if err != nil {
 		dlog.FromCtx(ctx).
-			Error("MiniblockProducer: jobStart: Error creating new miniblock proposal", "streamId", j.stream.streamId, "err", err)
+			Error(
+				"MiniblockProducer: jobStart: Error creating new miniblock proposal",
+				"streamId",
+				j.stream.streamId,
+				"err",
+				err,
+			)
 		p.jobDone(ctx, j)
 		return
 	}
@@ -611,7 +593,6 @@ func (p *miniblockProducer) jobStart(ctx context.Context, j *mbJob, forceSnapsho
 		p.jobDone(ctx, j)
 		return
 	}
-	dlog.FromCtx(ctx).Error("Candidate produced", "stream", j.stream.streamId)
 
 	j.candidate = candidate
 	p.candidates.add(ctx, p, j)

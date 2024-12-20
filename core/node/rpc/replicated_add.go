@@ -54,7 +54,7 @@ func (r *replicatedStream) AddEvent(ctx context.Context, event *ParsedEvent) err
 				),
 			)
 			return err
-		}, "NewEventReceived")
+		})
 	}
 
 	return sender.Wait()
