@@ -270,7 +270,6 @@ func (p *miniblockProducer) TestMakeMiniblock(
 	for {
 		actual, _ := p.jobs.LoadOrStore(streamId, job)
 		if actual == job {
-			dlog.FromCtx(ctx).Error("TestMakeMiniblock - started job", "stream", job.stream.streamId)
 			go p.jobStart(ctx, job, forceSnapshot)
 			break
 		}
