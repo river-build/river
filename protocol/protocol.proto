@@ -616,7 +616,7 @@ message BlockchainTransaction {
         bytes currency = 2;
         bytes sender = 3;
         bytes receiver = 4;
-        uint64 quantity = 5;
+        uint64 amount = 5;
         bytes message_id = 6;
         bytes channel_id = 7;
     }

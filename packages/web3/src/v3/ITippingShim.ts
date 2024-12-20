@@ -1,7 +1,6 @@
 import {
     ITipping,
     ITippingInterface,
-    TipEvent,
     TipEventObject,
 } from '@river-build/generated/dev/typings/ITipping'
 
@@ -44,9 +43,8 @@ export class ITippingShim extends BaseContractShim<ITipping, ITippingInterface> 
                 const parsedLog = this.interface.parseLog(log)
                 if (
                     parsedLog.name === 'Tip' &&
-                    parsedLog.args.sender.toLowerCase() === senderAddress.toLowerCase()
+                    (parsedLog.args.sender as string).toLowerCase() === senderAddress.toLowerCase()
                 ) {
-                    // seems like we should be able to just cast here
                     return {
                         tokenId: parsedLog.args.tokenId,
                         currency: parsedLog.args.currency,

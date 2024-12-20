@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
+	"math/big"
 	"slices"
 	"time"
 
@@ -342,8 +343,8 @@ func (params *aeParams) canAddUserPayload(payload *StreamEvent_UserPayload) rule
 		return aeBuilder().
 			check(ru.params.creatorIsMember).
 			check(ru.validBlockchainTransaction_IsUnique).
-			check(ru.validBlockchainTransaction_ReceiptMetadata).
-			verifyReceipt(ru.blockchainTransaction_Receipt).
+			check(ru.validBlockchainTransaction_CheckReceiptMetadata).
+			verifyReceipt(ru.blockchainTransaction_GetReceipt).
 			requireChainAuth(ru.blockchainTransaction_ChainAuth).
 			requireParentEvent(ru.parentEventForBlockchainTransaction)
 	case *UserPayload_ReceivedBlockchainTransaction_:
@@ -692,7 +693,7 @@ func (ru *aeBlockchainTransactionRules) validBlockchainTransaction_IsUnique() (b
 	return true, nil
 }
 
-func (ru *aeBlockchainTransactionRules) validBlockchainTransaction_ReceiptMetadata() (bool, error) {
+func (ru *aeBlockchainTransactionRules) validBlockchainTransaction_CheckReceiptMetadata() (bool, error) {
 	receipt := ru.transaction.Receipt
 	if receipt == nil {
 		return false, RiverError(Err_INVALID_ARGUMENT, "receipt is nil")
@@ -704,6 +705,7 @@ func (ru *aeBlockchainTransactionRules) validBlockchainTransaction_ReceiptMetada
 		// the other checks should make sure the transaction is valid and from this user
 		return true, nil
 	case *BlockchainTransaction_Tip_:
+		// parse the logs for the tip event, make sure it matches the tip metadata
 		filterer, err := baseContracts.NewTippingFilterer(common.Address{}, nil)
 		if err != nil {
 			return false, err
@@ -720,18 +722,38 @@ func (ru *aeBlockchainTransactionRules) validBlockchainTransaction_ReceiptMetada
 				Topics:  topics,
 				Data:    receiptLog.Data,
 			}
-			_, err := filterer.ParseTip(log)
+			tipEvent, err := filterer.ParseTip(log)
 			if err != nil {
 				continue // not a tip
 			}
-			// if tipEvent. != content. {
-			// 	continue // not a tip for this stream
-			// }
-			// if tipEvent.MessageId != ru.transaction.Receipt.MessageId {
-			// 	continue // not a tip for this message
-			// }
+			if tipEvent.TokenId.Cmp(big.NewInt(int64(content.Tip.GetTokenId()))) != 0 {
+				continue
+			}
+			if !bytes.Equal(tipEvent.Currency[:], content.Tip.GetCurrency()) {
+				continue
+			}
+			if !bytes.Equal(tipEvent.Sender[:], content.Tip.GetSender()) {
+				continue
+			}
+			if !bytes.Equal(tipEvent.Receiver[:], content.Tip.GetReceiver()) {
+				continue
+			}
+			if tipEvent.Amount.Cmp(big.NewInt(int64(content.Tip.GetAmount()))) != 0 {
+				continue
+			}
+			if !bytes.Equal(tipEvent.MessageId[:], content.Tip.GetMessageId()) {
+				continue
+			}
+			if !bytes.Equal(tipEvent.ChannelId[:], content.Tip.GetChannelId()) {
+				continue
+			}
+			// match found
+			return true, nil
 		}
-		return true, nil
+		return false, RiverError(
+			Err_INVALID_ARGUMENT,
+			"matching tip event not found in receipt logs",
+		)
 	default:
 		return false, RiverError(
 			Err_INVALID_ARGUMENT,
@@ -823,8 +845,8 @@ func (ru *aeBlockchainTransactionRules) parentEventForBlockchainTransaction() (*
 	}
 }
 
-func (ru *aeBlockchainTransactionRules) blockchainTransaction_Receipt() (*BlockchainTransactionReceipt, error) {
-	return ru.transaction.Receipt, nil
+func (ru *aeBlockchainTransactionRules) blockchainTransaction_GetReceipt() (*BlockchainTransactionReceipt, error) {
+	return ru.transaction.GetReceipt(), nil
 }
 
 // check to see that the transaction is from a wallet linked to the creator
@@ -832,11 +854,28 @@ func (ru *aeBlockchainTransactionRules) blockchainTransaction_ChainAuth() (*auth
 	if bytes.Equal(ru.transaction.Receipt.From, ru.params.parsedEvent.Event.CreatorAddress) {
 		return nil, nil
 	}
-	args := auth.NewChainAuthArgsForIsWalletLinked(
-		ru.params.parsedEvent.Event.CreatorAddress,
-		ru.transaction.Receipt.From,
-	)
-	return args, nil
+	switch content := ru.transaction.Content.(type) {
+	case nil:
+		// no content, verify the receipt.from
+		return auth.NewChainAuthArgsForIsWalletLinked(
+			ru.params.parsedEvent.Event.CreatorAddress,
+			ru.transaction.Receipt.From,
+		), nil
+	case *BlockchainTransaction_Tip_:
+		// tips can be sent through a bundler, verify the tip sender
+		// as specified in the tip content and verified against the logs in blockchainTransaction_CheckReceiptMetadata
+		return auth.NewChainAuthArgsForIsWalletLinked(
+			content.Tip.GetSender(),
+			ru.transaction.Receipt.From,
+		), nil
+	default:
+		return nil, RiverError(
+			Err_INVALID_ARGUMENT,
+			"unknown transaction type",
+			"transactionType",
+			content,
+		)
+	}
 }
 
 func (ru *aeMembershipRules) validMembershipPayload() (bool, error) {

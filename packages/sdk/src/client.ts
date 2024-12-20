@@ -28,7 +28,6 @@ import {
     UserBio,
     Tags,
     BlockchainTransaction,
-    BlockchainTransaction_Tip,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -1943,7 +1942,7 @@ export class Client
                 currency: bin_fromHexString(event.currency),
                 sender: addressFromUserId(event.sender),
                 receiver: addressFromUserId(event.receiver),
-                quantity: event.amount.toBigInt(),
+                amount: event.amount.toBigInt(),
                 messageId: bin_fromHexString(event.messageId),
                 channelId: streamIdAsBytes(event.channelId),
             },

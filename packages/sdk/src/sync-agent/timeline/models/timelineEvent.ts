@@ -992,7 +992,7 @@ function getFallbackContent_BlockchainTransaction(
                 transaction.content.value.messageId,
             )} receiver: ${bin_toHexString(
                 transaction.content.value.receiver,
-            )} quantity: ${transaction.content.value.quantity.toString()}`
+            )} amount: ${transaction.content.value.amount.toString()}`
         default:
             return `kind: ${transaction.content.case ?? 'unspecified'}`
     }

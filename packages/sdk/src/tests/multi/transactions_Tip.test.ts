@@ -11,8 +11,7 @@ import { Bot } from '../../sync-agent/utils/bot'
 import { waitFor } from '../testUtils'
 import { StreamTimelineEvent } from '../../types'
 import { ReceivedBlockchainTransactionKind } from '@river-build/proto'
-import { userIdFromAddress } from '../../id'
-import { makeUniqueChannelStreamId } from '../../id'
+import { userIdFromAddress, makeUniqueChannelStreamId } from '../../id'
 import { randomBytes } from 'crypto'
 import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
 import { deepCopy } from 'ethers/lib/utils'
@@ -104,7 +103,7 @@ describe('transactions_Tip', () => {
         dummyTipEvent = bob.riverConnection.spaceDapp.getTipEvent(
             spaceId,
             dummyReceipt,
-            bobIdentity.rootWallet.address,
+            bobIdentity.rootWallet.address, // if account abstraction is enabled, this is the abstract account address
         )!
         expect(dummyTipEvent).toBeDefined()
         dummyTipEventCopy = deepCopy(dummyTipEvent)
@@ -215,7 +214,7 @@ describe('transactions_Tip', () => {
         event.channelId = makeUniqueChannelStreamId(spaceId)
         await expect(
             bob.riverConnection.client!.addTransaction_Tip(chainId, dummyReceipt, event),
-        ).rejects.toThrow('mismatched channelId')
+        ).rejects.toThrow('matching tip event not found in receipt logs')
     })
 
     test('cantAddTipWithBadMessageId', async () => {
@@ -223,7 +222,7 @@ describe('transactions_Tip', () => {
         event.messageId = randomBytes(32).toString('hex')
         await expect(
             bob.riverConnection.client!.addTransaction_Tip(chainId, dummyReceipt, event),
-        ).rejects.toThrow('mismatched messageId')
+        ).rejects.toThrow('matching tip event not found in receipt logs')
     })
 
     test('cantAddTipWithBadFromUserAddress', async () => {
@@ -231,7 +230,7 @@ describe('transactions_Tip', () => {
         event.sender = aliceIdentity.rootWallet.address
         await expect(
             bob.riverConnection.client!.addTransaction_Tip(chainId, dummyReceipt, event),
-        ).rejects.toThrow('mismatched fromUserAddress')
+        ).rejects.toThrow('matching tip event not found in receipt logs')
     })
 
     test('cantAddTipWithBadAmount', async () => {
@@ -239,7 +238,7 @@ describe('transactions_Tip', () => {
         event.amount = BigNumber.from(10000000n)
         await expect(
             bob.riverConnection.client!.addTransaction_Tip(chainId, dummyReceipt, event),
-        ).rejects.toThrow('mismatched amount')
+        ).rejects.toThrow('matching tip event not found in receipt logs')
     })
 
     test('cantAddTipWithBadCurrency', async () => {
@@ -247,6 +246,6 @@ describe('transactions_Tip', () => {
         event.currency = '0x0000000000000000000000000000000000000000'
         await expect(
             bob.riverConnection.client!.addTransaction_Tip(chainId, dummyReceipt, event),
-        ).rejects.toThrow('mismatched currency')
+        ).rejects.toThrow('matching tip event not found in receipt logs')
     })
 })
