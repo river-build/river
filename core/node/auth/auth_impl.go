@@ -1008,24 +1008,40 @@ func (ca *chainAuth) checkEntitlement(
 
 	// handle checking if the user is linked to a specific wallet
 	if args.kind == chainAuthKindIsWalletLinked {
-		for _, wallet := range wallets {
-			   // Check the transaction sender (for regular transactions)
-			if bytes.Equal(args.receipt.From, wallet.Bytes()) {
-				return boolCacheResult(true), nil
+		   // Create ITipping filterer
+		   // dont need the address for parsing logs
+		   filterer, err := base.NewITippingFilterer(common.Address{}, nil)
+		   if err != nil {
+			   return nil, fmt.Errorf("failed to create tipping filterer: %w", err)
+		   }
+	   
+		  // Check logs for Tip events
+		  for _, logEntry := range args.receipt.Logs {
+			  // Convert protocol Log to types.Log
+			  ethLog := ethTypes.Log{
+				Address: common.BytesToAddress(logEntry.Address),
+				Topics:  make([]common.Hash, len(logEntry.Topics)),
+				Data:    logEntry.Data,
 			}
-			// Check each log in the receipt
-			for _, logEntry := range args.receipt.Logs {
-				// The sender is typically in the first topic (after the event signature)
-				if len(logEntry.Topics) > 1 { // First topic is event signature, second is usually sender
-					// Convert the topic (which is 32 bytes) to an address (20 bytes) by taking the last 20 bytes
-					senderFromTopic := common.BytesToAddress(logEntry.Topics[1])
-					if bytes.Equal(senderFromTopic.Bytes(), wallet.Bytes()) {
-						return boolCacheResult(true), nil
-					}
-				}
+			// Convert topics to the right format
+			for i, topic := range logEntry.Topics {
+				ethLog.Topics[i] = common.BytesToHash(topic)
 			}
-		}
-		return boolCacheResult(false), nil
+	
+			// Try to parse as Tip event
+			tipEvent, err := filterer.ParseTip(ethLog)
+			if err != nil {
+				continue // Not a Tip event
+			}
+	  
+			  // Check if the sender matches any of our linked wallets
+			  for _, wallet := range wallets {
+				  if bytes.Equal(tipEvent.Sender.Bytes(), wallet.Bytes()) {
+					  return boolCacheResult(true), nil
+				  }
+			  }
+		  }
+		  return boolCacheResult(false), nil
 	}
 
 	args = args.withLinkedWallets(wallets)
