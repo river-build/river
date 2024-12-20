@@ -684,14 +684,14 @@ jobs:
             - name: Setup River CA for testing certificates
               run: ./scripts/register-ca.sh
               working-directory: core
-            
+
             - name: Start MLS Service
               run: ./scripts/start-mls-service.sh
 
             - name: Run node tests
               run: go test -race -timeout 24m -v -parallel 1 -count 1 -p 8 ./...
               working-directory: core
-            
+
             - name: Stop MLS Service
               run: ./scripts/stop-mls-service.sh
 
