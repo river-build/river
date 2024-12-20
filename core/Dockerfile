@@ -3,7 +3,10 @@ FROM golang:1.23.3-alpine3.20 as builder
 
 # Install build-base for GCC (C compiler and related tools), git, and other dependencies.
 # Install libsecp256k1-dev if available or compile it from source.
+RUN apk upgrade
 RUN apk add --no-cache build-base git libsecp256k1-dev
+RUN apk add cargo=1.78.0-r0
+RUN apk add protobuf-dev=24.4-r1
 
 ARG VER_VERSION=version_unset
 ARG VER_BRANCH=branch_unset
@@ -12,6 +15,7 @@ ARG VER_COMMIT=commit_unset
 # Prepare build environment
 WORKDIR /build
 COPY . .
+COPY --from=mls . ./
 RUN go mod download
 
 # Build river_node
@@ -21,6 +25,10 @@ RUN go build \
     -o /bin/river_node \
     -ldflags="-X github.com/river-build/river/core/river_node/version.version=$VER_VERSION -X github.com/river-build/river/core/river_node/version.branch=$VER_BRANCH -X github.com/river-build/river/core/river_node/version.commit=$VER_COMMIT" \
     ./river_node
+
+WORKDIR /build/mls-tools/crates/service
+RUN cargo build --release
+RUN mv -f ../../target/release/service /bin/mls-service
 
 # Final stage
 FROM alpine:latest
