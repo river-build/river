@@ -314,7 +314,9 @@ _run-node $INSTANCE_NUM $INSTANCE_DIR:
         --config config/config.env \
         ${RUN_ARGS} \
         > ./logs/tty.stdout.log 2> ./logs/tty.stderr.log &
-    ../bin/mls_service & echo "MLS_SERVICE_PID="$! > config/mls_service.env
+    
+    ../bin/mls_service /tmp/mls_service_beta_${RUN_ENV}_${INSTANCE_NUM} > ./logs/mls.stdout.log 2> ./logs/mls.stderr.log \
+        & echo "MLS_SERVICE_PID="$! > config/mls_service.env
 
 _stop-node $INSTANCE_NUM $INSTANCE_DIR:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
