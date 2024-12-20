@@ -106,7 +106,7 @@ func GetHttp2LocalhostTLSClient(ctx context.Context, cfg *config.Config) (*http.
 			// Node-2-node connections to local nodes in tests sometimes seem to hang if the
 			// local node is down, although they do terminate when the http service is torn down.
 			// This setting limits the duration of attempting to establish a connection to
-			// another node to 100ms.
+			// another node.
 			DialContext: (&net.Dialer{
 				Timeout:   500 * time.Millisecond,
 				KeepAlive: 30 * time.Second,

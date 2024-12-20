@@ -407,7 +407,6 @@ func gatherRemoteProposals(
 	for i, node := range nodes {
 		go func(i int, node common.Address) {
 			defer wg.Done()
-
 			proposal, err := params.RemoteMiniblockProvider.GetMbProposal(ctx, node, streamId, forceSnapshot)
 			mu.Lock()
 			defer mu.Unlock()
