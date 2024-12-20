@@ -800,7 +800,7 @@ func (ru *aeBlockchainTransactionRules) blockchainTransaction_ChainAuth() (*auth
 	}
 	args := auth.NewChainAuthArgsForIsWalletLinked(
 		ru.params.parsedEvent.Event.CreatorAddress,
-		ru.transaction.Receipt,
+		ru.transaction.Receipt.From,
 	)
 	return args, nil
 }
