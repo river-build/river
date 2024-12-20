@@ -125,7 +125,7 @@ func (s *Service) ProposeMiniblock(
 	req *connect.Request[ProposeMiniblockRequest],
 ) (*connect.Response[ProposeMiniblockResponse], error) {
 	ctx, log := utils.CtxAndLogForRequest(ctx, req)
-	log.Debug("ProposeMiniblock ENTER")
+	log.Error("ProposeMiniblock ENTER", "stream", req.Msg.StreamId)
 	r, e := s.proposeMiniblock(ctx, req.Msg)
 	if e != nil {
 		return nil, AsRiverError(
@@ -135,7 +135,7 @@ func (s *Service) ProposeMiniblock(
 			LogWarn(log).
 			AsConnectError()
 	}
-	log.Debug("ProposeMiniblock LEAVE", "response", r)
+	log.Error("ProposeMiniblock LEAVE", "stream", req.Msg.StreamId, "response", r)
 	return connect.NewResponse(r), nil
 }
 

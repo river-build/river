@@ -199,7 +199,7 @@ func (s *Service) createReplicatedStream(
 				remoteSyncCookie = r.Msg.SyncCookie
 			})
 			return nil
-		})
+		}, "AllocateStream")
 	}
 
 	err = sender.Wait()
