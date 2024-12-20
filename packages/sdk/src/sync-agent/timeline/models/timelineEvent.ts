@@ -988,10 +988,10 @@ function getFallbackContent_BlockchainTransaction(
     }
     switch (transaction.content.case) {
         case 'tip':
-            return `kind: ${transaction.content.case} refEventId: ${bin_toHexString(
-                transaction.content.value.refEventId,
-            )} toUserAddress: ${bin_toHexString(
-                transaction.content.value.toUserAddress,
+            return `kind: ${transaction.content.case} messageId: ${bin_toHexString(
+                transaction.content.value.messageId,
+            )} receiver: ${bin_toHexString(
+                transaction.content.value.receiver,
             )} quantity: ${transaction.content.value.quantity.toString()}`
         default:
             return `kind: ${transaction.content.case ?? 'unspecified'}`

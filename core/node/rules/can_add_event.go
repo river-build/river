@@ -13,6 +13,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
+
+	baseContracts "github.com/river-build/river/core/contracts/base"
+
 	"github.com/river-build/river/core/node/auth"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
@@ -616,13 +620,13 @@ func (ru *aeMemberBlockchainTransactionRules) validMemberBlockchainTransaction_R
 		if err != nil {
 			return false, err
 		}
-		err = checkIsMember(ru.params, content.Tip.GetToUserAddress())
+		err = checkIsMember(ru.params, content.Tip.GetReceiver())
 		if err != nil {
 			return false, err
 		}
 		// we need a ref event id
-		if content.Tip.GetRefEventId() == nil {
-			return false, RiverError(Err_INVALID_ARGUMENT, "tip transaction ref event id is nil")
+		if content.Tip.GetMessageId() == nil {
+			return false, RiverError(Err_INVALID_ARGUMENT, "tip transaction message id is nil")
 		}
 		return true, nil
 	default:
@@ -689,6 +693,10 @@ func (ru *aeBlockchainTransactionRules) validBlockchainTransaction_IsUnique() (b
 }
 
 func (ru *aeBlockchainTransactionRules) validBlockchainTransaction_ReceiptMetadata() (bool, error) {
+	receipt := ru.transaction.Receipt
+	if receipt == nil {
+		return false, RiverError(Err_INVALID_ARGUMENT, "receipt is nil")
+	}
 	// check creator
 	switch content := ru.transaction.Content.(type) {
 	case nil:
@@ -696,7 +704,33 @@ func (ru *aeBlockchainTransactionRules) validBlockchainTransaction_ReceiptMetada
 		// the other checks should make sure the transaction is valid and from this user
 		return true, nil
 	case *BlockchainTransaction_Tip_:
-		// todo
+		filterer, err := baseContracts.NewTippingFilterer(common.Address{}, nil)
+		if err != nil {
+			return false, err
+		}
+		for _, receiptLog := range receipt.Logs {
+			// unpack the log
+			// compare to metadata in the tip
+			topics := make([]common.Hash, len(receiptLog.Topics))
+			for i, topic := range receiptLog.Topics {
+				topics[i] = common.BytesToHash(topic)
+			}
+			log := ethTypes.Log{
+				Address: common.BytesToAddress(receiptLog.Address),
+				Topics:  topics,
+				Data:    receiptLog.Data,
+			}
+			_, err := filterer.ParseTip(log)
+			if err != nil {
+				continue // not a tip
+			}
+			// if tipEvent. != content. {
+			// 	continue // not a tip for this stream
+			// }
+			// if tipEvent.MessageId != ru.transaction.Receipt.MessageId {
+			// 	continue // not a tip for this message
+			// }
+		}
 		return true, nil
 	default:
 		return false, RiverError(
@@ -724,11 +758,11 @@ func (ru *aeReceivedBlockchainTransactionRules) parentEventForReceivedBlockchain
 		if !ok {
 			return nil, RiverError(Err_INVALID_ARGUMENT, "content is not a tip")
 		}
-		if content.Tip.GetStreamId() == nil {
-			return nil, RiverError(Err_INVALID_ARGUMENT, "transaction stream id is nil")
+		if content.Tip.GetChannelId() == nil {
+			return nil, RiverError(Err_INVALID_ARGUMENT, "transaction channel id is nil")
 		}
 		// convert to stream id
-		streamId, err := shared.StreamIdFromBytes(content.Tip.GetStreamId())
+		streamId, err := shared.StreamIdFromBytes(content.Tip.GetChannelId())
 		if err != nil {
 			return nil, err
 		}
@@ -752,11 +786,11 @@ func (ru *aeBlockchainTransactionRules) parentEventForBlockchainTransaction() (*
 		return nil, nil
 	case *BlockchainTransaction_Tip_:
 		// forward a "tip received" event to the user stream of the toUserAddress
-		userStreamId, err := shared.UserStreamIdFromBytes(content.Tip.GetToUserAddress())
+		userStreamId, err := shared.UserStreamIdFromBytes(content.Tip.GetReceiver())
 		if err != nil {
 			return nil, err
 		}
-		toStreamId, err := shared.StreamIdFromBytes(content.Tip.GetStreamId())
+		toStreamId, err := shared.StreamIdFromBytes(content.Tip.GetChannelId())
 		if err != nil {
 			return nil, err
 		}
