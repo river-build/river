@@ -13,7 +13,7 @@ func socketName() string {
 	return "unix:/tmp/mls_service"
 }
 
-func InfoRequest() (*mls_tools.InfoResponse, error) {
+func InfoRequest(context context.Context) (*mls_tools.InfoResponse, error) {
 	client, err := grpc.NewClient(socketName(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -22,7 +22,7 @@ func InfoRequest() (*mls_tools.InfoResponse, error) {
 	defer client.Close()
 
 	mlsClient := mls_tools.NewMlsClient(client)
-	info, err := mlsClient.Info(context.Background(), &mls_tools.InfoRequest{})
+	info, err := mlsClient.Info(context, &mls_tools.InfoRequest{})
 
 	if err != nil {
 		return nil, err
@@ -30,7 +30,7 @@ func InfoRequest() (*mls_tools.InfoResponse, error) {
 	return info, nil
 }
 
-func InitialGroupInfoRequest(request *mls_tools.InitialGroupInfoRequest) (*mls_tools.InitialGroupInfoResponse, error) {
+func InitialGroupInfoRequest(context context.Context, request *mls_tools.InitialGroupInfoRequest) (*mls_tools.InitialGroupInfoResponse, error) {
 	client, err := grpc.NewClient(socketName(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -39,14 +39,14 @@ func InitialGroupInfoRequest(request *mls_tools.InitialGroupInfoRequest) (*mls_t
 	defer client.Close()
 
 	mlsClient := mls_tools.NewMlsClient(client)
-	info, err := mlsClient.InitialGroupInfo(context.Background(), request)
+	info, err := mlsClient.InitialGroupInfo(context, request)
 	if err != nil {
 		return nil, err
 	}
 	return info, nil
 }
 
-func ExternalJoinRequest(request *mls_tools.ExternalJoinRequest) (*mls_tools.ExternalJoinResponse, error) {
+func ExternalJoinRequest(context context.Context, request *mls_tools.ExternalJoinRequest) (*mls_tools.ExternalJoinResponse, error) {
 	client, err := grpc.NewClient(socketName(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -55,7 +55,7 @@ func ExternalJoinRequest(request *mls_tools.ExternalJoinRequest) (*mls_tools.Ext
 	defer client.Close()
 
 	mlsClient := mls_tools.NewMlsClient(client)
-	info, err := mlsClient.ExternalJoin(context.Background(), request)
+	info, err := mlsClient.ExternalJoin(context, request)
 	if err != nil {
 		return nil, err
 	}
