@@ -335,9 +335,11 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 			stream.nodes.AdvanceStickyPeer(nodeAddr)
 
 			// reschedule
-			time.AfterFunc(5*time.Second, func() {
-				a.tasks <- stream.streamId
-			})
+			if !stream.corrupt.Load() {
+				time.AfterFunc(5*time.Second, func() {
+					a.tasks <- stream.streamId
+				})
+			}
 			return err
 		}
 
@@ -363,10 +365,12 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 			stream.nodes.AdvanceStickyPeer(nodeAddr)
 
 			// Reschedule with delay.
-			streamId := stream.streamId
-			time.AfterFunc(time.Second, func() {
-				a.tasks <- streamId
-			})
+			if !stream.corrupt.Load() {
+				streamId := stream.streamId
+				time.AfterFunc(time.Second, func() {
+					a.tasks <- streamId
+				})
+			}
 			return nil
 		}
 
