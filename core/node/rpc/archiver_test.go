@@ -270,6 +270,8 @@ func TestArchive100StreamsWithReplication(t *testing.T) {
 				num, err := arch.Storage().GetMaxArchivedMiniblockNumber(ctx, streamId)
 				assert.NoError(c, err)
 				expectedMaxBlockNum := int64(0)
+				// The first stream id is a user stream with 2 miniblocks. The rest are
+				// space streams with a single block.
 				if streamId == streamIds[0] {
 					expectedMaxBlockNum = int64(1)
 				}
