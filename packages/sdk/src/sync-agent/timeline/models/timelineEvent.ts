@@ -970,7 +970,9 @@ export function getFallbackContent(
                 content.fromUserId
             } ${getFallbackContent_BlockchainTransaction(content.transaction)}`
         case RiverTimelineEvent.UserReceivedBlockchainTransaction:
-            return `kind: ${content.receivedTransaction.kind} fromUserAddress: ${
+            return `kind: ${
+                content.receivedTransaction.transaction?.content?.case ?? '??'
+            } fromUserAddress: ${
                 content.receivedTransaction.fromUserAddress
                     ? bin_toHexString(content.receivedTransaction.fromUserAddress)
                     : ''
