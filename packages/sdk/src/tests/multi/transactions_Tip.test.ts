@@ -10,7 +10,6 @@ import { SyncAgent } from '../../sync-agent/syncAgent'
 import { Bot } from '../../sync-agent/utils/bot'
 import { waitFor } from '../testUtils'
 import { StreamTimelineEvent } from '../../types'
-import { ReceivedBlockchainTransactionKind } from '@river-build/proto'
 import { userIdFromAddress, makeUniqueChannelStreamId } from '../../id'
 import { randomBytes } from 'crypto'
 import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
@@ -195,7 +194,7 @@ describe('transactions_Tip', () => {
         })
         if (!tipEvent) throw new Error('no tip event found')
         expect(tipEvent.transaction?.receipt).toBeDefined()
-        expect(tipEvent?.kind).toEqual(ReceivedBlockchainTransactionKind.TIP)
+        expect(tipEvent?.transaction?.content?.case).toEqual('tip')
     })
 
     test('bobSeesOnMessageInChannel', async () => {
