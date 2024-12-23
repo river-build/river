@@ -35,12 +35,12 @@ library VotesEnumerableLib {
     }
   }
 
-  function getDelegatorCount() external view returns (uint256) {
+  function getDelegatorCount() internal view returns (uint256) {
     Layout storage l = layout();
     return l.delegators.length();
   }
 
-  function getDelegators() external view returns (address[] memory) {
+  function getDelegators() internal view returns (address[] memory) {
     Layout storage l = layout();
     return l.delegators.values();
   }
@@ -48,7 +48,7 @@ library VotesEnumerableLib {
   function getDelegatorsPaginated(
     uint256 start,
     uint256 count
-  ) external view returns (address[] memory) {
+  ) internal view returns (address[] memory) {
     Layout storage ds = layout();
     uint256 total = ds.delegators.length();
 

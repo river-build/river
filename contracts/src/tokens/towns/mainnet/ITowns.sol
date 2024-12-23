@@ -12,13 +12,6 @@ interface ITownsBase {
     uint256 inflationDecreaseInterval;
   }
 
-  struct TokenConfig {
-    address inflationCaller;
-    address tokenRecipient;
-    uint256 lastMintTime;
-    InflationConfig inflationConfig;
-  }
-
   // =============================================================
   //                           Errors
   // =============================================================

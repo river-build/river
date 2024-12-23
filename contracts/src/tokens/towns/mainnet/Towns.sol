@@ -10,23 +10,29 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 
 // libraries
 import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
+import {VotesEnumerableLib} from "contracts/src/diamond/facets/governance/votes/enumerable/VotesEnumerableLib.sol";
+import {InflationLib} from "./inflation/InflationLib.sol";
+import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 
 // contracts
-
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-
-import {VotesEnumerableLib} from "contracts/src/diamond/facets/governance/votes/enumerable/VotesEnumerableLib.sol";
+import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
 import {IntrospectionFacet} from "@river-build/diamond/src/facets/introspection/IntrospectionFacet.sol";
 
-contract Towns is ITowns, Ownable, ERC20Permit, ERC20Votes, IntrospectionFacet {
+contract Towns is
+  ITowns,
+  AccessManaged,
+  ERC20Permit,
+  ERC20Votes,
+  IntrospectionFacet
+{
   /// @dev initial supply is 10 billion tokens
   uint256 internal constant INITIAL_SUPPLY = 10_000_000_000 ether;
 
   /// @dev deployment time
-  uint256 public immutable deployedAt = block.timestamp;
+  uint256 public immutable deployedAt;
 
   /// @dev initialInflationRate is the initial inflation rate in basis points (0-10000)
   uint256 public immutable initialInflationRate;
@@ -40,23 +46,12 @@ contract Towns is ITowns, Ownable, ERC20Permit, ERC20Votes, IntrospectionFacet {
   /// @dev inflationDecreaseInterval is the interval at which the inflation rate decreases in years
   uint256 public immutable inflationDecreaseInterval;
 
-  /// @dev last mint time
-  uint256 public lastMintTime;
-
-  /// @dev inflation rate override
-  bool public overrideInflation;
-  uint256 public overrideInflationRate;
-
-  /// @dev token recipient
-  address public tokenRecipient;
-
   constructor(
-    TokenConfig memory config
-  )
-    ERC20Permit("Towns")
-    Ownable(config.tokenRecipient)
-    ERC20("Towns", "TOWNS")
-  {
+    address vault,
+    address manager,
+    uint256 mintTime,
+    InflationConfig memory inflationConfig
+  ) ERC20Permit("Towns") AccessManaged(manager) ERC20("Towns", "TOWNS") {
     __IntrospectionBase_init();
 
     // add interface
@@ -67,69 +62,92 @@ contract Towns is ITowns, Ownable, ERC20Permit, ERC20Votes, IntrospectionFacet {
     _addInterface(type(IERC20Permit).interfaceId);
 
     // mint to vault
-    _mint(config.tokenRecipient, INITIAL_SUPPLY);
+    _mint(vault, INITIAL_SUPPLY);
 
     // set last mint time for inflation
-    lastMintTime = config.lastMintTime;
+    InflationLib.layout().lastMintTime = mintTime;
+
+    // backfill deployed at
+    deployedAt = mintTime;
 
     // set inflation values
-    initialInflationRate = config.inflationConfig.initialInflationRate;
-    finalInflationRate = config.inflationConfig.finalInflationRate;
-    inflationDecreaseRate = config.inflationConfig.inflationDecreaseRate;
-    inflationDecreaseInterval = config
-      .inflationConfig
-      .inflationDecreaseInterval;
+    initialInflationRate = inflationConfig.initialInflationRate;
+    finalInflationRate = inflationConfig.finalInflationRate;
+    inflationDecreaseRate = inflationConfig.inflationDecreaseRate;
+    inflationDecreaseInterval = inflationConfig.inflationDecreaseInterval;
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-  /*                           Enumerable                               */
+  /*                           Delegation                               */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
   function getDelegators() external view returns (address[] memory) {
-    return VotesEnumerableLib.layout().delegators.values();
+    return VotesEnumerableLib.getDelegators();
   }
 
-  // =============================================================
-  //                          Inflation
-  // =============================================================
+  function getDelegatorsPaginated(
+    uint256 start,
+    uint256 count
+  ) external view returns (address[] memory) {
+    return VotesEnumerableLib.getDelegatorsPaginated(start, count);
+  }
 
-  function setTokenRecipient(address _tokenRecipient) external onlyOwner {
-    tokenRecipient = _tokenRecipient;
+  function getDelegatorCount() external view returns (uint256) {
+    return VotesEnumerableLib.getDelegatorCount();
+  }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           Inflation                               */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+  function lastMintTime() external view returns (uint256) {
+    return InflationLib.layout().lastMintTime;
+  }
+
+  function setTokenRecipient(address _tokenRecipient) external restricted {
+    InflationLib.layout().tokenRecipient = _tokenRecipient;
     emit TokenRecipientSet(_tokenRecipient);
   }
 
   /// @inheritdoc ITowns
-  function createInflation() external onlyOwner {
-    // verify that minting can only happen once per year
-    uint256 timeSinceLastMint = block.timestamp - lastMintTime;
+  function createInflation() external restricted {
+    InflationLib.Layout storage ds = InflationLib.layout();
 
+    // verify that minting can only happen once per year
+    uint256 timeSinceLastMint = block.timestamp - ds.lastMintTime;
     if (timeSinceLastMint < 365 days) revert MintingTooSoon();
 
     // calculate the amount to mint
-    uint256 inflationRateBPS = _getCurrentInflationRateBPS();
-    uint256 inflationAmount = (totalSupply() * inflationRateBPS) / 10000;
+    uint256 inflationRateBPS = InflationLib.getCurrentInflationRateBPS(
+      deployedAt,
+      inflationDecreaseInterval,
+      inflationDecreaseRate,
+      initialInflationRate,
+      finalInflationRate
+    );
+    uint256 inflationAmount = BasisPoints.calculate(
+      totalSupply(),
+      inflationRateBPS
+    );
 
-    _mint(tokenRecipient, inflationAmount);
+    _mint(ds.tokenRecipient, inflationAmount);
 
     // update last mint time
-    lastMintTime = block.timestamp;
+    ds.lastMintTime = block.timestamp;
 
     emit InflationCreated(inflationAmount);
   }
 
   /// @inheritdoc ITowns
   function setOverrideInflation(
-    bool _overrideInflation,
-    uint256 _overrideInflationRate
-  ) external onlyOwner {
-    if (_overrideInflationRate > finalInflationRate)
+    bool overrideInflation,
+    uint256 overrideInflationRate
+  ) external restricted {
+    if (overrideInflationRate > finalInflationRate)
       revert InvalidInflationRate();
-
-    overrideInflation = _overrideInflation;
-    overrideInflationRate = _overrideInflationRate;
+    InflationLib.setOverrideInflation(overrideInflation, overrideInflationRate);
   }
 
   // =============================================================
-  //                           Hooks
+  //                           Overrides
   // =============================================================
   function _update(
     address from,
@@ -175,27 +193,5 @@ contract Towns is ITowns, Ownable, ERC20Permit, ERC20Votes, IntrospectionFacet {
     address owner
   ) public view virtual override(ERC20Permit, Nonces) returns (uint256) {
     return super.nonces(owner);
-  }
-
-  // =============================================================
-  //                           Internal
-  // =============================================================
-
-  /**
-   * @dev Returns the current inflation rate.
-   * @return inflation rate in basis points (0-100)
-   */
-  function _getCurrentInflationRateBPS() internal view returns (uint256) {
-    uint256 yearsSinceDeployment = (block.timestamp - deployedAt) / 365 days;
-
-    if (overrideInflation) return overrideInflationRate; // override inflation rate
-
-    // return final inflation rate if yearsSinceDeployment is greater than or equal to inflationDecreaseInterval
-    if (yearsSinceDeployment >= inflationDecreaseInterval)
-      return finalInflationRate;
-
-    // linear decrease from initialInflationRate to finalInflationRate over the inflationDecreateInterval
-    uint256 decreasePerYear = inflationDecreaseRate / inflationDecreaseInterval;
-    return initialInflationRate - (yearsSinceDeployment * decreasePerYear);
   }
 }
