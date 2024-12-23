@@ -66,6 +66,13 @@ type SyncStream interface {
 		mb *Miniblock,
 	) error
 
+	// SaveEphemeralMiniblock saves the given miniblock in ephemeral state.
+	// Once stream is completed, ephemeral miniblocks become canonical.
+	SaveEphemeralMiniblock(
+		ctx context.Context,
+		mb *Miniblock,
+	) error
+
 	IsLocal() bool
 }
 
@@ -955,6 +962,29 @@ func (s *streamImpl) SaveMiniblockCandidate(ctx context.Context, mb *Miniblock) 
 		mbInfo.Ref.Num,
 		serialized,
 	)
+}
+
+// SaveEphemeralMiniblock saves the ephemeral miniblock for the stream.
+func (s *streamImpl) SaveEphemeralMiniblock(ctx context.Context, mb *Miniblock) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := s.loadInternal(ctx); err != nil {
+		return err
+	}
+
+	mbInfo, err := NewMiniblockInfoFromProto(
+		mb,
+		NewMiniblockInfoFromProtoOpts{
+			ExpectedBlockNumber: -1,
+			IsEphemeral:         true,
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	return s.applyMiniblockImplLocked(ctx, mbInfo, nil)
 }
 
 // tryApplyCandidate tries to apply the miniblock candidate to the stream. It will apply iff

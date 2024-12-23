@@ -168,7 +168,7 @@ func DefaultOnChainSettings() *OnChainSettings {
 		StreamCachePollIntterval: 30 * time.Second,
 
 		// TODO: Set it to the default value when the client side is updated.
-		GetMiniblocksMaxPageSize: 0,
+		GetMiniblocksMaxPageSize: 10,
 
 		MembershipLimits: MembershipLimitsSettings{
 			GDM: 48,

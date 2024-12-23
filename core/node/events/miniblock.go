@@ -189,6 +189,7 @@ func NewMiniblockInfoFromBytesWithOpts(bytes []byte, opts NewMiniblockInfoFromPr
 type NewMiniblockInfoFromProtoOpts struct {
 	ExpectedBlockNumber int64
 	DontParseEvents     bool
+	IsEphemeral         bool
 }
 
 func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts) (*MiniblockInfo, error) {

@@ -1721,7 +1721,7 @@ func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
 // TestGetMiniblocksRangeLimit checks that GetMiniblocks endpoint has a validation for a max range of blocks
 // to be fetched at once.
 func TestGetMiniblocksRangeLimit(t *testing.T) {
-	const expectedLimit = 200
+	const expectedLimit = 5
 	tt := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
 	tt.btc.SetConfigValue(
 		t,
@@ -1738,7 +1738,7 @@ func TestGetMiniblocksRangeLimit(t *testing.T) {
 	// Here we create a miniblock for each message sent by Alice.
 	// Creating a bit more miniblocks than limit.
 	var lastMbNum int64
-	for count := range expectedLimit + 10 {
+	for count := range expectedLimit + 100 {
 		alice.say(channelId, fmt.Sprintf("hello from Alice %d", count))
 		mb, err := makeMiniblock(tt.ctx, alice.client, channelId, false, lastMbNum)
 		tt.require.NoError(err)
@@ -1770,6 +1770,14 @@ func TestGetMiniblocksRangeLimit(t *testing.T) {
 		tt.require.Equal(int64(5), resp.Msg.GetFromInclusive())
 		tt.require.Equal(int64(expectedLimit), resp.Msg.GetLimit())
 		tt.require.Len(resp.Msg.GetMiniblocks(), expectedLimit)
+
+		for _, mb := range resp.Msg.GetMiniblocks() {
+			events, err := events.ParseEvents(mb.GetEvents())
+			tt.require.NoError(err)
+			for _, event := range events {
+				fmt.Println(event.Event.Payload.(*protocol.StreamEvent_ChannelPayload).ChannelPayload.GetMessage())
+			}
+		}
 
 		return true
 	}, 20*time.Second, 100*time.Millisecond)

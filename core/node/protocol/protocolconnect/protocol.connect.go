@@ -36,6 +36,9 @@ const (
 	// StreamServiceCreateStreamProcedure is the fully-qualified name of the StreamService's
 	// CreateStream RPC.
 	StreamServiceCreateStreamProcedure = "/river.StreamService/CreateStream"
+	// StreamServiceCreateMediaStreamProcedure is the fully-qualified name of the StreamService's
+	// CreateMediaStream RPC.
+	StreamServiceCreateMediaStreamProcedure = "/river.StreamService/CreateMediaStream"
 	// StreamServiceGetStreamProcedure is the fully-qualified name of the StreamService's GetStream RPC.
 	StreamServiceGetStreamProcedure = "/river.StreamService/GetStream"
 	// StreamServiceGetStreamExProcedure is the fully-qualified name of the StreamService's GetStreamEx
@@ -49,6 +52,9 @@ const (
 	StreamServiceGetLastMiniblockHashProcedure = "/river.StreamService/GetLastMiniblockHash"
 	// StreamServiceAddEventProcedure is the fully-qualified name of the StreamService's AddEvent RPC.
 	StreamServiceAddEventProcedure = "/river.StreamService/AddEvent"
+	// StreamServiceAddMediaEventProcedure is the fully-qualified name of the StreamService's
+	// AddMediaEvent RPC.
+	StreamServiceAddMediaEventProcedure = "/river.StreamService/AddMediaEvent"
 	// StreamServiceSyncStreamsProcedure is the fully-qualified name of the StreamService's SyncStreams
 	// RPC.
 	StreamServiceSyncStreamsProcedure = "/river.StreamService/SyncStreams"
@@ -74,11 +80,13 @@ const (
 var (
 	streamServiceServiceDescriptor                    = protocol.File_protocol_proto.Services().ByName("StreamService")
 	streamServiceCreateStreamMethodDescriptor         = streamServiceServiceDescriptor.Methods().ByName("CreateStream")
+	streamServiceCreateMediaStreamMethodDescriptor    = streamServiceServiceDescriptor.Methods().ByName("CreateMediaStream")
 	streamServiceGetStreamMethodDescriptor            = streamServiceServiceDescriptor.Methods().ByName("GetStream")
 	streamServiceGetStreamExMethodDescriptor          = streamServiceServiceDescriptor.Methods().ByName("GetStreamEx")
 	streamServiceGetMiniblocksMethodDescriptor        = streamServiceServiceDescriptor.Methods().ByName("GetMiniblocks")
 	streamServiceGetLastMiniblockHashMethodDescriptor = streamServiceServiceDescriptor.Methods().ByName("GetLastMiniblockHash")
 	streamServiceAddEventMethodDescriptor             = streamServiceServiceDescriptor.Methods().ByName("AddEvent")
+	streamServiceAddMediaEventMethodDescriptor        = streamServiceServiceDescriptor.Methods().ByName("AddMediaEvent")
 	streamServiceSyncStreamsMethodDescriptor          = streamServiceServiceDescriptor.Methods().ByName("SyncStreams")
 	streamServiceAddStreamToSyncMethodDescriptor      = streamServiceServiceDescriptor.Methods().ByName("AddStreamToSync")
 	streamServiceModifySyncMethodDescriptor           = streamServiceServiceDescriptor.Methods().ByName("ModifySync")
@@ -91,11 +99,13 @@ var (
 // StreamServiceClient is a client for the river.StreamService service.
 type StreamServiceClient interface {
 	CreateStream(context.Context, *connect.Request[protocol.CreateStreamRequest]) (*connect.Response[protocol.CreateStreamResponse], error)
+	CreateMediaStream(context.Context, *connect.Request[protocol.CreateMediaStreamRequest]) (*connect.Response[protocol.CreateMediaStreamResponse], error)
 	GetStream(context.Context, *connect.Request[protocol.GetStreamRequest]) (*connect.Response[protocol.GetStreamResponse], error)
 	GetStreamEx(context.Context, *connect.Request[protocol.GetStreamExRequest]) (*connect.ServerStreamForClient[protocol.GetStreamExResponse], error)
 	GetMiniblocks(context.Context, *connect.Request[protocol.GetMiniblocksRequest]) (*connect.Response[protocol.GetMiniblocksResponse], error)
 	GetLastMiniblockHash(context.Context, *connect.Request[protocol.GetLastMiniblockHashRequest]) (*connect.Response[protocol.GetLastMiniblockHashResponse], error)
 	AddEvent(context.Context, *connect.Request[protocol.AddEventRequest]) (*connect.Response[protocol.AddEventResponse], error)
+	AddMediaEvent(context.Context, *connect.Request[protocol.AddMediaEventRequest]) (*connect.Response[protocol.AddMediaEventResponse], error)
 	SyncStreams(context.Context, *connect.Request[protocol.SyncStreamsRequest]) (*connect.ServerStreamForClient[protocol.SyncStreamsResponse], error)
 	AddStreamToSync(context.Context, *connect.Request[protocol.AddStreamToSyncRequest]) (*connect.Response[protocol.AddStreamToSyncResponse], error)
 	// ModifySync adds/removes streams to/from an in progress sync session.
@@ -126,6 +136,12 @@ func NewStreamServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(streamServiceCreateStreamMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		createMediaStream: connect.NewClient[protocol.CreateMediaStreamRequest, protocol.CreateMediaStreamResponse](
+			httpClient,
+			baseURL+StreamServiceCreateMediaStreamProcedure,
+			connect.WithSchema(streamServiceCreateMediaStreamMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		getStream: connect.NewClient[protocol.GetStreamRequest, protocol.GetStreamResponse](
 			httpClient,
 			baseURL+StreamServiceGetStreamProcedure,
@@ -154,6 +170,12 @@ func NewStreamServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			httpClient,
 			baseURL+StreamServiceAddEventProcedure,
 			connect.WithSchema(streamServiceAddEventMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		addMediaEvent: connect.NewClient[protocol.AddMediaEventRequest, protocol.AddMediaEventResponse](
+			httpClient,
+			baseURL+StreamServiceAddMediaEventProcedure,
+			connect.WithSchema(streamServiceAddMediaEventMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		syncStreams: connect.NewClient[protocol.SyncStreamsRequest, protocol.SyncStreamsResponse](
@@ -204,11 +226,13 @@ func NewStreamServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 // streamServiceClient implements StreamServiceClient.
 type streamServiceClient struct {
 	createStream         *connect.Client[protocol.CreateStreamRequest, protocol.CreateStreamResponse]
+	createMediaStream    *connect.Client[protocol.CreateMediaStreamRequest, protocol.CreateMediaStreamResponse]
 	getStream            *connect.Client[protocol.GetStreamRequest, protocol.GetStreamResponse]
 	getStreamEx          *connect.Client[protocol.GetStreamExRequest, protocol.GetStreamExResponse]
 	getMiniblocks        *connect.Client[protocol.GetMiniblocksRequest, protocol.GetMiniblocksResponse]
 	getLastMiniblockHash *connect.Client[protocol.GetLastMiniblockHashRequest, protocol.GetLastMiniblockHashResponse]
 	addEvent             *connect.Client[protocol.AddEventRequest, protocol.AddEventResponse]
+	addMediaEvent        *connect.Client[protocol.AddMediaEventRequest, protocol.AddMediaEventResponse]
 	syncStreams          *connect.Client[protocol.SyncStreamsRequest, protocol.SyncStreamsResponse]
 	addStreamToSync      *connect.Client[protocol.AddStreamToSyncRequest, protocol.AddStreamToSyncResponse]
 	modifySync           *connect.Client[protocol.ModifySyncRequest, protocol.ModifySyncResponse]
@@ -221,6 +245,11 @@ type streamServiceClient struct {
 // CreateStream calls river.StreamService.CreateStream.
 func (c *streamServiceClient) CreateStream(ctx context.Context, req *connect.Request[protocol.CreateStreamRequest]) (*connect.Response[protocol.CreateStreamResponse], error) {
 	return c.createStream.CallUnary(ctx, req)
+}
+
+// CreateMediaStream calls river.StreamService.CreateMediaStream.
+func (c *streamServiceClient) CreateMediaStream(ctx context.Context, req *connect.Request[protocol.CreateMediaStreamRequest]) (*connect.Response[protocol.CreateMediaStreamResponse], error) {
+	return c.createMediaStream.CallUnary(ctx, req)
 }
 
 // GetStream calls river.StreamService.GetStream.
@@ -246,6 +275,11 @@ func (c *streamServiceClient) GetLastMiniblockHash(ctx context.Context, req *con
 // AddEvent calls river.StreamService.AddEvent.
 func (c *streamServiceClient) AddEvent(ctx context.Context, req *connect.Request[protocol.AddEventRequest]) (*connect.Response[protocol.AddEventResponse], error) {
 	return c.addEvent.CallUnary(ctx, req)
+}
+
+// AddMediaEvent calls river.StreamService.AddMediaEvent.
+func (c *streamServiceClient) AddMediaEvent(ctx context.Context, req *connect.Request[protocol.AddMediaEventRequest]) (*connect.Response[protocol.AddMediaEventResponse], error) {
+	return c.addMediaEvent.CallUnary(ctx, req)
 }
 
 // SyncStreams calls river.StreamService.SyncStreams.
@@ -286,11 +320,13 @@ func (c *streamServiceClient) PingSync(ctx context.Context, req *connect.Request
 // StreamServiceHandler is an implementation of the river.StreamService service.
 type StreamServiceHandler interface {
 	CreateStream(context.Context, *connect.Request[protocol.CreateStreamRequest]) (*connect.Response[protocol.CreateStreamResponse], error)
+	CreateMediaStream(context.Context, *connect.Request[protocol.CreateMediaStreamRequest]) (*connect.Response[protocol.CreateMediaStreamResponse], error)
 	GetStream(context.Context, *connect.Request[protocol.GetStreamRequest]) (*connect.Response[protocol.GetStreamResponse], error)
 	GetStreamEx(context.Context, *connect.Request[protocol.GetStreamExRequest], *connect.ServerStream[protocol.GetStreamExResponse]) error
 	GetMiniblocks(context.Context, *connect.Request[protocol.GetMiniblocksRequest]) (*connect.Response[protocol.GetMiniblocksResponse], error)
 	GetLastMiniblockHash(context.Context, *connect.Request[protocol.GetLastMiniblockHashRequest]) (*connect.Response[protocol.GetLastMiniblockHashResponse], error)
 	AddEvent(context.Context, *connect.Request[protocol.AddEventRequest]) (*connect.Response[protocol.AddEventResponse], error)
+	AddMediaEvent(context.Context, *connect.Request[protocol.AddMediaEventRequest]) (*connect.Response[protocol.AddMediaEventResponse], error)
 	SyncStreams(context.Context, *connect.Request[protocol.SyncStreamsRequest], *connect.ServerStream[protocol.SyncStreamsResponse]) error
 	AddStreamToSync(context.Context, *connect.Request[protocol.AddStreamToSyncRequest]) (*connect.Response[protocol.AddStreamToSyncResponse], error)
 	// ModifySync adds/removes streams to/from an in progress sync session.
@@ -315,6 +351,12 @@ func NewStreamServiceHandler(svc StreamServiceHandler, opts ...connect.HandlerOp
 		StreamServiceCreateStreamProcedure,
 		svc.CreateStream,
 		connect.WithSchema(streamServiceCreateStreamMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	streamServiceCreateMediaStreamHandler := connect.NewUnaryHandler(
+		StreamServiceCreateMediaStreamProcedure,
+		svc.CreateMediaStream,
+		connect.WithSchema(streamServiceCreateMediaStreamMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	streamServiceGetStreamHandler := connect.NewUnaryHandler(
@@ -345,6 +387,12 @@ func NewStreamServiceHandler(svc StreamServiceHandler, opts ...connect.HandlerOp
 		StreamServiceAddEventProcedure,
 		svc.AddEvent,
 		connect.WithSchema(streamServiceAddEventMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	streamServiceAddMediaEventHandler := connect.NewUnaryHandler(
+		StreamServiceAddMediaEventProcedure,
+		svc.AddMediaEvent,
+		connect.WithSchema(streamServiceAddMediaEventMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	streamServiceSyncStreamsHandler := connect.NewServerStreamHandler(
@@ -393,6 +441,8 @@ func NewStreamServiceHandler(svc StreamServiceHandler, opts ...connect.HandlerOp
 		switch r.URL.Path {
 		case StreamServiceCreateStreamProcedure:
 			streamServiceCreateStreamHandler.ServeHTTP(w, r)
+		case StreamServiceCreateMediaStreamProcedure:
+			streamServiceCreateMediaStreamHandler.ServeHTTP(w, r)
 		case StreamServiceGetStreamProcedure:
 			streamServiceGetStreamHandler.ServeHTTP(w, r)
 		case StreamServiceGetStreamExProcedure:
@@ -403,6 +453,8 @@ func NewStreamServiceHandler(svc StreamServiceHandler, opts ...connect.HandlerOp
 			streamServiceGetLastMiniblockHashHandler.ServeHTTP(w, r)
 		case StreamServiceAddEventProcedure:
 			streamServiceAddEventHandler.ServeHTTP(w, r)
+		case StreamServiceAddMediaEventProcedure:
+			streamServiceAddMediaEventHandler.ServeHTTP(w, r)
 		case StreamServiceSyncStreamsProcedure:
 			streamServiceSyncStreamsHandler.ServeHTTP(w, r)
 		case StreamServiceAddStreamToSyncProcedure:
@@ -430,6 +482,10 @@ func (UnimplementedStreamServiceHandler) CreateStream(context.Context, *connect.
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.StreamService.CreateStream is not implemented"))
 }
 
+func (UnimplementedStreamServiceHandler) CreateMediaStream(context.Context, *connect.Request[protocol.CreateMediaStreamRequest]) (*connect.Response[protocol.CreateMediaStreamResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.StreamService.CreateMediaStream is not implemented"))
+}
+
 func (UnimplementedStreamServiceHandler) GetStream(context.Context, *connect.Request[protocol.GetStreamRequest]) (*connect.Response[protocol.GetStreamResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.StreamService.GetStream is not implemented"))
 }
@@ -448,6 +504,10 @@ func (UnimplementedStreamServiceHandler) GetLastMiniblockHash(context.Context, *
 
 func (UnimplementedStreamServiceHandler) AddEvent(context.Context, *connect.Request[protocol.AddEventRequest]) (*connect.Response[protocol.AddEventResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.StreamService.AddEvent is not implemented"))
+}
+
+func (UnimplementedStreamServiceHandler) AddMediaEvent(context.Context, *connect.Request[protocol.AddMediaEventRequest]) (*connect.Response[protocol.AddMediaEventResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.StreamService.AddMediaEvent is not implemented"))
 }
 
 func (UnimplementedStreamServiceHandler) SyncStreams(context.Context, *connect.Request[protocol.SyncStreamsRequest], *connect.ServerStream[protocol.SyncStreamsResponse]) error {

@@ -214,6 +214,15 @@ func (s *Service) CreateStream(
 	return executeConnectHandler(ctx, req, s, s.createStreamImpl, "CreateStream")
 }
 
+func (s *Service) CreateMediaStream(
+	ctx context.Context,
+	req *connect.Request[CreateMediaStreamRequest],
+) (*connect.Response[CreateMediaStreamResponse], error) {
+	ctx, cancel := utils.UncancelContext(ctx, 20*time.Second, 40*time.Second)
+	defer cancel()
+	return executeConnectHandler(ctx, req, s, s.createMediaStreamImpl, "CreateMediaStream")
+}
+
 func (s *Service) GetStream(
 	ctx context.Context,
 	req *connect.Request[GetStreamRequest],
@@ -489,6 +498,67 @@ func (s *Service) addEventImpl(
 	newReq.Header().Set(RiverFromNodeHeader, s.wallet.Address.Hex())
 	newReq.Header().Set(RiverToNodeHeader, firstRemote.Hex())
 	ret, err := stub.AddEvent(ctx, newReq)
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(ret.Msg), nil
+}
+
+func (s *Service) AddMediaEvent(
+	ctx context.Context,
+	req *connect.Request[AddMediaEventRequest],
+) (*connect.Response[AddMediaEventResponse], error) {
+	ctx, cancel := utils.UncancelContext(ctx, 10*time.Second, 20*time.Second)
+	defer cancel()
+	return executeConnectHandler(ctx, req, s, s.addMediaEventImpl, "AddMediaEvent")
+}
+
+func (s *Service) addMediaEventImpl(
+	ctx context.Context,
+	req *connect.Request[AddMediaEventRequest],
+) (*connect.Response[AddMediaEventResponse], error) {
+	streamId, err := shared.StreamIdFromBytes(req.Msg.Cookie.StreamId)
+	if err != nil {
+		return nil, err
+	}
+
+	stream, err := s.cache.GetStreamNoWait(ctx, streamId)
+	if err != nil {
+		return nil, err
+	}
+
+	view, err := stream.GetViewIfLocal(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if view != nil {
+		return s.localAddMediaEvent(ctx, req, stream, view)
+	}
+
+	if req.Header().Get(RiverNoForwardHeader) == RiverNoForwardValue {
+		return nil, RiverError(Err_UNAVAILABLE, "Forwarding disabled by request header").
+			Func("service.addMediaEventImpl").
+			Tags("streamId", req.Msg.Cookie.StreamId,
+				RiverFromNodeHeader, req.Header().Get(RiverFromNodeHeader),
+				RiverToNodeHeader, req.Header().Get(RiverToNodeHeader),
+			)
+	}
+
+	// TODO: smarter remote select? random?
+	// TODO: retry?
+	firstRemote := stream.GetStickyPeer()
+	dlog.FromCtx(ctx).Debug("Forwarding request", "nodeAddress", firstRemote)
+	stub, err := s.nodeRegistry.GetStreamServiceClientForAddress(firstRemote)
+	if err != nil {
+		return nil, err
+	}
+
+	newReq := connect.NewRequest(req.Msg)
+	newReq.Header().Set(RiverNoForwardHeader, RiverNoForwardValue)
+	newReq.Header().Set(RiverFromNodeHeader, s.wallet.Address.Hex())
+	newReq.Header().Set(RiverToNodeHeader, firstRemote.Hex())
+	ret, err := stub.AddMediaEvent(ctx, newReq)
 	if err != nil {
 		return nil, err
 	}

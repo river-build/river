@@ -4,14 +4,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/river-build/river/core/node/utils"
-
 	"connectrpc.com/connect"
 
 	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
+	"github.com/river-build/river/core/node/utils"
 )
 
 func (s *Service) AllocateStream(
@@ -207,4 +206,47 @@ func (s *Service) saveMiniblockCandidate(
 	}
 
 	return &SaveMiniblockCandidateResponse{}, nil
+}
+
+func (s *Service) SaveEphemeralMiniblock(
+	ctx context.Context,
+	req *connect.Request[SaveEphemeralMiniblockRequest],
+) (*connect.Response[SaveEphemeralMiniblockResponse], error) {
+	ctx, log := utils.CtxAndLogForRequest(ctx, req)
+	ctx, cancel := utils.UncancelContext(ctx, 5*time.Second, 10*time.Second)
+	defer cancel()
+	log.Debug("SaveEphemeralMiniblock ENTER")
+	r, e := s.saveEphemeralMiniblock(ctx, req.Msg)
+	if e != nil {
+		return nil, AsRiverError(
+			e,
+		).Func("SaveEphemeralMiniblock").
+			Tag("streamId", req.Msg.StreamId).
+			LogWarn(log).
+			AsConnectError()
+	}
+	log.Debug("SaveEphemeralMiniblock LEAVE", "response", r)
+	return connect.NewResponse(r), nil
+}
+
+func (s *Service) saveEphemeralMiniblock(
+	ctx context.Context,
+	req *SaveEphemeralMiniblockRequest,
+) (*SaveEphemeralMiniblockResponse, error) {
+	streamId, err := StreamIdFromBytes(req.StreamId)
+	if err != nil {
+		return nil, err
+	}
+
+	stream, err := s.cache.GetStreamWaitForLocal(ctx, streamId)
+	if err != nil {
+		return nil, err
+	}
+
+	err = stream.SaveEphemeralMiniblock(ctx, req.Miniblock)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SaveEphemeralMiniblockResponse{}, nil
 }
