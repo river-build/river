@@ -66,6 +66,9 @@ jobs:
                   go-version-file: 'go.work'
                   cache-dependency-path: '**/*.sum'
 
+            - name: Install Protoc
+              uses: arduino/setup-protoc@v3
+
             - name: Install Foundry
               uses: foundry-rs/foundry-toolchain@v1
               with:
@@ -230,6 +233,9 @@ jobs:
                   go-version-file: 'go.work'
                   cache-dependency-path: '**/*.sum'
 
+            - name: Install Protoc
+              uses: arduino/setup-protoc@v3
+
             - name: Install Foundry
               uses: foundry-rs/foundry-toolchain@v1
               with:
@@ -369,6 +375,9 @@ jobs:
                   go-version-file: 'go.work'
                   cache-dependency-path: '**/*.sum'
 
+            - name: Install Protoc
+              uses: arduino/setup-protoc@v3
+
             - name: Install Foundry
               uses: foundry-rs/foundry-toolchain@v1
               with:
@@ -506,6 +515,9 @@ jobs:
                   go-version-file: 'go.work'
                   cache-dependency-path: '**/*.sum'
 
+            - name: Install Protoc
+              uses: arduino/setup-protoc@v3
+
             - name: Install Foundry
               uses: foundry-rs/foundry-toolchain@v1
               with:
@@ -635,6 +647,9 @@ jobs:
                   go-version-file: 'go.work'
                   cache-dependency-path: '**/*.sum'
 
+            - name: Install Protoc
+              uses: arduino/setup-protoc@v3
+
             - name: Install Foundry
               uses: foundry-rs/foundry-toolchain@v1
               with:
@@ -670,9 +685,15 @@ jobs:
               run: ./scripts/register-ca.sh
               working-directory: core
 
+            - name: Start MLS Service
+              run: ./scripts/start-mls-service.sh
+
             - name: Run node tests
               run: go test -race -timeout 24m -v -parallel 1 -count 1 -p 8 ./...
               working-directory: core
+
+            - name: Stop MLS Service
+              run: ./scripts/stop-mls-service.sh
 
     XChain_Integration:
         permissions: write-all
@@ -695,6 +716,9 @@ jobs:
               with:
                   go-version-file: 'go.work'
                   cache-dependency-path: '**/*.sum'
+
+            - name: Install Protoc
+              uses: arduino/setup-protoc@v3
 
             - name: Install Foundry
               uses: foundry-rs/foundry-toolchain@v1
