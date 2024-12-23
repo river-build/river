@@ -20,6 +20,7 @@ type ExternalConfig = ExternalWithIdentityProvider<
     ExternalWithCryptoProvider<RustCryptoProvider, ExternalBaseConfig>,
 >;
 
+
 fn create_external_client() -> ExternalClient<ExternalConfig> {
     let crypto_provider = RustCryptoProvider::default();
     let external_client = ExternalClient::builder()
@@ -125,8 +126,8 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJ
         }
     };
 
-    for commit_bytes in request.commits {
-        let commit = match MlsMessage::from_bytes(&commit_bytes) {
+    for commit in request.commits {
+        let commit = match MlsMessage::from_bytes(&commit.commit) {
             Ok(commit) => commit,
             Err(_) => return ExternalJoinResponse {
                 result: ValidationResult::InvalidCommit.into(),
@@ -199,6 +200,7 @@ mod tests {
     };
     const CIPHERSUITE: CipherSuite = CipherSuite::P256_AES128;
     use mls_rs::mls_rules::{CommitOptions, DefaultMlsRules};
+    use river_mls_protocol::Commit;
     type ClientConfig = WithIdentityProvider<BasicIdentityProvider, WithCryptoProvider<RustCryptoProvider, BaseConfig>>;
     type ProviderCipherSuite = <RustCryptoProvider as CryptoProvider>::CipherSuiteProvider;
     
@@ -236,11 +238,12 @@ mod tests {
         client
     }
 
-    fn perform_external_join(external_group_snapshot: ExternalSnapshot, commits: Vec<MlsMessage>, group_info_message: MlsMessage, client: Client<ClientConfig>) -> (MlsMessage, MlsMessage) {
+    fn perform_external_join(external_group_snapshot: ExternalSnapshot, commits: Vec<Commit>, group_info_message: MlsMessage, client: Client<ClientConfig>) -> (MlsMessage, MlsMessage) {
         let external_client = create_external_client();
         let mut external_group = external_client.load_group(external_group_snapshot.clone()).unwrap();
         for commit in commits.iter() {
-            external_group.process_incoming_message(commit.clone()).unwrap();
+            let mls_message : MlsMessage = MlsMessage::from_bytes(&commit.commit).unwrap();
+            external_group.process_incoming_message(mls_message).unwrap();
         }
         let tree_after_commits_bytes = external_group.export_tree().unwrap();
         let exported_tree_after_commits = ExportedTree::from_bytes(&tree_after_commits_bytes).unwrap();
@@ -309,14 +312,15 @@ mod tests {
         let external_group = external_client.observe_group(bob_group_info_message.clone(), Some(tree)).unwrap();
         let external_group_snapshot = external_group.snapshot();
         let mut latest_group_info_message_without_tree = bob_group_info_message.clone();
-        let mut commits: Vec<MlsMessage> = Vec::new();
+        let mut commits: Vec<Commit> = Vec::new();
 
         // apply 10 external joins
         for i in 0..10 {
             let name = format!("client {}", i);
             let client = create_client(name);
             let (client_group_info_message, commit) = perform_external_join(external_group_snapshot.clone(), commits.clone(), latest_group_info_message_without_tree, client);
-            commits.push(commit);
+            commits.push(Commit{commit: commit.to_bytes().unwrap(), updated_group_info_message: Some(client_group_info_message.to_bytes().unwrap())});
+            
             latest_group_info_message_without_tree = client_group_info_message;
         }
 
@@ -324,7 +328,7 @@ mod tests {
         let (alice_group_info_message, alice_commit) = perform_external_join(external_group_snapshot.clone(), commits.clone(), latest_group_info_message_without_tree, alice);
         let request = ExternalJoinRequest {
             external_group_snapshot: external_group_snapshot.to_bytes().unwrap(),
-            commits: commits.iter().map(|commit| commit.to_bytes().unwrap()).collect(),
+            commits: commits,
             proposed_external_join_info_message: alice_group_info_message.to_bytes().unwrap(),
             proposed_external_join_commit: alice_commit.to_bytes().unwrap(),
         };
@@ -332,6 +336,30 @@ mod tests {
         assert_eq!(result.result, ValidationResult::Valid.into());
     }
 
+
+    #[test]
+    fn test_validate_epoch_stuff() {
+        let bob_client = create_client("bob".to_string());
+        let mut bob_group = bob_client.create_group(Default::default(), Default::default()).unwrap();
+        let message: Vec<u8> = vec![1, 2, 3, 4];
+        let bob_group_info_message = bob_group.group_info_message_allowing_ext_commit(true).unwrap();
+        println!("before {}", bob_group.current_epoch());
+        let encrypted = bob_group.encrypt_application_message(&message, Default::default()).unwrap();
+        
+        println!("after {}", bob_group.current_epoch());
+        let external_client = create_external_client();
+        let tree_bytes = bob_group.export_tree().to_bytes().unwrap();
+        let tree = ExportedTree::from_bytes(&tree_bytes).unwrap();
+        let mut external_group = external_client.observe_group(bob_group_info_message.clone(), Some(tree)).unwrap();
+        
+        // external_group.process_incoming_message(encrypted.clone()).unwrap();
+        let external_group_snapshot = external_group.snapshot();
+        let mut latest_group_info_message_without_tree = bob_group_info_message.clone();
+        let mut commits: Vec<Commit> = Vec::new();
+        
+        let alice = create_client("alice".to_string());
+        let (alice_group_info_message, alice_commit) = perform_external_join(external_group_snapshot.clone(), commits.clone(), latest_group_info_message_without_tree, alice);
+
+        bob_group.process_incoming_message(alice_commit).unwrap();
+    }
 }
-
-

@@ -13,6 +13,7 @@ import (
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/mls_service/mls_tools"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
@@ -30,7 +31,7 @@ type StreamViewStats struct {
 
 type StreamMlsState struct {
 	ExternalGroupSnapshot []byte
-	Commits [][]byte
+	Commits []*mls_tools.Commit
 }
 
 type StreamView interface {
@@ -807,7 +808,7 @@ func (r *streamViewImpl) AllEvents() iter.Seq[*ParsedEvent] {
 }
 
 func (r *streamViewImpl) GetMlsState() *StreamMlsState {
-	commits := make([][]byte, 0)
+	commits := make([]*mls_tools.Commit, 0)
 	externalGroupSnapshot := r.snapshot.Members.Mls.GetExternalGroupSnapshot()
 	if externalGroupSnapshot == nil {
 		externalGroupSnapshot = make([]byte, 0)
@@ -821,7 +822,11 @@ func (r *streamViewImpl) GetMlsState() *StreamMlsState {
 					externalGroupSnapshot = content.InitializeGroup.GetExternalGroupSnapshot()
 				}
 			case *MemberPayload_Mls_ExternalJoin_:
-				commits = append(commits, content.ExternalJoin.GetCommit())
+				commit := &mls_tools.Commit {
+					Commit: content.ExternalJoin.GetCommit(),
+					UpdatedGroupInfoMessage: content.ExternalJoin.GetGroupInfoMessage(),
+				}
+				commits = append(commits, commit)
 			default:
 				break
 		}

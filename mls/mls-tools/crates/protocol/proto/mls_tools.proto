@@ -23,9 +23,14 @@ message InitialGroupInfoResponse {
     ValidationResult result = 1;
 }
 
+message Commit {
+    bytes commit = 1;
+    optional bytes updated_group_info_message = 2;
+}
+
 message ExternalJoinRequest {
     bytes external_group_snapshot = 1;
-    repeated bytes commits = 2;
+    repeated Commit commits = 2;
     bytes proposed_external_join_info_message = 3;
     bytes proposed_external_join_commit = 4;
 }
