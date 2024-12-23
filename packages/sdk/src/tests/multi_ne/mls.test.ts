@@ -179,7 +179,7 @@ describe('mlsTests', () => {
                     deviceKey: aliceDeviceKey,
                     groupInfoMessage: aliceGroupInfoMessage,
                     commit: aliceCommit,
-                    epoch: 0n,
+                    epoch: 0n, // figure out if it helps to tag commits with epoch for accessibility from go
                 },
             },
         }
