@@ -14,6 +14,9 @@ import {
     MlsMessage,
 } from '@river-build/mls-rs-wasm'
 import { randomBytes } from 'crypto'
+import { dlog } from '@river-build/dlog'
+
+const log = dlog('encryption:mls')
 
 describe('mlsTests', () => {
     let clients: Client[] = []
@@ -47,6 +50,34 @@ describe('mlsTests', () => {
         const snapshot = externalGroup.snapshot()
         const snapshotBytes = snapshot.toBytes()
         return { groupInfoMessage: groupInfoBytes, externalGroupSnapshot: snapshotBytes }
+    }
+
+    async function externalJoin(
+        mlsClient: MlsClient,
+        externalGroupSnapshot: Uint8Array,
+        commits: Uint8Array[],
+        groupInfoMessage: Uint8Array,
+    ): Promise<{ groupInfoMessage: Uint8Array; commit: Uint8Array }> {
+        const externalClient = new ExternalClient()
+        const snapshot = ExternalSnapshot.fromBytes(externalGroupSnapshot)
+        const externalGroup = await externalClient.loadGroup(snapshot)
+        for (const commit of commits) {
+            try {
+                await externalGroup.processIncomingMessage(MlsMessage.fromBytes(commit))
+            } catch (e) {
+                // allow commits to fail application
+                log('Error processing commit', e)
+            }
+        }
+        const tree = externalGroup.exportTree()
+        const exportedTree = ExportedTree.fromBytes(tree)
+        const groupInfoMessageMls = MlsMessage.fromBytes(groupInfoMessage)
+        const { group: aliceGroup, commit: aliceCommit } = await mlsClient.commitExternal(
+            groupInfoMessageMls,
+            exportedTree,
+        )
+        const aliceGroupInfoMessage = await aliceGroup.groupInfoMessageAllowingExtCommit(false)
+        return { groupInfoMessage: aliceGroupInfoMessage.toBytes(), commit: aliceCommit.toBytes() }
     }
 
     test('clientCanCreateMlsGroup', async () => {
@@ -106,7 +137,7 @@ describe('mlsTests', () => {
         )
     })
 
-    test.only('clientCanExternalJoin - valid', async () => {
+    test('clientCanExternalJoin - valid', async () => {
         const bobsClient = await makeInitAndStartClient()
         const alicesClient = await makeInitAndStartClient()
         const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
@@ -134,26 +165,20 @@ describe('mlsTests', () => {
 
         const aliceDeviceKey = new Uint8Array(randomBytes(32))
         const aliceMlsClient = await MlsClient.create(aliceDeviceKey)
-        const externalClient = new ExternalClient()
-        const snapshot = ExternalSnapshot.fromBytes(groupParams.externalGroupSnapshot)
-        const externalGroup = await externalClient.loadGroup(snapshot)
-        const tree = externalGroup.exportTree()
-        const exportedTree = ExportedTree.fromBytes(tree)
-        const groupInfoMessage = MlsMessage.fromBytes(groupParams.groupInfoMessage)
-        const { group: aliceGroup, commit: aliceCommit } = await aliceMlsClient.commitExternal(
-            groupInfoMessage,
-            exportedTree,
+        const { groupInfoMessage: aliceGroupInfoMessage, commit: aliceCommit } = await externalJoin(
+            aliceMlsClient,
+            groupParams.externalGroupSnapshot,
+            [], // commits and group info messages need to be combined
+            groupParams.groupInfoMessage,
         )
-
-        const aliceGroupInfoMessage = await aliceGroup.groupInfoMessageAllowingExtCommit(false)
 
         const mlsPayload2: PlainMessage<MemberPayload_Mls> = {
             content: {
                 case: 'externalJoin',
                 value: {
                     deviceKey: aliceDeviceKey,
-                    groupInfoMessage: aliceGroupInfoMessage.toBytes(),
-                    commit: aliceCommit.toBytes(),
+                    groupInfoMessage: aliceGroupInfoMessage,
+                    commit: aliceCommit,
                     epoch: 0n,
                 },
             },

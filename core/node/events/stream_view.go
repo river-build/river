@@ -816,12 +816,12 @@ func (r *streamViewImpl) GetMlsState() *StreamMlsState {
 	for event := range r.AllEvents() {
 		payload := event.Event.GetMemberPayload().GetMls()
 		switch content := payload.GetContent().(type) {
-			case *MemberPayload_Mls_ExternalJoin_:
-				commits = append(commits, content.ExternalJoin.GetCommit())
 			case *MemberPayload_Mls_InitializeGroup_:
 				if len(externalGroupSnapshot) == 0 {
 					externalGroupSnapshot = content.InitializeGroup.GetExternalGroupSnapshot()
 				}
+			case *MemberPayload_Mls_ExternalJoin_:
+				commits = append(commits, content.ExternalJoin.GetCommit())
 			default:
 				break
 		}
