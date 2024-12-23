@@ -173,6 +173,12 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJ
         };
     }
 
+    if !external_group.process_incoming_message(proposed_external_join_commit.clone()).is_ok() {
+        return ExternalJoinResponse {
+            result: ValidationResult::InvalidCommit.into(),
+        };
+    }
+
     return ExternalJoinResponse {
         result: ValidationResult::Valid.into(),
     };

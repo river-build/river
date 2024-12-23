@@ -186,4 +186,56 @@ describe('mlsTests', () => {
 
         await expect(alicesClient._debugSendMls(streamId, mlsPayload2)).resolves.not.toThrow()
     })
+
+    test('clientCanExternalJoin - invalid', async () => {
+        const bobsClient = await makeInitAndStartClient()
+        const alicesClient = await makeInitAndStartClient()
+        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
+        const stream = await bobsClient.waitForStream(streamId)
+
+        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
+            new Set([bobsClient.userId, alicesClient.userId]),
+        )
+
+        const bobDeviceKey = new Uint8Array(randomBytes(32))
+        const bobMlsClient = await MlsClient.create(bobDeviceKey)
+        const groupParams = await createGroup(bobMlsClient)
+
+        const mlsPayload: PlainMessage<MemberPayload_Mls> = {
+            content: {
+                case: 'initializeGroup',
+                value: {
+                    deviceKey: bobDeviceKey,
+                    externalGroupSnapshot: groupParams.externalGroupSnapshot,
+                    groupInfoMessage: groupParams.groupInfoMessage,
+                },
+            },
+        }
+        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).resolves.not.toThrow()
+
+        const aliceDeviceKey = new Uint8Array(randomBytes(32))
+        const aliceMlsClient = await MlsClient.create(aliceDeviceKey)
+        const { groupInfoMessage: aliceGroupInfoMessage, commit: aliceCommit } = await externalJoin(
+            aliceMlsClient,
+            groupParams.externalGroupSnapshot,
+            [], // commits and group info messages need to be combined
+            groupParams.groupInfoMessage,
+        )
+
+        const mlsPayload2: PlainMessage<MemberPayload_Mls> = {
+            content: {
+                case: 'externalJoin',
+                value: {
+                    deviceKey: aliceDeviceKey,
+                    groupInfoMessage: aliceGroupInfoMessage,
+                    commit: new Uint8Array([9, ...aliceCommit]), // invalid commit
+                    epoch: 0n, // figure out if it helps to tag commits with epoch for accessibility from go
+                },
+            },
+        }
+
+        await expect(alicesClient._debugSendMls(streamId, mlsPayload2)).rejects.toThrow(
+            'INVALID_COMMIT',
+        )
+    })
 })
