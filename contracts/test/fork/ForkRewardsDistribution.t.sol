@@ -12,19 +12,19 @@ import {IDiamondCut} from "@river-build/diamond/src/facets/cut/IDiamondCut.sol";
 import {IDiamondLoupe} from "@river-build/diamond/src/facets/loupe/IDiamondLoupe.sol";
 import {IDiamond} from "@river-build/diamond/src/Diamond.sol";
 import {INodeOperator} from "contracts/src/base/registry/facets/operator/INodeOperator.sol";
-import {IMainnetDelegationBase, IMainnetDelegation} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
-import {ICrossDomainMessenger} from "contracts/src/tokens/river/mainnet/delegation/ICrossDomainMessenger.sol";
+import {IMainnetDelegationBase, IMainnetDelegation} from "contracts/src/tokens/towns/base/delegation/IMainnetDelegation.sol";
+import {ICrossDomainMessenger} from "contracts/src/tokens/towns/mainnet/delegation/ICrossDomainMessenger.sol";
 
 //libraries
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {StakingRewards} from "contracts/src/base/registry/facets/distribution/v2/StakingRewards.sol";
 
 //contracts
-import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/MainnetDelegation.sol";
+import {MainnetDelegation} from "contracts/src/tokens/towns/base/delegation/MainnetDelegation.sol";
 import {MockMessenger} from "contracts/test/mocks/MockMessenger.sol";
 import {NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
 import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistribution.sol";
-import {River} from "contracts/src/tokens/river/base/River.sol";
+import {River} from "contracts/src/tokens/towns/base/River.sol";
 import {OwnableFacet} from "@river-build/diamond/src/facets/ownable/OwnableFacet.sol";
 
 // deployers

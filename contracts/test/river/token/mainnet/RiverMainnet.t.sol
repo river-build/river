@@ -6,7 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ILockBase} from "contracts/src/tokens/lock/ILock.sol";
-import {IRiverBase} from "contracts/src/tokens/river/mainnet/IRiver.sol";
+import {IRiverBase} from "contracts/src/tokens/towns/mainnet/IRiver.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 //libraries
@@ -15,7 +15,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 import {EIP712Utils} from "contracts/test/utils/EIP712Utils.sol";
 import {DeployRiverMainnet} from "contracts/scripts/deployments/utils/DeployRiverMainnet.s.sol";
-import {River} from "contracts/src/tokens/river/mainnet/River.sol";
+import {River} from "contracts/src/tokens/towns/mainnet/River.sol";
 
 contract RiverMainnetTest is TestUtils, EIP712Utils, IRiverBase, ILockBase {
   DeployRiverMainnet internal deployRiverMainnet = new DeployRiverMainnet();

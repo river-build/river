@@ -4,14 +4,14 @@ pragma solidity ^0.8.23;
 // interfaces
 import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
 import {IImplementationRegistry} from "./../../src/factory/facets/registry/IImplementationRegistry.sol";
-import {IMainnetDelegation} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
+import {IMainnetDelegation} from "contracts/src/tokens/towns/base/delegation/IMainnetDelegation.sol";
 import {SpaceDelegationFacet} from "contracts/src/base/registry/facets/delegation/SpaceDelegationFacet.sol";
 
 // libraries
 
 // contracts
 import {Interaction} from "contracts/scripts/common/Interaction.s.sol";
-import {River} from "contracts/src/tokens/river/base/River.sol";
+import {River} from "contracts/src/tokens/towns/base/River.sol";
 import {MAX_CLAIMABLE_SUPPLY} from "./InteractClaimCondition.s.sol";
 
 // deployments

@@ -2,13 +2,13 @@
 pragma solidity ^0.8.19;
 
 //interfaces
-import {IRiverBase} from "contracts/src/tokens/river/mainnet/IRiver.sol";
+import {IRiverBase} from "contracts/src/tokens/towns/mainnet/IRiver.sol";
 
 //libraries
 
 //contracts
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
-import {River} from "contracts/src/tokens/river/base/River.sol";
+import {River} from "contracts/src/tokens/towns/base/River.sol";
 
 contract DeployRiverBase is Deployer, IRiverBase {
   address public bridgeBase; // L2StandardBridge

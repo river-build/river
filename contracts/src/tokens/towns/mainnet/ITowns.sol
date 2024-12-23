@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-interface IRiverBase {
+interface ITownsBase {
   // =============================================================
   //                           Structs
   // =============================================================
@@ -12,33 +12,43 @@ interface IRiverBase {
     uint256 inflationDecreaseInterval;
   }
 
-  struct RiverConfig {
-    address vault;
-    address owner;
+  struct TokenConfig {
+    address inflationCaller;
+    address tokenRecipient;
+    uint256 lastMintTime;
     InflationConfig inflationConfig;
   }
 
   // =============================================================
   //                           Errors
   // =============================================================
-  error River__InvalidInflationRate();
-  error River__CannotMint();
-  error River__CannotMintZero();
-  error River__TransferLockEnabled();
-  error River__InvalidDelegatee();
-  error River__MintingTooSoon();
-  error River__InvalidAddress();
-  error River__DelegateeSameAsCurrent();
+  error InvalidInflationRate();
+  error CannotMint();
+  error CannotMintZero();
+  error TransferLockEnabled();
+  error InvalidDelegatee();
+  error MintingTooSoon();
+  error InvalidAddress();
+  error DelegateeSameAsCurrent();
+
+  // =============================================================
+  //                           Events
+  // =============================================================
+  event InflationCreated(uint256 amount);
+  event OverrideInflationSet(
+    bool overrideInflation,
+    uint256 overrideInflationRate
+  );
+  event TokenRecipientSet(address tokenRecipient);
 }
 
-interface IRiver is IRiverBase {
+interface ITowns is ITownsBase {
   // =============================================================
   //                           Functions
   // =============================================================
 
   /// @notice create inflation
-  /// @param to address to mint token to
-  function createInflation(address to) external;
+  function createInflation() external;
 
   /// @notice override inflation
   /// @param overrideInflation bool to override inflation

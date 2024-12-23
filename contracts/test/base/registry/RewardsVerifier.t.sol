@@ -10,7 +10,7 @@ import {StakingRewards} from "contracts/src/base/registry/facets/distribution/v2
 
 // contracts
 import {StdAssertions} from "forge-std/StdAssertions.sol";
-import {River} from "contracts/src/tokens/river/base/River.sol";
+import {River} from "contracts/src/tokens/towns/base/River.sol";
 import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistribution.sol";
 
 abstract contract RewardsVerifier is StdAssertions, IRewardsDistributionBase {

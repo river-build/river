@@ -2,13 +2,13 @@
 pragma solidity ^0.8.19;
 
 //interfaces
-import {IRiverBase} from "contracts/src/tokens/river/mainnet/IRiver.sol";
+import {IRiverBase} from "contracts/src/tokens/towns/mainnet/IRiver.sol";
 
 //libraries
 
 //contracts
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
-import {River} from "contracts/src/tokens/river/mainnet/River.sol";
+import {River} from "contracts/src/tokens/towns/mainnet/River.sol";
 
 contract DeployRiverMainnet is Deployer, IRiverBase {
   address public constant association =

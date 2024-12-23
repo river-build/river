@@ -7,13 +7,13 @@ import {console} from "forge-std/console.sol";
 import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 
 //interfaces
-import {IMainnetDelegation} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
+import {IMainnetDelegation} from "contracts/src/tokens/towns/base/delegation/IMainnetDelegation.sol";
 import {IRewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/IRewardsDistribution.sol";
 
 //libraries
 
 //contracts
-import {ProxyBatchDelegation} from "contracts/src/tokens/river/mainnet/delegation/ProxyBatchDelegation.sol";
+import {ProxyBatchDelegation} from "contracts/src/tokens/towns/mainnet/delegation/ProxyBatchDelegation.sol";
 import {MockMessenger} from "contracts/test/mocks/MockMessenger.sol";
 
 // Mainnet

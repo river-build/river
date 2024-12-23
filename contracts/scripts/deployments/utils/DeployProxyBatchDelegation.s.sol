@@ -7,7 +7,7 @@ pragma solidity ^0.8.23;
 
 //contracts
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
-import {ProxyBatchDelegation} from "contracts/src/tokens/river/mainnet/delegation/ProxyBatchDelegation.sol";
+import {ProxyBatchDelegation} from "contracts/src/tokens/towns/mainnet/delegation/ProxyBatchDelegation.sol";
 
 // deployments
 import {DeployRiverMainnet} from "./DeployRiverMainnet.s.sol";

@@ -2,12 +2,11 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {IRiver} from "./IRiver.sol";
+import {ITowns} from "./ITowns.sol";
 import {IERC5805} from "@openzeppelin/contracts/interfaces/IERC5805.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {ILock} from "contracts/src/tokens/lock/ILock.sol";
 
 // libraries
 import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
@@ -19,19 +18,10 @@ import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20P
 import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-import {VotesEnumerable} from "contracts/src/diamond/facets/governance/votes/enumerable/VotesEnumerable.sol";
+import {VotesEnumerableLib} from "contracts/src/diamond/facets/governance/votes/enumerable/VotesEnumerableLib.sol";
 import {IntrospectionFacet} from "@river-build/diamond/src/facets/introspection/IntrospectionFacet.sol";
-import {LockFacet} from "contracts/src/tokens/lock/LockFacet.sol";
 
-contract River is
-  IRiver,
-  Ownable,
-  ERC20Permit,
-  ERC20Votes,
-  VotesEnumerable,
-  LockFacet,
-  IntrospectionFacet
-{
+contract Towns is ITowns, Ownable, ERC20Permit, ERC20Votes, IntrospectionFacet {
   /// @dev initial supply is 10 billion tokens
   uint256 internal constant INITIAL_SUPPLY = 10_000_000_000 ether;
 
@@ -57,25 +47,30 @@ contract River is
   bool public overrideInflation;
   uint256 public overrideInflationRate;
 
+  /// @dev token recipient
+  address public tokenRecipient;
+
   constructor(
-    RiverConfig memory config
-  ) ERC20Permit("River") Ownable(config.owner) ERC20("River", "RVR") {
+    TokenConfig memory config
+  )
+    ERC20Permit("Towns")
+    Ownable(config.tokenRecipient)
+    ERC20("Towns", "TOWNS")
+  {
     __IntrospectionBase_init();
-    __LockBase_init(0 days);
 
     // add interface
-    _addInterface(type(IRiver).interfaceId);
+    _addInterface(type(ITowns).interfaceId);
     _addInterface(type(IERC5805).interfaceId);
     _addInterface(type(IERC20).interfaceId);
     _addInterface(type(IERC20Metadata).interfaceId);
     _addInterface(type(IERC20Permit).interfaceId);
-    _addInterface(type(ILock).interfaceId);
 
     // mint to vault
-    _mint(config.vault, INITIAL_SUPPLY);
+    _mint(config.tokenRecipient, INITIAL_SUPPLY);
 
     // set last mint time for inflation
-    lastMintTime = block.timestamp;
+    lastMintTime = config.lastMintTime;
 
     // set inflation values
     initialInflationRate = config.inflationConfig.initialInflationRate;
@@ -86,36 +81,48 @@ contract River is
       .inflationDecreaseInterval;
   }
 
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           Enumerable                               */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+  function getDelegators() external view returns (address[] memory) {
+    return VotesEnumerableLib.layout().delegators.values();
+  }
+
   // =============================================================
   //                          Inflation
   // =============================================================
 
-  /// @inheritdoc IRiver
-  function createInflation(address to) external onlyOwner {
-    if (to == address(0)) revert River__InvalidAddress();
+  function setTokenRecipient(address _tokenRecipient) external onlyOwner {
+    tokenRecipient = _tokenRecipient;
+    emit TokenRecipientSet(_tokenRecipient);
+  }
 
+  /// @inheritdoc ITowns
+  function createInflation() external onlyOwner {
     // verify that minting can only happen once per year
     uint256 timeSinceLastMint = block.timestamp - lastMintTime;
 
-    if (timeSinceLastMint < 365 days) revert River__MintingTooSoon();
+    if (timeSinceLastMint < 365 days) revert MintingTooSoon();
 
     // calculate the amount to mint
     uint256 inflationRateBPS = _getCurrentInflationRateBPS();
     uint256 inflationAmount = (totalSupply() * inflationRateBPS) / 10000;
 
-    _mint(to, inflationAmount);
+    _mint(tokenRecipient, inflationAmount);
 
     // update last mint time
     lastMintTime = block.timestamp;
+
+    emit InflationCreated(inflationAmount);
   }
 
-  /// @inheritdoc IRiver
+  /// @inheritdoc ITowns
   function setOverrideInflation(
     bool _overrideInflation,
     uint256 _overrideInflationRate
   ) external onlyOwner {
     if (_overrideInflationRate > finalInflationRate)
-      revert River__InvalidInflationRate();
+      revert InvalidInflationRate();
 
     overrideInflation = _overrideInflation;
     overrideInflationRate = _overrideInflationRate;
@@ -129,46 +136,26 @@ contract River is
     address to,
     uint256 value
   ) internal virtual override(ERC20, ERC20Votes) {
-    if (from != address(0) && _lockEnabled(from)) {
-      // allow transferring at minting time
-      revert River__TransferLockEnabled();
-    }
     super._update(from, to, value);
-  }
-
-  /// @dev Hook that gets called before any external enable and disable lock function
-  function _canLock() internal view override returns (bool) {
-    return msg.sender == owner();
   }
 
   function _delegate(
     address account,
     address delegatee
   ) internal virtual override {
-    // revert if the delegatee is the same as the current delegatee
-    if (delegates(account) == delegatee) revert River__DelegateeSameAsCurrent();
-
-    // if the delegatee is the zero address, initialize disable lock
-    if (delegatee == address(0)) {
-      _disableLock(account);
-    } else {
-      if (!_lockEnabled(account)) _enableLock(account);
-    }
     address currentDelegatee = delegates(account);
+
+    // revert if the delegatee is the same as the current delegatee
+    if (currentDelegatee == delegatee) revert DelegateeSameAsCurrent();
+
     super._delegate(account, delegatee);
 
-    _setDelegators(account, delegatee, currentDelegatee);
+    VotesEnumerableLib.addDelegator(account, delegatee);
   }
 
   // =============================================================
   //                           Override
   // =============================================================
-
-  /// @dev Do not allow enabling lock without delegating
-  function enableLock(address account) external override onlyAllowed {}
-
-  /// @dev Do not allow disabling lock without delegating
-  function disableLock(address account) external override onlyAllowed {}
 
   /// @notice Clock used for flagging checkpoints, overridden to implement timestamp based
   /// checkpoints (and voting).

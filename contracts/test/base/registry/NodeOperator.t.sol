@@ -17,7 +17,7 @@ import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {OwnableFacet} from "@river-build/diamond/src/facets/ownable/OwnableFacet.sol";
 import {IntrospectionFacet} from "@river-build/diamond/src/facets/introspection/IntrospectionFacet.sol";
 import {ERC721A} from "contracts/src/diamond/facets/token/ERC721A/ERC721A.sol";
-import {River} from "contracts/src/tokens/river/base/River.sol";
+import {River} from "contracts/src/tokens/towns/base/River.sol";
 
 contract NodeOperatorFacetTest is
   BaseSetup,

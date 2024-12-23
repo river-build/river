@@ -7,14 +7,14 @@ import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 //interfaces
 import {IERC173} from "@river-build/diamond/src/facets/ownable/IERC173.sol";
 import {INodeOperator} from "contracts/src/base/registry/facets/operator/INodeOperator.sol";
-import {IMainnetDelegationBase} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
+import {IMainnetDelegationBase} from "contracts/src/tokens/towns/base/delegation/IMainnetDelegation.sol";
 
 //libraries
 import {NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
 
 //contracts
 import {MockMessenger} from "contracts/test/mocks/MockMessenger.sol";
-import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/MainnetDelegation.sol";
+import {MainnetDelegation} from "contracts/src/tokens/towns/base/delegation/MainnetDelegation.sol";
 
 // Base
 contract ForkMainnetDelegationTest is TestUtils, IMainnetDelegationBase {

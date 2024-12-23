@@ -7,7 +7,7 @@ pragma solidity ^0.8.23;
 
 // contracts
 import {Interaction} from "contracts/scripts/common/Interaction.s.sol";
-import {River} from "contracts/src/tokens/river/mainnet/River.sol";
+import {River} from "contracts/src/tokens/towns/mainnet/River.sol";
 
 // debugging
 import {console} from "forge-std/console.sol";

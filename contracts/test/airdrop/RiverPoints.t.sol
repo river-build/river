@@ -12,7 +12,7 @@ import {IRiverPointsBase} from "contracts/src/tokens/points/IRiverPoints.sol";
 import {CheckIn} from "contracts/src/tokens/points/CheckIn.sol";
 
 // contracts
-import {River} from "contracts/src/tokens/river/base/River.sol";
+import {River} from "contracts/src/tokens/towns/base/River.sol";
 import {RiverPoints} from "contracts/src/tokens/points/RiverPoints.sol";
 import {BaseRegistryTest} from "../base/registry/BaseRegistry.t.sol";
 

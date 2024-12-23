@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {IMainnetDelegationBase} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
+import {IMainnetDelegationBase} from "contracts/src/tokens/towns/base/delegation/IMainnetDelegation.sol";
 
 // libraries
 import {NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
@@ -12,11 +12,11 @@ import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {NodeOperatorFacet} from "contracts/src/base/registry/facets/operator/NodeOperatorFacet.sol";
 
 // deps
-import {River} from "contracts/src/tokens/river/mainnet/River.sol";
-import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/MainnetDelegation.sol";
-import {ProxyBatchDelegation} from "contracts/src/tokens/river/mainnet/delegation/ProxyBatchDelegation.sol";
-import {ICrossDomainMessenger} from "contracts/src/tokens/river/mainnet/delegation/ICrossDomainMessenger.sol";
-import {AuthorizedClaimers} from "contracts/src/tokens/river/mainnet/claimer/AuthorizedClaimers.sol";
+import {River} from "contracts/src/tokens/towns/mainnet/River.sol";
+import {MainnetDelegation} from "contracts/src/tokens/towns/base/delegation/MainnetDelegation.sol";
+import {ProxyBatchDelegation} from "contracts/src/tokens/towns/mainnet/delegation/ProxyBatchDelegation.sol";
+import {ICrossDomainMessenger} from "contracts/src/tokens/towns/mainnet/delegation/ICrossDomainMessenger.sol";
+import {AuthorizedClaimers} from "contracts/src/tokens/towns/mainnet/claimer/AuthorizedClaimers.sol";
 
 contract ProxyBatchDelegationTest is BaseSetup, IMainnetDelegationBase {
   MainnetDelegation internal delegation;

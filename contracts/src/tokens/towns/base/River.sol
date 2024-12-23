@@ -8,8 +8,8 @@ import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC2
 import {IERC5267} from "@openzeppelin/contracts/interfaces/IERC5267.sol";
 import {IERC6372} from "@openzeppelin/contracts/interfaces/IERC6372.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import {IOptimismMintableERC20, ILegacyMintableERC20} from "contracts/src/tokens/river/base/IOptimismMintableERC20.sol";
-import {ISemver} from "contracts/src/tokens/river/base/ISemver.sol";
+import {IOptimismMintableERC20, ILegacyMintableERC20} from "contracts/src/tokens/towns/base/IOptimismMintableERC20.sol";
+import {ISemver} from "contracts/src/tokens/towns/base/ISemver.sol";
 import {ILock} from "contracts/src/tokens/lock/ILock.sol";
 
 // libraries
