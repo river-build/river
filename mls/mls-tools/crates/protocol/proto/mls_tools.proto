@@ -39,6 +39,18 @@ message ExternalJoinResponse {
     ValidationResult result = 1;
 }
 
+message SnapshotExternalGroupRequest {
+    bytes external_group_snapshot = 1;
+    bytes group_info_message = 2;
+    repeated Commit commits = 3;
+}
+
+message SnapshotExternalGroupResponse {
+    bytes external_group_snapshot = 1;
+    bytes group_info_message = 2;
+}
+
+
 message InfoRequest {}
 message InfoResponse {
     string graffiti = 1;
@@ -49,4 +61,5 @@ service Mls {
     rpc Info(InfoRequest) returns(InfoResponse) {}
     rpc InitialGroupInfo(InitialGroupInfoRequest)  returns(InitialGroupInfoResponse) {}
     rpc ExternalJoin(ExternalJoinRequest) returns(ExternalJoinResponse) {}
+    rpc SnapshotExternalGroup(SnapshotExternalGroupRequest) returns(SnapshotExternalGroupResponse) {}
 }

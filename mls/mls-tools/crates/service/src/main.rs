@@ -34,6 +34,12 @@ impl river_mls_protocol::mls_server::Mls for MlsService {
         reply.git = env!("GIT_HASH").to_string();
         Ok(Response::new(reply))
     }
+
+    async fn snapshot_external_group(&self, _: Request<river_mls_protocol::SnapshotExternalGroupRequest>)
+        -> Result<Response<river_mls_protocol::SnapshotExternalGroupResponse>, Status> {
+        let response = river_mls_protocol::SnapshotExternalGroupResponse::default();
+        Ok(Response::new(response))
+    }
 }
 
 
