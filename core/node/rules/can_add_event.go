@@ -89,6 +89,11 @@ type aeMlsInitializeGroupRules struct {
 	initializeGroup *MemberPayload_Mls_InitializeGroup
 }
 
+type aeMlsExternalJoinRules struct {
+	params *aeParams
+	externalJoin *MemberPayload_Mls_ExternalJoin
+}
+
 type aeMediaPayloadChunkRules struct {
 	params *aeParams
 	chunk  *MediaPayload_Chunk
@@ -573,15 +578,27 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 			check(ru.validMemberBlockchainTransaction_IsUnique).
 			check(ru.validMemberBlockchainTransaction_ReceiptMetadata)
 	case *MemberPayload_Mls_:
-		ru := &aeMlsInitializeGroupRules{
-			params:           params,
-			initializeGroup: content.Mls.GetInitializeGroup(),
-		}
-		
-		return aeBuilder().
-			check(params.creatorIsMember).
-			check(ru.validInitializeGroup)
-
+		switch mlsContent := content.Mls.Content.(type) {
+			case *MemberPayload_Mls_InitializeGroup_:
+				ru := &aeMlsInitializeGroupRules{
+					params:           params,
+					initializeGroup: content.Mls.GetInitializeGroup(),
+				}
+				return aeBuilder().
+					check(params.creatorIsMember).
+					check(ru.validInitializeGroup)
+			case *MemberPayload_Mls_ExternalJoin_:
+				ru := &aeMlsExternalJoinRules{
+					params:       params,
+					externalJoin: content.Mls.GetExternalJoin(),
+				}
+				return aeBuilder().
+					check(params.creatorIsMember).
+					check(ru.validExternalJoin)
+			default:
+				return aeBuilder().
+					fail(unknownContentType(mlsContent))
+			}
 	case *MemberPayload_EncryptionAlgorithm_:
 		return aeBuilder().
 			check(params.creatorIsMember)
@@ -1360,6 +1377,10 @@ func (ru *aeMlsInitializeGroupRules) validInitializeGroup() (bool, error) {
 		return false, RiverError(Err_INVALID_ARGUMENT, "invalid group info", "result", resp.GetResult())
 	}
 	return true, nil
+}
+
+func (ru *aeMlsExternalJoinRules) validExternalJoin() (bool, error) {
+	return false, RiverError(Err_UNIMPLEMENTED, "external join not implemented")
 }
 
 // return function that can be used to check if a user has a permission for a space
