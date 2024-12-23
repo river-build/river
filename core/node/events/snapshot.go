@@ -150,7 +150,9 @@ func make_SnapshotMembers(iInception IsInceptionPayload, creatorAddress []byte) 
 			}),
 		}, nil
 	default:
-		return &MemberPayload_Snapshot{}, nil
+		return &MemberPayload_Snapshot{
+			Mls: &MemberPayload_Snapshot_Mls{},
+		}, nil
 	}
 }
 
