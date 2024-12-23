@@ -1374,13 +1374,28 @@ func (ru *aeMlsInitializeGroupRules) validInitializeGroup() (bool, error) {
 	}
 	valid := resp.GetResult() == mls_tools.ValidationResult_VALID
 	if !valid {
-		return false, RiverError(Err_INVALID_ARGUMENT, "invalid group info", "result", resp.GetResult())
+		return false, RiverError(Err_INVALID_ARGUMENT, "invalid group init", "result", resp.GetResult())
 	}
 	return true, nil
 }
 
 func (ru *aeMlsExternalJoinRules) validExternalJoin() (bool, error) {
-	return false, RiverError(Err_UNIMPLEMENTED, "external join not implemented")
+	mlsState := ru.params.streamView.GetMlsState()
+	request := mls_tools.ExternalJoinRequest{
+		ExternalGroupSnapshot: mlsState.ExternalGroupSnapshot,
+		Commits: 			 mlsState.Commits,
+		ProposedExternalJoinInfoMessage: ru.externalJoin.GroupInfoMessage,
+		ProposedExternalJoinCommit: ru.externalJoin.Commit,
+	}
+	resp, err := mls_service.ExternalJoinRequest(ru.params.ctx, &request)
+	if err != nil {
+		return false, err
+	}
+	valid := resp.GetResult() == mls_tools.ValidationResult_VALID
+	if !valid {
+		return false, RiverError(Err_INVALID_ARGUMENT, "invalid group external join", "result", resp.GetResult())
+	}
+	return true, nil
 }
 
 // return function that can be used to check if a user has a permission for a space

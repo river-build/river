@@ -28,6 +28,11 @@ type StreamViewStats struct {
 	TotalEventsEver       int // This is total number of events in the stream ever, not in the cache.
 }
 
+type StreamMlsState struct {
+	ExternalGroupSnapshot []byte
+	Commits [][]byte
+}
+
 type StreamView interface {
 	StreamId() *StreamId
 	StreamParentId() *StreamId
@@ -55,6 +60,7 @@ type StreamView interface {
 	IsMember(userAddress []byte) (bool, error)
 	CopyAndPrependMiniblocks(mbs []*MiniblockInfo) (StreamView, error)
 	AllEvents() iter.Seq[*ParsedEvent]
+	GetMlsState() *StreamMlsState
 }
 
 func MakeStreamView(
@@ -797,5 +803,31 @@ func (r *streamViewImpl) AllEvents() iter.Seq[*ParsedEvent] {
 				return
 			}
 		}
+	}
+}
+
+func (r *streamViewImpl) GetMlsState() *StreamMlsState {
+	commits := make([][]byte, 0)
+	externalGroupSnapshot := r.snapshot.Members.Mls.GetExternalGroupSnapshot()
+	if externalGroupSnapshot == nil {
+		externalGroupSnapshot = make([]byte, 0)
+	}
+	
+	for event := range r.AllEvents() {
+		payload := event.Event.GetMemberPayload().GetMls()
+		switch content := payload.GetContent().(type) {
+			case *MemberPayload_Mls_ExternalJoin_:
+				commits = append(commits, content.ExternalJoin.GetCommit())
+			case *MemberPayload_Mls_InitializeGroup_:
+				if len(externalGroupSnapshot) == 0 {
+					externalGroupSnapshot = content.InitializeGroup.GetExternalGroupSnapshot()
+				}
+			default:
+				break
+		}
+	}
+	return &StreamMlsState{
+		ExternalGroupSnapshot: externalGroupSnapshot,
+		Commits:               commits,
 	}
 }
