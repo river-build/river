@@ -127,7 +127,7 @@ describe('mlsTests', () => {
                 case: 'initializeGroup',
                 value: {
                     deviceKey: deviceKey,
-                    externalGroupSnapshot: groupParams1.externalGroupSnapshot,
+                    externalGroupSnapshot: groupParams1.externalGroupSnapshot, // use the wrong snapshot
                     groupInfoMessage: groupParams2.groupInfoMessage,
                 },
             },
