@@ -6611,7 +6611,7 @@ __metadata:
     vite-plugin-checker: ^0.8.0
     vite-plugin-node-polyfills: ^0.22.0
     vite-plugin-replace: ^0.1.1
-    vite-plugin-wasm: ^3.3.0
+    vite-plugin-wasm: ^3.4.1
     vite-tsconfig-paths: ^5.1.3
     wagmi: ^2.13.0
     zod: ^3.21.4
@@ -29866,15 +29866,6 @@ __metadata:
   peerDependencies:
     vite: ^2
   checksum: 247ccdc61605f0a2e097e25fd31cc3528ecb8682dc691fdb5944cc67e427f2ca66864f3bdb21cfb80f835f62366fec8d86f38a2e427f11e016acdbc51219a117
-  languageName: node
-  linkType: hard
-
-"vite-plugin-wasm@npm:^3.3.0":
-  version: 3.3.0
-  resolution: "vite-plugin-wasm@npm:3.3.0"
-  peerDependencies:
-    vite: ^2 || ^3 || ^4 || ^5
-  checksum: 844034955d6650f89988eebb543e4b3307a54d7b800365052f5b97683223d3b99640ecb22d1fd770e768239576629d975bdefc0c9545999564e206b331f0ac3b
   languageName: node
   linkType: hard
 
