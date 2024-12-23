@@ -220,9 +220,24 @@ message MemberPayload {
     }
 
     message Mls {
+        message InitializeGroup {
+            bytes device_key = 1;
+            bytes group_info_message = 2;
+            bytes external_group_snapshot = 3;
+        }
 
+        message ExternalJoin {
+            bytes device_key = 1;
+            bytes commit = 2;
+            bytes group_info_message = 3;
+            int64 epoch = 4;
+        }
+        oneof content {
+            InitializeGroup initialize_group = 1;
+            ExternalJoin external_join = 2;
+        }
     }
-
+    
     message EncryptionAlgorithm {
         optional string algorithm = 1;
     }
