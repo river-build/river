@@ -6452,7 +6452,7 @@ __metadata:
   dependencies:
     "@openzeppelin/contracts": ^5.1.0
     solady: ^0.0.281
-  checksum: 2666668787f50af79a76004ccea89798fb362f07eea88557cdcf13a70d1164b2ad58c9278fd19ff5b304d9fc1439d097d57e03676b6c1dfeeb98535dd5059b50
+  checksum: 3884bdab0e68b6f64293404a8e3670280d5ad6255f905c189121e2c34d210ec7fa3d9ffda67447a08d060c02564591d0ee0923ae9f13a3d71c0ddfd46e898ff7
   languageName: node
   linkType: hard
 
@@ -6549,10 +6549,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@river-build/mls-rs-wasm@npm:^0.0.7":
-  version: 0.0.7
-  resolution: "@river-build/mls-rs-wasm@npm:0.0.7"
-  checksum: 1e91e7b2f9d16562c676e692809cc46d2d88f58afd61990740c5685120ae11fe75c810b1cb8cc4038e93012b732051f394ac47691613d516ea9e46fa40c7b64b
+"@river-build/mls-rs-wasm@npm:^0.0.9":
+  version: 0.0.9
+  resolution: "@river-build/mls-rs-wasm@npm:0.0.9"
+  checksum: c0221954de5c0b981f656b497e9b72ac3a3c82cb7810c389f4cb25a84ffb1727718342eafc186edeb1b3d14580ff7a1dfb2fbac576cf792ac1054f04b4659cbb
   languageName: node
   linkType: hard
 
@@ -6693,7 +6693,7 @@ __metadata:
     "@river-build/dlog": "workspace:^"
     "@river-build/encryption": "workspace:^"
     "@river-build/generated": "workspace:^"
-    "@river-build/mls-rs-wasm": ^0.0.7
+    "@river-build/mls-rs-wasm": ^0.0.9
     "@river-build/proto": "workspace:^"
     "@river-build/web3": "workspace:^"
     "@testing-library/react": ^14.2.1
@@ -6722,6 +6722,7 @@ __metadata:
     seedrandom: ^3.0.5
     typed-emitter: ^2.1.0
     typescript: ^5.1.6
+    vite-plugin-wasm: ^3.4.1
     vitest: ^2.1.5
   languageName: unknown
   linkType: soft
@@ -29874,6 +29875,15 @@ __metadata:
   peerDependencies:
     vite: ^2 || ^3 || ^4 || ^5
   checksum: 844034955d6650f89988eebb543e4b3307a54d7b800365052f5b97683223d3b99640ecb22d1fd770e768239576629d975bdefc0c9545999564e206b331f0ac3b
+  languageName: node
+  linkType: hard
+
+"vite-plugin-wasm@npm:^3.4.1":
+  version: 3.4.1
+  resolution: "vite-plugin-wasm@npm:3.4.1"
+  peerDependencies:
+    vite: ^2 || ^3 || ^4 || ^5 || ^6
+  checksum: 50176a45ae9c185bab8922874d7ab74e85a008cc4896cfff3f2b155c482d8efb5caa50559f0458b1974ac374e52787fa1e979af870a083eedb81a3f512c65b1d
   languageName: node
   linkType: hard
 
