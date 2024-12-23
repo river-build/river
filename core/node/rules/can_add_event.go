@@ -11,6 +11,8 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/river-build/river/core/node/crypto"
+	"github.com/river-build/river/core/node/mls_service"
+	"github.com/river-build/river/core/node/mls_service/mls_tools"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -80,6 +82,11 @@ type aePinRules struct {
 type aeUnpinRules struct {
 	params *aeParams
 	unpin  *MemberPayload_Unpin
+}
+
+type aeMlsInitializeGroupRules struct {
+	params *aeParams
+	initializeGroup *MemberPayload_Mls_InitializeGroup
 }
 
 type aeMediaPayloadChunkRules struct {
@@ -566,8 +573,15 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 			check(ru.validMemberBlockchainTransaction_IsUnique).
 			check(ru.validMemberBlockchainTransaction_ReceiptMetadata)
 	case *MemberPayload_Mls_:
+		ru := &aeMlsInitializeGroupRules{
+			params:           params,
+			initializeGroup: content.Mls.GetInitializeGroup(),
+		}
+		
 		return aeBuilder().
-			check(params.creatorIsMember)
+			check(params.creatorIsMember).
+			check(ru.validInitializeGroup)
+
 	case *MemberPayload_EncryptionAlgorithm_:
 		return aeBuilder().
 			check(params.creatorIsMember)
@@ -1330,6 +1344,22 @@ func (ru *aeMembershipRules) channelMembershipEntitlements() (*auth.ChainAuthArg
 	)
 
 	return chainAuthArgs, nil
+}
+
+func (ru *aeMlsInitializeGroupRules) validInitializeGroup() (bool, error) {
+	request := mls_tools.InitialGroupInfoRequest{
+		GroupInfoMessage: ru.initializeGroup.GroupInfoMessage,
+		ExternalGroupSnapshot: ru.initializeGroup.ExternalGroupSnapshot,
+	}
+	resp, err := mls_service.InitialGroupInfoRequest(ru.params.ctx, &request)
+	if err != nil {
+		return false, err
+	}
+	valid := resp.GetResult() == mls_tools.ValidationResult_VALID
+	if !valid {
+		return false, RiverError(Err_INVALID_ARGUMENT, "invalid group info", "result", resp.GetResult())
+	}
+	return true, nil
 }
 
 // return function that can be used to check if a user has a permission for a space
