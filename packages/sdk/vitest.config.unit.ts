@@ -13,14 +13,10 @@ export default mergeConfig(
             setupFiles: './vitest.setup.ts',
             server: {
                 deps: {
-                    inline: [
-                        '@river-build/mls-rs-wasm',
-                    ]
-                }
+                    inline: ['@river-build/mls-rs-wasm'],
+                },
             },
         },
-        plugins: [
-            wasm(),
-        ],
+        plugins: [wasm()],
     }),
 )
