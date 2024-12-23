@@ -2,6 +2,7 @@
 
 import { EpochRecord, IGroupStateStorage } from '@river-build/mls-rs-wasm'
 import Dexie from 'dexie'
+import { bin_toString } from '@river-build/dlog'
 
 type GroupStateId = string & { __brand: 'GroupStateId' }
 
@@ -102,6 +103,15 @@ export class DexieGroupStateStorage extends Dexie implements IGroupStateStorage 
     private epochs!: Dexie.Table<{ groupId: string; epochId: string; data: Uint8Array }>
     private maxEpochRetention: bigint = 3n
 
+    constructor(deviceKey: Uint8Array) {
+        const databaseName = `mlsStore-${bin_toString(deviceKey)}`
+        super(databaseName)
+        this.version(1).stores({
+            groupStates: 'groupId',
+            epochs: '[groupId+epochId]',
+        })
+    }
+
     async state(groupId: Uint8Array): Promise<Uint8Array | undefined> {
         const groupId_ = groupStateId(groupId)
         const groupState = await this.groupStates.get(groupId_)
@@ -111,7 +121,7 @@ export class DexieGroupStateStorage extends Dexie implements IGroupStateStorage 
     async epoch(groupId: Uint8Array, epochId: bigint): Promise<Uint8Array | undefined> {
         const groupId_ = groupStateId(groupId)
         const epochId_ = epochId.toString()
-        const epoch = await this.epochs.get([groupId_, epochId_])
+        const epoch = await this.epochs.get({ groupId: groupId_, epochId: epochId_ })
         return epoch?.data
     }
 
