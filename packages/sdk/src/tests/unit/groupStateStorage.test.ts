@@ -53,6 +53,16 @@ describe('inMemory', () => {
         await storage.write(groupId, data, [{ id: epochId + 1n, data: epochData }], [])
         await expect(storage.maxEpochId(groupId)).resolves.toBe(epochId + 1n)
     })
+
+    it('shouldTrimOldEpochs', async () => {
+        await storage.write(groupId, data, [{ id: 1n, data: epochData }], [])
+        await storage.write(groupId, data, [{ id: 2n, data: epochData }], [])
+        await storage.write(groupId, data, [{ id: 3n, data: epochData }], [])
+        await storage.write(groupId, data, [{ id: 4n, data: epochData }], [])
+
+        await expect(storage.epoch(groupId, 1n)).resolves.toBeUndefined()
+        await expect(storage.epoch(groupId, 2n)).resolves.toStrictEqual(epochData)
+    })
 })
 
 describe('dexie', () => {
@@ -100,5 +110,15 @@ describe('dexie', () => {
         await expect(storage.maxEpochId(groupId)).resolves.toBe(epochId)
         await storage.write(groupId, data, [{ id: epochId + 1n, data: epochData }], [])
         await expect(storage.maxEpochId(groupId)).resolves.toBe(epochId + 1n)
+    })
+
+    it('shouldTrimOldEpochs', async () => {
+        await storage.write(groupId, data, [{ id: 1n, data: epochData }], [])
+        await storage.write(groupId, data, [{ id: 2n, data: epochData }], [])
+        await storage.write(groupId, data, [{ id: 3n, data: epochData }], [])
+        await storage.write(groupId, data, [{ id: 4n, data: epochData }], [])
+
+        await expect(storage.epoch(groupId, 1n)).resolves.toBeUndefined()
+        await expect(storage.epoch(groupId, 2n)).resolves.toStrictEqual(epochData)
     })
 })
