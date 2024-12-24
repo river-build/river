@@ -124,9 +124,6 @@ func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTe
 		nr, err := LoadNodeRegistry(ctx, registry, bc.Wallet.Address, blockNumber, bc.ChainMonitor, nil, nil)
 		ctc.require.NoError(err)
 
-		sr, err := NewStreamRegistry(ctx, bc, nr, registry, btc.OnChainConfig)
-		ctc.require.NoError(err)
-
 		params := &StreamCacheParams{
 			Storage:                 streamStore.Storage,
 			Wallet:                  bc.Wallet,
@@ -143,7 +140,7 @@ func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTe
 
 		inst := &cacheTestInstance{
 			params:         params,
-			streamRegistry: sr,
+			streamRegistry: NewStreamRegistry(bc, nr, registry, btc.OnChainConfig),
 		}
 		ctc.instances = append(ctc.instances, inst)
 		ctc.instancesByAddr[bc.Wallet.Address] = inst
