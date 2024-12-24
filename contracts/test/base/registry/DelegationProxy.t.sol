@@ -6,11 +6,11 @@ import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Vo
 import {LibClone} from "solady/utils/LibClone.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 import {Initializable_AlreadyInitialized} from "@river-build/diamond/src/facets/initializable/Initializable.sol";
-import {DeployRiverBase} from "contracts/scripts/deployments/utils/DeployRiverBase.s.sol";
+import {DeployTownsBase} from "contracts/scripts/deployments/utils/DeployTownsBase.s.sol";
 import {DelegationProxy} from "contracts/src/base/registry/facets/distribution/v2/DelegationProxy.sol";
 
 contract DelegationProxyTest is TestUtils {
-  DeployRiverBase internal deployRiverTokenBase = new DeployRiverBase();
+  DeployTownsBase internal deployRiverTokenBase = new DeployTownsBase();
 
   address internal deployer;
   address internal river;

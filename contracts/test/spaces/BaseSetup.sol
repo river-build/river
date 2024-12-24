@@ -13,7 +13,7 @@ import {IEntitlementChecker} from "contracts/src/base/registry/facets/checker/IE
 import {IImplementationRegistry} from "contracts/src/factory/facets/registry/IImplementationRegistry.sol";
 import {IWalletLink} from "contracts/src/factory/facets/wallet-link/IWalletLink.sol";
 import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
-import {IMainnetDelegation} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
+import {IMainnetDelegation} from "contracts/src/tokens/towns/base/delegation/IMainnetDelegation.sol";
 import {INodeOperator} from "contracts/src/base/registry/facets/operator/INodeOperator.sol";
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {ICreateSpace} from "contracts/src/factory/facets/create/ICreateSpace.sol";
@@ -36,7 +36,7 @@ import {ISpaceDelegation} from "contracts/src/base/registry/facets/delegation/IS
 
 // deployments
 import {DeploySpaceFactory} from "contracts/scripts/deployments/diamonds/DeploySpaceFactory.s.sol";
-import {DeployRiverBase} from "contracts/scripts/deployments/utils/DeployRiverBase.s.sol";
+import {DeployTownsBase} from "contracts/scripts/deployments/utils/DeployTownsBase.s.sol";
 import {DeployProxyBatchDelegation} from "contracts/scripts/deployments/utils/DeployProxyBatchDelegation.s.sol";
 import {DeployBaseRegistry} from "contracts/scripts/deployments/diamonds/DeployBaseRegistry.s.sol";
 import {DeployRiverAirdrop} from "contracts/scripts/deployments/diamonds/DeployRiverAirdrop.s.sol";
@@ -57,7 +57,7 @@ contract BaseSetup is TestUtils, SpaceHelper {
 
   DeployBaseRegistry internal deployBaseRegistry = new DeployBaseRegistry();
   DeploySpaceFactory internal deploySpaceFactory = new DeploySpaceFactory();
-  DeployRiverBase internal deployRiverTokenBase = new DeployRiverBase();
+  DeployTownsBase internal deployRiverTokenBase = new DeployTownsBase();
   DeployProxyBatchDelegation internal deployProxyBatchDelegation =
     new DeployProxyBatchDelegation();
   DeployRiverAirdrop internal deployRiverAirdrop = new DeployRiverAirdrop();
@@ -85,7 +85,7 @@ contract BaseSetup is TestUtils, SpaceHelper {
 
   address internal mainnetProxyDelegation;
   address internal claimers;
-  address internal mainnetRiverToken;
+  address internal mainnetTownsToken;
 
   address internal pricingModule;
   address internal fixedPricingModule;
@@ -131,7 +131,7 @@ contract BaseSetup is TestUtils, SpaceHelper {
       messenger_: address(messenger)
     });
     mainnetProxyDelegation = deployProxyBatchDelegation.deploy(deployer);
-    mainnetRiverToken = deployProxyBatchDelegation.riverToken();
+    mainnetTownsToken = deployProxyBatchDelegation.riverToken();
     vault = deployProxyBatchDelegation.vault();
     claimers = deployProxyBatchDelegation.claimers();
 

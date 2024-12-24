@@ -10,7 +10,7 @@ import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 import {Diamond} from "@river-build/diamond/src/Diamond.sol";
 
 // facets
-import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/MainnetDelegation.sol";
+import {MainnetDelegation} from "contracts/src/tokens/towns/base/delegation/MainnetDelegation.sol";
 import {MultiInit} from "@river-build/diamond/src/initializers/MultiInit.sol";
 
 // deployers

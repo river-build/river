@@ -13,7 +13,7 @@ import {RewardsDistributionStorage} from "contracts/src/base/registry/facets/dis
 
 // contracts
 import {EIP712Utils} from "contracts/test/utils/EIP712Utils.sol";
-import {River} from "contracts/src/tokens/river/base/River.sol";
+import {River} from "contracts/src/tokens/towns/base/River.sol";
 import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistribution.sol";
 import {DelegationProxy} from "contracts/src/base/registry/facets/distribution/v2/DelegationProxy.sol";
 import {UpgradeableBeaconBase} from "contracts/src/diamond/facets/beacon/UpgradeableBeacon.sol";

@@ -10,7 +10,7 @@ import {ISpaceDelegationBase} from "contracts/src/base/registry/facets/delegatio
 import {IRewardsDistributionBase} from "contracts/src/base/registry/facets/distribution/v1/IRewardsDistribution.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import {IMainnetDelegationBase} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
+import {IMainnetDelegationBase} from "contracts/src/tokens/towns/base/delegation/IMainnetDelegation.sol";
 import {IERC173, IOwnableBase} from "@river-build/diamond/src/facets/ownable/IERC173.sol";
 import {INodeOperatorBase} from "contracts/src/base/registry/facets/operator/INodeOperator.sol";
 
@@ -21,8 +21,8 @@ import {NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/No
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
 import {NodeOperatorFacet} from "contracts/src/base/registry/facets/operator/NodeOperatorFacet.sol";
-import {River} from "contracts/src/tokens/river/base/River.sol";
-import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/MainnetDelegation.sol";
+import {River} from "contracts/src/tokens/towns/base/River.sol";
+import {MainnetDelegation} from "contracts/src/tokens/towns/base/delegation/MainnetDelegation.sol";
 import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/v1/RewardsDistribution.sol";
 import {SpaceDelegationFacet} from "contracts/src/base/registry/facets/delegation/SpaceDelegationFacet.sol";
 

@@ -2,20 +2,20 @@
 pragma solidity ^0.8.19;
 
 //interfaces
-import {IRiverBase} from "contracts/src/tokens/river/mainnet/IRiver.sol";
+import {ITownsBase} from "contracts/src/tokens/towns/mainnet/ITowns.sol";
 
 //libraries
 
 //contracts
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
-import {River} from "contracts/src/tokens/river/base/River.sol";
+import {River} from "contracts/src/tokens/towns/base/River.sol";
 
-contract DeployRiverBase is Deployer, IRiverBase {
+contract DeployTownsBase is Deployer, ITownsBase {
   address public bridgeBase; // L2StandardBridge
   address public l1Token;
 
   function versionName() public pure override returns (string memory) {
-    return "river";
+    return "towns";
   }
 
   function __deploy(address deployer) public override returns (address) {

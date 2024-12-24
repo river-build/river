@@ -3,8 +3,8 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IMainnetDelegationBase} from "./IMainnetDelegation.sol";
-import {IProxyDelegation} from "contracts/src/tokens/river/mainnet/delegation/IProxyDelegation.sol";
-import {ICrossDomainMessenger} from "contracts/src/tokens/river/mainnet/delegation/ICrossDomainMessenger.sol";
+import {IProxyDelegation} from "contracts/src/tokens/towns/mainnet/delegation/IProxyDelegation.sol";
+import {ICrossDomainMessenger} from "contracts/src/tokens/towns/mainnet/delegation/ICrossDomainMessenger.sol";
 
 // libraries
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
