@@ -125,10 +125,11 @@ type StreamStorage interface {
 }
 
 type WriteMiniblockData struct {
-	Number   int64
-	Hash     common.Hash
-	Snapshot bool
-	Data     []byte
+	Number    int64
+	Hash      common.Hash
+	Snapshot  bool
+	Data      []byte
+	Ephemeral bool
 }
 
 type MiniblockData struct {

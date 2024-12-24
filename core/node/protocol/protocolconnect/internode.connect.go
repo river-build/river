@@ -48,6 +48,9 @@ const (
 	// NodeToNodeSaveMiniblockCandidateProcedure is the fully-qualified name of the NodeToNode's
 	// SaveMiniblockCandidate RPC.
 	NodeToNodeSaveMiniblockCandidateProcedure = "/river.NodeToNode/SaveMiniblockCandidate"
+	// NodeToNodeSaveEphemeralMiniblockProcedure is the fully-qualified name of the NodeToNode's
+	// SaveEphemeralMiniblock RPC.
+	NodeToNodeSaveEphemeralMiniblockProcedure = "/river.NodeToNode/SaveEphemeralMiniblock"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -58,6 +61,7 @@ var (
 	nodeToNodeNewEventInPoolMethodDescriptor         = nodeToNodeServiceDescriptor.Methods().ByName("NewEventInPool")
 	nodeToNodeProposeMiniblockMethodDescriptor       = nodeToNodeServiceDescriptor.Methods().ByName("ProposeMiniblock")
 	nodeToNodeSaveMiniblockCandidateMethodDescriptor = nodeToNodeServiceDescriptor.Methods().ByName("SaveMiniblockCandidate")
+	nodeToNodeSaveEphemeralMiniblockMethodDescriptor = nodeToNodeServiceDescriptor.Methods().ByName("SaveEphemeralMiniblock")
 )
 
 // NodeToNodeClient is a client for the river.NodeToNode service.
@@ -67,6 +71,7 @@ type NodeToNodeClient interface {
 	NewEventInPool(context.Context, *connect.Request[protocol.NewEventInPoolRequest]) (*connect.Response[protocol.NewEventInPoolResponse], error)
 	ProposeMiniblock(context.Context, *connect.Request[protocol.ProposeMiniblockRequest]) (*connect.Response[protocol.ProposeMiniblockResponse], error)
 	SaveMiniblockCandidate(context.Context, *connect.Request[protocol.SaveMiniblockCandidateRequest]) (*connect.Response[protocol.SaveMiniblockCandidateResponse], error)
+	SaveEphemeralMiniblock(context.Context, *connect.Request[protocol.SaveEphemeralMiniblockRequest]) (*connect.Response[protocol.SaveEphemeralMiniblockResponse], error)
 }
 
 // NewNodeToNodeClient constructs a client for the river.NodeToNode service. By default, it uses the
@@ -109,6 +114,12 @@ func NewNodeToNodeClient(httpClient connect.HTTPClient, baseURL string, opts ...
 			connect.WithSchema(nodeToNodeSaveMiniblockCandidateMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		saveEphemeralMiniblock: connect.NewClient[protocol.SaveEphemeralMiniblockRequest, protocol.SaveEphemeralMiniblockResponse](
+			httpClient,
+			baseURL+NodeToNodeSaveEphemeralMiniblockProcedure,
+			connect.WithSchema(nodeToNodeSaveEphemeralMiniblockMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -119,6 +130,7 @@ type nodeToNodeClient struct {
 	newEventInPool         *connect.Client[protocol.NewEventInPoolRequest, protocol.NewEventInPoolResponse]
 	proposeMiniblock       *connect.Client[protocol.ProposeMiniblockRequest, protocol.ProposeMiniblockResponse]
 	saveMiniblockCandidate *connect.Client[protocol.SaveMiniblockCandidateRequest, protocol.SaveMiniblockCandidateResponse]
+	saveEphemeralMiniblock *connect.Client[protocol.SaveEphemeralMiniblockRequest, protocol.SaveEphemeralMiniblockResponse]
 }
 
 // AllocateStream calls river.NodeToNode.AllocateStream.
@@ -146,6 +158,11 @@ func (c *nodeToNodeClient) SaveMiniblockCandidate(ctx context.Context, req *conn
 	return c.saveMiniblockCandidate.CallUnary(ctx, req)
 }
 
+// SaveEphemeralMiniblock calls river.NodeToNode.SaveEphemeralMiniblock.
+func (c *nodeToNodeClient) SaveEphemeralMiniblock(ctx context.Context, req *connect.Request[protocol.SaveEphemeralMiniblockRequest]) (*connect.Response[protocol.SaveEphemeralMiniblockResponse], error) {
+	return c.saveEphemeralMiniblock.CallUnary(ctx, req)
+}
+
 // NodeToNodeHandler is an implementation of the river.NodeToNode service.
 type NodeToNodeHandler interface {
 	AllocateStream(context.Context, *connect.Request[protocol.AllocateStreamRequest]) (*connect.Response[protocol.AllocateStreamResponse], error)
@@ -153,6 +170,7 @@ type NodeToNodeHandler interface {
 	NewEventInPool(context.Context, *connect.Request[protocol.NewEventInPoolRequest]) (*connect.Response[protocol.NewEventInPoolResponse], error)
 	ProposeMiniblock(context.Context, *connect.Request[protocol.ProposeMiniblockRequest]) (*connect.Response[protocol.ProposeMiniblockResponse], error)
 	SaveMiniblockCandidate(context.Context, *connect.Request[protocol.SaveMiniblockCandidateRequest]) (*connect.Response[protocol.SaveMiniblockCandidateResponse], error)
+	SaveEphemeralMiniblock(context.Context, *connect.Request[protocol.SaveEphemeralMiniblockRequest]) (*connect.Response[protocol.SaveEphemeralMiniblockResponse], error)
 }
 
 // NewNodeToNodeHandler builds an HTTP handler from the service implementation. It returns the path
@@ -191,6 +209,12 @@ func NewNodeToNodeHandler(svc NodeToNodeHandler, opts ...connect.HandlerOption) 
 		connect.WithSchema(nodeToNodeSaveMiniblockCandidateMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	nodeToNodeSaveEphemeralMiniblockHandler := connect.NewUnaryHandler(
+		NodeToNodeSaveEphemeralMiniblockProcedure,
+		svc.SaveEphemeralMiniblock,
+		connect.WithSchema(nodeToNodeSaveEphemeralMiniblockMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/river.NodeToNode/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case NodeToNodeAllocateStreamProcedure:
@@ -203,6 +227,8 @@ func NewNodeToNodeHandler(svc NodeToNodeHandler, opts ...connect.HandlerOption) 
 			nodeToNodeProposeMiniblockHandler.ServeHTTP(w, r)
 		case NodeToNodeSaveMiniblockCandidateProcedure:
 			nodeToNodeSaveMiniblockCandidateHandler.ServeHTTP(w, r)
+		case NodeToNodeSaveEphemeralMiniblockProcedure:
+			nodeToNodeSaveEphemeralMiniblockHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -230,4 +256,8 @@ func (UnimplementedNodeToNodeHandler) ProposeMiniblock(context.Context, *connect
 
 func (UnimplementedNodeToNodeHandler) SaveMiniblockCandidate(context.Context, *connect.Request[protocol.SaveMiniblockCandidateRequest]) (*connect.Response[protocol.SaveMiniblockCandidateResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NodeToNode.SaveMiniblockCandidate is not implemented"))
+}
+
+func (UnimplementedNodeToNodeHandler) SaveEphemeralMiniblock(context.Context, *connect.Request[protocol.SaveEphemeralMiniblockRequest]) (*connect.Response[protocol.SaveEphemeralMiniblockResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NodeToNode.SaveEphemeralMiniblock is not implemented"))
 }

@@ -1222,14 +1222,20 @@ func (s *PostgresStreamStore) writeMiniblocksTx(
 	_, err = tx.CopyFrom(
 		ctx,
 		pgx.Identifier{s.sqlForStream("{{miniblocks}}", streamId)},
-		[]string{"stream_id", "seq_num", "blockdata"},
+		[]string{"stream_id", "seq_num", "blockdata", "ephemeral"},
 		pgx.CopyFromSlice(
 			len(miniblocks),
 			func(i int) ([]any, error) {
 				if miniblocks[i].Snapshot {
 					newLastSnapshotMiniblock = miniblocks[i].Number
 				}
-				return []any{streamId, miniblocks[i].Number, miniblocks[i].Data}, nil
+
+				var ephemeral *bool
+				if miniblocks[i].Ephemeral {
+					ephemeral = &miniblocks[i].Ephemeral
+				}
+
+				return []any{streamId, miniblocks[i].Number, miniblocks[i].Data, ephemeral}, nil
 			},
 		),
 	)
