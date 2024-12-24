@@ -214,6 +214,15 @@ func (s *Service) CreateStream(
 	return executeConnectHandler(ctx, req, s, s.createStreamImpl, "CreateStream")
 }
 
+func (s *Service) CreateMediaStream(
+	ctx context.Context,
+	req *connect.Request[CreateMediaStreamRequest],
+) (*connect.Response[CreateMediaStreamResponse], error) {
+	ctx, cancel := utils.UncancelContext(ctx, 20*time.Second, 40*time.Second)
+	defer cancel()
+	return executeConnectHandler(ctx, req, s, s.createMediaStreamImpl, "CreateMediaStream")
+}
+
 func (s *Service) GetStream(
 	ctx context.Context,
 	req *connect.Request[GetStreamRequest],

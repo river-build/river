@@ -366,16 +366,12 @@ func (s *Service) initRiverChain() error {
 		return err
 	}
 
-	s.streamRegistry, err = nodes.NewStreamRegistry(
-		ctx,
+	s.streamRegistry = nodes.NewStreamRegistry(
 		s.riverChain,
 		s.nodeRegistry,
 		s.registryContract,
 		s.chainConfig,
 	)
-	if err != nil {
-		return err
-	}
 
 	return nil
 }

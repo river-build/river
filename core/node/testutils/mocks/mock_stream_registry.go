@@ -9,8 +9,6 @@ import (
 
 	mock "github.com/stretchr/testify/mock"
 
-	nodes "github.com/river-build/river/core/node/nodes"
-
 	shared "github.com/river-build/river/core/node/shared"
 )
 
@@ -49,29 +47,29 @@ func (_m *MockStreamRegistry) AllocateStream(ctx context.Context, streamId share
 	return r0, r1
 }
 
-// GetStreamInfo provides a mock function with given fields: ctx, streamId
-func (_m *MockStreamRegistry) GetStreamInfo(ctx context.Context, streamId shared.StreamId) (nodes.StreamNodes, error) {
-	ret := _m.Called(ctx, streamId)
+// ChooseStreamNodes provides a mock function with given fields: streamId
+func (_m *MockStreamRegistry) ChooseStreamNodes(streamId shared.StreamId) ([]common.Address, error) {
+	ret := _m.Called(streamId)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetStreamInfo")
+		panic("no return value specified for ChooseStreamNodes")
 	}
 
-	var r0 nodes.StreamNodes
+	var r0 []common.Address
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, shared.StreamId) (nodes.StreamNodes, error)); ok {
-		return rf(ctx, streamId)
+	if rf, ok := ret.Get(0).(func(shared.StreamId) ([]common.Address, error)); ok {
+		return rf(streamId)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, shared.StreamId) nodes.StreamNodes); ok {
-		r0 = rf(ctx, streamId)
+	if rf, ok := ret.Get(0).(func(shared.StreamId) []common.Address); ok {
+		r0 = rf(streamId)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(nodes.StreamNodes)
+			r0 = ret.Get(0).([]common.Address)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, shared.StreamId) error); ok {
-		r1 = rf(ctx, streamId)
+	if rf, ok := ret.Get(1).(func(shared.StreamId) error); ok {
+		r1 = rf(streamId)
 	} else {
 		r1 = ret.Error(1)
 	}
