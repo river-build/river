@@ -10,14 +10,14 @@ import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 import {ProxyBatchDelegation} from "contracts/src/tokens/towns/mainnet/delegation/ProxyBatchDelegation.sol";
 
 // deployments
-import {DeployRiverMainnet} from "./DeployRiverMainnet.s.sol";
+import {DeployTownsMainnet} from "./DeployTownsMainnet.s.sol";
 import {DeployAuthorizedClaimers} from "./DeployAuthorizedClaimers.s.sol";
 
 import {MockMessenger} from "contracts/test/mocks/MockMessenger.sol";
 
 contract DeployProxyBatchDelegation is Deployer {
   // Mainnet
-  DeployRiverMainnet internal riverHelper = new DeployRiverMainnet();
+  DeployTownsMainnet internal riverHelper = new DeployTownsMainnet();
   DeployAuthorizedClaimers internal claimersHelper =
     new DeployAuthorizedClaimers();
 

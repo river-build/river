@@ -12,7 +12,7 @@ import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {NodeOperatorFacet} from "contracts/src/base/registry/facets/operator/NodeOperatorFacet.sol";
 
 // deps
-import {River} from "contracts/src/tokens/towns/mainnet/River.sol";
+import {Towns} from "contracts/src/tokens/towns/mainnet/Towns.sol";
 import {MainnetDelegation} from "contracts/src/tokens/towns/base/delegation/MainnetDelegation.sol";
 import {ProxyBatchDelegation} from "contracts/src/tokens/towns/mainnet/delegation/ProxyBatchDelegation.sol";
 import {ICrossDomainMessenger} from "contracts/src/tokens/towns/mainnet/delegation/ICrossDomainMessenger.sol";
@@ -22,7 +22,7 @@ contract ProxyBatchDelegationTest is BaseSetup, IMainnetDelegationBase {
   MainnetDelegation internal delegation;
   ProxyBatchDelegation internal proxyDelegation;
   AuthorizedClaimers internal authorizedClaimers;
-  River internal rvr;
+  Towns internal towns;
   ICrossDomainMessenger internal crossDomainMessenger;
   NodeOperatorFacet internal operatorFacet;
 
@@ -44,7 +44,7 @@ contract ProxyBatchDelegationTest is BaseSetup, IMainnetDelegationBase {
     _claimers = _createAccounts(5);
     tokens = 10 ether;
 
-    rvr = River(mainnetRiverToken);
+    towns = Towns(mainnetTownsToken);
     proxyDelegation = ProxyBatchDelegation(mainnetProxyDelegation);
     crossDomainMessenger = ICrossDomainMessenger(address(messenger));
 
@@ -67,7 +67,7 @@ contract ProxyBatchDelegationTest is BaseSetup, IMainnetDelegationBase {
   modifier givenUsersHaveTokens() {
     for (uint256 i = 0; i < _users.length; i++) {
       vm.prank(vault);
-      rvr.transfer(_users[i], tokens);
+      towns.transfer(_users[i], tokens);
     }
     _;
   }
@@ -83,7 +83,7 @@ contract ProxyBatchDelegationTest is BaseSetup, IMainnetDelegationBase {
   modifier givenUsersHaveDelegatedTokens() {
     for (uint256 i = 0; i < _users.length; i++) {
       vm.prank(_users[i]);
-      rvr.delegate(_getRandomValue(_operators));
+      towns.delegate(_getRandomValue(_operators));
     }
     _;
   }
@@ -138,7 +138,7 @@ contract ProxyBatchDelegationTest is BaseSetup, IMainnetDelegationBase {
       randomUser
     );
 
-    assertEq(rvr.delegates(randomUser), delegator.operator);
+    assertEq(towns.delegates(randomUser), delegator.operator);
     assertEq(
       authorizedClaimers.getAuthorizedClaimer(randomUser),
       delegation.getAuthorizedClaimer(randomUser)

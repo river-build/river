@@ -6,7 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ILockBase} from "contracts/src/tokens/lock/ILock.sol";
-import {IRiverBase} from "contracts/src/tokens/towns/mainnet/IRiver.sol";
+import {ITownsBase} from "contracts/src/tokens/towns/mainnet/ITowns.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 //libraries
@@ -14,11 +14,11 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 //contracts
 import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 import {EIP712Utils} from "contracts/test/utils/EIP712Utils.sol";
-import {DeployRiverMainnet} from "contracts/scripts/deployments/utils/DeployRiverMainnet.s.sol";
-import {River} from "contracts/src/tokens/towns/mainnet/River.sol";
+import {DeployTownsMainnet} from "contracts/scripts/deployments/utils/DeployTownsMainnet.s.sol";
+import {Towns} from "contracts/src/tokens/towns/mainnet/Towns.sol";
 
-contract RiverMainnetTest is TestUtils, EIP712Utils, IRiverBase, ILockBase {
-  DeployRiverMainnet internal deployRiverMainnet = new DeployRiverMainnet();
+contract TownsMainnetTest is TestUtils, EIP712Utils, ITownsBase, ILockBase {
+  DeployTownsMainnet internal deployTownsMainnet = new DeployTownsMainnet();
 
   /// @dev initial supply is 10 billion tokens
   uint256 internal INITIAL_SUPPLY = 10_000_000_000 ether;
@@ -26,30 +26,30 @@ contract RiverMainnetTest is TestUtils, EIP712Utils, IRiverBase, ILockBase {
   address association;
   address vault;
 
-  River river;
+  Towns towns;
   InflationConfig internal inflation;
 
   function setUp() public {
-    river = River(deployRiverMainnet.deploy());
-    association = deployRiverMainnet.association();
-    vault = deployRiverMainnet.vault();
-    (, , inflation) = deployRiverMainnet.config();
+    towns = Towns(deployTownsMainnet.deploy());
+    association = deployTownsMainnet.association();
+    vault = deployTownsMainnet.vault();
+    inflation = deployTownsMainnet.inflationConfig();
   }
 
   function test_init() external view {
-    assertEq(river.name(), "River");
-    assertEq(river.symbol(), "RVR");
-    assertEq(river.decimals(), 18);
-    assertTrue(river.supportsInterface(type(IERC20).interfaceId));
-    assertTrue(river.supportsInterface(type(IERC20Permit).interfaceId));
-    assertTrue(river.supportsInterface(type(IERC20Metadata).interfaceId));
-    assertEq(river.totalSupply(), INITIAL_SUPPLY);
+    assertEq(towns.name(), "Towns");
+    assertEq(towns.symbol(), "TOWNS");
+    assertEq(towns.decimals(), 18);
+    assertTrue(towns.supportsInterface(type(IERC20).interfaceId));
+    assertTrue(towns.supportsInterface(type(IERC20Permit).interfaceId));
+    assertTrue(towns.supportsInterface(type(IERC20Metadata).interfaceId));
+    assertEq(towns.totalSupply(), INITIAL_SUPPLY);
   }
 
   modifier givenCallerHasTokens(address caller) {
     vm.assume(caller != address(0));
-    vm.prank(deployRiverMainnet.vault());
-    river.transfer(caller, 100);
+    vm.prank(deployTownsMainnet.vault());
+    towns.transfer(caller, 100);
     _;
   }
 
@@ -60,12 +60,12 @@ contract RiverMainnetTest is TestUtils, EIP712Utils, IRiverBase, ILockBase {
   ) external givenCallerHasTokens(alice) {
     vm.assume(bob != address(0));
 
-    assertEq(river.allowance(alice, bob), 0);
+    assertEq(towns.allowance(alice, bob), 0);
 
     vm.prank(alice);
-    river.approve(bob, 50);
+    towns.approve(bob, 50);
 
-    assertEq(river.allowance(alice, bob), 50);
+    assertEq(towns.allowance(alice, bob), 50);
   }
 
   function test_permit(address bob) external {
@@ -74,27 +74,27 @@ contract RiverMainnetTest is TestUtils, EIP712Utils, IRiverBase, ILockBase {
     uint256 alicePrivateKey = _randomUint256();
     address alice = vm.addr(alicePrivateKey);
 
-    vm.prank(deployRiverMainnet.vault());
-    river.transfer(alice, 100);
+    vm.prank(deployTownsMainnet.vault());
+    towns.transfer(alice, 100);
 
     vm.warp(block.timestamp + 100);
 
     uint256 deadline = block.timestamp + 100;
     (uint8 v, bytes32 r, bytes32 s) = signPermit(
       alicePrivateKey,
-      address(river),
+      address(towns),
       alice,
       bob,
       50,
       deadline
     );
 
-    assertEq(river.allowance(alice, bob), 0);
+    assertEq(towns.allowance(alice, bob), 0);
 
     vm.prank(bob);
-    river.permit(alice, bob, 50, deadline, v, r, s);
+    towns.permit(alice, bob, 50, deadline, v, r, s);
 
-    assertEq(river.allowance(alice, bob), 50);
+    assertEq(towns.allowance(alice, bob), 50);
   }
 
   // =============================================================
@@ -102,11 +102,11 @@ contract RiverMainnetTest is TestUtils, EIP712Utils, IRiverBase, ILockBase {
   // =============================================================
 
   modifier givenCallerHasDelegated(address caller, address delegatee) {
-    vm.assume(river.delegates(caller) != delegatee);
+    vm.assume(towns.delegates(caller) != delegatee);
 
     vm.prank(caller);
-    river.delegate(delegatee);
-    assertEq(river.delegates(caller), delegatee);
+    towns.delegate(delegatee);
+    assertEq(towns.delegates(caller), delegatee);
     _;
   }
 
@@ -114,9 +114,9 @@ contract RiverMainnetTest is TestUtils, EIP712Utils, IRiverBase, ILockBase {
     address alice
   ) external givenCallerHasTokens(alice) {
     vm.prank(alice);
-    vm.expectRevert(River__DelegateeSameAsCurrent.selector);
-    river.delegate(address(0));
-    assertEq(river.delegates(alice), address(0));
+    vm.expectRevert(DelegateeSameAsCurrent.selector);
+    towns.delegate(address(0));
+    assertEq(towns.delegates(alice), address(0));
   }
 
   function test_delegateToAddress(
@@ -127,10 +127,9 @@ contract RiverMainnetTest is TestUtils, EIP712Utils, IRiverBase, ILockBase {
     givenCallerHasTokens(delegator)
     givenCallerHasDelegated(delegator, delegatee)
   {
-    assertEq(river.delegates(delegator), delegatee);
-    assertTrue(river.isLockEnabled(delegator));
+    assertEq(towns.delegates(delegator), delegatee);
 
-    address[] memory delegators = river.getDelegators();
+    address[] memory delegators = towns.getDelegators();
     assertEq(delegators.length, 1);
 
     address found;
@@ -144,80 +143,16 @@ contract RiverMainnetTest is TestUtils, EIP712Utils, IRiverBase, ILockBase {
     assertEq(found, delegator);
   }
 
-  modifier givenAssociationUpdatedCooldown() {
-    vm.prank(association);
-    river.setLockCooldown(2 days);
-    _;
-  }
-
-  // Locking
-  function test_enableLock(
-    address delegator,
-    address delegatee
-  )
-    external
-    givenCallerHasTokens(delegator)
-    givenCallerHasDelegated(delegator, delegatee)
-    givenAssociationUpdatedCooldown
-  {
-    vm.assume(delegatee != address(0));
-
-    vm.prank(delegator);
-    river.delegate(address(0));
-
-    assertEq(river.isLockEnabled(delegator), true);
-
-    uint256 lockCooldown = river.lockCooldown(delegator);
-    vm.warp(block.timestamp + lockCooldown + 1);
-
-    assertEq(river.isLockEnabled(delegator), false);
-  }
-
-  function test_enableLock_revert_LockEnabled(
-    address delegator,
-    address delegatee
-  )
-    external
-    givenCallerHasTokens(delegator)
-    givenCallerHasDelegated(delegator, delegatee)
-    givenAssociationUpdatedCooldown
-  {
-    uint256 amount = 100;
-
-    vm.prank(delegator);
-    vm.expectRevert(River__TransferLockEnabled.selector);
-    river.transfer(delegatee, amount);
-  }
-
-  function test_revertWhen_disableLockOverrideToNotDisable(
-    address delegator,
-    address delegatee
-  )
-    external
-    givenCallerHasTokens(delegator)
-    givenCallerHasDelegated(delegator, delegatee)
-  {
-    uint256 amount = 100;
-
-    vm.prank(association);
-    river.disableLock(delegator);
-
-    vm.prank(delegator);
-    vm.expectRevert(River__TransferLockEnabled.selector);
-    river.transfer(delegatee, amount);
-  }
-
   // =============================================================
-  //                        createInflation
-  // =============================================================
+  //                        createInflation  // =============================================================
 
   function test_revertWhen_createInflationIsCalledByOwnerTooSoon() external {
     // wait 5 days
     vm.warp(block.timestamp + 5 days);
 
     vm.prank(association);
-    vm.expectRevert(River__MintingTooSoon.selector);
-    river.createInflation(vault);
+    vm.expectRevert(MintingTooSoon.selector);
+    towns.createInflation();
   }
 
   function test_createInflation_isCalledByOwnerAfterOneYear() external {
@@ -228,15 +163,15 @@ contract RiverMainnetTest is TestUtils, EIP712Utils, IRiverBase, ILockBase {
 
     uint256 inflationAmount = _getCurrentInflationAmount(
       deployedAt,
-      river.totalSupply()
+      towns.totalSupply()
     );
 
-    uint256 expectedSupply = river.totalSupply() + inflationAmount;
+    uint256 expectedSupply = towns.totalSupply() + inflationAmount;
 
     vm.prank(association);
-    river.createInflation(vault);
+    towns.createInflation();
 
-    assertEq(river.totalSupply(), expectedSupply);
+    assertEq(towns.totalSupply(), expectedSupply);
   }
 
   function test_createInflation_isCalledByOwnerAfter20Years() external {
@@ -247,15 +182,15 @@ contract RiverMainnetTest is TestUtils, EIP712Utils, IRiverBase, ILockBase {
 
     uint256 inflationAmount = _getCurrentInflationAmount(
       deployedAt,
-      river.totalSupply()
+      towns.totalSupply()
     );
 
-    uint256 expectedSupply = river.totalSupply() + inflationAmount;
+    uint256 expectedSupply = towns.totalSupply() + inflationAmount;
 
     vm.prank(association);
-    river.createInflation(vault);
+    towns.createInflation();
 
-    assertEq(river.totalSupply(), expectedSupply);
+    assertEq(towns.totalSupply(), expectedSupply);
   }
 
   function test_revertWhen_createInflationIsCalledByNotOwner(
@@ -273,13 +208,13 @@ contract RiverMainnetTest is TestUtils, EIP712Utils, IRiverBase, ILockBase {
         notOwner
       )
     );
-    river.createInflation(vault);
+    towns.createInflation();
   }
 
   function test_revertWhen_createInflationIsCalledWithAddressZero() external {
     vm.prank(association);
-    vm.expectRevert(River__InvalidAddress.selector);
-    river.createInflation(address(0));
+    vm.expectRevert(InvalidAddress.selector);
+    towns.createInflation();
   }
 
   // =============================================================
@@ -289,33 +224,33 @@ contract RiverMainnetTest is TestUtils, EIP712Utils, IRiverBase, ILockBase {
     // set to 1.5%
     uint256 overrideInflationRateBPS = 130;
 
-    vm.prank(deployRiverMainnet.association());
-    river.setOverrideInflation(true, overrideInflationRateBPS);
+    vm.prank(deployTownsMainnet.association());
+    towns.setOverrideInflation(true, overrideInflationRateBPS);
 
-    assertEq(river.overrideInflationRate(), overrideInflationRateBPS);
+    assertEq(towns.overrideInflationRate(), overrideInflationRateBPS);
 
     uint256 deployedAt = block.timestamp;
 
     // wait 365 days
     vm.warp(deployedAt + 365 days);
 
-    uint256 inflationAmount = (river.totalSupply() * overrideInflationRateBPS) /
+    uint256 inflationAmount = (towns.totalSupply() * overrideInflationRateBPS) /
       10000;
 
-    uint256 expectedSupply = river.totalSupply() + inflationAmount;
+    uint256 expectedSupply = towns.totalSupply() + inflationAmount;
 
-    vm.prank(deployRiverMainnet.association());
-    river.createInflation(vault);
+    vm.prank(deployTownsMainnet.association());
+    towns.createInflation();
 
-    assertEq(river.totalSupply(), expectedSupply);
+    assertEq(towns.totalSupply(), expectedSupply);
   }
 
   function test_revertWhen_overrideInflationRateIsGreaterThanFinalInflationRate()
     external
   {
-    vm.prank(deployRiverMainnet.association());
-    vm.expectRevert(River__InvalidInflationRate.selector);
-    river.setOverrideInflation(true, inflation.finalInflationRate + 1);
+    vm.prank(deployTownsMainnet.association());
+    vm.expectRevert(InvalidInflationRate.selector);
+    towns.setOverrideInflation(true, inflation.finalInflationRate + 1);
   }
 
   function test_revertWhen_overrideInflationIsCalledByNotOwner(
@@ -330,32 +265,32 @@ contract RiverMainnetTest is TestUtils, EIP712Utils, IRiverBase, ILockBase {
         notOwner
       )
     );
-    river.setOverrideInflation(true, 100);
+    towns.setOverrideInflation(true, 100);
   }
 
   function test_setOverrideInflation_isSetToFalse() external {
     uint256 deployedAt = block.timestamp;
 
     vm.prank(association);
-    river.setOverrideInflation(true, 100);
+    towns.setOverrideInflation(true, 100);
 
     vm.prank(association);
-    river.setOverrideInflation(false, 0);
+    towns.setOverrideInflation(false, 0);
 
     // wait 365 days
     vm.warp(deployedAt + 365 days);
 
     uint256 inflationAmount = _getCurrentInflationAmount(
       deployedAt,
-      river.totalSupply()
+      towns.totalSupply()
     );
 
-    uint256 expectedSupply = river.totalSupply() + inflationAmount;
+    uint256 expectedSupply = towns.totalSupply() + inflationAmount;
 
     vm.prank(association);
-    river.createInflation(vault);
+    towns.createInflation();
 
-    assertEq(river.totalSupply(), expectedSupply);
+    assertEq(towns.totalSupply(), expectedSupply);
   }
 
   function _getCurrentInflationAmount(

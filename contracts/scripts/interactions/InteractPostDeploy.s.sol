@@ -18,7 +18,7 @@ import {MAX_CLAIMABLE_SUPPLY} from "./InteractClaimCondition.s.sol";
 import {DeploySpaceOwner} from "contracts/scripts/deployments/diamonds/DeploySpaceOwner.s.sol";
 import {DeploySpaceFactory} from "contracts/scripts/deployments/diamonds/DeploySpaceFactory.s.sol";
 import {DeployBaseRegistry} from "contracts/scripts/deployments/diamonds/DeployBaseRegistry.s.sol";
-import {DeployRiverBase} from "contracts/scripts/deployments/utils/DeployRiverBase.s.sol";
+import {DeployTownsBase} from "contracts/scripts/deployments/utils/DeployTownsBase.s.sol";
 import {DeployProxyBatchDelegation} from "contracts/scripts/deployments/utils/DeployProxyBatchDelegation.s.sol";
 import {DeployRiverAirdrop} from "contracts/scripts/deployments/diamonds/DeployRiverAirdrop.s.sol";
 
@@ -26,7 +26,7 @@ contract InteractPostDeploy is Interaction {
   DeploySpaceOwner deploySpaceOwner = new DeploySpaceOwner();
   DeploySpaceFactory deploySpaceFactory = new DeploySpaceFactory();
   DeployBaseRegistry deployBaseRegistry = new DeployBaseRegistry();
-  DeployRiverBase deployRiverBaseToken = new DeployRiverBase();
+  DeployTownsBase deployRiverBaseToken = new DeployTownsBase();
   DeployProxyBatchDelegation deployProxyDelegation =
     new DeployProxyBatchDelegation();
   DeployRiverAirdrop deployRiverAirdrop = new DeployRiverAirdrop();

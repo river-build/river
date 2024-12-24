@@ -139,11 +139,14 @@ contract Towns is
   /// @inheritdoc ITowns
   function setOverrideInflation(
     bool overrideInflation,
-    uint256 overrideInflationRate
+    uint256 rate
   ) external restricted {
-    if (overrideInflationRate > finalInflationRate)
-      revert InvalidInflationRate();
-    InflationLib.setOverrideInflation(overrideInflation, overrideInflationRate);
+    if (rate > finalInflationRate) revert InvalidInflationRate();
+    InflationLib.setOverrideInflation(overrideInflation, rate);
+  }
+
+  function overrideInflationRate() external view returns (uint256) {
+    return InflationLib.layout().overrideInflationRate;
   }
 
   // =============================================================
