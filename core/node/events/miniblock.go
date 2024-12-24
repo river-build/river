@@ -95,6 +95,7 @@ type MiniblockInfo struct {
 	headerEvent        *ParsedEvent
 	useGetterForEvents []*ParsedEvent // Use events(). Getter checks if events have been initialized.
 	Proto              *Miniblock
+	Ephemeral          bool
 }
 
 func (b *MiniblockInfo) Events() []*ParsedEvent {
@@ -135,10 +136,11 @@ func (b *MiniblockInfo) asStorageMb() (*storage.WriteMiniblockData, error) {
 
 func (b *MiniblockInfo) asStorageMbWithData(bytes []byte) *storage.WriteMiniblockData {
 	return &storage.WriteMiniblockData{
-		Number:   b.Ref.Num,
-		Hash:     b.Ref.Hash,
-		Snapshot: b.IsSnapshot(),
-		Data:     bytes,
+		Number:    b.Ref.Num,
+		Hash:      b.Ref.Hash,
+		Snapshot:  b.IsSnapshot(),
+		Data:      bytes,
+		Ephemeral: b.Ephemeral,
 	}
 }
 
@@ -189,6 +191,7 @@ func NewMiniblockInfoFromBytesWithOpts(bytes []byte, opts NewMiniblockInfoFromPr
 type NewMiniblockInfoFromProtoOpts struct {
 	ExpectedBlockNumber int64
 	DontParseEvents     bool
+	Ephemeral           bool
 }
 
 func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts) (*MiniblockInfo, error) {
@@ -230,6 +233,7 @@ func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts
 		headerEvent:        headerEvent,
 		useGetterForEvents: events,
 		Proto:              pb,
+		Ephemeral:          opts.Ephemeral,
 	}, nil
 }
 
