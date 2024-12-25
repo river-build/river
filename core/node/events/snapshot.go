@@ -547,12 +547,27 @@ func update_Snapshot_Member(
 		}
 		snapshot.Pins = snapPins
 		return nil
+	case *MemberPayload_Mls_:
+		return update_Snapshot_Mls(iSnapshot, memberPayload, creatorAddress, miniblockNum, eventNum, eventHash)
 	case *MemberPayload_EncryptionAlgorithm_:
 		snapshot.EncryptionAlgorithm.Algorithm = content.EncryptionAlgorithm.Algorithm
 		return nil
 	default:
 		return RiverError(Err_INVALID_ARGUMENT, "unknown membership payload type %T", memberPayload.Content)
 	}
+}
+
+
+func update_Snapshot_Mls(
+	iSnapshot *Snapshot,
+	memberPayload *MemberPayload,
+	creatorAddress []byte,
+	miniblockNum int64,
+	eventNum int64,
+	eventHash []byte,
+) error {
+	
+	return nil
 }
 
 func removeCommon(x, y []string) []string {

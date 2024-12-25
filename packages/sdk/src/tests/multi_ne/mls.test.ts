@@ -2,7 +2,7 @@
  * @group main
  */
 
-import { makeTestClient } from '../testUtils'
+import { makeTestClient, makeUniqueSpaceStreamId } from '../testUtils'
 import { Client } from '../../client'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { MemberPayload_Mls } from '@river-build/proto'
@@ -15,6 +15,7 @@ import {
 } from '@river-build/mls-rs-wasm'
 import { randomBytes } from 'crypto'
 import { dlog } from '@river-build/dlog'
+import { makeUniqueChannelStreamId } from '../../id'
 
 const log = dlog('encryption:mls')
 
@@ -237,5 +238,59 @@ describe('mlsTests', () => {
         await expect(alicesClient._debugSendMls(streamId, mlsPayload2)).rejects.toThrow(
             'INVALID_COMMIT',
         )
+    })
+
+    test.only('snapshots', async () => {
+        const client = await makeInitAndStartClient()
+        const spaceId = makeUniqueSpaceStreamId()
+        await expect(client.createSpace(spaceId)).resolves.not.toThrow()
+
+        const channelId = makeUniqueChannelStreamId(spaceId)
+        await expect(
+            client.createChannel(spaceId, 'Channel', 'Topic', channelId),
+        ).resolves.not.toThrow()
+
+        const bobDeviceKey = new Uint8Array(randomBytes(32))
+        const bobMlsClient = await MlsClient.create(bobDeviceKey)
+        const groupParams = await createGroup(bobMlsClient)
+        const commits: Uint8Array[] = []
+        const mlsPayload: PlainMessage<MemberPayload_Mls> = {
+            content: {
+                case: 'initializeGroup',
+                value: {
+                    deviceKey: bobDeviceKey,
+                    externalGroupSnapshot: groupParams.externalGroupSnapshot,
+                    groupInfoMessage: groupParams.groupInfoMessage,
+                },
+            },
+        }
+        await expect(client._debugSendMls(channelId, mlsPayload)).resolves.not.toThrow()
+        let latestGroupInfoMessage = groupParams.groupInfoMessage
+        for (let i = 0; i < 10; i++) {
+            const deviceKey = new Uint8Array(randomBytes(32))
+            const mlsClient = await MlsClient.create(deviceKey)
+            const { groupInfoMessage, commit } = await externalJoin(
+                mlsClient,
+                groupParams.externalGroupSnapshot,
+                commits,
+                latestGroupInfoMessage,
+            )
+
+            const mlsPayload: PlainMessage<MemberPayload_Mls> = {
+                content: {
+                    case: 'externalJoin',
+                    value: {
+                        deviceKey: deviceKey,
+                        groupInfoMessage: groupInfoMessage,
+                        commit: commit,
+                        epoch: 0n, // figure out if it helps to tag commits with epoch for accessibility from go
+                    },
+                },
+            }
+            latestGroupInfoMessage = groupInfoMessage
+            commits.push(commit)
+            await expect(client._debugSendMls(channelId, mlsPayload)).resolves.not.toThrow()
+            await client.debugForceMakeMiniblock(channelId, { forceSnapshot: true })
+        }
     })
 })
