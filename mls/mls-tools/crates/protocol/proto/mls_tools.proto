@@ -14,6 +14,20 @@ enum ValidationResult {
     INVALID_COMMIT = 8;
 }
 
+message MlsRequest {
+    oneof content {
+        InitialGroupInfoRequest initial_group_info = 1;
+        ExternalJoinRequest external_join = 2;
+    }
+}
+
+message MlsResponse {
+    oneof content {
+        InitialGroupInfoResponse initial_group_info = 1;
+        ExternalJoinResponse external_join = 2;
+    }
+}
+
 message InitialGroupInfoRequest {
     bytes group_info_message = 1;
     bytes external_group_snapshot = 2;
