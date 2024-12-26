@@ -36,6 +36,9 @@ const (
 	// StreamServiceCreateStreamProcedure is the fully-qualified name of the StreamService's
 	// CreateStream RPC.
 	StreamServiceCreateStreamProcedure = "/river.StreamService/CreateStream"
+	// StreamServiceCreateMediaStreamProcedure is the fully-qualified name of the StreamService's
+	// CreateMediaStream RPC.
+	StreamServiceCreateMediaStreamProcedure = "/river.StreamService/CreateMediaStream"
 	// StreamServiceGetStreamProcedure is the fully-qualified name of the StreamService's GetStream RPC.
 	StreamServiceGetStreamProcedure = "/river.StreamService/GetStream"
 	// StreamServiceGetStreamExProcedure is the fully-qualified name of the StreamService's GetStreamEx
@@ -74,6 +77,7 @@ const (
 var (
 	streamServiceServiceDescriptor                    = protocol.File_protocol_proto.Services().ByName("StreamService")
 	streamServiceCreateStreamMethodDescriptor         = streamServiceServiceDescriptor.Methods().ByName("CreateStream")
+	streamServiceCreateMediaStreamMethodDescriptor    = streamServiceServiceDescriptor.Methods().ByName("CreateMediaStream")
 	streamServiceGetStreamMethodDescriptor            = streamServiceServiceDescriptor.Methods().ByName("GetStream")
 	streamServiceGetStreamExMethodDescriptor          = streamServiceServiceDescriptor.Methods().ByName("GetStreamEx")
 	streamServiceGetMiniblocksMethodDescriptor        = streamServiceServiceDescriptor.Methods().ByName("GetMiniblocks")
@@ -91,6 +95,7 @@ var (
 // StreamServiceClient is a client for the river.StreamService service.
 type StreamServiceClient interface {
 	CreateStream(context.Context, *connect.Request[protocol.CreateStreamRequest]) (*connect.Response[protocol.CreateStreamResponse], error)
+	CreateMediaStream(context.Context, *connect.Request[protocol.CreateMediaStreamRequest]) (*connect.Response[protocol.CreateMediaStreamResponse], error)
 	GetStream(context.Context, *connect.Request[protocol.GetStreamRequest]) (*connect.Response[protocol.GetStreamResponse], error)
 	GetStreamEx(context.Context, *connect.Request[protocol.GetStreamExRequest]) (*connect.ServerStreamForClient[protocol.GetStreamExResponse], error)
 	GetMiniblocks(context.Context, *connect.Request[protocol.GetMiniblocksRequest]) (*connect.Response[protocol.GetMiniblocksResponse], error)
@@ -124,6 +129,12 @@ func NewStreamServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			httpClient,
 			baseURL+StreamServiceCreateStreamProcedure,
 			connect.WithSchema(streamServiceCreateStreamMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		createMediaStream: connect.NewClient[protocol.CreateMediaStreamRequest, protocol.CreateMediaStreamResponse](
+			httpClient,
+			baseURL+StreamServiceCreateMediaStreamProcedure,
+			connect.WithSchema(streamServiceCreateMediaStreamMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		getStream: connect.NewClient[protocol.GetStreamRequest, protocol.GetStreamResponse](
@@ -204,6 +215,7 @@ func NewStreamServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 // streamServiceClient implements StreamServiceClient.
 type streamServiceClient struct {
 	createStream         *connect.Client[protocol.CreateStreamRequest, protocol.CreateStreamResponse]
+	createMediaStream    *connect.Client[protocol.CreateMediaStreamRequest, protocol.CreateMediaStreamResponse]
 	getStream            *connect.Client[protocol.GetStreamRequest, protocol.GetStreamResponse]
 	getStreamEx          *connect.Client[protocol.GetStreamExRequest, protocol.GetStreamExResponse]
 	getMiniblocks        *connect.Client[protocol.GetMiniblocksRequest, protocol.GetMiniblocksResponse]
@@ -221,6 +233,11 @@ type streamServiceClient struct {
 // CreateStream calls river.StreamService.CreateStream.
 func (c *streamServiceClient) CreateStream(ctx context.Context, req *connect.Request[protocol.CreateStreamRequest]) (*connect.Response[protocol.CreateStreamResponse], error) {
 	return c.createStream.CallUnary(ctx, req)
+}
+
+// CreateMediaStream calls river.StreamService.CreateMediaStream.
+func (c *streamServiceClient) CreateMediaStream(ctx context.Context, req *connect.Request[protocol.CreateMediaStreamRequest]) (*connect.Response[protocol.CreateMediaStreamResponse], error) {
+	return c.createMediaStream.CallUnary(ctx, req)
 }
 
 // GetStream calls river.StreamService.GetStream.
@@ -286,6 +303,7 @@ func (c *streamServiceClient) PingSync(ctx context.Context, req *connect.Request
 // StreamServiceHandler is an implementation of the river.StreamService service.
 type StreamServiceHandler interface {
 	CreateStream(context.Context, *connect.Request[protocol.CreateStreamRequest]) (*connect.Response[protocol.CreateStreamResponse], error)
+	CreateMediaStream(context.Context, *connect.Request[protocol.CreateMediaStreamRequest]) (*connect.Response[protocol.CreateMediaStreamResponse], error)
 	GetStream(context.Context, *connect.Request[protocol.GetStreamRequest]) (*connect.Response[protocol.GetStreamResponse], error)
 	GetStreamEx(context.Context, *connect.Request[protocol.GetStreamExRequest], *connect.ServerStream[protocol.GetStreamExResponse]) error
 	GetMiniblocks(context.Context, *connect.Request[protocol.GetMiniblocksRequest]) (*connect.Response[protocol.GetMiniblocksResponse], error)
@@ -315,6 +333,12 @@ func NewStreamServiceHandler(svc StreamServiceHandler, opts ...connect.HandlerOp
 		StreamServiceCreateStreamProcedure,
 		svc.CreateStream,
 		connect.WithSchema(streamServiceCreateStreamMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	streamServiceCreateMediaStreamHandler := connect.NewUnaryHandler(
+		StreamServiceCreateMediaStreamProcedure,
+		svc.CreateMediaStream,
+		connect.WithSchema(streamServiceCreateMediaStreamMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	streamServiceGetStreamHandler := connect.NewUnaryHandler(
@@ -393,6 +417,8 @@ func NewStreamServiceHandler(svc StreamServiceHandler, opts ...connect.HandlerOp
 		switch r.URL.Path {
 		case StreamServiceCreateStreamProcedure:
 			streamServiceCreateStreamHandler.ServeHTTP(w, r)
+		case StreamServiceCreateMediaStreamProcedure:
+			streamServiceCreateMediaStreamHandler.ServeHTTP(w, r)
 		case StreamServiceGetStreamProcedure:
 			streamServiceGetStreamHandler.ServeHTTP(w, r)
 		case StreamServiceGetStreamExProcedure:
@@ -428,6 +454,10 @@ type UnimplementedStreamServiceHandler struct{}
 
 func (UnimplementedStreamServiceHandler) CreateStream(context.Context, *connect.Request[protocol.CreateStreamRequest]) (*connect.Response[protocol.CreateStreamResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.StreamService.CreateStream is not implemented"))
+}
+
+func (UnimplementedStreamServiceHandler) CreateMediaStream(context.Context, *connect.Request[protocol.CreateMediaStreamRequest]) (*connect.Response[protocol.CreateMediaStreamResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.StreamService.CreateMediaStream is not implemented"))
 }
 
 func (UnimplementedStreamServiceHandler) GetStream(context.Context, *connect.Request[protocol.GetStreamRequest]) (*connect.Response[protocol.GetStreamResponse], error) {
