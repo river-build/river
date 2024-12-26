@@ -133,7 +133,6 @@ func (s *Service) createMediaStream(ctx context.Context, req *CreateMediaStreamR
 	}
 
 	// add derived events
-	// TODO: Check what should be the right behaviour here. Potentially, should be replaced with AddMediaEventPayload.
 	if csRules.DerivedEvents != nil {
 		for _, de := range csRules.DerivedEvents {
 			err := s.AddEventPayload(ctx, de.StreamId, de.Payload)
