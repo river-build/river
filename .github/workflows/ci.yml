@@ -685,7 +685,7 @@ jobs:
               run: ./scripts/register-ca.sh
               working-directory: core
 
-            - name: Start MLS Service
+            - name: Build MLS libs
               run: ./scripts/build-mlslib.sh
 
             - name: Run node tests
