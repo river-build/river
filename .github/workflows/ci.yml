@@ -685,6 +685,9 @@ jobs:
               run: ./scripts/register-ca.sh
               working-directory: core
 
+            - name: Build MLS libs
+              run: ./scripts/build-mls.sh
+
             - name: Run node tests
               run: go test -race -timeout 24m -v -parallel 1 -count 1 -p 8 ./...
               working-directory: core
