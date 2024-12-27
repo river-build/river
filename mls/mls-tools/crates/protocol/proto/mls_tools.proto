@@ -53,9 +53,3 @@ message InfoResponse {
     string graffiti = 1;
     string git = 2;
 }
-
-service Mls {
-    rpc Info(InfoRequest) returns(InfoResponse) {}
-    rpc InitialGroupInfo(InitialGroupInfoRequest)  returns(InitialGroupInfoResponse) {}
-    rpc ExternalJoin(ExternalJoinRequest) returns(ExternalJoinResponse) {}
-}
