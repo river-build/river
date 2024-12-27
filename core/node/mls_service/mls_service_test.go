@@ -1,7 +1,6 @@
 package mls_service_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/river-build/river/core/node/mls_service"
@@ -9,20 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMlsInfo(t *testing.T) {
-	require := require.New(t)
-	info, err := mls_service.InfoRequest(context.Background())
-	if err != nil {
-		t.Errorf("Error: %v", err)
-	}
-	
-	require.Equal("MLS Service welcomes you", info.Graffiti)
-	require.Greater(len(info.Git), 0)
-}
-
 func TestMlsInitialGroupInfo(t *testing.T) {
 	require := require.New(t)
-	info, err := mls_service.InitialGroupInfoRequest(context.Background(), &mls_tools.InitialGroupInfoRequest{})
+	info, err := mls_service.InitialGroupInfoRequest(&mls_tools.InitialGroupInfoRequest{})
 	if err != nil {
 		t.Errorf("Error: %v", err)
 	}
@@ -31,7 +19,7 @@ func TestMlsInitialGroupInfo(t *testing.T) {
 
 func TestMlsExternalJoin(t *testing.T) {
 	require := require.New(t)
-	info, err := mls_service.ExternalJoinRequest(context.Background(), &mls_tools.ExternalJoinRequest{})
+	info, err := mls_service.ExternalJoinRequest(&mls_tools.ExternalJoinRequest{})
 	if err != nil {
 		t.Errorf("Error: %v", err)
 	}

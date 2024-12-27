@@ -1,63 +1,83 @@
 package mls_service
 
+/*
+#cgo LDFLAGS: -L. -lmls_lib
+#include <stdlib.h>
+#include <stdint.h>
+
+// Define the function prototype
+int process_mls_request(const uint8_t* input, size_t input_len, uint8_t** output_ptr, size_t* output_len);
+void free_bytes(uint8_t* ptr, size_t len);
+*/
+import "C"
 import (
-	"context"
+	"fmt"
 	"log"
+	"unsafe"
 
 	"github.com/river-build/river/core/node/mls_service/mls_tools"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/proto"
 )
 
-func socketName() string {
-	return "unix:/tmp/mls_service"
+func makeFfiCall(request *mls_tools.MlsRequest) ([]byte, error) {
+	var outputPtr *C.uint8_t
+	var outputLen C.size_t
+	bytes, err := proto.Marshal(request)
+	if err != nil {
+		log.Fatal("marshaling error: ", err)
+		return nil, err
+	}
+	// Call the Rust function
+	retCode := C.process_mls_request(
+		(*C.uint8_t)(unsafe.Pointer(&bytes[0])),
+		C.size_t(len(bytes)),
+		&outputPtr,
+		&outputLen,
+	)
+
+	defer C.free_bytes(outputPtr, outputLen)
+
+	if retCode != 0 {
+		return nil, fmt.Errorf("Error calling Rust function: %d", retCode)
+	}
+
+	// Convert the result to a Go slice
+	output := C.GoBytes(unsafe.Pointer(outputPtr), C.int(outputLen))
+	return output, nil
 }
 
-func InfoRequest(context context.Context) (*mls_tools.InfoResponse, error) {
-	client, err := grpc.NewClient(socketName(),
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatal("NewClient:", err)
+func InitialGroupInfoRequest(request *mls_tools.InitialGroupInfoRequest) (*mls_tools.InitialGroupInfoResponse, error) {
+	r := &mls_tools.MlsRequest{
+		Content: &mls_tools.MlsRequest_InitialGroupInfo{
+			InitialGroupInfo: request,
+		},
 	}
-	defer client.Close()
-
-	mlsClient := mls_tools.NewMlsClient(client)
-	info, err := mlsClient.Info(context, &mls_tools.InfoRequest{})
-
+	responseBytes, err := makeFfiCall(r)
 	if err != nil {
 		return nil, err
 	}
-	return info, nil
-}
-
-func InitialGroupInfoRequest(context context.Context, request *mls_tools.InitialGroupInfoRequest) (*mls_tools.InitialGroupInfoResponse, error) {
-	client, err := grpc.NewClient(socketName(),
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatal("NewClient:", err)
-	}
-	defer client.Close()
-
-	mlsClient := mls_tools.NewMlsClient(client)
-	info, err := mlsClient.InitialGroupInfo(context, request)
+	var result = mls_tools.InitialGroupInfoResponse{}
+	err = proto.Unmarshal(responseBytes, &result)
 	if err != nil {
 		return nil, err
 	}
-	return info, nil
+	return &result, nil
 }
 
-func ExternalJoinRequest(context context.Context, request *mls_tools.ExternalJoinRequest) (*mls_tools.ExternalJoinResponse, error) {
-	client, err := grpc.NewClient(socketName(),
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatal("NewClient:", err)
+func ExternalJoinRequest(request *mls_tools.ExternalJoinRequest) (*mls_tools.ExternalJoinResponse, error) {
+	r := &mls_tools.MlsRequest{
+		Content: &mls_tools.MlsRequest_ExternalJoin{
+			ExternalJoin: request,
+		},
 	}
-	defer client.Close()
-
-	mlsClient := mls_tools.NewMlsClient(client)
-	info, err := mlsClient.ExternalJoin(context, request)
+	responseBytes, err := makeFfiCall(r)
 	if err != nil {
 		return nil, err
 	}
-	return info, nil
+	var result = mls_tools.ExternalJoinResponse{}
+	err = proto.Unmarshal(responseBytes, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
