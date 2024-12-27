@@ -6,6 +6,8 @@ import (
 	"net"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"connectrpc.com/connect"
 
 	. "github.com/river-build/river/core/node/base"
@@ -513,6 +515,7 @@ func (s *Service) AddMediaEvent(
 	return executeConnectHandler(ctx, req, s, s.addMediaEventImpl, "AddMediaEvent")
 }
 
+// TODO: To be completed
 func (s *Service) addMediaEventImpl(
 	ctx context.Context,
 	req *connect.Request[AddMediaEventRequest],
@@ -522,7 +525,14 @@ func (s *Service) addMediaEventImpl(
 		return nil, err
 	}
 
-	stream, err := s.cache.GetStreamNoWait(ctx, streamId)
+	cc := req.Msg.GetCreationCookie()
+	nodesRaw := cc.GetNodes()
+	nodes := make([]common.Address, len(nodesRaw))
+	for i, node := range nodesRaw {
+		nodes[i] = common.BytesToAddress(node)
+	}
+
+	stream, err := s.cache.GetEphemeralStream(ctx, streamId, nodes, common.BytesToHash(cc.GetPrevMiniblockHash()))
 	if err != nil {
 		return nil, err
 	}
@@ -532,7 +542,7 @@ func (s *Service) addMediaEventImpl(
 		return nil, err
 	}
 
-	if view != nil {
+	for view != nil {
 		return s.localAddMediaEvent(ctx, req, stream, view)
 	}
 

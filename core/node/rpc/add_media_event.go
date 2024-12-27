@@ -33,9 +33,11 @@ func (s *Service) localAddMediaEvent(
 		return nil, AsRiverError(err).Func("localAddMediaEvent")
 	}
 
-	log.Debug("localAddMediaEvent", "parsedEvent", parsedEvent)
+	creationCookie := req.Msg.GetCreationCookie()
 
-	err = s.addParsedMediaEvent(ctx, streamId, parsedEvent, localStream, streamView)
+	log.Debug("localAddMediaEvent", "parsedEvent", parsedEvent, "creationCookie", creationCookie)
+
+	err = s.addParsedMediaEvent(ctx, streamId, parsedEvent, localStream, streamView, creationCookie)
 	if err != nil && req.Msg.Optional {
 		// aellis 5/2024 - we only want to wrap errors from canAddEvent,
 		// currently this is catching all errors, which is not ideal
@@ -60,6 +62,7 @@ func (s *Service) addParsedMediaEvent(
 	parsedEvent *ParsedEvent,
 	localStream SyncStream,
 	streamView StreamView,
+	creationCookie *CreationCookie,
 ) error {
 	// TODO: here it should loop and re-check the rules if view was updated in the meantime.
 
@@ -126,6 +129,7 @@ func (s *Service) addParsedMediaEvent(
 	}
 
 	if sideEffects.RequiredParentEvent != nil {
+		// TODO: Should we use AddMediaEvent here?
 		err := s.AddMediaEventPayload(ctx, sideEffects.RequiredParentEvent.StreamId, sideEffects.RequiredParentEvent.Payload)
 		if err != nil {
 			return err
@@ -139,7 +143,7 @@ func (s *Service) addParsedMediaEvent(
 		service:     s,
 	}
 
-	err = stream.AddMediaEvent(ctx, parsedEvent)
+	err = stream.AddMediaEvent(ctx, parsedEvent, creationCookie)
 	if err != nil {
 		return err
 	}
