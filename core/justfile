@@ -278,11 +278,11 @@ config: config-root register-nodes-base register-nodes-river storage-start
 
 _build-mls:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
-    OUTPUT=${RUN_BASE}/bin/mls_service
+    OUTPUT=${RUN_BASE}/bin
     echo "Building MLS ${OUTPUT}"
     mkdir -p ${RUN_BASE}/bin
-    cargo build --release --manifest-path ../mls/mls-tools/crates/service/Cargo.toml
-    mv ../mls/mls-tools/target/release/service ${OUTPUT}
+    cargo build --release --manifest-path ../mls/mls-tools/crates/mlslib/Cargo.toml
+    cp ../mls/mls-tools/target/release/libmls* ${OUTPUT}
 
 _build-node:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
@@ -314,9 +314,6 @@ _run-node $INSTANCE_NUM $INSTANCE_DIR:
         --config config/config.env \
         ${RUN_ARGS} \
         > ./logs/tty.stdout.log 2> ./logs/tty.stderr.log &
-    
-    ../bin/mls_service /tmp/mls_service_beta_${RUN_ENV}_${INSTANCE_NUM} > ./logs/mls.stdout.log 2> ./logs/mls.stderr.log \
-        & echo "MLS_SERVICE_PID="$! > config/mls_service.env
 
 _stop-node $INSTANCE_NUM $INSTANCE_DIR:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
@@ -326,15 +323,6 @@ _stop-node $INSTANCE_NUM $INSTANCE_DIR:
     fi
     source ${INSTANCE_DIR}/config/config.env
     ../scripts/kill-on-port.sh ${RIVER_PORT} instance_${INSTANCE_NUM}
-
-    if [ ! -f "${INSTANCE_DIR}/config/mls_service.env" ]; then
-        exit 0
-    fi
-    source ${INSTANCE_DIR}/config/mls_service.env
-    if [ ! -z $MLS_SERVICE_PID ]; then
-        echo "Killing MLS service ${MLS_SERVICE_PID}"
-        kill $MLS_SERVICE_PID
-    fi
 
 # Stop all nodes
 stop: (_loop-instances "_stop-node")
