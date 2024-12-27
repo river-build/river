@@ -48,7 +48,7 @@ describe('mlsTests', () => {
                 },
             },
         }
-        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).resolves.to.toThrow(
+        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).rejects.to.toThrow(
             'INVALID_GROUP_INFO',
         )
     })
