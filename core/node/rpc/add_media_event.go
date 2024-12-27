@@ -143,7 +143,7 @@ func (s *Service) addParsedMediaEvent(
 		service:     s,
 	}
 
-	err = stream.AddMediaEvent(ctx, parsedEvent, creationCookie)
+	err = stream.AddMediaEvent(ctx, parsedEvent, streamView)
 	if err != nil {
 		return err
 	}

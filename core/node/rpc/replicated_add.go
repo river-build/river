@@ -59,16 +59,16 @@ func (r *replicatedStream) AddEvent(ctx context.Context, event *ParsedEvent) err
 	return sender.Wait()
 }
 
-func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent, cc *CreationCookie) error {
+func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent, view StreamView) error {
 	// TODO: Store event in the DB
 	// TODO: Create next miniblock and store in ephemeral state
-	// TODO: Remotes are always empty because the stream is not registered in the registry smart contract
-	// TODO: that's why we need a creation cookie here.
-	nodesRaw := cc.GetNodes()
-	if len(nodesRaw) == 0 {
-		// TODO: Throw error here?
-		return r.localStream.AddEvent(ctx, event)
-	}
+	remotes, _ := r.nodes.GetRemotesAndIsLocal()
+
+	// TODO: Implement the following in the block producer:
+	// 1. Get proposals from local and remote
+	// 2. Combine proposals
+	// 3. Create a miniblock
+	// 4. Same the given miniblock in ephemenral state
 
 	sender := NewQuorumPool("method", "replicatedStream.AddMediaEvent", "streamId", r.streamId)
 
