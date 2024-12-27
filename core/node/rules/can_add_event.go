@@ -3,6 +3,7 @@ package rules
 import (
 	"bytes"
 	"context"
+	"log"
 	"log/slog"
 	"math/big"
 	"slices"
@@ -11,6 +12,8 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/river-build/river/core/node/crypto"
+	"github.com/river-build/river/core/node/mls_service"
+	"github.com/river-build/river/core/node/mls_service/mls_tools"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -80,6 +83,11 @@ type aePinRules struct {
 type aeUnpinRules struct {
 	params *aeParams
 	unpin  *MemberPayload_Unpin
+}
+
+type aeMlsInitializeGroupRules struct {
+	params *aeParams
+	initializeGroup *MemberPayload_Mls_InitializeGroup
 }
 
 type aeMediaPayloadChunkRules struct {
@@ -566,8 +574,8 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 			check(ru.validMemberBlockchainTransaction_IsUnique).
 			check(ru.validMemberBlockchainTransaction_ReceiptMetadata)
 	case *MemberPayload_Mls_:
-		return aeBuilder().
-			check(params.creatorIsMember)
+		return params.canAddMlsPayload(content.Mls)
+		
 	case *MemberPayload_EncryptionAlgorithm_:
 		return aeBuilder().
 			check(params.creatorIsMember)
@@ -575,6 +583,24 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 		return aeBuilder().
 			fail(unknownContentType(content))
 	}
+}
+
+func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilderAE {
+	switch content := payload.Content.(type) {
+	case *MemberPayload_Mls_InitializeGroup_:
+		ru := &aeMlsInitializeGroupRules{
+			params:          params,
+			initializeGroup: content.InitializeGroup,
+		}
+		log.Println("canAddMlsPayload check")
+		return aeBuilder().
+			check(params.creatorIsMember).
+			check(ru.validMlsInitializeGroup)
+	default:
+		return aeBuilder().
+			fail(unknownContentType(content))
+	}
+
 }
 
 func (params *aeParams) pass() (bool, error) {
@@ -1330,6 +1356,21 @@ func (ru *aeMembershipRules) channelMembershipEntitlements() (*auth.ChainAuthArg
 	)
 
 	return chainAuthArgs, nil
+}
+
+func (ru *aeMlsInitializeGroupRules) validMlsInitializeGroup() (bool, error) {
+	request := mls_tools.InitialGroupInfoRequest{
+		GroupInfoMessage: ru.initializeGroup.GroupInfoMessage,
+		ExternalGroupSnapshot: ru.initializeGroup.ExternalGroupSnapshot,
+	}
+	resp, err := mls_service.InitialGroupInfoRequest(&request)
+	if err != nil {
+		return false, err
+	}
+	if resp.GetResult() != mls_tools.ValidationResult_VALID {
+		return false, RiverError(Err_INVALID_ARGUMENT, "invalid group init", "result", resp.GetResult())
+	}
+	return true, nil
 }
 
 // return function that can be used to check if a user has a permission for a space
