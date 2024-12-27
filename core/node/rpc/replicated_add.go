@@ -62,6 +62,8 @@ func (r *replicatedStream) AddEvent(ctx context.Context, event *ParsedEvent) err
 func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent) error {
 	// TODO: Store event in the DB
 	// TODO: Create next miniblock and store in ephemeral state
+	// TODO: Remotes are always empty because the stream is not registered in the registry smart contract
+	// TODO: that's why we need a creation cookie here.
 	remotes, _ := r.nodes.GetRemotesAndIsLocal()
 	if len(remotes) == 0 {
 		return r.localStream.AddEvent(ctx, event)

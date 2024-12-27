@@ -836,7 +836,8 @@ message AddEventResponse {
 message AddMediaEventRequest {
     bytes stream_id = 1;
     Envelope event = 2;
-    bool optional = 3; // if true, response will contain non nil error if event didn't pass validation
+    CreationCookie creation_cookie = 3;
+    bool optional = 4; // if true, response will contain non nil error if event didn't pass validation
 }
 
 message AddMediaEventResponse {
@@ -846,6 +847,7 @@ message AddMediaEventResponse {
         repeated string funcs = 3;
     }
     Error error = 1; // only set if AddMediaEventRequest.optional is true
+    CreationCookie creation_cookie = 2;
 }
 
 // SyncStreamsRequest is a request to start a streams sync session.
