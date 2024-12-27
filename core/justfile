@@ -283,6 +283,7 @@ _build-mls:
     mkdir -p ${RUN_BASE}/bin
     cargo build --release --manifest-path ../mls/mls-tools/crates/mlslib/Cargo.toml
     cp ../mls/mls-tools/target/release/libmls* ${OUTPUT}
+    cp ../mls/mls-tools/target/release/libmls* ./node/mls_service
 
 _build-node:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
