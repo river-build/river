@@ -17,6 +17,11 @@ COPY . .
 COPY --from=mls . ./
 RUN go mod download
 
+WORKDIR /build/mls-tools/crates/mlslib
+RUN cargo build --release
+RUN cp -f ../../target/release/libmls* /usr/bin
+RUN cp -f ../../target/release/libmls* /build/node/mls_service
+
 # Build river_node
 WORKDIR /build
 RUN go build \
@@ -24,10 +29,6 @@ RUN go build \
     -o /bin/river_node \
     -ldflags="-X github.com/river-build/river/core/river_node/version.version=$VER_VERSION -X github.com/river-build/river/core/river_node/version.branch=$VER_BRANCH -X github.com/river-build/river/core/river_node/version.commit=$VER_COMMIT" \
     ./river_node
-
-WORKDIR /build/mls-tools/crates/mlslib
-RUN cargo build --release
-RUN cp -f ../../target/release/libmls* /usr/bin
 
 # Final stage
 FROM alpine:latest
