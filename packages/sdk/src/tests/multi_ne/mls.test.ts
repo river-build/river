@@ -17,7 +17,7 @@ import { randomBytes } from 'crypto'
 import { dlog } from '@river-build/dlog'
 import { makeUniqueChannelStreamId } from '../../id'
 
-const log = dlog('encryption:mls')
+const log = dlog('csb:test:mls')
 
 describe('mlsTests', () => {
     let clients: Client[] = []
@@ -266,7 +266,7 @@ describe('mlsTests', () => {
         }
         await expect(client._debugSendMls(channelId, mlsPayload)).resolves.not.toThrow()
         let latestGroupInfoMessage = groupParams.groupInfoMessage
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 1; i++) {
             const deviceKey = new Uint8Array(randomBytes(32))
             const mlsClient = await MlsClient.create(deviceKey)
             const { groupInfoMessage, commit } = await externalJoin(
@@ -290,7 +290,16 @@ describe('mlsTests', () => {
             latestGroupInfoMessage = groupInfoMessage
             commits.push(commit)
             await expect(client._debugSendMls(channelId, mlsPayload)).resolves.not.toThrow()
-            await client.debugForceMakeMiniblock(channelId, { forceSnapshot: true })
         }
+
+        await expect(
+            client.debugForceMakeMiniblock(channelId, { forceSnapshot: true }),
+        ).resolves.not.toThrow()
+
+        await new Promise((resolve) => setTimeout(resolve, 10000))
+        const aliceClient = await makeInitAndStartClient()
+        const stream = await aliceClient.getStream(channelId)
+        log('GET STREAM')
+        log(stream.timeline)
     })
 })

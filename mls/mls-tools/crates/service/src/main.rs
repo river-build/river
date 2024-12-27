@@ -35,9 +35,9 @@ impl river_mls_protocol::mls_server::Mls for MlsService {
         Ok(Response::new(reply))
     }
 
-    async fn snapshot_external_group(&self, _: Request<river_mls_protocol::SnapshotExternalGroupRequest>)
+    async fn snapshot_external_group(&self, request: Request<river_mls_protocol::SnapshotExternalGroupRequest>)
         -> Result<Response<river_mls_protocol::SnapshotExternalGroupResponse>, Status> {
-        let response = river_mls_protocol::SnapshotExternalGroupResponse::default();
+        let response = river_mls::snapshot_external_group(request.into_inner());
         Ok(Response::new(response))
     }
 }

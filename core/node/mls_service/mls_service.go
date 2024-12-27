@@ -61,3 +61,19 @@ func ExternalJoinRequest(context context.Context, request *mls_tools.ExternalJoi
 	}
 	return info, nil
 }
+
+func SnapshotExternalGroup(context context.Context, request *mls_tools.SnapshotExternalGroupRequest) (*mls_tools.SnapshotExternalGroupResponse, error) {
+	client, err := grpc.NewClient(socketName(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatal("NewClient:", err)
+	}
+	defer client.Close()
+
+	mlsClient := mls_tools.NewMlsClient(client)
+	info, err := mlsClient.SnapshotExternalGroup(context, request)
+	if err != nil {
+		return nil, err
+	}
+	return info, nil
+}

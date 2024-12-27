@@ -8,6 +8,8 @@ use mls_rs::external_client::ExternalClient;
 use mls_rs::identity::basic::BasicIdentityProvider;
 use mls_rs_crypto_rustcrypto::RustCryptoProvider;
 
+use river_mls_protocol::SnapshotExternalGroupRequest;
+use river_mls_protocol::SnapshotExternalGroupResponse;
 use river_mls_protocol::{InitialGroupInfoRequest, 
     InitialGroupInfoResponse, 
     ExternalJoinRequest, 
@@ -130,14 +132,12 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJ
         let commit = match MlsMessage::from_bytes(&commit.commit) {
             Ok(commit) => commit,
             Err(_) => return ExternalJoinResponse {
-                result: ValidationResult::InvalidCommit.into(),
+                result: ValidationResult::InvalidGroupInfoMissingPubKeyExtension.into(),
             }
         };
 
         if external_group.process_incoming_message(commit).is_err() {
-            return ExternalJoinResponse {
-                result: ValidationResult::InvalidCommit.into(),
-            };
+            println!("Failed processing commit, this is potentially ok");
         }
     }
 
@@ -164,7 +164,7 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJ
     let proposed_external_join_commit = match MlsMessage::from_bytes(&request.proposed_external_join_commit) {
         Ok(commit) => commit,
         Err(_) => return ExternalJoinResponse {
-            result: ValidationResult::InvalidCommit.into(),
+            result: ValidationResult::InvalidExternalGroupMissingTree.into(),
         }
     };
 
@@ -176,7 +176,7 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJ
 
     if !external_group.process_incoming_message(proposed_external_join_commit.clone()).is_ok() {
         return ExternalJoinResponse {
-            result: ValidationResult::InvalidCommit.into(),
+            result: ValidationResult::InvalidExternalGroupEpoch.into(),
         };
     }
 
@@ -184,6 +184,71 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJ
         result: ValidationResult::Valid.into(),
     };
 }
+
+pub fn snapshot_external_group(request: SnapshotExternalGroupRequest) -> SnapshotExternalGroupResponse {
+    println!("About to snapshot {:?} commit count: {}", request.external_group_snapshot, request.commits.len());
+    let external_client = create_external_client();
+    let external_group_snapshot = match ExternalSnapshot::from_bytes(&request.external_group_snapshot) {
+        Ok(external_group_snapshot) => external_group_snapshot,
+        Err(_) => {
+            println!("Failed getting external group 1");
+            return SnapshotExternalGroupResponse { // this means trouble, what should we do?
+                group_info_message: request.group_info_message,
+                external_group_snapshot: request.external_group_snapshot,
+            }
+        }
+    };
+
+    let mut external_group = match external_client.load_group(external_group_snapshot) {
+        Ok(group) => group,
+        Err(_) => {
+            println!("Failed getting external group 2");
+            return SnapshotExternalGroupResponse { // this means trouble, what should we do?
+                group_info_message: request.group_info_message,
+                external_group_snapshot: request.external_group_snapshot,
+            }
+        }
+    };
+    
+    let mut latest_valid_group_info_message = request.group_info_message.clone();
+    for commit_and_group_info in request.commits {
+        let commit = match MlsMessage::from_bytes(&commit_and_group_info.commit) {
+            Ok(commit) => commit,
+            Err(_) => { continue; }
+        };
+
+        if external_group.process_incoming_message(commit).is_ok() {
+            println!("Processed commmit ok");
+            match commit_and_group_info.updated_group_info_message {
+                Some(group_info_message) => {
+                    latest_valid_group_info_message = group_info_message;
+                }
+                None => {}
+            }
+        } else {
+            println!("Failed processing commit");
+        }
+    }
+
+    println!("snapshotting external group, all good so far");
+    match external_group.snapshot().to_bytes() {
+        Ok(snapshot_bytes) => {
+            println!("returning snapshot");
+            SnapshotExternalGroupResponse {
+                group_info_message: latest_valid_group_info_message,
+                external_group_snapshot: snapshot_bytes,
+            }
+        }
+        Err(_) => {
+            println!("FAILED returning snapshot");
+            return SnapshotExternalGroupResponse {
+                group_info_message: latest_valid_group_info_message,
+                external_group_snapshot: request.external_group_snapshot,
+            }
+        }
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

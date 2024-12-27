@@ -2,6 +2,7 @@ package events
 
 import (
 	"bytes"
+	"log"
 	"slices"
 
 	"google.golang.org/protobuf/proto"
@@ -548,7 +549,7 @@ func update_Snapshot_Member(
 		snapshot.Pins = snapPins
 		return nil
 	case *MemberPayload_Mls_:
-		return update_Snapshot_Mls(iSnapshot, memberPayload, creatorAddress, miniblockNum, eventNum, eventHash)
+		return update_Snapshot_Mls(snapshot, memberPayload.GetMls())
 	case *MemberPayload_EncryptionAlgorithm_:
 		snapshot.EncryptionAlgorithm.Algorithm = content.EncryptionAlgorithm.Algorithm
 		return nil
@@ -559,14 +560,20 @@ func update_Snapshot_Member(
 
 
 func update_Snapshot_Mls(
-	iSnapshot *Snapshot,
-	memberPayload *MemberPayload,
-	creatorAddress []byte,
-	miniblockNum int64,
-	eventNum int64,
-	eventHash []byte,
+	snapshot *MemberPayload_Snapshot,
+	mlsPayload *MemberPayload_Mls,
 ) error {
-	
+	log.Printf("update_Snapshot_Mls content %v", mlsPayload.GetContent())
+	switch content := mlsPayload.GetContent().(type) {
+	case *MemberPayload_Mls_InitializeGroup_:
+		log.Println("update_Snapshot_Mls got init")
+		log.Printf("update_Snapshot_Mls Setting: %v", content.InitializeGroup.GetExternalGroupSnapshot())
+		snapshot.Mls.ExternalGroupSnapshot = content.InitializeGroup.GetExternalGroupSnapshot()
+		snapshot.Mls.GroupInfoMessage = content.InitializeGroup.GetGroupInfoMessage()
+		return nil
+	default:
+		break
+	}
 	return nil
 }
 

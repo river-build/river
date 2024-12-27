@@ -3,6 +3,7 @@ package events
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"iter"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/mls_service"
 	"github.com/river-build/river/core/node/mls_service/mls_tools"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
@@ -334,6 +336,59 @@ func (r *streamViewImpl) makeMiniblockHeader(
 				)
 			}
 		}
+
+		commits := make([]*mls_tools.Commit, 0)
+		for i := r.snapshotIndex + 1; i < len(r.blocks); i++ {
+			block := r.blocks[i]
+			for _, e := range block.Events() {
+				payload := e.Event.GetMemberPayload().GetMls()
+				switch content := payload.GetContent().(type) {
+					case *MemberPayload_Mls_ExternalJoin_:
+						commit := &mls_tools.Commit {
+							Commit: content.ExternalJoin.GetCommit(),
+							UpdatedGroupInfoMessage: content.ExternalJoin.GetGroupInfoMessage(),
+						}
+						commits = append(commits, commit)
+					default:
+						break
+				}
+			}
+		}
+		
+		for _, e := range events {
+			payload := e.Event.GetMemberPayload().GetMls()
+			switch content := payload.GetContent().(type) {
+				case *MemberPayload_Mls_ExternalJoin_:
+					commit := &mls_tools.Commit {
+						Commit: content.ExternalJoin.GetCommit(),
+						UpdatedGroupInfoMessage: content.ExternalJoin.GetGroupInfoMessage(),
+					}
+					commits = append(commits, commit)
+				default:
+					break
+			}
+		}
+		
+		externalGroupSnapshotRequest := mls_tools.SnapshotExternalGroupRequest{
+			ExternalGroupSnapshot: snapshot.Members.Mls.ExternalGroupSnapshot,
+			Commits: commits,
+		}
+
+		logMsg := fmt.Sprintf("external MLS group snapshot %v", snapshot.Members.Mls.ExternalGroupSnapshot)
+		log.Error(logMsg)
+		externalGroupSnapshotResponse, err := mls_service.SnapshotExternalGroup(ctx, &externalGroupSnapshotRequest)
+		if err != nil {
+			log.Error("Failed to get external MLS group snapshot",
+				"error", err,
+				"streamId", r.streamId,
+			)
+		} else {
+			logMsg := fmt.Sprintf("Got external MLS group snapshot %v", externalGroupSnapshotResponse.ExternalGroupSnapshot)
+			log.Error(logMsg)
+			snapshot.Members.Mls.ExternalGroupSnapshot = externalGroupSnapshotResponse.ExternalGroupSnapshot
+			snapshot.Members.Mls.GroupInfoMessage = externalGroupSnapshotResponse.GroupInfoMessage
+		}
+		
 	}
 
 	return &MiniblockHeader{

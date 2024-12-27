@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Mls_Info_FullMethodName             = "/mls_tools.Mls/Info"
-	Mls_InitialGroupInfo_FullMethodName = "/mls_tools.Mls/InitialGroupInfo"
-	Mls_ExternalJoin_FullMethodName     = "/mls_tools.Mls/ExternalJoin"
+	Mls_Info_FullMethodName                  = "/mls_tools.Mls/Info"
+	Mls_InitialGroupInfo_FullMethodName      = "/mls_tools.Mls/InitialGroupInfo"
+	Mls_ExternalJoin_FullMethodName          = "/mls_tools.Mls/ExternalJoin"
+	Mls_SnapshotExternalGroup_FullMethodName = "/mls_tools.Mls/SnapshotExternalGroup"
 )
 
 // MlsClient is the client API for Mls service.
@@ -31,6 +32,7 @@ type MlsClient interface {
 	Info(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoResponse, error)
 	InitialGroupInfo(ctx context.Context, in *InitialGroupInfoRequest, opts ...grpc.CallOption) (*InitialGroupInfoResponse, error)
 	ExternalJoin(ctx context.Context, in *ExternalJoinRequest, opts ...grpc.CallOption) (*ExternalJoinResponse, error)
+	SnapshotExternalGroup(ctx context.Context, in *SnapshotExternalGroupRequest, opts ...grpc.CallOption) (*SnapshotExternalGroupResponse, error)
 }
 
 type mlsClient struct {
@@ -71,6 +73,16 @@ func (c *mlsClient) ExternalJoin(ctx context.Context, in *ExternalJoinRequest, o
 	return out, nil
 }
 
+func (c *mlsClient) SnapshotExternalGroup(ctx context.Context, in *SnapshotExternalGroupRequest, opts ...grpc.CallOption) (*SnapshotExternalGroupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SnapshotExternalGroupResponse)
+	err := c.cc.Invoke(ctx, Mls_SnapshotExternalGroup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MlsServer is the server API for Mls service.
 // All implementations must embed UnimplementedMlsServer
 // for forward compatibility.
@@ -78,6 +90,7 @@ type MlsServer interface {
 	Info(context.Context, *InfoRequest) (*InfoResponse, error)
 	InitialGroupInfo(context.Context, *InitialGroupInfoRequest) (*InitialGroupInfoResponse, error)
 	ExternalJoin(context.Context, *ExternalJoinRequest) (*ExternalJoinResponse, error)
+	SnapshotExternalGroup(context.Context, *SnapshotExternalGroupRequest) (*SnapshotExternalGroupResponse, error)
 	mustEmbedUnimplementedMlsServer()
 }
 
@@ -96,6 +109,9 @@ func (UnimplementedMlsServer) InitialGroupInfo(context.Context, *InitialGroupInf
 }
 func (UnimplementedMlsServer) ExternalJoin(context.Context, *ExternalJoinRequest) (*ExternalJoinResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ExternalJoin not implemented")
+}
+func (UnimplementedMlsServer) SnapshotExternalGroup(context.Context, *SnapshotExternalGroupRequest) (*SnapshotExternalGroupResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SnapshotExternalGroup not implemented")
 }
 func (UnimplementedMlsServer) mustEmbedUnimplementedMlsServer() {}
 func (UnimplementedMlsServer) testEmbeddedByValue()             {}
@@ -172,6 +188,24 @@ func _Mls_ExternalJoin_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Mls_SnapshotExternalGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SnapshotExternalGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MlsServer).SnapshotExternalGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Mls_SnapshotExternalGroup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MlsServer).SnapshotExternalGroup(ctx, req.(*SnapshotExternalGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Mls_ServiceDesc is the grpc.ServiceDesc for Mls service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +224,10 @@ var Mls_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExternalJoin",
 			Handler:    _Mls_ExternalJoin_Handler,
+		},
+		{
+			MethodName: "SnapshotExternalGroup",
+			Handler:    _Mls_SnapshotExternalGroup_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
