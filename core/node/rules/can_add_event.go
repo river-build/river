@@ -3,7 +3,6 @@ package rules
 import (
 	"bytes"
 	"context"
-	"log"
 	"log/slog"
 	"math/big"
 	"slices"
@@ -592,7 +591,6 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 			params:          params,
 			initializeGroup: content.InitializeGroup,
 		}
-		log.Println("canAddMlsPayload check")
 		return aeBuilder().
 			check(params.creatorIsMember).
 			check(ru.validMlsInitializeGroup)
