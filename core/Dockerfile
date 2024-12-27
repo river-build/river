@@ -27,7 +27,7 @@ RUN go build \
 
 WORKDIR /build/mls-tools/crates/mlslib
 RUN cargo build --release
-RUN cp -f ../../target/release/libmls* /bin
+RUN cp -f ../../target/release/libmls* /usr/bin
 
 # Final stage
 FROM alpine:latest
