@@ -19,7 +19,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func makeFfiCall(request *mls_tools.MlsRequest) ([]byte, error) {
+func makeMlsRequest(request *mls_tools.MlsRequest) ([]byte, error) {
 	var outputPtr *C.uint8_t
 	var outputLen C.size_t
 	bytes, err := proto.Marshal(request)
@@ -52,7 +52,7 @@ func InitialGroupInfoRequest(request *mls_tools.InitialGroupInfoRequest) (*mls_t
 			InitialGroupInfo: request,
 		},
 	}
-	responseBytes, err := makeFfiCall(r)
+	responseBytes, err := makeMlsRequest(r)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func ExternalJoinRequest(request *mls_tools.ExternalJoinRequest) (*mls_tools.Ext
 			ExternalJoin: request,
 		},
 	}
-	responseBytes, err := makeFfiCall(r)
+	responseBytes, err := makeMlsRequest(r)
 	if err != nil {
 		return nil, err
 	}
