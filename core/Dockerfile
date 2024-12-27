@@ -25,9 +25,9 @@ RUN go build \
     -ldflags="-X github.com/river-build/river/core/river_node/version.version=$VER_VERSION -X github.com/river-build/river/core/river_node/version.branch=$VER_BRANCH -X github.com/river-build/river/core/river_node/version.commit=$VER_COMMIT" \
     ./river_node
 
-WORKDIR /build/mls-tools/crates/service
+WORKDIR /build/mls-tools/crates/mlslib
 RUN cargo build --release
-RUN mv -f ../../target/release/service /bin/mls-service
+RUN cp -f ../../target/release/libmls* /bin
 
 # Final stage
 FROM alpine:latest
