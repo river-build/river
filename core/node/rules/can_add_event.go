@@ -788,7 +788,7 @@ func (ru *aeReceivedBlockchainTransactionRules) receivedBlockchainTransaction_Ch
 			content.Tip.GetEvent().GetReceiver(),
 		), nil
 	default:
-		return nil, RiverError(Err_INVALID_ARGUMENT, "unknown received transaction kind for chain auth", "kind", ru.receivedTransaction.Kind)
+		return nil, RiverError(Err_INVALID_ARGUMENT, "unknown received transaction kind for chain auth", "kind", content)
 	}
 }
 
@@ -798,16 +798,10 @@ func (ru *aeReceivedBlockchainTransactionRules) parentEventForReceivedBlockchain
 		return nil, RiverError(Err_INVALID_ARGUMENT, "transaction is nil")
 	}
 
-	switch ru.receivedTransaction.Kind {
-	case ReceivedBlockchainTransactionKind_RECEIVED_BLOCKCHAIN_TRANSACTION_KIND_UNSPECIFIED:
-		return nil, RiverError(Err_INVALID_ARGUMENT, "transaction kind is unspecified")
-	case ReceivedBlockchainTransactionKind_RECEIVED_BLOCKCHAIN_TRANSACTION_KIND_TIP:
-		// received tips wrap the original tip transaction, grab the stream id
-		// cast content to tip and check error
-		content, ok := transaction.Content.(*BlockchainTransaction_Tip_)
-		if !ok {
-			return nil, RiverError(Err_INVALID_ARGUMENT, "content is not a tip")
-		}
+	switch content := transaction.Content.(type) {
+	case nil:
+		return nil, RiverError(Err_INVALID_ARGUMENT, "transaction content is unspecified")
+	case *BlockchainTransaction_Tip_:
 		if content.Tip.GetEvent().GetChannelId() == nil {
 			return nil, RiverError(Err_INVALID_ARGUMENT, "transaction channel id is nil")
 		}
@@ -825,7 +819,7 @@ func (ru *aeReceivedBlockchainTransactionRules) parentEventForReceivedBlockchain
 			StreamId: streamId,
 		}, nil
 	default:
-		return nil, RiverError(Err_INVALID_ARGUMENT, "unknown transaction kind", "kind", ru.receivedTransaction.Kind)
+		return nil, RiverError(Err_INVALID_ARGUMENT, "unknown transaction content", "content", content)
 	}
 }
 
@@ -849,7 +843,6 @@ func (ru *aeBlockchainTransactionRules) parentEventForBlockchainTransaction() (*
 			shared.ValidGDMChannelStreamId(&toStreamId) {
 			return &DerivedEvent{
 				Payload: events.Make_UserPayload_ReceivedBlockchainTransaction(
-					ReceivedBlockchainTransactionKind_RECEIVED_BLOCKCHAIN_TRANSACTION_KIND_TIP,
 					ru.params.parsedEvent.Event.CreatorAddress,
 					ru.transaction,
 				),
