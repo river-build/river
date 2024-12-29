@@ -17,12 +17,14 @@ import { isDefined, logNever } from './check'
 import { userIdFromAddress } from './id'
 import { StreamStateView_Members_Membership } from './streamStateView_Members_Membership'
 import { StreamStateView_Members_Solicitations } from './streamStateView_Members_Solicitations'
-import { bin_toHexString, check } from '@river-build/dlog'
+import { bin_toHexString, check, dlog } from '@river-build/dlog'
 import { DecryptedContent } from './encryptedContentTypes'
 import { StreamStateView_MemberMetadata } from './streamStateView_MemberMetadata'
 import { KeySolicitationContent } from '@river-build/encryption'
 import { makeParsedEvent } from './sign'
 import { StreamStateView_AbstractContent } from './streamStateView_AbstractContent'
+
+const log = dlog('csb:streamStateView_Members')
 
 export type StreamMember = {
     userId: string
@@ -183,7 +185,12 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
                     const userId = userIdFromAddress(membership.userAddress)
                     switch (membership.op) {
                         case MembershipOp.SO_JOIN:
-                            check(!this.joined.has(userId), 'user already joined')
+                            if (this.joined.has(userId)) {
+                                // aellis 12/24 there is a real bug here, not sure why we
+                                // are getting duplicate join events
+                                log('user already joined', this.streamId, userId)
+                                return
+                            }
                             this.joined.set(userId, {
                                 userId,
                                 userAddress: membership.userAddress,
