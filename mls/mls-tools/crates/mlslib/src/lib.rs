@@ -25,27 +25,26 @@ pub extern "C" fn process_mls_request(input_ptr: *const u8, input_len: usize, ou
         }
     };
     
-    let result: Vec<u8>;
-    match payload {
+    let result = match payload {
         mls_request::Content::InitialGroupInfo(initial_group_info) => {
-            let response = river_mls::validate_initial_group_info_request(initial_group_info);
-            result = response.encode_to_vec();
+            river_mls::validate_initial_group_info_request(initial_group_info).encode_to_vec()
         }
         mls_request::Content::ExternalJoin(external_join) => {
-            let response = river_mls::validate_external_join_request(external_join);
-            result = response.encode_to_vec();
+            river_mls::validate_external_join_request(external_join).encode_to_vec()
         }
-    }
+    };
     
     // Allocate memory for the output
     let output_data = result.into_boxed_slice();
     let length = output_data.len();
     let output_data_ptr = Box::into_raw(output_data);
+
     // Write the pointer and length back to the caller
     unsafe {
         *output_ptr = output_data_ptr as *mut u8;
         *output_len = length;
     }
+
     0
 }
 
