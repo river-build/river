@@ -10,9 +10,11 @@ import {ITownsBase} from "contracts/src/tokens/towns/mainnet/ITowns.sol";
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 import {Towns} from "contracts/src/tokens/towns/mainnet/Towns.sol";
 
+import {DeployTownsManager} from "./DeployTownsManager.s.sol";
+
 contract DeployTownsMainnet is Deployer, ITownsBase {
-  address public constant association =
-    address(0x6C373dB26926a0575f70369aAE2cBfC0E88218DC);
+  DeployTownsManager internal townsManager = new DeployTownsManager();
+
   address public constant vault =
     address(0xD6ab6aA22D7cD09e18A923192a20F9c82331d1CB);
 
@@ -35,15 +37,19 @@ contract DeployTownsMainnet is Deployer, ITownsBase {
   }
 
   function __deploy(address deployer) public override returns (address) {
-    vm.broadcast(deployer);
-    return
-      address(
-        new Towns({
-          vault: vault,
-          manager: association,
-          mintTime: 1709667671,
-          inflationConfig: inflationConfig()
-        })
-      );
+    address manager = townsManager.deploy(deployer);
+
+    vm.startBroadcast(deployer);
+    address towns = address(
+      new Towns({
+        vault: vault,
+        manager: manager,
+        mintTime: 1709667671, // 2024-03-01
+        inflationConfig: inflationConfig()
+      })
+    );
+    vm.stopBroadcast();
+
+    return towns;
   }
 }

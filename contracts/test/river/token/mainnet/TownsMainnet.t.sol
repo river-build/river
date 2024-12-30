@@ -15,23 +15,30 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 import {EIP712Utils} from "contracts/test/utils/EIP712Utils.sol";
 import {DeployTownsMainnet} from "contracts/scripts/deployments/utils/DeployTownsMainnet.s.sol";
+import {DeployTownsManager} from "contracts/scripts/deployments/utils/DeployTownsManager.s.sol";
 import {Towns} from "contracts/src/tokens/towns/mainnet/Towns.sol";
+import {TownsManager} from "contracts/src/tokens/towns/mainnet/TownsManager.sol";
 
 contract TownsMainnetTest is TestUtils, EIP712Utils, ITownsBase, ILockBase {
   DeployTownsMainnet internal deployTownsMainnet = new DeployTownsMainnet();
+  DeployTownsManager internal deployTownsManager = new DeployTownsManager();
 
   /// @dev initial supply is 10 billion tokens
   uint256 internal INITIAL_SUPPLY = 10_000_000_000 ether;
 
+  address deployer;
   address association;
   address vault;
 
   Towns towns;
+  TownsManager townsManager;
   InflationConfig internal inflation;
 
   function setUp() public {
-    towns = Towns(deployTownsMainnet.deploy());
-    association = deployTownsMainnet.association();
+    deployer = getDeployer();
+    towns = Towns(deployTownsMainnet.deploy(deployer));
+    townsManager = TownsManager(towns.authority());
+    association = deployTownsManager.association();
     vault = deployTownsMainnet.vault();
     inflation = deployTownsMainnet.inflationConfig();
   }
@@ -50,6 +57,16 @@ contract TownsMainnetTest is TestUtils, EIP712Utils, ITownsBase, ILockBase {
     vm.assume(caller != address(0));
     vm.prank(deployTownsMainnet.vault());
     towns.transfer(caller, 100);
+    _;
+  }
+
+  modifier givenCallerHasSelectorAccess(
+    address caller,
+    bytes4[] memory selectors,
+    uint64 role
+  ) {
+    vm.prank(deployer);
+    townsManager.setTargetFunctionRole(address(towns), selectors, role);
     _;
   }
 
@@ -224,7 +241,7 @@ contract TownsMainnetTest is TestUtils, EIP712Utils, ITownsBase, ILockBase {
     // set to 1.5%
     uint256 overrideInflationRateBPS = 130;
 
-    vm.prank(deployTownsMainnet.association());
+    vm.prank(deployTownsManager.association());
     towns.setOverrideInflation(true, overrideInflationRateBPS);
 
     assertEq(towns.overrideInflationRate(), overrideInflationRateBPS);
@@ -239,7 +256,7 @@ contract TownsMainnetTest is TestUtils, EIP712Utils, ITownsBase, ILockBase {
 
     uint256 expectedSupply = towns.totalSupply() + inflationAmount;
 
-    vm.prank(deployTownsMainnet.association());
+    vm.prank(deployTownsManager.association());
     towns.createInflation();
 
     assertEq(towns.totalSupply(), expectedSupply);
@@ -248,7 +265,7 @@ contract TownsMainnetTest is TestUtils, EIP712Utils, ITownsBase, ILockBase {
   function test_revertWhen_overrideInflationRateIsGreaterThanFinalInflationRate()
     external
   {
-    vm.prank(deployTownsMainnet.association());
+    vm.prank(deployTownsManager.association());
     vm.expectRevert(InvalidInflationRate.selector);
     towns.setOverrideInflation(true, inflation.finalInflationRate + 1);
   }

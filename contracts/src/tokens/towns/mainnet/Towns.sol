@@ -164,13 +164,7 @@ contract Towns is
     address account,
     address delegatee
   ) internal virtual override {
-    address currentDelegatee = delegates(account);
-
-    // revert if the delegatee is the same as the current delegatee
-    if (currentDelegatee == delegatee) revert DelegateeSameAsCurrent();
-
     super._delegate(account, delegatee);
-
     VotesEnumerableLib.addDelegator(account, delegatee);
   }
 
