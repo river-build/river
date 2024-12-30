@@ -3,8 +3,8 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IVotesEnumerable} from "contracts/src/diamond/facets/governance/votes/enumerable/IVotesEnumerable.sol";
-import {IAuthorizedClaimers} from "contracts/src/tokens/river/mainnet/claimer/IAuthorizedClaimers.sol";
-import {IMainnetDelegation} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
+import {IAuthorizedClaimers} from "contracts/src/tokens/towns/mainnet/claimer/IAuthorizedClaimers.sol";
+import {IMainnetDelegation} from "contracts/src/tokens/towns/base/delegation/IMainnetDelegation.sol";
 import {ICrossDomainMessenger} from "./ICrossDomainMessenger.sol";
 import {IProxyBatchDelegation} from "./IProxyBatchDelegation.sol";
 

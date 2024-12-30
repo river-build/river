@@ -12,7 +12,6 @@ import {IRiverPointsBase} from "contracts/src/airdrop/points/IRiverPoints.sol";
 import {CheckIn} from "contracts/src/airdrop/points/CheckIn.sol";
 
 // contracts
-import {River} from "contracts/src/tokens/river/base/River.sol";
 import {RiverPoints} from "contracts/src/airdrop/points/RiverPoints.sol";
 import {BaseRegistryTest} from "../base/registry/BaseRegistry.t.sol";
 

@@ -12,14 +12,14 @@ import {Interaction} from "contracts/scripts/common/Interaction.s.sol";
 
 // deployments
 import {DeployRiverAirdrop} from "contracts/scripts/deployments/diamonds/DeployRiverAirdrop.s.sol";
-import {DeployRiverBase} from "contracts/scripts/deployments/utils/DeployRiverBase.s.sol";
+import {DeployTownsBase} from "contracts/scripts/deployments/utils/DeployTownsBase.s.sol";
 
 uint256 constant MAX_CLAIMABLE_SUPPLY = 5 ether;
 
 contract InteractClaimCondition is IDropFacetBase, Interaction {
   // deployments
   DeployRiverAirdrop deployRiverAirdrop = new DeployRiverAirdrop();
-  DeployRiverBase deployRiverBase = new DeployRiverBase();
+  DeployTownsBase deployRiverBase = new DeployTownsBase();
   MerkleTree merkleTree = new MerkleTree();
 
   address[] public wallets;

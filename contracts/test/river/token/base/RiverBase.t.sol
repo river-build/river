@@ -17,7 +17,7 @@ import {IOwnableBase} from "@river-build/diamond/src/facets/ownable/IERC173.sol"
 //contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {EIP712Utils} from "contracts/test/utils/EIP712Utils.sol";
-import {River} from "contracts/src/tokens/river/base/River.sol";
+import {River} from "contracts/src/tokens/towns/base/River.sol";
 import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
 contract RiverBaseTest is BaseSetup, EIP712Utils, ILockBase, IOwnableBase {
