@@ -271,10 +271,10 @@ function ChatMessages({ channelId }: { channelId: string }) {
     <div>
       {/* Filter out non-message events */}
       {events
-        ?.filter((event) => event.content?.kind === RiverTimelineEvent.RoomMessage)
+        ?.filter((event) => event.content?.kind === RiverTimelineEvent.ChannelMessage)
         .map((message) => (
           <p key={message.eventId}>
-            {message.content?.kind === RiverTimelineEvent.RoomMessage
+            {message.content?.kind === RiverTimelineEvent.ChannelMessage
               ? message.content?.body
               : ''}
           </p>
