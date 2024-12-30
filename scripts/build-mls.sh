@@ -7,3 +7,5 @@ cp ./mls/mls-tools/target/release/libmls* ./core/node/mls_service/
 cp ./mls/mls-tools/target/release/libmls* ./core
 cp ./mls/mls-tools/target/release/libmls* ./bin
 cp ./mls/mls-tools/target/release/libmls* ./
+
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./
