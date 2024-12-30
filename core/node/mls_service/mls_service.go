@@ -1,7 +1,7 @@
 package mls_service
 
 /*
-#cgo LDFLAGS: -L. -llibmls_lib.a -ldl
+#cgo LDFLAGS: ./libmls_lib.a -ldl
 #include <stdlib.h>
 #include <stdint.h>
 
