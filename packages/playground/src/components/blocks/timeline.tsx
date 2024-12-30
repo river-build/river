@@ -93,7 +93,8 @@ export const Timeline = ({ streamId, showThreadMessages, threads, events }: Time
                         }
                         if (
                             event.content?.kind === RiverTimelineEvent.ChannelMessageEncrypted ||
-                            event.content?.kind === RiverTimelineEvent.ChannelMessageEncryptedWithRef
+                            event.content?.kind ===
+                                RiverTimelineEvent.ChannelMessageEncryptedWithRef
                         ) {
                             return <EncryptedMessage key={event.eventId} />
                         }
