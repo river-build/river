@@ -7,7 +7,6 @@ RUN apk add --no-cache build-base git libsecp256k1-dev
 RUN apk add cargo=1.78.0-r0
 RUN apk add protobuf-dev=24.4-r1
 RUN apk add --no-cache libgcc
-RUN #apk add zig
 
 RUN cargo install cargo-zigbuild
 
