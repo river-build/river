@@ -11,18 +11,18 @@ import {Interaction} from "../common/Interaction.s.sol";
 import {DiamondHelper} from "contracts/test/diamond/Diamond.t.sol";
 
 // facet
-import {DeployRiverPoints} from "contracts/scripts/deployments/facets/DeployRiverPoints.s.sol";
+import {DeployTipping} from "contracts/scripts/deployments/facets/DeployTipping.s.sol";
 
 contract InteractDiamondCut is Interaction, DiamondHelper {
-  DeployRiverPoints riverPointsHelper = new DeployRiverPoints();
+  DeployTipping tippingFacetHelper = new DeployTipping();
 
   function __interact(address deployer) internal override {
-    address diamond = getDeployment("riverAirdrop");
+    address diamond = getDeployment("space");
 
-    address riverPoints = riverPointsHelper.deploy(deployer);
+    address tippingFacet = tippingFacetHelper.deploy(deployer);
 
     addCut(
-      riverPointsHelper.makeCut(riverPoints, IDiamond.FacetCutAction.Replace)
+      tippingFacetHelper.makeCut(tippingFacet, IDiamond.FacetCutAction.Replace)
     );
 
     vm.broadcast(deployer);
