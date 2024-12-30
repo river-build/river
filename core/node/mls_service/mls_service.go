@@ -1,7 +1,6 @@
 package mls_service
 
 /*
-#cgo LDFLAGS: ./mls/mls-tools/target/release/libmls_lib.a -ldl
 #include <stdlib.h>
 #include <stdint.h>
 

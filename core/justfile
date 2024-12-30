@@ -291,6 +291,8 @@ _build-node:
     OUTPUT=${RUN_BASE}/bin/river_node
     echo "Building node binary ${OUTPUT}"
     mkdir -p ${RUN_BASE}/bin
+
+    export CGO_LDFLAGS="${RUN_BASE}/bin/libmls_lib.a -ldl"
     go build \
         -o ${OUTPUT} \
         -race \
