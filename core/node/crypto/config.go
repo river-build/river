@@ -47,6 +47,7 @@ const (
 	MediaStreamMembershipLimitsGDMConfigKey         = "media.streamMembershipLimits.77"
 	MediaStreamMembershipLimitsDMConfigKey          = "media.streamMembershipLimits.88"
 	XChainBlockchainsConfigKey                      = "xchain.blockchains"
+	StreamMiniblockRegistrationFrequencyKey         = "stream.miniblockRegistrationFrequency"
 )
 
 var (

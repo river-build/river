@@ -618,7 +618,7 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 				"streamId", job.stream.streamId, "blocknum", job.candidate.Ref.Num)
 		}
 	}
-	
+
 	if len(filteredProposals) == 1 {
 		job := filteredProposals[0]
 
@@ -655,15 +655,15 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 		var err error
 		successRegistered, failed, err := p.streamCache.Params().Registry.SetStreamLastMiniblockBatch(ctx, mbs)
 		if err == nil {
-			log.Error("processMiniblockProposalBatch: Error registering miniblock batch", "err", err)
-		} else {
 			success = append(success, successRegistered...)
 			if len(failed) > 0 {
 				log.Error("processMiniblockProposalBatch: Failed to register some miniblocks", "failed", failed)
 			}
+		} else {
+			log.Error("processMiniblockProposalBatch: Error registering miniblock batch", "err", err)
 		}
 	}
-
+	
 	for _, job := range proposals {
 		if slices.Contains(success, job.stream.streamId) {
 			err := job.stream.ApplyMiniblock(ctx, job.candidate)
