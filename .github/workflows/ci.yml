@@ -689,7 +689,7 @@ jobs:
               if: contains(github.event.pull_request.labels.*.name, 'ssh')
 
             - name: Run node tests
-              run: LD_LIBRARY_PATH=./ go test -race -timeout 24m -v -parallel 1 -count 1 -p 8 ./...
+              run: CGO_LDFLAGS=""./libmls_lib.a -ldl" go test -race -timeout 24m -v -parallel 1 -count 1 -p 8 ./...
               working-directory: core
 
     XChain_Integration:
