@@ -2,8 +2,10 @@
 pragma solidity ^0.8.23;
 
 //interfaces
+import {IDiamond} from "@river-build/diamond/src/IDiamond.sol";
 
 //libraries
+import "forge-std/console.sol";
 
 //contracts
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
