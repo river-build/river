@@ -93,6 +93,10 @@ type OnChainSettings struct {
 
 	MinSnapshotEvents MinSnapshotEventsSettings `mapstructure:",squash"`
 
+	// StreamMiniblockRegistrationFrequency indicates how often miniblocks are registered.
+	// E.g. StreamMiniblockRegistrationFrequency=5 means that only 1 out of 5 miniblocks for a stream are registered.
+	StreamMiniblockRegistrationFrequency uint64 `mapstructure:"stream.miniblockRegistrationFrequency"`
+
 	StreamCacheExpiration    time.Duration `mapstructure:"stream.cacheExpirationMs"`
 	StreamCachePollIntterval time.Duration `mapstructure:"stream.cacheExpirationPollIntervalMs"`
 
@@ -169,6 +173,8 @@ func DefaultOnChainSettings() *OnChainSettings {
 
 		// TODO: Set it to the default value when the client side is updated.
 		GetMiniblocksMaxPageSize: 0,
+
+		StreamMiniblockRegistrationFrequency: 1,
 
 		MembershipLimits: MembershipLimitsSettings{
 			GDM: 48,

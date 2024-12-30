@@ -68,6 +68,8 @@ type MiniblockProducer interface {
 }
 
 type MiniblockProducerOpts struct {
+	// MiniblockRegistrationFrequency
+	MiniblockRegistrationFrequency int64
 	TestDisableMbProdcutionOnBlock bool
 }
 
@@ -80,8 +82,13 @@ func NewMiniblockProducer(
 		streamCache:      streamCache,
 		localNodeAddress: streamCache.Params().Wallet.Address,
 	}
+
 	if opts != nil {
 		mb.opts = *opts
+	}
+
+	if mb.opts.MiniblockRegistrationFrequency == 0 {
+		mb.opts.MiniblockRegistrationFrequency = 1
 	}
 
 	if !mb.opts.TestDisableMbProdcutionOnBlock {
@@ -597,9 +604,23 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 		return
 	}
 
+	// Only register miniblocks when it's time. If it's not time assume registration was successful.
+	// This is to reduce the number of transactions/calldata size.
 	var success []StreamId
-	if len(proposals) == 1 {
-		job := proposals[0]
+	var filteredProposals []*mbJob
+	for _, job := range proposals {
+		if job.candidate.Ref.Num%p.opts.MiniblockRegistrationFrequency == 0 {
+			filteredProposals = append(filteredProposals, job)
+		} else {
+			success = append(success, job.stream.streamId)
+
+			log.Info("submitProposalBatch: skip miniblock registration",
+				"streamId", job.stream.streamId, "blocknum", job.candidate.Ref.Num)
+		}
+	}
+	
+	if len(filteredProposals) == 1 {
+		job := filteredProposals[0]
 
 		err := p.streamCache.Params().Registry.SetStreamLastMiniblock(
 			ctx,
@@ -614,9 +635,10 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 		} else {
 			success = append(success, job.stream.streamId)
 		}
+
 	} else {
 		var mbs []river.SetMiniblock
-		for _, job := range proposals {
+		for _, job := range filteredProposals {
 			mbs = append(
 				mbs,
 				river.SetMiniblock{
@@ -631,10 +653,11 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 
 		var failed []StreamId
 		var err error
-		success, failed, err = p.streamCache.Params().Registry.SetStreamLastMiniblockBatch(ctx, mbs)
-		if err != nil {
+		successRegistered, failed, err := p.streamCache.Params().Registry.SetStreamLastMiniblockBatch(ctx, mbs)
+		if err == nil {
 			log.Error("processMiniblockProposalBatch: Error registering miniblock batch", "err", err)
 		} else {
+			success = append(success, successRegistered...)
 			if len(failed) > 0 {
 				log.Error("processMiniblockProposalBatch: Failed to register some miniblocks", "failed", failed)
 			}
