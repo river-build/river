@@ -607,6 +607,10 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 	var filteredProposals []*mbJob
 	for _, job := range proposals {
 		freq := int64(p.cfg.Get().StreamMiniblockRegistrationFrequency)
+		if freq <= 0 {
+			freq = 1
+		}
+		
 		if job.candidate.Ref.Num%freq == 0 {
 			filteredProposals = append(filteredProposals, job)
 		} else {
