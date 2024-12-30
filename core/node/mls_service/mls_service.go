@@ -1,7 +1,7 @@
 package mls_service
 
 /*
-#cgo LDFLAGS: ./libmls_lib.a -ldl
+#cgo LDFLAGS: ./mls/mls-tools/target/release/libmls_lib.a -ldl
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -10,13 +10,15 @@ int process_mls_request(const uint8_t* input, size_t input_len, uint8_t** output
 void free_bytes(uint8_t* ptr, size_t len);
 */
 import "C"
+
 import (
 	"fmt"
 	"log"
 	"unsafe"
 
-	"github.com/river-build/river/core/node/mls_service/mls_tools"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/river-build/river/core/node/mls_service/mls_tools"
 )
 
 func makeMlsRequest(request *mls_tools.MlsRequest) ([]byte, error) {
@@ -56,7 +58,7 @@ func InitialGroupInfoRequest(request *mls_tools.InitialGroupInfoRequest) (*mls_t
 	if err != nil {
 		return nil, err
 	}
-	var result = mls_tools.InitialGroupInfoResponse{}
+	result := mls_tools.InitialGroupInfoResponse{}
 	err = proto.Unmarshal(responseBytes, &result)
 	if err != nil {
 		return nil, err
@@ -74,7 +76,7 @@ func ExternalJoinRequest(request *mls_tools.ExternalJoinRequest) (*mls_tools.Ext
 	if err != nil {
 		return nil, err
 	}
-	var result = mls_tools.ExternalJoinResponse{}
+	result := mls_tools.ExternalJoinResponse{}
 	err = proto.Unmarshal(responseBytes, &result)
 	if err != nil {
 		return nil, err
