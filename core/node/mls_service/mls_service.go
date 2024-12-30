@@ -1,9 +1,15 @@
+//go:build (darwin && cgo) || linux
+
 package mls_service
 
 /*
-#cgo LDFLAGS: -L. -lmls_lib
+#cgo CFLAGS: -I../../../mls/mls-tools/crates/mlslib/target -I/usr/include
+#cgo LDFLAGS: -L../../../mls/mls-tools/target/release -L/usr/local/lib -lmls_lib
+
 #include <stdlib.h>
 #include <stdint.h>
+
+#include "mls-lib.h"
 
 // Define the function prototype
 int process_mls_request(const uint8_t* input, size_t input_len, uint8_t** output_ptr, size_t* output_len);

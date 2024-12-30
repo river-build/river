@@ -2,14 +2,14 @@
 name = "mls-lib"
 edition.workspace = true
 
+[lib]
+crate-type = ["staticlib"]
+
 [dependencies]
 river-mls = {workspace = true}
 river-mls-protocol = {workspace = true}
-libc = "0.2"
 prost = {workspace = true}
-
-[lib]
-crate-type = ["lib", "cdylib", "staticlib"]
+libc = "0.2"
 
 [build-dependencies]
 cbindgen = "0.27.0"

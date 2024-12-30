@@ -1,11 +1,15 @@
 # Start with an Alpine image that includes Go.
-FROM golang:1.23.3-alpine3.20 as builder
+FROM golang:1.23.3-alpine3.20 AS builder
 
 # Install build-base for GCC (C compiler and related tools), git, and other dependencies.
 # Install libsecp256k1-dev if available or compile it from source.
 RUN apk add --no-cache build-base git libsecp256k1-dev
 RUN apk add cargo=1.78.0-r0
 RUN apk add protobuf-dev=24.4-r1
+RUN apk add --no-cache libgcc
+RUN #apk add zig
+
+RUN cargo install cargo-zigbuild
 
 ARG VER_VERSION=version_unset
 ARG VER_BRANCH=branch_unset
@@ -14,13 +18,14 @@ ARG VER_COMMIT=commit_unset
 # Prepare build environment
 WORKDIR /build
 COPY . .
-COPY --from=mls . ./
 RUN go mod download
 
-WORKDIR /build/mls-tools/crates/mlslib
+WORKDIR /build/mls/mls-tools
 RUN cargo build --release
-RUN cp -f ../../target/release/libmls* /usr/bin
-RUN cp -f ../../target/release/libmls* /build/node/mls_service
+#RUN cargo zigbuild --release
+
+RUN cp ./crates/mlslib/target/mls-lib.h /usr/include/
+RUN cp ./target/release/libmls_lib* /usr/local/lib/
 
 # Build river_node
 WORKDIR /build
@@ -38,11 +43,12 @@ LABEL org.opencontainers.image.title="River Node" \
     org.opencontainers.image.licenses="MIT"
 
 # Install dependencies
-RUN apk add --no-cache libcap curl && \
+RUN apk add --no-cache libcap curl libgcc && \
     adduser -D riveruser
 
 COPY docker/run.sh /etc/run.sh
 COPY --from=builder /bin/river_node /usr/bin/river_node
+COPY --from=builder /usr/local/lib/libmls_lib* /usr/local/lib
 
 # Use setcap to allow the web server binary to bind to privileged ports
 RUN setcap 'cap_net_bind_service=+ep' /usr/bin/river_node
