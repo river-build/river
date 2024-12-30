@@ -283,7 +283,6 @@ _build-mls:
     mkdir -p ${RUN_BASE}/bin
     cargo build --release --manifest-path ../mls/mls-tools/crates/mlslib/Cargo.toml
     cp ../mls/mls-tools/target/release/libmls* ${OUTPUT}
-    cp ../mls/mls-tools/target/release/libmls* ./node/mls_service
 
 _build-node:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
@@ -292,7 +291,7 @@ _build-node:
     echo "Building node binary ${OUTPUT}"
     mkdir -p ${RUN_BASE}/bin
 
-    export CGO_LDFLAGS="${RUN_BASE}/bin/libmls_lib.a -ldl"
+    export CGO_LDFLAGS="${RUN_BASE}/bin/libmls_lib.a -ldl -Wl,-no_warn_duplicate_libraries"
     go build \
         -o ${OUTPUT} \
         -race \
