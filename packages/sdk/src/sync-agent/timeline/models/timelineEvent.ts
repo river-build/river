@@ -12,6 +12,7 @@ import {
     type SpacePayload,
     type UserPayload,
     MembershipOp,
+    BlockchainTransaction,
 } from '@river-build/proto'
 import { isDefined, logNever } from '../../../check'
 import {
@@ -50,6 +51,7 @@ import {
     UserBlockchainTransactionEvent,
     MemberBlockchainTransactionEvent,
     UserReceivedBlockchainTransactionEvent,
+    StreamEncryptionAlgorithmEvent,
 } from './timeline-types'
 import type { PlainMessage } from '@bufbuild/protobuf'
 import { userIdFromAddress, streamIdFromBytes, streamIdAsString } from '../../../id'
@@ -364,7 +366,13 @@ function toTownsContent_MemberPayload(
                     kind: RiverTimelineEvent.Mls,
                 },
             }
-            break
+        case 'encryptionAlgorithm':
+            return {
+                content: {
+                    kind: RiverTimelineEvent.StreamEncryptionAlgorithm,
+                    algorithm: value.content.value.algorithm,
+                } satisfies StreamEncryptionAlgorithmEvent,
+            }
         case 'memberBlockchainTransaction':
             return {
                 content: {
@@ -956,37 +964,42 @@ export function getFallbackContent(
         case RiverTimelineEvent.Mls:
             return `mlsEvent`
         case RiverTimelineEvent.UserBlockchainTransaction:
-            return `kind: ${content.transaction.kind} refEventId: ${
-                content.transaction.refEventId
-                    ? bin_toHexString(content.transaction.refEventId)
-                    : ''
-            } toUserAddress: ${
-                content.transaction?.toUserAddress
-                    ? bin_toHexString(content.transaction?.toUserAddress)
-                    : ''
-            } quantity: ${
-                content.transaction?.quantity ? content.transaction.quantity.toString() : ''
-            }`
+            return getFallbackContent_BlockchainTransaction(content.transaction)
         case RiverTimelineEvent.MemberBlockchainTransaction:
-            return `kind: ${content.transaction?.kind} fromUserAddress: ${
+            return `memberTransaction from: ${
                 content.fromUserId
-            } refEventId: ${
-                content.transaction?.refEventId
-                    ? bin_toHexString(content.transaction.refEventId)
-                    : ''
-            } toUserAddress: ${
-                content.transaction?.toUserAddress
-                    ? bin_toHexString(content.transaction?.toUserAddress)
-                    : ''
-            } quantity: ${
-                content.transaction?.quantity ? content.transaction?.quantity.toString() : ''
-            }`
+            } ${getFallbackContent_BlockchainTransaction(content.transaction)}`
         case RiverTimelineEvent.UserReceivedBlockchainTransaction:
-            return `kind: ${content.receivedTransaction.kind} fromUserAddress: ${
+            return `kind: ${
+                content.receivedTransaction.transaction?.content?.case ?? '??'
+            } fromUserAddress: ${
                 content.receivedTransaction.fromUserAddress
                     ? bin_toHexString(content.receivedTransaction.fromUserAddress)
                     : ''
             }`
+        case RiverTimelineEvent.StreamEncryptionAlgorithm:
+            return `algorithm: ${content.algorithm}`
+    }
+}
+
+function getFallbackContent_BlockchainTransaction(
+    transaction: PlainMessage<BlockchainTransaction> | undefined,
+) {
+    if (!transaction) {
+        return '??'
+    }
+    switch (transaction.content.case) {
+        case 'tip':
+            if (!transaction.content.value?.event) {
+                return '??'
+            }
+            return `kind: ${transaction.content.case} messageId: ${bin_toHexString(
+                transaction.content.value.event.messageId,
+            )} receiver: ${bin_toHexString(
+                transaction.content.value.event.receiver,
+            )} amount: ${transaction.content.value.event.amount.toString()}`
+        default:
+            return `kind: ${transaction.content.case ?? 'unspecified'}`
     }
 }
 

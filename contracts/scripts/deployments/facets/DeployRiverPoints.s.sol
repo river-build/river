@@ -8,7 +8,7 @@ pragma solidity ^0.8.23;
 //contracts
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 import {FacetHelper} from "contracts/test/diamond/Facet.t.sol";
-import {RiverPoints} from "contracts/src/tokens/points/RiverPoints.sol";
+import {RiverPoints} from "contracts/src/airdrop/points/RiverPoints.sol";
 
 contract DeployRiverPoints is Deployer, FacetHelper {
   // FacetHelper
@@ -30,7 +30,7 @@ contract DeployRiverPoints is Deployer, FacetHelper {
 
   // Deploying
   function versionName() public pure override returns (string memory) {
-    return "riverPointsFacet";
+    return "pointsFacet";
   }
 
   function initializer() public pure override returns (bytes4) {
