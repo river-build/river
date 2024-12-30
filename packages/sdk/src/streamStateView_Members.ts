@@ -317,12 +317,12 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
                     this.removePin(eventId, stateEmitter)
                 }
                 break
-            case 'memberBlockchainTransaction':
+            case 'memberBlockchainTransaction': {
                 const transactionContent = payload.content.value.transaction?.content
                 switch (transactionContent?.case) {
                     case undefined:
                         break
-                    case 'tip':
+                    case 'tip': {
                         const tipEvent = transactionContent.value.event
                         if (!tipEvent) {
                             return
@@ -336,10 +336,12 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
                             transactionContent.value,
                         )
                         break
+                    }
                     default:
                         logNever(transactionContent)
                 }
                 break
+            }
             case 'mls':
                 break
             case 'encryptionAlgorithm':

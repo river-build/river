@@ -153,9 +153,7 @@ describe('transactions_Tip', () => {
 
     test('bobSeesTipInUserStream', async () => {
         // get the user "stream" that is being synced by bob
-        const stream = await bob.riverConnection.client!.stream(
-            bob.riverConnection.client!.userStreamId!,
-        )
+        const stream = bob.riverConnection.client!.stream(bob.riverConnection.client!.userStreamId!)
         if (!stream) throw new Error('no stream found')
         const tipEvent = await waitFor(() => {
             const isUserBlockchainTransaction = (e: StreamTimelineEvent) =>
@@ -179,7 +177,7 @@ describe('transactions_Tip', () => {
 
     test('aliceSeesTipReceivedInUserStream', async () => {
         // get the user "stream" that is being synced by alice
-        const stream = await alice.riverConnection.client!.stream(
+        const stream = alice.riverConnection.client!.stream(
             alice.riverConnection.client!.userStreamId!,
         )
         if (!stream) throw new Error('no stream found')
@@ -208,7 +206,7 @@ describe('transactions_Tip', () => {
 
     test('bobSeesOnMessageInChannel', async () => {
         // get the channel "stream" that is being synced by bob
-        const stream = await bob.riverConnection.client!.stream(defaultChannelId)
+        const stream = bob.riverConnection.client!.stream(defaultChannelId)
         if (!stream) throw new Error('no stream found')
         const tipEvent = await waitFor(() => {
             const isMemberBlockchainTransaction = (e: StreamTimelineEvent) =>

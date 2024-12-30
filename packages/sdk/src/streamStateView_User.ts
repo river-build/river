@@ -12,7 +12,6 @@ import { StreamStateView_AbstractContent } from './streamStateView_AbstractConte
 import { bin_toHexString, check } from '@river-build/dlog'
 import { logNever } from './check'
 import { streamIdFromBytes } from './id'
-import { bytesToHex } from 'ethereum-cryptography/utils'
 import { utils } from 'ethers'
 
 export class StreamStateView_User extends StreamStateView_AbstractContent {
