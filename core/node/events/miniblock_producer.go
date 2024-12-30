@@ -112,8 +112,9 @@ var _ MiniblockProducer = (*miniblockProducer)(nil)
 
 // mbJos tracks single miniblock production attempt for a single stream.
 type mbJob struct {
-	stream    *streamImpl
-	candidate *MiniblockInfo
+	stream     *streamImpl
+	candidate  *MiniblockInfo
+	replicated bool
 }
 
 // candidateTracker is a helper struct to accumulate proposals and call SetStreamLastMiniblockBatch.
@@ -432,36 +433,37 @@ func mbProduceCandidate(
 	params *StreamCacheParams,
 	stream *streamImpl,
 	forceSnapshot bool,
-) (*MiniblockInfo, error) {
+) (*MiniblockInfo, bool, error) {
 	remoteNodes, isLocal := stream.GetRemotesAndIsLocal()
+	replicated := len(remoteNodes) > 0
 	// TODO: this is a sanity check, but in general mb production code needs to be hardened
 	// to handle scenario when local node is removed from the stream.
 	if !isLocal {
-		return nil, RiverError(Err_INTERNAL, "Not a local stream")
+		return nil, replicated, RiverError(Err_INTERNAL, "Not a local stream")
 	}
 
 	view, err := stream.getViewIfLocal(ctx)
 	if err != nil {
-		return nil, err
+		return nil, replicated, err
 	}
 	if view == nil {
-		return nil, RiverError(Err_INTERNAL, "mbProduceCandidate: stream is not local")
+		return nil, replicated, RiverError(Err_INTERNAL, "mbProduceCandidate: stream is not local")
 	}
 
 	mbInfo, err := mbProduceCandiate_Make(ctx, params, view, forceSnapshot, remoteNodes)
 	if err != nil {
-		return nil, err
+		return nil, replicated, err
 	}
 	if mbInfo == nil {
-		return nil, nil
+		return nil, replicated, nil
 	}
 
 	err = mbProduceCandiate_Save(ctx, params, stream.streamId, mbInfo, remoteNodes)
 	if err != nil {
-		return nil, err
+		return nil, replicated, err
 	}
 
-	return mbInfo, nil
+	return mbInfo, replicated, nil
 }
 
 func mbProduceCandiate_Make(
@@ -572,7 +574,7 @@ func (p *miniblockProducer) jobStart(ctx context.Context, j *mbJob, forceSnapsho
 		return
 	}
 
-	candidate, err := mbProduceCandidate(ctx, p.streamCache.Params(), j.stream, forceSnapshot)
+	candidate, replicated, err := mbProduceCandidate(ctx, p.streamCache.Params(), j.stream, forceSnapshot)
 	if err != nil {
 		dlog.FromCtx(ctx).
 			Error("MiniblockProducer: jobStart: Error creating new miniblock proposal", "streamId", j.stream.streamId, "err", err)
@@ -585,6 +587,7 @@ func (p *miniblockProducer) jobStart(ctx context.Context, j *mbJob, forceSnapsho
 	}
 
 	j.candidate = candidate
+	j.replicated = replicated
 	p.candidates.add(ctx, p, j)
 }
 
@@ -610,13 +613,13 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 		if freq <= 0 {
 			freq = 1
 		}
-		
-		if job.candidate.Ref.Num%freq == 0 {
+
+		if job.replicated || job.candidate.Ref.Num%freq == 0 {
 			filteredProposals = append(filteredProposals, job)
 		} else {
 			success = append(success, job.stream.streamId)
 
-			log.Info("submitProposalBatch: skip miniblock registration",
+			log.Debug("submitProposalBatch: skip miniblock registration",
 				"streamId", job.stream.streamId, "blocknum", job.candidate.Ref.Num)
 		}
 	}

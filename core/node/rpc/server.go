@@ -763,11 +763,11 @@ type ServerStartOpts struct {
 // and server must exit.
 func StartServer(
 	ctx context.Context,
+	ctxCancel context.CancelFunc,
 	cfg *config.Config,
 	opts *ServerStartOpts,
 ) (*Service, error) {
 	ctx = config.CtxWithConfig(ctx, cfg)
-	ctx, ctxCancel := context.WithCancel(ctx)
 
 	streamService := &Service{
 		serverCtx:       ctx,
