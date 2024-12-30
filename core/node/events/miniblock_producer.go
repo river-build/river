@@ -68,27 +68,23 @@ type MiniblockProducer interface {
 }
 
 type MiniblockProducerOpts struct {
-	// MiniblockRegistrationFrequency
-	MiniblockRegistrationFrequency int64
 	TestDisableMbProdcutionOnBlock bool
 }
 
 func NewMiniblockProducer(
 	ctx context.Context,
 	streamCache StreamCache,
+	cfg crypto.OnChainConfiguration,
 	opts *MiniblockProducerOpts,
 ) *miniblockProducer {
 	mb := &miniblockProducer{
 		streamCache:      streamCache,
 		localNodeAddress: streamCache.Params().Wallet.Address,
+		cfg:              cfg,
 	}
 
 	if opts != nil {
 		mb.opts = *opts
-	}
-
-	if mb.opts.MiniblockRegistrationFrequency == 0 {
-		mb.opts.MiniblockRegistrationFrequency = 1
 	}
 
 	if !mb.opts.TestDisableMbProdcutionOnBlock {
@@ -100,6 +96,7 @@ func NewMiniblockProducer(
 
 type miniblockProducer struct {
 	streamCache      StreamCache
+	cfg              crypto.OnChainConfiguration
 	opts             MiniblockProducerOpts
 	localNodeAddress common.Address
 
@@ -609,7 +606,8 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 	var success []StreamId
 	var filteredProposals []*mbJob
 	for _, job := range proposals {
-		if job.candidate.Ref.Num%p.opts.MiniblockRegistrationFrequency == 0 {
+		freq := int64(p.cfg.Get().StreamMiniblockRegistrationFrequency)
+		if job.candidate.Ref.Num%freq == 0 {
 			filteredProposals = append(filteredProposals, job)
 		} else {
 			success = append(success, job.stream.streamId)
@@ -663,7 +661,7 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 			log.Error("processMiniblockProposalBatch: Error registering miniblock batch", "err", err)
 		}
 	}
-	
+
 	for _, job := range proposals {
 		if slices.Contains(success, job.stream.streamId) {
 			err := job.stream.ApplyMiniblock(ctx, job.candidate)

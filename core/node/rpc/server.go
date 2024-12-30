@@ -682,7 +682,7 @@ func (s *Service) initCacheAndSync(opts *ServerStartOpts) error {
 		return err
 	}
 
-	s.mbProducer = events.NewMiniblockProducer(s.serverCtx, s.cache, nil)
+	s.mbProducer = events.NewMiniblockProducer(s.serverCtx, s.cache, s.chainConfig, nil)
 
 	s.syncHandler = sync.NewHandler(
 		s.wallet.Address,
