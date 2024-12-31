@@ -725,6 +725,7 @@ func (r *transactionPool) submitLocked(
 		Signer:  r.signerFn,
 		Context: ctx,
 		NoSend:  true,
+		GasFeeCap: r.pricePolicy.GasFeeCap(),
 	}
 
 	tx, err := createTx(opts)
@@ -779,11 +780,12 @@ func (r *transactionPool) submitLocked(
 	r.transactionSubmitted.With(prometheus.Labels{"method_name": methodName}).Add(1)
 
 	log := dlog.FromCtx(ctx)
-	log.Debug(
+	log.Info(
 		"TxPool: Transaction SENT",
 		"txHash", tx.Hash(),
 		"chain", r.chainID,
 		"name", name,
+		"method", methodName,
 		"nonce", tx.Nonce(),
 		"from", opts.From,
 		"to", tx.To(),
