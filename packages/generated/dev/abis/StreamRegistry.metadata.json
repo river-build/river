@@ -639,7 +639,7 @@
           },
           {
             "internalType": "bytes32",
-            "name": "prevMiniBlockHash",
+            "name": "",
             "type": "bytes32"
           },
           {
@@ -774,10 +774,17 @@
       "license": "MIT"
     },
     "contracts/src/river/registry/facets/stream/StreamRegistry.sol": {
+<<<<<<< HEAD
       "keccak256": "0xfd0fa40ce70e101fbc2037e7bab91c3b4f4f70cd7679c3455454fa777bed3381",
       "urls": [
         "bzz-raw://9391463aebf57b361feb25aca8fd47e791a3ce7cdb89813f47892dc687eb3947",
         "dweb:/ipfs/QmYz9hiRKXqd58ByxYNimqcyvH5eFeG63za9u99uPWwHTu"
+=======
+      "keccak256": "0xf8b92b4cfd0138527330d6fddb9b04f11b7757b100fa526bc6c4252a8efbb6ca",
+      "urls": [
+        "bzz-raw://fc171f6503f5725eb89c20a19f44b2b3ecac3e616103c9454029987247a61b9f",
+        "dweb:/ipfs/QmW7kRN9vjUQq8my7tUVisT8pvjGFVWXmGPgGWmFT6Lyjc"
+>>>>>>> origin/main
       ],
       "license": "MIT"
     },
