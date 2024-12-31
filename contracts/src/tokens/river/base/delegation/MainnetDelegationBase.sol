@@ -16,6 +16,21 @@ import {IRewardsDistribution} from "contracts/src/base/registry/facets/distribut
 abstract contract MainnetDelegationBase is IMainnetDelegationBase {
   using EnumerableSet for EnumerableSet.AddressSet;
 
+  function _setDelegationDigest(bytes32 digest) internal {
+    MainnetDelegationStorage.layout().delegationDigest = digest;
+
+    emit DelegationDigestSet(digest);
+  }
+
+  function _relayDelegations(bytes memory encodedMsgs) internal {
+    MainnetDelegationStorage.Layout storage ds = MainnetDelegationStorage
+      .layout();
+
+    bytes32 digest = keccak256(abi.encode(keccak256(encodedMsgs)));
+    require(digest == ds.delegationDigest);
+    DelegationMsg[] memory msgs = abi.decode(encodedMsgs, (DelegationMsg[]));
+  }
+
   function _removeDelegation(address delegator) internal {
     MainnetDelegationStorage.Layout storage ds = MainnetDelegationStorage
       .layout();

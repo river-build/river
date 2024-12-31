@@ -25,6 +25,7 @@ library MainnetDelegationStorage {
     address proxyDelegation;
     EnumerableSet.AddressSet delegators;
     mapping(address delegator => uint256 depositId) depositIdByDelegator;
+    bytes32 delegationDigest;
   }
 
   function layout() internal pure returns (Layout storage s) {
