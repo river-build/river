@@ -65,9 +65,14 @@ interface IMainnetDelegationBase {
 }
 
 interface IMainnetDelegation is IMainnetDelegationBase {
+  /// @notice Set delegation digest from L1
+  /// @dev Only the L2 messenger can call this function
+  /// @param digest The delegation digest
   function setDelegationDigest(bytes32 digest) external;
 
-  function relayDelegations(bytes memory encodedMsgs) external;
+  /// @notice Relay cross-chain delegations
+  /// @param encodedMsgs The encoded delegation messages
+  function relayDelegations(bytes calldata encodedMsgs) external;
 
   /// @notice Set batch cross-chain delegation
   /// @param delegators The delegator address

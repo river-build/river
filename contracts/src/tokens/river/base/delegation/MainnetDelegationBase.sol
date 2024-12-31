@@ -22,13 +22,62 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
     emit DelegationDigestSet(digest);
   }
 
-  function _relayDelegations(bytes memory encodedMsgs) internal {
+  function _verifyDelegations(bytes calldata encodedMsgs) internal view {
     MainnetDelegationStorage.Layout storage ds = MainnetDelegationStorage
       .layout();
 
     bytes32 digest = keccak256(abi.encode(keccak256(encodedMsgs)));
     require(digest == ds.delegationDigest);
-    DelegationMsg[] memory msgs = abi.decode(encodedMsgs, (DelegationMsg[]));
+  }
+
+  /// @dev equivalent: abi.decode(encodedMsgs, (DelegationMsg[]));
+  function _decodeDelegations(
+    bytes calldata encodedMsgs
+  ) internal pure returns (DelegationMsg[] calldata msgs) {
+    assembly {
+      // this is a dynamic array, so calldataload(encodedMsgs.offset) is the
+      // offset from encodedMsgs.offset at which the array begins
+      let lengthPtr := add(encodedMsgs.offset, calldataload(encodedMsgs.offset))
+      msgs.length := calldataload(lengthPtr)
+      msgs.offset := add(lengthPtr, 0x20)
+    }
+  }
+
+  function _relayDelegations(bytes calldata encodedMsgs) internal {
+    _verifyDelegations(encodedMsgs);
+
+    DelegationMsg[] calldata msgs = _decodeDelegations(encodedMsgs);
+
+    // process the delegation messages
+    for (uint256 i; i < msgs.length; ++i) {
+      DelegationMsg calldata delegation = msgs[i];
+      _setDelegation(
+        delegation.delegator,
+        delegation.delegatee,
+        delegation.quantity
+      );
+      _setAuthorizedClaimer(delegation.delegator, delegation.claimer);
+    }
+
+    MainnetDelegationStorage.Layout storage ds = MainnetDelegationStorage
+      .layout();
+
+    address[] memory delegators = ds.delegators.values();
+
+    // remove stale delegation if a delegator isn't in the encodedMsgs
+    for (uint256 i; i < delegators.length; ++i) {
+      address delegator = delegators[i];
+      bool found;
+      for (uint256 j; j < msgs.length; ++j) {
+        if (msgs[j].delegator == delegator) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        _removeDelegation(delegator);
+      }
+    }
   }
 
   function _removeDelegation(address delegator) internal {

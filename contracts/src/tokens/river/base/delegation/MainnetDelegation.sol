@@ -56,6 +56,11 @@ contract MainnetDelegation is
     _setProxyDelegation(proxyDelegation);
   }
 
+  /// @inheritdoc IMainnetDelegation
+  function relayDelegations(bytes calldata encodedMsgs) external onlyOwner {
+    _relayDelegations(encodedMsgs);
+  }
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                         DELEGATION                         */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -65,10 +70,6 @@ contract MainnetDelegation is
     bytes32 digest
   ) external onlyCrossDomainMessenger {
     _setDelegationDigest(digest);
-  }
-
-  function relayDelegations(bytes memory encodedMsgs) external onlyOwner {
-    _relayDelegations(encodedMsgs);
   }
 
   function removeDelegations(
