@@ -235,6 +235,9 @@ jobs:
               with:
                   version: ${{ env.FOUNDRY_VERSION }}
 
+            - name: Install Protoc
+              uses: arduino/setup-protoc@v3
+
             - uses: actions/setup-node@v4
               with:
                   node-version: '20'
@@ -374,6 +377,9 @@ jobs:
               with:
                   version: ${{ env.FOUNDRY_VERSION }}
 
+            - name: Install Protoc
+              uses: arduino/setup-protoc@v3
+
             - uses: actions/setup-node@v4
               with:
                   node-version: '20'
@@ -510,6 +516,9 @@ jobs:
               uses: foundry-rs/foundry-toolchain@v1
               with:
                   version: ${{ env.FOUNDRY_VERSION }}
+
+            - name: Install Protoc
+              uses: arduino/setup-protoc@v3
 
             - uses: actions/setup-node@v4
               with:
