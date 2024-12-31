@@ -51,15 +51,10 @@ import {
     GroupEncryptionCrypto,
     GroupEncryptionSession,
     IGroupEncryptionClient,
-    MlsKeyAnnouncement,
     UserDevice,
     UserDeviceCollection,
     makeSessionKeys,
     type EncryptionDeviceInitOpts,
-    // MlsCommit,
-    // MlsGroupInfo,
-    MlsInitializeGroup,
-    MlsExternalJoin,
 } from '@river-build/encryption'
 import { getMaxTimeoutMs, StreamRpcClient } from './makeStreamRpcClient'
 import { errorContains, getRpcErrorProperty } from './rpcInterceptors'
@@ -139,7 +134,6 @@ import {
     make_SpacePayload_SpaceImage,
     make_UserMetadataPayload_ProfileImage,
     make_UserMetadataPayload_Bio,
-    make_MemberPayload_Mls,
 } from './types'
 
 import debug from 'debug'
@@ -156,6 +150,7 @@ import { SignerContext } from './signerContext'
 import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from './crypto_utils'
 import { makeTags } from './tags'
 import { MlsCrypto } from './mls'
+import { MlsQueue } from './mls/mlsQueue'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -192,7 +187,7 @@ export class Client
 
     public cryptoBackend?: GroupEncryptionCrypto
     public cryptoStore: CryptoStore
-    public mlsCrypto?: MlsCrypto
+    public mlsQueue?: MlsQueue
 
     private getStreamRequests: Map<string, Promise<StreamStateView>> = new Map()
     private getStreamExRequests: Map<string, Promise<StreamStateView>> = new Map()
@@ -2244,7 +2239,14 @@ export class Client
             this.nickname,
         )
         await mlsCrypto.initialize()
-        this.mlsCrypto = mlsCrypto
+
+        this.mlsQueue = new MlsQueue(
+            this,
+            this,
+            mlsCrypto,
+            this.persistenceStore,
+            this.entitlementsDelegate,
+        )
 
         this.decryptionExtensions = new ClientDecryptionExtensions(
             this,
@@ -2350,23 +2352,13 @@ export class Client
         }
         this.logDebug('Cache miss for cleartext', eventId)
 
-        if (encryptedData.mlsCiphertext !== undefined) {
-            if (!this.mlsCrypto) {
-                throw new Error('mls backend not initialized')
-            }
-            const cleartext = await this.mlsCrypto.decrypt(streamId, encryptedData)
-            const string = new TextDecoder().decode(cleartext)
-            this.mlsCrypto.log('decrypted', string)
-            return string
-        } else {
-            if (!this.cryptoBackend) {
-                throw new Error('crypto backend not initialized')
-            }
-            const cleartext = await this.cryptoBackend.decryptGroupEvent(streamId, encryptedData)
-
-            await this.persistenceStore.saveCleartext(eventId, cleartext)
-            return cleartext
+        if (!this.cryptoBackend) {
+            throw new Error('crypto backend not initialized')
         }
+        const cleartext = await this.cryptoBackend.decryptGroupEvent(streamId, encryptedData)
+
+        await this.persistenceStore.saveCleartext(eventId, cleartext)
+        return cleartext
     }
 
     public async encryptAndShareGroupSessions(
@@ -2430,100 +2422,14 @@ export class Client
         return this.cryptoBackend.encryptGroupEvent(streamId, cleartext)
     }
 
-    // Sends an event
-    async mls_joinOrCreateGroup(streamId: string): Promise<void> {
-        if (!this.mlsCrypto) {
-            throw new Error('mls backend not initialized')
-        }
-
-        if (await this.mlsCrypto.groupStore.hasGroup(streamId)) {
-            this.mlsCrypto.log('Group already exists')
-            return
-        }
-
-        const stream = this.streams.get(streamId)
-        if (!stream) {
-            throw new Error('stream not found')
-        }
-        await stream.waitForMembership(MembershipOp.SO_JOIN)
-        const latestGroupInfo = stream.view.membershipContent.mls.latestGroupInfo
-        let joinOrCreateEvent: PlainMessage<StreamEvent>['payload']
-        if (!latestGroupInfo) {
-            // join via group create
-            const groupInfoWithExternalKey = await this.mlsCrypto.createGroup(streamId)
-            const deviceKey = this.mlsCrypto.deviceKey
-            this.mlsCrypto.log('trying to initialize a group', {
-                groupInfo: shortenHexString(bin_toHexString(groupInfoWithExternalKey)),
-            })
-            joinOrCreateEvent = make_MemberPayload_Mls({
-                content: {
-                    case: 'initializeGroup',
-                    value: {
-                        groupInfoWithExternalKey: groupInfoWithExternalKey,
-                        userAddress: addressFromUserId(this.userId),
-                        deviceKey: deviceKey,
-                    },
-                },
-            })
-        } else {
-            // join via external join
-            const groupJoinResult = await this.mlsCrypto.externalJoin(streamId, latestGroupInfo)
-            this.mlsCrypto.log('trying to externally add', {
-                epoch: groupJoinResult.epoch,
-                commit: shortenHexString(bin_toHexString(groupJoinResult.commit)),
-                groupInfo: shortenHexString(bin_toHexString(groupJoinResult.groupInfo)),
-            })
-            joinOrCreateEvent = make_MemberPayload_Mls({
-                content: {
-                    case: 'externalJoin',
-                    value: {
-                        userAddress: addressFromUserId(this.userId),
-                        deviceKey: this.mlsCrypto.deviceKey,
-                        groupInfoWithExternalKey: groupJoinResult.groupInfo,
-                        commit: groupJoinResult.commit,
-                        epoch: groupJoinResult.epoch,
-                    },
-                },
-            })
-        }
-        await this.makeEventAndAddToStream(streamId, joinOrCreateEvent)
-    }
-
     // Encrypt event using MLS.
     async encryptGroupEventMls(event: Message, streamId: string): Promise<EncryptedData> {
-        if (!this.mlsCrypto) {
+        // TODO: Use MlsQueue
+        if (!this.mlsQueue) {
             throw new Error('mls backend not initialized')
         }
-        if (!(await this.mlsCrypto.groupStore.hasGroup(streamId))) {
-            await this.mls_joinOrCreateGroup(streamId)
-        }
-        // NOTE: We recheck the group status
-        let group = await this.mlsCrypto.groupStore.getGroup(streamId)
-        if (group?.state.status !== 'GROUP_ACTIVE') {
-            this.mlsCrypto.log('waiting for group to become active')
-            await this.mlsCrypto.awaitGroupActive(streamId)
-            // Reload the group
-            group = await this.mlsCrypto.groupStore.getGroup(streamId)
-        }
 
-        if (!group) {
-            throw new Error(
-                `Programmer error: group not found after becoming active for streamId ${streamId}`,
-            )
-        }
-
-        // Ensure epoch keys are derived
-        const epochKey = await this.mlsCrypto.epochKeyService.getEpochKey(
-            streamId,
-            group.state.group.currentEpoch,
-        )
-        if (epochKey?.state.status !== 'EPOCH_KEY_OPEN') {
-            throw new Error('epoch keys not derived')
-        }
-
-        const plaintext = event.toJsonString()
-        const binary = new TextEncoder().encode(plaintext)
-        return this.mlsCrypto.encrypt(streamId, binary)
+        return this.mlsQueue.encryptGroupEventMls(event, streamId)
     }
 
     async encryptWithDeviceKeys(
@@ -2563,147 +2469,5 @@ export class Client
 
     public async debugDropStream(syncId: string, streamId: string): Promise<void> {
         await this.rpcClient.info({ debug: ['drop_stream', syncId, streamId] })
-    }
-
-    public async mls_didReceiveKeyAnnouncement(announcement: MlsKeyAnnouncement) {
-        if (!this.mlsCrypto) {
-            throw new Error('mls backend not initialized')
-        }
-        this.mlsCrypto.log('didReceiveKeyAnnouncement', {
-            epoch: announcement.key.epoch,
-            key: shortenHexString(bin_toHexString(announcement.key.key)),
-        })
-        await this.mlsCrypto.handleKeyAnnouncement(announcement.streamId, announcement.key)
-        // Eagerly try to decrypt messages
-        if (this.decryptionExtensions) {
-            await this.decryptionExtensions.retryMls(announcement.streamId)
-        }
-    }
-
-    public async mls_didReceiveInitializeGroup(group: MlsInitializeGroup): Promise<void> {
-        if (!this.mlsCrypto) {
-            throw new Error('mls backend not initialized')
-        }
-
-        const streamId = group.streamId
-        const before = this.mlsCrypto.groupStore.getGroup(streamId)
-        const after = await this.mlsCrypto.handleInitializeGroup(
-            group.streamId,
-            group.userAddress,
-            group.deviceKey,
-            group.groupInfoWithExternalKey,
-        )
-        this.mlsCrypto.log('handleInitializeGroup', before, after)
-        if (!after) {
-            // Try rejoining the group
-            this.mlsCrypto.log('trying to join group')
-            await this.mls_joinOrCreateGroup(streamId)
-        }
-    }
-
-    private async mls_announceKeys(
-        streamId: string,
-        currentEpoch: bigint,
-        maxDelayMS: number = 3000,
-    ): Promise<void> {
-        if (!this.mlsCrypto) {
-            throw new Error('mls backend not initialized')
-        }
-
-        // Wait random delay to give others a chance to share the key
-        const delay = Math.random() * maxDelayMS
-        await new Promise((resolve) => setTimeout(resolve, delay))
-
-        const previousEpoch = currentEpoch - 1n
-        let previousEpochKey = await this.mlsCrypto.epochKeyService.getEpochKey(
-            streamId,
-            previousEpoch,
-        )
-
-        if (previousEpochKey?.state.announced) {
-            this.mlsCrypto.log(`Epoch ${previousEpoch} key announcement already received`)
-            return
-        }
-
-        const currentEpochKey = await this.mlsCrypto.epochKeyService.getEpochKey(
-            streamId,
-            currentEpoch,
-        )
-
-        if (
-            currentEpochKey?.state.status === 'EPOCH_KEY_OPEN' &&
-            previousEpochKey?.state.status === 'EPOCH_KEY_OPEN'
-        ) {
-            if (!previousEpochKey.state.sealedEpochSecret) {
-                this.mlsCrypto.log('sealing previous epoch', {
-                    epoch: currentEpoch,
-                })
-                await this.mlsCrypto.epochKeyService.sealEpochSecret(
-                    streamId,
-                    previousEpoch,
-                    currentEpochKey.state,
-                )
-                previousEpochKey = await this.mlsCrypto.epochKeyService.getEpochKey(
-                    streamId,
-                    previousEpoch,
-                )
-            }
-
-            if (
-                previousEpochKey?.state.status !== 'EPOCH_KEY_OPEN' ||
-                previousEpochKey?.state.sealedEpochSecret === undefined
-            ) {
-                throw new Error('Previous key not sealed (programmer error)')
-            }
-            // Announcing previous epoch secret
-            try {
-                const sealedEpochSecret = previousEpochKey.state.sealedEpochSecret.toBytes()
-                this.mlsCrypto.log('announcing key', {
-                    epoch: previousEpoch,
-                    key: shortenHexString(bin_toHexString(sealedEpochSecret)),
-                })
-                await this.makeEventAndAddToStream(
-                    streamId,
-                    make_MemberPayload_Mls({
-                        content: {
-                            case: 'keyAnnouncement',
-                            value: {
-                                key: sealedEpochSecret,
-                                epoch: previousEpoch,
-                            },
-                        },
-                    }),
-                )
-            } catch (error) {
-                this.mlsCrypto.log('error announcing key', error)
-            }
-        }
-    }
-
-    public async mls_didReceiveExternalJoin(externalJoin: MlsExternalJoin): Promise<void> {
-        if (!this.mlsCrypto) {
-            throw new Error('mls backend not initialized')
-        }
-
-        const streamId = externalJoin.streamId
-        const before = this.mlsCrypto.groupStore.getGroup(streamId)
-        const after = await this.mlsCrypto?.handleExternalJoin(
-            externalJoin.streamId,
-            externalJoin.userAddress,
-            externalJoin.deviceKey,
-            externalJoin.commit,
-            externalJoin.groupInfoWithExternalKey,
-            externalJoin.epoch,
-        )
-        this.mlsCrypto.log('handleExternalJoin', before, after)
-        if (!after) {
-            // Try rejoining the group
-            this.mlsCrypto.log('trying to rejoin group')
-            await this.mls_joinOrCreateGroup(streamId)
-        } else {
-            // We can announce the group key now that we are switching to a different epoch.
-            // NOTE: we need to await this, otherwise weird stuff will happen
-            await this.mls_announceKeys(streamId, after.state.group.currentEpoch)
-        }
     }
 }

@@ -1,5 +1,5 @@
 import TypedEmitter from 'typed-emitter'
-import { StreamEncryptionEvents, StreamStateEvents } from './streamEvents'
+import { StreamMlsEvents, StreamStateEvents } from './streamEvents'
 import { StreamStateView_AbstractContent } from './streamStateView_AbstractContent'
 import { RemoteTimelineEvent } from './types'
 import {
@@ -29,7 +29,7 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
 
     applySnapshot(
         snapshot: MemberPayload_Snapshot_MlsGroup,
-        encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
+        mlsEmitter: TypedEmitter<StreamMlsEvents> | undefined,
     ) {
         this.initialGroupInfo = snapshot.initialGroupInfo
         this.latestGroupInfo = snapshot.latestGroupInfo
@@ -40,16 +40,14 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
         this.recordHighestSeenEpoch(this.currentEpoch)
 
         for (const commit of snapshot.commits) {
-            encryptionEmitter?.emit('mlsCommit', this.streamId, commit)
+            mlsEmitter?.emit('mlsCommit', this.streamId, commit)
         }
-
-        // console.log('GOT KEYVALS', snapshot.epochKeys)
     }
 
     appendEvent(
         event: RemoteTimelineEvent,
         _cleartext: string | undefined,
-        encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
+        mlsEmitter: TypedEmitter<StreamMlsEvents> | undefined,
         _stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
     ): void {
         check(event.remoteEvent.event.payload.case === 'memberPayload')
@@ -61,7 +59,7 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
                 if (!this.initialGroupInfo) {
                     this.initialGroupInfo = payload.content.value.groupInfoWithExternalKey
                     this.latestGroupInfo = payload.content.value.groupInfoWithExternalKey
-                    encryptionEmitter?.emit(
+                    mlsEmitter?.emit(
                         'mlsInitializeGroup',
                         this.streamId,
                         payload.content.value.userAddress,
@@ -94,7 +92,7 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
                     this.latestGroupInfo = payload.content.value.groupInfoWithExternalKey
                     this.currentEpoch = payload.content.value.epoch
                     this.recordHighestSeenEpoch(this.currentEpoch)
-                    encryptionEmitter?.emit(
+                    mlsEmitter?.emit(
                         'mlsExternalJoin',
                         this.streamId,
                         payload.content.value.userAddress,
@@ -108,7 +106,7 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
             }
             case 'keyAnnouncement':
                 this.keys.set(payload.content.value.epoch, payload.content.value.key)
-                encryptionEmitter?.emit('mlsKeyAnnouncement', this.streamId, payload.content.value)
+                mlsEmitter?.emit('mlsKeyAnnouncement', this.streamId, payload.content.value)
                 break
             case undefined:
                 break
@@ -120,7 +118,7 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
     prependEvent(
         _event: RemoteTimelineEvent,
         _cleartext: string | undefined,
-        _encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
+        _encryptionEmitter: TypedEmitter<StreamMlsEvents> | undefined,
         _stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
     ): void {
         //

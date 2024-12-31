@@ -10,12 +10,6 @@ import {
     KeySolicitationContent,
     KeySolicitationData,
     makeSessionKeys,
-    MlsCommit,
-    MlsExternalJoin,
-    MlsGroupInfo,
-    MlsInitializeGroup,
-    MlsJoinGroupEvent,
-    MlsKeyAnnouncement,
 } from '../decryptionExtensions'
 import {
     AddEventResponse_Error,
@@ -368,26 +362,6 @@ class MockDecryptionExtensions extends BaseDecryptionExtensions {
         Object.values(this.inProgress).forEach((t: MicroTask) => {
             t.tick(this.status)
         })
-    }
-
-    public async didReceiveMlsGroupInfo(_args: MlsGroupInfo): Promise<void> {
-        //
-    }
-    public async didReceiveMlsCommit(_args: MlsCommit): Promise<void> {
-        //
-    }
-    public async didReceiveMlsInitializeGroup(_args: MlsInitializeGroup): Promise<void> {
-        //
-    }
-    public async didReceiveMlsExternalJoin(_args: MlsExternalJoin): Promise<void> {
-        //
-    }
-    public async didReceiveMlsKeyAnnouncement(_args: MlsKeyAnnouncement): Promise<void> {
-        //
-    }
-
-    public async didReceiveMlsJoinGroupEvent(_args: MlsJoinGroupEvent): Promise<void> {
-        //
     }
 }
 

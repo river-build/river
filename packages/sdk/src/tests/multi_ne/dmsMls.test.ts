@@ -66,8 +66,8 @@ describe('dmsMlsTests', () => {
         // Not sure both are active
         await waitFor(
             async () => {
-                const aliceEpoch = await alicesClient.mlsCrypto!.epochFor(streamId)
-                const bobEpoch = await bobsClient.mlsCrypto!.epochFor(streamId)
+                const aliceEpoch = await alicesClient.mlsQueue!.mlsCrypto.epochFor(streamId)
+                const bobEpoch = await bobsClient.mlsQueue!.mlsCrypto.epochFor(streamId)
                 check(aliceEpoch === bobEpoch)
                 check(aliceEpoch === BigInt(1))
             },
@@ -244,8 +244,8 @@ describe('dmsMlsTests', () => {
             Array.from(Array(12).keys()).map(async (n) => {
                 log(`JOINING client-${n}`)
                 const client = await makeInitAndStartClient(`client-${n}`)
-                if (client.mlsCrypto) {
-                    client.mlsCrypto.awaitTimeoutMS = 30_000
+                if (client.mlsQueue) {
+                    client.mlsQueue.mlsCrypto.awaitTimeoutMS = 30_000
                 }
                 await expect(client.joinStream(channelId)).resolves.toBeDefined()
                 await expect(client.waitForStream(channelId)).resolves.toBeDefined()
@@ -285,9 +285,9 @@ describe('dmsMlsTests', () => {
         await expect(
             await waitFor(async () => {
                 for (const client of clients) {
-                    check(await client.mlsCrypto!.hasGroup(channelId))
+                    check(await client.mlsQueue!.mlsCrypto.hasGroup(channelId))
                     check(
-                        (await client.mlsCrypto!.epochFor(channelId)) ===
+                        (await client.mlsQueue!.mlsCrypto.epochFor(channelId)) ===
                             BigInt(clients.length - 1),
                     )
                 }
@@ -322,8 +322,8 @@ describe('dmsMlsTests', () => {
             Array.from(Array(NUM_CLIENTS).keys()).map(async (n: number) => {
                 log(`INIT client-${n}`)
                 const client = await makeInitAndStartClient(`client-${n}`)
-                if (client.mlsCrypto) {
-                    client.mlsCrypto.awaitTimeoutMS = 30_000
+                if (client.mlsQueue) {
+                    client.mlsQueue.mlsCrypto.awaitTimeoutMS = 30_000
                 }
                 return client
             }),
