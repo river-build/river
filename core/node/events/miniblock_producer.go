@@ -609,13 +609,13 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 	var success []StreamId
 	var failed []StreamId
 	var filteredProposals []*mbJob
-	for _, job := range proposals {
-		freq := int64(p.cfg.Get().StreamMiniblockRegistrationFrequency)
-		if freq <= 0 {
-			freq = 1
-		}
+	freq := int64(p.cfg.Get().StreamMiniblockRegistrationFrequency)
+	if freq <= 0 {
+		freq = 1
+	}
 
-		if job.replicated || job.candidate.Ref.Num%freq == 0 || job.candidate.Ref.Num == 1 {
+	for _, job := range proposals {
+		if job.replicated || job.candidate.Ref.Num%freq == 0 { //|| job.candidate.Ref.Num == 1 {
 			filteredProposals = append(filteredProposals, job)
 		} else {
 			success = append(success, job.stream.streamId)
@@ -657,6 +657,7 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 		"actualSubmitted", len(filteredProposals),
 		"success", len(success),
 		"failed", len(failed),
+		"mbFrequency", freq,
 	)
 
 	for _, job := range proposals {
