@@ -614,7 +614,7 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 			freq = 1
 		}
 
-		if job.replicated || job.candidate.Ref.Num%freq == 0 {
+		if job.replicated || job.candidate.Ref.Num%freq == 0 || job.candidate.Ref.Num == 1 {
 			filteredProposals = append(filteredProposals, job)
 		} else {
 			success = append(success, job.stream.streamId)
@@ -624,24 +624,7 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 		}
 	}
 
-	if len(filteredProposals) == 1 {
-		job := filteredProposals[0]
-
-		err := p.streamCache.Params().Registry.SetStreamLastMiniblock(
-			ctx,
-			job.stream.streamId,
-			job.candidate.headerEvent.MiniblockRef.Hash,
-			job.candidate.headerEvent.Hash,
-			uint64(job.candidate.Ref.Num),
-			false,
-		)
-		if err != nil {
-			log.Error("submitProposalBatch: Error registering miniblock", "streamId", job.stream.streamId, "err", err)
-		} else {
-			success = append(success, job.stream.streamId)
-		}
-
-	} else {
+	if len(filteredProposals) > 0 {
 		var mbs []river.SetMiniblock
 		for _, job := range filteredProposals {
 			mbs = append(

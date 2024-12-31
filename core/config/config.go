@@ -31,7 +31,7 @@ func GetDefaultConfig() *Config {
 			BlockTimeMs: 2000,
 			TransactionPool: TransactionPoolConfig{
 				TransactionTimeout:               6 * time.Second,
-				GasFeeCap:                        150_000_000_000, // 150 Gwei
+				GasFeeCap:                        1_000_000_000, // 1 Gwei
 				MinerTipFeeReplacementPercentage: 10,
 				GasFeeIncreasePercentage:         10,
 			},
