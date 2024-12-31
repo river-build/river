@@ -281,8 +281,8 @@ _build-mls:
     OUTPUT=${RUN_BASE}/bin
     echo "Building MLS ${OUTPUT}"
     mkdir -p ${RUN_BASE}/bin
-    cargo build --release --manifest-path ../mls/mls-tools/crates/mlslib/Cargo.toml
-    cp ../mls/mls-tools/target/release/libmls* ${OUTPUT}
+    cargo build --release --manifest-path ./mls/mls-tools/crates/mlslib/Cargo.toml
+    cp ./mls/mls-tools/target/release/libmls* ${OUTPUT}
 
 _build-node:
     #!/usr/bin/env -S bash {{BASH_OPTS}}

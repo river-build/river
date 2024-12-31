@@ -14,7 +14,6 @@ ARG VER_COMMIT=commit_unset
 # Prepare build environment
 WORKDIR /build
 COPY . .
-COPY --from=mls . ./
 RUN go mod download
 
 WORKDIR /build/mls-tools/crates/mlslib

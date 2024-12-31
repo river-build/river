@@ -96,7 +96,6 @@ jobs:
                     --build-arg VER_VERSION=$RELEASE_VERSION \
                     --build-arg VER_BRANCH=$BRANCH \
                     --build-arg VER_COMMIT=$COMMIT_HASH \
-                    --build-context mls=../mls \
                     -t river:local-latest \
                     . 
 

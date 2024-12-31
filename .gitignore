@@ -83,5 +83,4 @@ go.work.sum
 
 .idea
 
-mls/mls-tools/target
 /core/node/mls_service/libmls*
