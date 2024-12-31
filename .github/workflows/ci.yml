@@ -66,9 +66,6 @@ jobs:
                   go-version-file: 'go.work'
                   cache-dependency-path: '**/*.sum'
 
-            - name: Install Protoc
-              uses: arduino/setup-protoc@v3
-
             - name: Install Foundry
               uses: foundry-rs/foundry-toolchain@v1
               with:
@@ -233,9 +230,6 @@ jobs:
                   go-version-file: 'go.work'
                   cache-dependency-path: '**/*.sum'
 
-            - name: Install Protoc
-              uses: arduino/setup-protoc@v3
-
             - name: Install Foundry
               uses: foundry-rs/foundry-toolchain@v1
               with:
@@ -375,9 +369,6 @@ jobs:
                   go-version-file: 'go.work'
                   cache-dependency-path: '**/*.sum'
 
-            - name: Install Protoc
-              uses: arduino/setup-protoc@v3
-
             - name: Install Foundry
               uses: foundry-rs/foundry-toolchain@v1
               with:
@@ -514,9 +505,6 @@ jobs:
               with:
                   go-version-file: 'go.work'
                   cache-dependency-path: '**/*.sum'
-
-            - name: Install Protoc
-              uses: arduino/setup-protoc@v3
 
             - name: Install Foundry
               uses: foundry-rs/foundry-toolchain@v1
@@ -713,9 +701,6 @@ jobs:
               with:
                   go-version-file: 'go.work'
                   cache-dependency-path: '**/*.sum'
-
-            - name: Install Protoc
-              uses: arduino/setup-protoc@v3
 
             - name: Install Foundry
               uses: foundry-rs/foundry-toolchain@v1
