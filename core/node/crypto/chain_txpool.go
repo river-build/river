@@ -720,11 +720,11 @@ func (r *transactionPool) submitLocked(
 	}
 
 	opts := &bind.TransactOpts{
-		From:    r.wallet.Address,
-		Nonce:   new(big.Int).SetUint64(nonce),
-		Signer:  r.signerFn,
-		Context: ctx,
-		NoSend:  true,
+		From:      r.wallet.Address,
+		Nonce:     new(big.Int).SetUint64(nonce),
+		Signer:    r.signerFn,
+		Context:   ctx,
+		NoSend:    true,
 		GasFeeCap: r.pricePolicy.GasFeeCap(),
 	}
 
