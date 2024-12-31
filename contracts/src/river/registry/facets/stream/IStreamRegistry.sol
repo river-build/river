@@ -77,6 +77,10 @@ interface IStreamRegistry {
 
   function getStreamCount() external view returns (uint256);
 
+  function getStreamCountOnNode(
+    address nodeAddress
+  ) external view returns (uint256);
+
   /**
    * @dev Recommended range is 5000 streams, returns true if on the last page.
    */

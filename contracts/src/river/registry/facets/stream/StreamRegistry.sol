@@ -243,6 +243,25 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
     return ds.streams.length();
   }
 
+  function getStreamCountOnNode(
+    address nodeAddress
+  ) external view returns (uint256) {
+    uint256 count = 0;
+    uint256 streamLength = ds.streams.length();
+    for (uint256 i = 0; i < streamLength; ++i) {
+      bytes32 id = ds.streams.at(i);
+      Stream storage stream = ds.streamById[id];
+      for (uint256 j = 0; j < stream.nodes.length; ++j) {
+        if (stream.nodes[j] == nodeAddress) {
+          count++;
+          break;
+        }
+      }
+    }
+
+    return count;
+  }
+
   function getPaginatedStreams(
     uint256 start,
     uint256 stop
