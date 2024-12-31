@@ -1,5 +1,5 @@
 # Start with an Alpine image that includes Go.
-FROM golang:1.23.3-alpine3.20 as builder
+FROM golang:1.23.3-alpine3.20 AS builder
 
 # Install build-base for GCC (C compiler and related tools), git, and other dependencies.
 # Install libsecp256k1-dev if available or compile it from source.
@@ -16,14 +16,15 @@ WORKDIR /build
 COPY . .
 RUN go mod download
 
-WORKDIR /build/mls-tools/crates/mlslib
+WORKDIR /build/mls/mls-tools/crates/mlslib
 RUN cargo build --release
-RUN cp -f ../../target/release/libmls* /usr/bin
+RUN cp -f ../../target/release/libmls* /build
 RUN cp -f ../../target/release/libmls* /build/node/mls_service
 
 # Build river_node
 WORKDIR /build
-RUN go build \
+RUN CGO_LDFLAGS="./libmls_lib.a -ldl" \
+    go build \
     -trimpath \
     -o /bin/river_node \
     -ldflags="-X github.com/river-build/river/core/river_node/version.version=$VER_VERSION -X github.com/river-build/river/core/river_node/version.branch=$VER_BRANCH -X github.com/river-build/river/core/river_node/version.commit=$VER_COMMIT" \
