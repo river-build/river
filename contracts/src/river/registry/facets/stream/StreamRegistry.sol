@@ -64,17 +64,8 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
     return ds.streamById[streamId];
   }
 
-  function getStreamByIndex(
-    uint256 i
-  ) external view returns (StreamWithId memory) {
-    uint256 streamCount = ds.streams.length();
-
-    if (i >= streamCount) {
-      revert(RiverRegistryErrors.NOT_FOUND);
-    }
-
-    bytes32 streamId = ds.streams.at(i);
-    return StreamWithId({id: streamId, stream: ds.streamById[streamId]});
+  function isStream(bytes32 streamId) external view returns (bool) {
+    return ds.streams.contains(streamId);
   }
 
   /// @return stream, genesisMiniblockHash, genesisMiniblock
@@ -138,6 +129,8 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
     SetMiniblock[] calldata miniblocks
   ) external onlyNode(msg.sender) {
     uint256 miniblockCount = miniblocks.length;
+
+    if (miniblockCount == 0) revert(RiverRegistryErrors.BAD_ARG);
 
     for (uint256 i = 0; i < miniblockCount; ++i) {
       SetMiniblock calldata miniblock = miniblocks[i];
@@ -250,20 +243,23 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
     return ds.streams.length();
   }
 
-  function getAllStreamIds() external view returns (bytes32[] memory) {
-    return ds.streams.values();
-  }
-
-  function getAllStreams() external view returns (StreamWithId[] memory) {
-    uint256 streamCount = ds.streams.length();
-    StreamWithId[] memory streams = new StreamWithId[](streamCount);
-
-    for (uint256 i = 0; i < streamCount; ++i) {
+  function getStreamCountOnNode(
+    address nodeAddress
+  ) external view returns (uint256) {
+    uint256 count = 0;
+    uint256 streamLength = ds.streams.length();
+    for (uint256 i = 0; i < streamLength; ++i) {
       bytes32 id = ds.streams.at(i);
-      streams[i] = StreamWithId({id: id, stream: ds.streamById[id]});
+      Stream storage stream = ds.streamById[id];
+      for (uint256 j = 0; j < stream.nodes.length; ++j) {
+        if (stream.nodes[j] == nodeAddress) {
+          count++;
+          break;
+        }
+      }
     }
 
-    return streams;
+    return count;
   }
 
   function getPaginatedStreams(
@@ -284,71 +280,5 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
     }
 
     return (streams, stop >= streamCount);
-  }
-
-  function getStreams(
-    bytes32[] calldata streamIds
-  ) external view returns (uint256 foundCount, StreamWithId[] memory) {
-    uint256 streamCount = streamIds.length;
-    StreamWithId[] memory streams = new StreamWithId[](streamCount);
-    for (uint256 i = 0; i < streamCount; ++i) {
-      bytes32 streamId = streamIds[i];
-      Stream storage stream = ds.streamById[streamId];
-      if (stream.nodes.length == 0) continue;
-      streams[foundCount++] = StreamWithId({id: streamId, stream: stream});
-    }
-    return (foundCount, streams);
-  }
-
-  function getStreamsOnNode(
-    address nodeAddress
-  ) external view returns (StreamWithId[] memory) {
-    // TODO: very naive implementation, can be optimized
-    uint256 streamLength = ds.streams.length();
-
-    bytes32[] memory allStreamIds = new bytes32[](streamLength);
-    uint32 streamCount;
-
-    for (uint256 i = 0; i < streamLength; ++i) {
-      bytes32 id = ds.streams.at(i);
-      Stream storage stream = ds.streamById[id];
-      uint256 nodeCount = stream.nodes.length;
-
-      for (uint256 j = 0; j < nodeCount; ++j) {
-        if (stream.nodes[j] == nodeAddress) {
-          allStreamIds[streamCount++] = id;
-          break;
-        }
-      }
-    }
-
-    StreamWithId[] memory streams = new StreamWithId[](streamCount);
-    for (uint256 i = 0; i < streamCount; ++i) {
-      streams[i] = StreamWithId({
-        id: allStreamIds[i],
-        stream: ds.streamById[allStreamIds[i]]
-      });
-    }
-
-    return streams;
-  }
-
-  function getStreamCountOnNode(
-    address nodeAddress
-  ) external view returns (uint256) {
-    uint256 count = 0;
-    uint256 streamLength = ds.streams.length();
-    for (uint256 i = 0; i < streamLength; ++i) {
-      bytes32 id = ds.streams.at(i);
-      Stream storage stream = ds.streamById[id];
-      for (uint256 j = 0; j < stream.nodes.length; ++j) {
-        if (stream.nodes[j] == nodeAddress) {
-          count++;
-          break;
-        }
-      }
-    }
-
-    return count;
   }
 }
