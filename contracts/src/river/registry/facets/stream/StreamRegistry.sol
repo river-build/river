@@ -92,7 +92,7 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
 
   function setStreamLastMiniblock(
     bytes32 streamId,
-    bytes32 prevMiniBlockHash,
+    bytes32, // prevMiniblockHash
     bytes32 lastMiniblockHash,
     uint64 lastMiniblockNum,
     bool isSealed
