@@ -19,7 +19,6 @@ RUN go mod download
 WORKDIR /build/mls/mls-tools/crates/mlslib
 RUN cargo build --release
 RUN cp -f ../../target/release/libmls* /build
-RUN cp -f ../../target/release/libmls* /build/node/mls_service
 
 # Build river_node
 WORKDIR /build

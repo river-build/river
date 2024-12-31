@@ -84,3 +84,4 @@ go.work.sum
 .idea
 
 /core/node/mls_service/libmls*
+libmls_lib.*
