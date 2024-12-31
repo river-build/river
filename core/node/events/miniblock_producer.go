@@ -607,6 +607,7 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 	// Only register miniblocks when it's time. If it's not time assume registration was successful.
 	// This is to reduce the number of transactions/calldata size.
 	var success []StreamId
+	var failed []StreamId
 	var filteredProposals []*mbJob
 	for _, job := range proposals {
 		freq := int64(p.cfg.Get().StreamMiniblockRegistrationFrequency)
@@ -639,7 +640,6 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 			)
 		}
 
-		var failed []StreamId
 		var err error
 		successRegistered, failed, err := p.streamCache.Params().Registry.SetStreamLastMiniblockBatch(ctx, mbs)
 		if err == nil {
@@ -651,6 +651,13 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 			log.Error("processMiniblockProposalBatch: Error registering miniblock batch", "err", err)
 		}
 	}
+
+	log.Info("processMiniblockProposalBatch: Submitted SetStreamLastMiniblockBatch",
+		"total", len(proposals),
+		"actualSubmitted", len(filteredProposals),
+		"success", len(success),
+		"failed", len(failed),
+	)
 
 	for _, job := range proposals {
 		if slices.Contains(success, job.stream.streamId) {
