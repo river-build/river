@@ -354,6 +354,18 @@ func NewMiniblockInfoFromProto(pb *Miniblock, opts *ParsedMiniblockInfoOpts) (*M
 					Tag("headerEventHash", blockHeader.EventHashes[i])
 			}
 		}
+
+		// Validate event hashes match the hashes stored in the header.
+		for i, event := range events {
+			if event.Hash != common.Hash(blockHeader.EventHashes[i]) {
+				return nil, RiverError(
+					Err_BAD_BLOCK,
+					"Block event hash did not match hash in header",
+				).Tag("eventIndex", i).
+					Tag("blockEventHash", event.Hash).
+					Tag("headerEventHash", blockHeader.EventHashes[i])
+			}
+		}
 	}
 
 	if opts.HasExpectedPrevMiniblockHash() {
