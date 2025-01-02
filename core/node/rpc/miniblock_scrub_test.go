@@ -162,7 +162,7 @@ func TestMiniblockScrubber(t *testing.T) {
 	require.NoError(err)
 	require.Len(blocks, 3)
 
-	store.(*storage.PostgresStreamStore).DeleteStream(ctx, channelId)
+	require.NoError(store.(*storage.PostgresStreamStore).DeleteStream(ctx, channelId))
 
 	// Parse miniblocks in order to re-write them
 	mb0, err := events.NewMiniblockInfoFromBytes(blocks[0], 0)
@@ -216,7 +216,7 @@ func TestMiniblockScrubber(t *testing.T) {
 	// Parsing block two should cause an error because block 1 cannot be parsed.
 	// However we will not consider the stream corrupt, because we are not considering
 	// block 1.
-	scrubber.ScheduleStreamMiniblocksScrub(ctx, channelId, 2)
+	require.NoError(scrubber.ScheduleStreamMiniblocksScrub(ctx, channelId, 2))
 	report = <-reports
 
 	expectedErrString := "NewMiniblockInfoFromProto: (38:BAD_BLOCK) Length of events in block does not match length of event hashes in header"
@@ -226,7 +226,7 @@ func TestMiniblockScrubber(t *testing.T) {
 	require.Equal(int64(-1), report.FirstCorruptBlock)
 
 	// Before block 2 - we will evaluate block 1 as corrupt and report it as so.
-	scrubber.ScheduleStreamMiniblocksScrub(ctx, channelId, 0)
+	require.NoError(scrubber.ScheduleStreamMiniblocksScrub(ctx, channelId, 0))
 	report = <-reports
 
 	require.Equal(channelId, report.StreamId)
