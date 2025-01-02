@@ -6,7 +6,7 @@ import { makeTestClient } from '../testUtils'
 import { Client } from '../../client'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { MemberPayload_Mls } from '@river-build/proto'
-import { ExternalClient, Client as MlsClient } from '@river-build/mls-rs-wasm'
+import { ExternalClient, Group as MlsGroup, Client as MlsClient } from '@river-build/mls-rs-wasm'
 import { randomBytes } from 'crypto'
 
 describe('mlsTests', () => {
@@ -29,12 +29,10 @@ describe('mlsTests', () => {
     })
 
     // helper function to create a group + external snapshot
-    async function createGroupInfoAndExternalSnapshot(client: MlsClient): Promise<{
+    async function createGroupInfoAndExternalSnapshot(group: MlsGroup): Promise<{
         groupInfoMessage: Uint8Array
         externalGroupSnapshot: Uint8Array
     }> {
-        // this is still a little clunky — will be addressed in Rust
-        const group = await client.createGroup()
         const groupInfoMessage = await group.groupInfoMessageAllowingExtCommit(false)
         const tree = group.exportTree()
         const externalClient = new ExternalClient()
@@ -88,8 +86,9 @@ describe('mlsTests', () => {
 
         const deviceKey = new Uint8Array(randomBytes(32))
         const client = await MlsClient.create(deviceKey)
+        const group = await client.createGroup()
         const { groupInfoMessage, externalGroupSnapshot } =
-            await createGroupInfoAndExternalSnapshot(client)
+            await createGroupInfoAndExternalSnapshot(group)
 
         const mlsPayload: PlainMessage<MemberPayload_Mls> = {
             content: {
@@ -116,8 +115,9 @@ describe('mlsTests', () => {
 
         const deviceKey = new Uint8Array(randomBytes(32))
         const client = await MlsClient.create(deviceKey)
+        const group = await client.createGroup()
         const { groupInfoMessage, externalGroupSnapshot } =
-            await createGroupInfoAndExternalSnapshot(client)
+            await createGroupInfoAndExternalSnapshot(group)
 
         const mlsPayload: PlainMessage<MemberPayload_Mls> = {
             content: {
@@ -148,10 +148,12 @@ describe('mlsTests', () => {
 
         const deviceKey = new Uint8Array(randomBytes(32))
         const client = await MlsClient.create(deviceKey)
+        const group1 = await client.createGroup()
+        const group2 = await client.createGroup()
         const { externalGroupSnapshot: externalGroupSnapshot1 } =
-            await createGroupInfoAndExternalSnapshot(client)
+            await createGroupInfoAndExternalSnapshot(group1)
         const { groupInfoMessage: groupInfoMessage2 } = await createGroupInfoAndExternalSnapshot(
-            client,
+            group2,
         )
 
         const mlsPayload: PlainMessage<MemberPayload_Mls> = {
@@ -164,7 +166,7 @@ describe('mlsTests', () => {
                 },
             },
         }
-        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).resolves.toThrow(
+        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).rejects.toThrow(
             'INVALID_GROUP_INFO_GROUP_ID_MISMATCH',
         )
     })
