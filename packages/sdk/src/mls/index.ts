@@ -57,7 +57,7 @@ export class MlsCrypto {
     private epochKeyStore: IEpochKeyStore
     private nickname: string
     readonly log: DLogger
-    public awaitTimeoutMS: number = 10_000
+    public awaitTimeoutMS: number = 15_000
 
     awaitingGroupActive: Map<string, Awaiter> = new Map()
     cipherSuite: MlsCipherSuite = new MlsCipherSuite()

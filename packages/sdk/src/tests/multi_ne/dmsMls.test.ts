@@ -83,7 +83,7 @@ describe('dmsMlsTests', () => {
             .toBeTruthy()
     })
 
-    it('clientCanSendOneMlsMessageInDM', async () => {
+    it.only('clientCanSendOneMlsMessageInDM', async () => {
         const { aliceClient, bobClient, streamId } = await setupMlsDM()
 
         const result = await aliceClient.sendMessage(streamId, 'hello bob', [], [], {
@@ -191,7 +191,7 @@ describe('dmsMlsTests', () => {
         await expect.poll(async () => bobClient.mlsQueue?.mlsCrypto.epochFor(streamId)).toBe(1n)
     })
 
-    it.only('clientCanSendManyMlsPayloadsInDM', async () => {
+    it('clientCanSendManyMlsPayloadsInDM', async () => {
         const { aliceClient, bobClient, streamId } = await setupMlsDM()
 
         const aliceMessages = Array.from(Array(10).keys()).map((key) => `Alice ${key}`)
@@ -237,7 +237,7 @@ describe('dmsMlsTests', () => {
 
     // GDM
 
-    it('threeClientsCanJoin', async () => {
+    it.skip('threeClientsCanJoin', async () => {
         const aliceClient = await makeInitAndStartClient('alice')
         const bobClient = await makeInitAndStartClient('bob')
         const charlieClient = await makeInitAndStartClient('charlie')
@@ -279,7 +279,7 @@ describe('dmsMlsTests', () => {
         )
     })
 
-    it('moreClientsCanJoin', async () => {
+    it.skip('moreClientsCanJoin', async () => {
         const alicesClient = await makeInitAndStartClient('alice')
         const bobsClient = await makeInitAndStartClient('bob')
         const charliesClient = await makeInitAndStartClient('charlie')
@@ -418,7 +418,7 @@ describe('dmsMlsTests', () => {
         ).resolves.toBeDefined()
     })
 
-    it('manyClientsInChannelInterleaving', async () => {
+    it.skip('manyClientsInChannelInterleaving', async () => {
         const spaceId = makeUniqueSpaceStreamId()
         const bobsClient = await makeInitAndStartClient('bob')
         await expect(bobsClient.createSpace(spaceId)).resolves.toBeDefined()

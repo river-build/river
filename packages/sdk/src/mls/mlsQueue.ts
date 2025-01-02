@@ -78,6 +78,13 @@ type MlsEncryptedContentItem = {
     encryptedData: EncryptedData
 }
 
+type MlsCommand = {
+    command: 'JoinOrCreateGroup'
+    streamId: string
+    promise: Promise<void>
+    resolve: () => void
+}
+
 /// MlsQueue mimics how DecryptionExtensions handles encrypted content
 export class MlsQueue {
     private started: boolean = false
@@ -88,6 +95,8 @@ export class MlsQueue {
     private pendingDecryption: MlsEncryptedContentItem[] = []
     // streamId: epochId: EncryptedContentItem[]
     private decryptionFailures: Map<string, Map<bigint, EncryptedContentItem[]>> = new Map()
+    private mlsCommands: MlsCommand[] = []
+    private delayMs = 1000
 
     protected log: {
         debug: DLogger
@@ -103,10 +112,18 @@ export class MlsQueue {
         private readonly persistenceStore: IPersistenceStore,
         _delegate: EntitlementsDelegate,
     ) {
-        this.log = {
-            debug: dlog('csb:mls:debug'),
-            info: dlog('csb:mls'),
-            error: dlogError('csb:mls:error'),
+        if (client.nickname) {
+            this.log = {
+                debug: dlog(`csb:mls:debug:${client.nickname}`),
+                info: dlog(`csb:mls:${client.nickname}`),
+                error: dlogError(`csb:mls:error:${client.nickname}`),
+            }
+        } else {
+            this.log = {
+                debug: dlog('csb:mls:debug'),
+                info: dlog('csb:mls'),
+                error: dlogError('csb:mls:error'),
+            }
         }
     }
 
@@ -207,22 +224,45 @@ export class MlsQueue {
 
     private checkStartTicking() {
         // TODO: pause if take mobile safari is backgrounded (idb issue)
-        if (this.timeoutId) {
+        this.log.debug('checkStartTicking', this.timeoutId)
+
+        if (!this.started || this.timeoutId) {
+            this.log.debug('ticking in progress')
             return
         }
 
+        this.log.debug('setting timeout')
         this.timeoutId = setTimeout(() => {
+            this.log.debug('timeout fired')
             this.inProgressTick = this.tick()
-            this.inProgressTick
+                .then(() => {
+                    this.log.debug('tick done')
+                })
                 .catch((e) => this.log.error('MLS ProcessTick Error', e))
                 .finally(() => {
+                    this.log.debug('clearing timeout')
                     this.timeoutId = undefined
                     this.checkStartTicking()
                 })
-        }, 0)
+            this.log.debug('tock', this.inProgressTick)
+        }, this.getDelayMs())
+    }
+
+    private getDelayMs() {
+        if (this.client.nickname === 'alice') {
+            return 1000
+        }
+        return this.delayMs
     }
 
     private async tick() {
+        this.log.debug('tick')
+        // process MLS command
+        const mlsCommand = this.dequeueMlsCommand()
+        if (mlsCommand !== undefined) {
+            return this.processMlsCommand(mlsCommand)
+        }
+
         // process first mlsEncryptionEvent
         const mlsEvent = this.dequeueMlsEncryptionEvent()
         if (mlsEvent !== undefined) {
@@ -246,10 +286,13 @@ export class MlsQueue {
         if (availableEpochKey !== undefined) {
             return this.processAvailableEpochKey(availableEpochKey)
         }
+
+        return Promise.resolve()
     }
 
     /// Process items when ticking
     async processMlsEncryptionEvent(mlsEvent: MlsEncryptionEvent) {
+        this.log.debug('processMlsEncryptionEvent', mlsEvent)
         switch (mlsEvent.tag) {
             case 'MlsInitializeGroup':
                 return this.didReceiveMlsInitializeGroup(mlsEvent)
@@ -429,64 +472,94 @@ export class MlsQueue {
         }
     }
 
-    // Sends an event
-    private async joinOrCreateGroup(streamId: string): Promise<void> {
+    private joinOrCreateGroup(streamId: string): Promise<void> {
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
         }
+        this.log.info('joinOrCreateGroup', streamId)
 
-        if (await this.mlsCrypto.groupStore.hasGroup(streamId)) {
-            this.mlsCrypto.log('Group already exists')
-            return
+        // check if there is a matching event in the queue
+        const found = this.mlsCommands
+            .filter((x) => x.command === 'JoinOrCreateGroup' && streamId === streamId)
+            .shift()
+
+        if (found) {
+            return found.promise
         }
 
-        const stream = this.client.streams.get(streamId)
-        if (!stream) {
-            throw new Error('stream not found')
-        }
-        await stream.waitForMembership(MembershipOp.SO_JOIN)
-        const latestGroupInfo = stream.view.membershipContent.mls.latestGroupInfo
-        let joinOrCreateEvent: PlainMessage<StreamEvent>['payload']
-        if (!latestGroupInfo) {
-            // join via group create
-            const groupInfoWithExternalKey = await this.mlsCrypto.createGroup(streamId)
-            const deviceKey = this.mlsCrypto.deviceKey
-            this.mlsCrypto.log('trying to initialize a group', {
-                groupInfo: shortenHexString(bin_toHexString(groupInfoWithExternalKey)),
-            })
-            joinOrCreateEvent = make_MemberPayload_Mls({
-                content: {
-                    case: 'initializeGroup',
-                    value: {
-                        groupInfoWithExternalKey: groupInfoWithExternalKey,
-                        userAddress: addressFromUserId(this.client.userId),
-                        deviceKey: deviceKey,
-                    },
-                },
-            })
-        } else {
-            // join via external join
-            const groupJoinResult = await this.mlsCrypto.externalJoin(streamId, latestGroupInfo)
-            this.mlsCrypto.log('trying to externally add', {
-                epoch: groupJoinResult.epoch,
-                commit: shortenHexString(bin_toHexString(groupJoinResult.commit)),
-                groupInfo: shortenHexString(bin_toHexString(groupJoinResult.groupInfo)),
-            })
-            joinOrCreateEvent = make_MemberPayload_Mls({
-                content: {
-                    case: 'externalJoin',
-                    value: {
-                        userAddress: addressFromUserId(this.client.userId),
-                        deviceKey: this.mlsCrypto.deviceKey,
-                        groupInfoWithExternalKey: groupJoinResult.groupInfo,
-                        commit: groupJoinResult.commit,
-                        epoch: groupJoinResult.epoch,
-                    },
-                },
-            })
-        }
-        await this.client.makeEventAndAddToStream(streamId, joinOrCreateEvent)
+        let resolve_: () => void = () => {}
+        const promise = new Promise<void>((resolve) => {
+            resolve_ = resolve
+        })
+
+        this.enqueueMlsCommand({
+            command: 'JoinOrCreateGroup',
+            streamId,
+            promise,
+            resolve: resolve_,
+        })
+
+        return promise
     }
+
+    // Sends an event
+    // private async joinOrCreateGroup(streamId: string): Promise<void> {
+    //     if (!this.mlsCrypto) {
+    //         throw new Error('mls backend not initialized')
+    //     }
+    //
+    //     if (await this.mlsCrypto.groupStore.hasGroup(streamId)) {
+    //         this.mlsCrypto.log('Group already exists')
+    //         return
+    //     }
+    //
+    //     const stream = this.client.streams.get(streamId)
+    //     if (!stream) {
+    //         throw new Error('stream not found')
+    //     }
+    //     await stream.waitForMembership(MembershipOp.SO_JOIN)
+    //     const latestGroupInfo = stream.view.membershipContent.mls.latestGroupInfo
+    //     let joinOrCreateEvent: PlainMessage<StreamEvent>['payload']
+    //     if (!latestGroupInfo) {
+    //         // join via group create
+    //         const groupInfoWithExternalKey = await this.mlsCrypto.createGroup(streamId)
+    //         const deviceKey = this.mlsCrypto.deviceKey
+    //         this.mlsCrypto.log('trying to initialize a group', {
+    //             groupInfo: shortenHexString(bin_toHexString(groupInfoWithExternalKey)),
+    //         })
+    //         joinOrCreateEvent = make_MemberPayload_Mls({
+    //             content: {
+    //                 case: 'initializeGroup',
+    //                 value: {
+    //                     groupInfoWithExternalKey: groupInfoWithExternalKey,
+    //                     userAddress: addressFromUserId(this.client.userId),
+    //                     deviceKey: deviceKey,
+    //                 },
+    //             },
+    //         })
+    //     } else {
+    //         // join via external join
+    //         const groupJoinResult = await this.mlsCrypto.externalJoin(streamId, latestGroupInfo)
+    //         this.mlsCrypto.log('trying to externally add', {
+    //             epoch: groupJoinResult.epoch,
+    //             commit: shortenHexString(bin_toHexString(groupJoinResult.commit)),
+    //             groupInfo: shortenHexString(bin_toHexString(groupJoinResult.groupInfo)),
+    //         })
+    //         joinOrCreateEvent = make_MemberPayload_Mls({
+    //             content: {
+    //                 case: 'externalJoin',
+    //                 value: {
+    //                     userAddress: addressFromUserId(this.client.userId),
+    //                     deviceKey: this.mlsCrypto.deviceKey,
+    //                     groupInfoWithExternalKey: groupJoinResult.groupInfo,
+    //                     commit: groupJoinResult.commit,
+    //                     epoch: groupJoinResult.epoch,
+    //                 },
+    //             },
+    //         })
+    //     }
+    //     await this.client.makeEventAndAddToStream(streamId, joinOrCreateEvent)
+    // }
 
     // Encrypt event using MLS.
     public async encryptGroupEventMls(event: Message, streamId: string): Promise<EncryptedData> {
@@ -674,5 +747,116 @@ export class MlsQueue {
 
     private processAvailableEpochKey(_availableEpochKey: bigint) {
         throw new Error('Method not implemented.')
+    }
+
+    private dequeueMlsCommand(): MlsCommand | undefined {
+        return this.mlsCommands.shift()
+    }
+
+    private enqueueMlsCommand(mlsCommand: MlsCommand) {
+        this.log.debug('enqueueMlsCommand', mlsCommand)
+        this.mlsCommands.push(mlsCommand)
+        this.checkStartTicking()
+    }
+
+    private async processMlsCommand(mlsCommand: MlsCommand): Promise<void> {
+        this.log.debug('processMlsCommand', mlsCommand)
+        // Get view of the stream
+        const mlsView = this.client.stream(mlsCommand.streamId)?.view.membershipContent.mls
+        // Get view of a group
+        const mlsGroup = await this.mlsCrypto?.groupStore.getGroup(mlsCommand.streamId)
+
+        switch (mlsCommand.command) {
+            case 'JoinOrCreateGroup':
+                // If we already have a group do nothing
+                if (mlsGroup !== undefined) {
+                    return
+                }
+
+                if (mlsView?.latestGroupInfo === undefined) {
+                    // if there is no group info we try to create it
+                    return this.createGroup(mlsCommand.streamId, mlsCommand)
+                }
+                // if there is group info try external join
+                return this.externalJoin(mlsCommand.streamId, mlsView.latestGroupInfo, mlsCommand)
+            // default:
+            //     logNever(mlsCommand, `Unhandled MLS command ${mlsCommand}`)
+        }
+    }
+
+    /// Create a Group
+    private async createGroup(
+        streamId: string,
+        signal: { promise: Promise<void>; resolve: () => void },
+    ): Promise<void> {
+        const groupInfoWithExternalKey = await this.mlsCrypto.createGroup(streamId)
+        const deviceKey = this.mlsCrypto.deviceKey
+        this.log.debug('trying to initialize a group', {
+            groupInfo: shortenHexString(bin_toHexString(groupInfoWithExternalKey)),
+        })
+        const createEvent = make_MemberPayload_Mls({
+            content: {
+                case: 'initializeGroup',
+                value: {
+                    groupInfoWithExternalKey: groupInfoWithExternalKey,
+                    userAddress: addressFromUserId(this.client.userId),
+                    deviceKey: deviceKey,
+                },
+            },
+        })
+        try {
+            await this.client.makeEventAndAddToStream(streamId, createEvent)
+            signal.resolve()
+        } catch (error) {
+            this.log.error('error creating group', error)
+            // reschedule
+            this.log.debug('rescheduling join or create group')
+            this.enqueueMlsCommand({
+                command: 'JoinOrCreateGroup',
+                streamId,
+                promise: signal.promise,
+                resolve: signal.resolve,
+            })
+        }
+    }
+
+    /// External Join
+    private async externalJoin(
+        streamId: string,
+        latestGroupInfo: Uint8Array,
+        signal: { promise: Promise<void>; resolve: () => void },
+    ): Promise<void> {
+        const groupJoinResult = await this.mlsCrypto.externalJoin(streamId, latestGroupInfo)
+        this.log.debug('trying to externally add', {
+            epoch: groupJoinResult.epoch,
+            commit: shortenHexString(bin_toHexString(groupJoinResult.commit)),
+            groupInfo: shortenHexString(bin_toHexString(groupJoinResult.groupInfo)),
+        })
+        const joinEvent = make_MemberPayload_Mls({
+            content: {
+                case: 'externalJoin',
+                value: {
+                    userAddress: addressFromUserId(this.client.userId),
+                    deviceKey: this.mlsCrypto.deviceKey,
+                    groupInfoWithExternalKey: groupJoinResult.groupInfo,
+                    commit: groupJoinResult.commit,
+                    epoch: groupJoinResult.epoch,
+                },
+            },
+        })
+        try {
+            await this.client.makeEventAndAddToStream(streamId, joinEvent)
+            signal.resolve()
+        } catch (error) {
+            this.log.error('error during external join', error)
+            // reschedule
+            this.log.debug('rescheduling join or create group')
+            this.enqueueMlsCommand({
+                command: 'JoinOrCreateGroup',
+                streamId,
+                promise: signal.promise,
+                resolve: signal.resolve,
+            })
+        }
     }
 }
