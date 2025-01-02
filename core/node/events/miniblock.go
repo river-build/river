@@ -292,14 +292,12 @@ func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts
 				Tag("expectedEventNumOffset", opts.ExpectedEventNumOffset).
 				Tag("eventNumOffset", blockHeader.EventNumOffset)
 		}
-	} else if blockHeader.MiniblockNum == 0 {
-		if 0 != blockHeader.EventNumOffset {
-			return nil, RiverError(
-				Err_BAD_BLOCK,
-				"Header of first miniblock eventNumOffset is not zero",
-			).Func("NewMiniblockInfoFromProto").
-				Tag("eventNumOffset", blockHeader.EventNumOffset)
-		}
+	} else if blockHeader.MiniblockNum == 0 && blockHeader.EventNumOffset != 0 {
+		return nil, RiverError(
+			Err_BAD_BLOCK,
+			"Header of first miniblock eventNumOffset is not zero",
+		).Func("NewMiniblockInfoFromProto").
+			Tag("eventNumOffset", blockHeader.EventNumOffset)
 	}
 
 	if (opts.ExpectedMinimumTimestampExclusive != time.Time{}) {

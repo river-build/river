@@ -142,7 +142,7 @@ func (m *miniblockScrubTaskProcessorImpl) scrubMiniblocks(
 		prevBlock, err := m.store.ReadMiniblocks(ctx, streamId, blockNum-1, blockNum)
 		if err != nil || len(prevBlock) < 1 {
 			if len(prevBlock) < 1 {
-				err = fmt.Errorf("Previous miniblock was not available")
+				err = fmt.Errorf("previous miniblock was not available")
 			}
 
 			return newErrorReport(
