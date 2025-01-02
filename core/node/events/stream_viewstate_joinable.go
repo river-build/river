@@ -204,7 +204,6 @@ func (r *streamViewImpl) IsMlsInitialized() (bool, error) {
 				switch content.Mls.Content.(type) {
 					case *protocol.MemberPayload_Mls_InitializeGroup_:
 					isInitialized = true
-					break
 				default:
 					break
 				}
