@@ -159,7 +159,8 @@ message MemberPayload {
 
         // contains the current MLS group state
         message Mls {
-            
+            bytes external_group_snapshot = 1;
+            bytes group_info_message = 2;
         }
 
         message Member {
