@@ -79,6 +79,7 @@ type serviceTesterOpts struct {
 	replicationFactor int
 	start             bool
 	btcParams         *crypto.TestParams
+	printTestLogs     bool
 }
 
 func makeTestListenerNoCleanup(t *testing.T) (net.Listener, string) {
@@ -105,7 +106,13 @@ func newServiceTester(t *testing.T, opts serviceTesterOpts) *serviceTester {
 		opts.replicationFactor = 1
 	}
 
-	ctx, ctxCancel := test.NewTestContext()
+	var ctx context.Context
+	var ctxCancel func()
+	if opts.printTestLogs {
+		ctx, ctxCancel = test.NewTestContextWithLogging("info")
+	} else {
+		ctx, ctxCancel = test.NewTestContext()
+	}
 	require := require.New(t)
 
 	st := &serviceTester{
@@ -340,9 +347,10 @@ func (st *serviceTester) startSingle(i int, opts ...startOpts) error {
 
 	logger := dlog.FromCtx(st.ctx).With("nodeNum", i, "test", st.t.Name())
 	ctx := dlog.CtxWithLog(st.ctx, logger)
+	ctx, ctxCancel := context.WithCancel(ctx)
 
 	bc := st.btc.GetBlockchain(ctx, i)
-	service, err := StartServer(ctx, cfg, &ServerStartOpts{
+	service, err := StartServer(ctx, ctxCancel, cfg, &ServerStartOpts{
 		RiverChain:      bc,
 		Listener:        listener,
 		HttpClientMaker: testcert.GetHttp2LocalhostTLSClient,
