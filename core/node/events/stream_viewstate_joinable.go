@@ -17,6 +17,7 @@ type JoinableStreamView interface {
 	GetKeySolicitations(userAddress []byte) ([]*protocol.MemberPayload_KeySolicitation, error)
 	GetPinnedMessages() ([]*protocol.MemberPayload_SnappedPin, error)
 	HasTransaction(receipt *protocol.BlockchainTransactionReceipt) (bool, error) // defined in userStreamView
+	IsMlsInitialized() (bool, error)
 }
 
 var _ JoinableStreamView = (*streamViewImpl)(nil)
@@ -182,4 +183,40 @@ func (r *streamViewImpl) GetPinnedMessages() ([]*protocol.MemberPayload_SnappedP
 		return nil, err
 	}
 	return pins, nil
+}
+
+func (r *streamViewImpl) IsMlsInitialized() (bool, error) {
+	s := r.snapshot
+	if s.Members.GetMls() == nil {
+		return false, nil
+	}
+
+	if len(s.Members.GetMls().ExternalGroupSnapshot) > 0 {
+		return true, nil
+	}
+	
+	isInitialized := false
+	updateFn := func (e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error) {
+		switch payload := e.Event.Payload.(type) {
+		case *protocol.StreamEvent_MemberPayload:
+			switch content := payload.MemberPayload.Content.(type) {
+				case *protocol.MemberPayload_Mls_:
+				switch content.Mls.Content.(type) {
+					case *protocol.MemberPayload_Mls_InitializeGroup_:
+					isInitialized = true
+					break
+				default:
+					break
+				}
+			}
+		default:
+			break
+		}
+		return true, nil
+	}
+	err := r.forEachEvent(r.snapshotIndex+1, updateFn)
+	if err != nil {
+		return false, err
+	}
+	return isInitialized, nil
 }

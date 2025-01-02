@@ -1382,6 +1382,13 @@ func (ru *aeMlsInitializeGroupRules) validMlsInitializeGroup() (bool, error) {
 		GroupInfoMessage: ru.initializeGroup.GroupInfoMessage,
 		ExternalGroupSnapshot: ru.initializeGroup.ExternalGroupSnapshot,
 	}
+	mlsInitialized, err := ru.params.streamView.(events.JoinableStreamView).IsMlsInitialized()
+	if err != nil {
+		return false, err
+	}
+	if mlsInitialized {
+		return false, RiverError(Err_INVALID_ARGUMENT, "group already initialized")
+	}
 	resp, err := mls_service.InitialGroupInfoRequest(&request)
 	if err != nil {
 		return false, err
