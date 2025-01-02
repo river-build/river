@@ -194,15 +194,15 @@ func (r *streamViewImpl) IsMlsInitialized() (bool, error) {
 	if len(s.Members.GetMls().ExternalGroupSnapshot) > 0 {
 		return true, nil
 	}
-	
+
 	isInitialized := false
-	updateFn := func (e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error) {
+	updateFn := func(e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error) {
 		switch payload := e.Event.Payload.(type) {
 		case *protocol.StreamEvent_MemberPayload:
 			switch content := payload.MemberPayload.Content.(type) {
-				case *protocol.MemberPayload_Mls_:
+			case *protocol.MemberPayload_Mls_:
 				switch content.Mls.Content.(type) {
-					case *protocol.MemberPayload_Mls_InitializeGroup_:
+				case *protocol.MemberPayload_Mls_InitializeGroup_:
 					isInitialized = true
 				default:
 					break
