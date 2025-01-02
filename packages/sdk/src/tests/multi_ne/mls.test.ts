@@ -48,32 +48,6 @@ describe('mlsTests', () => {
         }
     }
 
-    test('invalidMlsGroupThrowsError', async () => {
-        const bobsClient = await makeInitAndStartClient()
-        const alicesClient = await makeInitAndStartClient()
-        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
-        const stream = await bobsClient.waitForStream(streamId)
-
-        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
-            new Set([bobsClient.userId, alicesClient.userId]),
-        )
-
-        const deviceKey = new Uint8Array(randomBytes(32))
-        const mlsPayload: PlainMessage<MemberPayload_Mls> = {
-            content: {
-                case: 'initializeGroup',
-                value: {
-                    deviceKey: deviceKey,
-                    externalGroupSnapshot: new Uint8Array([]),
-                    groupInfoMessage: new Uint8Array([]),
-                },
-            },
-        }
-        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).rejects.to.toThrow(
-            'INVALID_GROUP_INFO',
-        )
-    })
-
     test('valid MLS group is accepted', async () => {
         const bobsClient = await makeInitAndStartClient()
         const alicesClient = await makeInitAndStartClient()
@@ -101,6 +75,32 @@ describe('mlsTests', () => {
             },
         }
         await expect(bobsClient._debugSendMls(streamId, mlsPayload)).resolves.not.toThrow()
+    })
+
+    test('invalid MLS group is not accepted', async () => {
+        const bobsClient = await makeInitAndStartClient()
+        const alicesClient = await makeInitAndStartClient()
+        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
+        const stream = await bobsClient.waitForStream(streamId)
+
+        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
+            new Set([bobsClient.userId, alicesClient.userId]),
+        )
+
+        const deviceKey = new Uint8Array(randomBytes(32))
+        const mlsPayload: PlainMessage<MemberPayload_Mls> = {
+            content: {
+                case: 'initializeGroup',
+                value: {
+                    deviceKey: deviceKey,
+                    externalGroupSnapshot: new Uint8Array([]),
+                    groupInfoMessage: new Uint8Array([]),
+                },
+            },
+        }
+        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).rejects.to.toThrow(
+            'INVALID_GROUP_INFO',
+        )
     })
 
     test('initializing MLS group twice throws an error', async () => {
@@ -168,6 +168,43 @@ describe('mlsTests', () => {
         }
         await expect(bobsClient._debugSendMls(streamId, mlsPayload)).rejects.toThrow(
             'INVALID_GROUP_INFO_GROUP_ID_MISMATCH',
+        )
+    })
+
+    test.only('epoch not at 0 throws error', async () => {
+        const bobsClient = await makeInitAndStartClient()
+        const alicesClient = await makeInitAndStartClient()
+        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
+        const stream = await bobsClient.waitForStream(streamId)
+
+        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
+            new Set([bobsClient.userId, alicesClient.userId]),
+        )
+
+        const deviceKey1 = new Uint8Array(randomBytes(32))
+        const deviceKey2 = new Uint8Array(randomBytes(32))
+        const client = await MlsClient.create(deviceKey1)
+        const client2 = await MlsClient.create(deviceKey2)
+        const groupAtEpoch0 = await client.createGroup()
+
+        const groupInfoMessageAtEpoch0 = await groupAtEpoch0.groupInfoMessageAllowingExtCommit(true)
+        const output = await client2.commitExternal(groupInfoMessageAtEpoch0)
+        const groupAtEpoch1 = output.group
+        const { groupInfoMessage, externalGroupSnapshot } =
+            await createGroupInfoAndExternalSnapshot(groupAtEpoch1)
+
+        const mlsPayload: PlainMessage<MemberPayload_Mls> = {
+            content: {
+                case: 'initializeGroup',
+                value: {
+                    deviceKey: deviceKey2,
+                    externalGroupSnapshot: externalGroupSnapshot,
+                    groupInfoMessage: groupInfoMessage,
+                },
+            },
+        }
+        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).rejects.toThrow(
+            'INVALID_GROUP_INFO_EPOCH',
         )
     })
 })
