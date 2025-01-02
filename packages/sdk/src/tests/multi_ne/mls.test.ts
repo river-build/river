@@ -28,6 +28,7 @@ describe('mlsTests', () => {
         clients = []
     })
 
+    // helper function to create a group + external snapshot
     async function createGroupInfoAndExternalSnapshot(client: MlsClient): Promise<{
         groupInfoMessage: Uint8Array
         externalGroupSnapshot: Uint8Array
