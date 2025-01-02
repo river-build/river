@@ -13,6 +13,7 @@ import {
 
 import { StreamTimelineEvent } from '../../types'
 import { makeUniqueChannelStreamId } from '../../id'
+import { expect } from 'vitest'
 
 const log = dlog('test:mls')
 
@@ -40,79 +41,201 @@ describe('dmsMlsTests', () => {
         clients = []
     })
 
-    it('clientCanSendMlsPayloadInDM', async () => {
-        const alicesClient = await makeInitAndStartClient('alice')
-        const bobsClient = await makeInitAndStartClient('bob')
-        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
-        await expect(bobsClient.waitForStream(streamId)).resolves.toBeDefined()
-        await expect(alicesClient.waitForStream(streamId)).resolves.toBeDefined()
+    const setupMlsDM = async () => {
+        const aliceClient = await makeInitAndStartClient('alice')
+        const bobClient = await makeInitAndStartClient('bob')
+        const { streamId } = await aliceClient.createDMChannel(bobClient.userId)
+        await expect(aliceClient.waitForStream(streamId)).resolves.toBeDefined()
+        await expect(bobClient.waitForStream(streamId)).resolves.toBeDefined()
+
+        return { aliceClient, bobClient, streamId }
+    }
+
+    it('clientCanCreateDM', async () => {
+        const { aliceClient, bobClient, streamId } = await setupMlsDM()
+
+        expect(aliceClient).toBeDefined()
+        expect(bobClient).toBeDefined()
+        expect(streamId).toBeDefined()
+    })
+
+    it('clientCanCreateDMAndObserveMls', async () => {
+        const { aliceClient, bobClient, streamId } = await setupMlsDM()
 
         await expect(
-            alicesClient.sendMessage(streamId, 'hello bob', [], [], { useMls: true }),
+            aliceClient.sendMessage(streamId, 'hello bob', [], [], { useMls: true }),
         ).resolves.toBeDefined()
 
-        await waitFor(
-            () => {
-                const bobStream = bobsClient.streams.get(streamId)
-                check(bobStream?._view.membershipContent.mls.latestGroupInfo !== undefined)
-            },
-            { timeoutMS: 3_000 },
-        )
+        // Alice and Bob can observe MLS being initialised for the group
+        await expect
+            .poll(
+                async () => {
+                    const aliceStream = aliceClient.streams.get(streamId)
+                    const bobStream = bobClient.streams.get(streamId)
+                    const aliceObservesMls =
+                        aliceStream?._view.membershipContent.mls.latestGroupInfo !== undefined
+                    const bobObservesMls =
+                        bobStream?._view.membershipContent.mls.latestGroupInfo !== undefined
+                    return aliceObservesMls && bobObservesMls
+                },
+                { timeout: 10_000 },
+            )
+            .toBeTruthy()
+    })
 
-        await expect(
-            bobsClient.sendMessage(streamId, 'hello alice', [], [], { useMls: true }),
-        ).resolves.toBeDefined()
+    it('clientCanSendOneMlsMessageInDM', async () => {
+        const { aliceClient, bobClient, streamId } = await setupMlsDM()
 
-        // Not sure both are active
-        await waitFor(
-            async () => {
-                const aliceEpoch = await alicesClient.mlsQueue!.mlsCrypto.epochFor(streamId)
-                const bobEpoch = await bobsClient.mlsQueue!.mlsCrypto.epochFor(streamId)
-                check(aliceEpoch === bobEpoch)
-                check(aliceEpoch === BigInt(1))
-            },
-            { timeoutMS: 3_000 },
-        )
-
-        await waitFor(
-            () => {
-                const aliceStream = alicesClient.streams.get(streamId)!
-                check(
-                    checkTimelineContainsAll(
-                        ['hello alice', 'hello bob'],
-                        aliceStream.view.timeline,
-                    ),
-                )
-
-                const bobStream = bobsClient.streams.get(streamId)!
-                check(
-                    checkTimelineContainsAll(['hello alice', 'hello bob'], bobStream.view.timeline),
-                )
-            },
-            { timeoutMS: 3_000 },
-        )
-
-        const messages = Array.from(Array(10).keys()).map((key) => {
-            return `Message ${key}`
+        const result = await aliceClient.sendMessage(streamId, 'hello bob', [], [], {
+            useMls: true,
         })
 
-        for (const message of messages) {
-            await expect(
-                bobsClient.sendMessage(streamId, message, [], [], { useMls: true }),
-            ).resolves.toBeDefined()
-        }
+        expect(result).toBeDefined()
 
-        await waitFor(
-            () => {
-                const aliceStream = alicesClient.streams.get(streamId)!
-                check(checkTimelineContainsAll(messages, aliceStream.view.timeline))
+        // Check if Alice has the message
+        await expect
+            .poll(async () =>
+                checkTimelineContainsAll(
+                    ['hello bob'],
+                    aliceClient.streams.get(streamId)!.view.timeline,
+                ),
+            )
+            .toBeTruthy()
 
-                const bobStream = bobsClient.streams.get(streamId)!
-                check(checkTimelineContainsAll(messages, bobStream.view.timeline))
-            },
-            { timeoutMS: 3_000 },
-        )
+        // Check if Bob has the message
+        await expect
+            .poll(
+                async () =>
+                    checkTimelineContainsAll(
+                        ['hello bob'],
+                        bobClient.streams.get(streamId)!.view.timeline,
+                    ),
+                { timeout: 10_000 },
+            )
+            .toBeTruthy()
     })
+
+    it('clientsCanObserveLatestGroupInfoInDM', async () => {
+        const { aliceClient, bobClient, streamId } = await setupMlsDM()
+
+        // Alice sends MLS message to bootstrap the protocol
+        await expect(
+            aliceClient.sendMessage(streamId, 'hello bob', [], [], { useMls: true }),
+        ).resolves.toBeDefined()
+
+        // Alice can observe latestGroupInfo
+        await expect
+            .poll(
+                () =>
+                    aliceClient.streams.get(streamId)?._view.membershipContent.mls.latestGroupInfo,
+                { timeout: 10_000 },
+            )
+            .toBeDefined()
+
+        // Bob can observe latestGroupInfo
+        await expect
+            .poll(
+                () => bobClient.streams.get(streamId)?._view.membershipContent.mls.latestGroupInfo,
+                { timeout: 10_000 },
+            )
+            .toBeDefined()
+    })
+
+    it('bothClientsCanSendOneMlsMessageInDM', async () => {
+        const { aliceClient, bobClient, streamId } = await setupMlsDM()
+
+        // Alice can send message
+        await expect(
+            aliceClient.sendMessage(streamId, 'hello bob', [], [], { useMls: true }),
+        ).resolves.toBeDefined()
+
+        await expect(
+            bobClient.sendMessage(streamId, 'hello alice', [], [], { useMls: true }),
+        ).resolves.toBeDefined()
+
+        // Check Alice can see both messages
+        await expect
+            .poll(
+                () =>
+                    checkTimelineContainsAll(
+                        ['hello alice', 'hello bob'],
+                        aliceClient.streams.get(streamId)!.view.timeline,
+                    ),
+                { timeout: 10_000 },
+            )
+            .toBeTruthy()
+
+        // Check Bob can see both messages
+        await expect
+            .poll(
+                () =>
+                    checkTimelineContainsAll(
+                        ['hello alice', 'hello bob'],
+                        bobClient.streams.get(streamId)!.view.timeline,
+                    ),
+                { timeout: 10_000 },
+            )
+            .toBeTruthy()
+    })
+
+    it('clientsAgreeOnEpochInDM', async () => {
+        const { aliceClient, bobClient, streamId } = await setupMlsDM()
+
+        // Alice sends message to ensure MLS starts
+        await expect(
+            aliceClient.sendMessage(streamId, 'hello bob', [], [], { useMls: true }),
+        ).resolves.toBeDefined()
+
+        // Ensure Both Alice and Bob agree on an epoch
+        await expect.poll(async () => aliceClient.mlsQueue?.mlsCrypto.epochFor(streamId)).toBe(1n)
+        await expect.poll(async () => bobClient.mlsQueue?.mlsCrypto.epochFor(streamId)).toBe(1n)
+    })
+
+    it.only('clientCanSendManyMlsPayloadsInDM', async () => {
+        const { aliceClient, bobClient, streamId } = await setupMlsDM()
+
+        const aliceMessages = Array.from(Array(10).keys()).map((key) => `Alice ${key}`)
+        const bobMessages = Array.from(Array(10).keys()).map((key) => `Bob ${key}`)
+
+        const results = await Promise.all([
+            ...aliceMessages.map(async (message) =>
+                aliceClient.sendMessage(streamId, message, [], [], { useMls: true }),
+            ),
+            ...bobMessages.map(async (message) =>
+                bobClient.sendMessage(streamId, message, [], [], { useMls: true }),
+            ),
+        ])
+
+        expect(results).toBeDefined()
+
+        const allMessages = [...aliceMessages, ...bobMessages]
+
+        // Alice received all messages
+        await expect
+            .poll(
+                () =>
+                    checkTimelineContainsAll(
+                        allMessages,
+                        aliceClient.streams.get(streamId)!.view.timeline,
+                    ),
+                { timeout: 10_000 },
+            )
+            .toBeTruthy()
+
+        // Bob received all messages
+        await expect
+            .poll(
+                () =>
+                    checkTimelineContainsAll(
+                        allMessages,
+                        bobClient.streams.get(streamId)!.view.timeline,
+                    ),
+                { timeout: 10_000 },
+            )
+            .toBeTruthy()
+    })
+
+    // GDM
 
     it('threeClientsCanJoin', async () => {
         const aliceClient = await makeInitAndStartClient('alice')

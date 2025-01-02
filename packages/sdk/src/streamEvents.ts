@@ -52,6 +52,7 @@ export type StreamEncryptionEvents = {
         }[],
     ) => void
     userDeviceKeyMessage: (streamId: string, userId: string, userDevice: UserDevice) => void
+    mlsNewEncryptedContent: (streamId: string, eventId: string, content: EncryptedContent) => void
 }
 
 /// MLS Encryption events, emitted by streams
@@ -73,7 +74,6 @@ export type StreamMlsEvents = {
         epoch: bigint,
     ) => void
     mlsKeyAnnouncement: (streamId: string, keys: { epoch: bigint; key: Uint8Array }) => void
-    mlsNewEncryptedContent: (streamId: string, eventId: string, content: EncryptedContent) => void
 }
 
 export type SyncedStreamEvents = {

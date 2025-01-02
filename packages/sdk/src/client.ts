@@ -261,6 +261,7 @@ export class Client
             startSyncStreams: async () => {
                 await this.streams.startSyncStreams()
                 this.decryptionExtensions?.start()
+                this.mlsQueue?.start()
             },
             initStream: (streamId, allowGetStream) => this.initStream(streamId, allowGetStream),
             emitClientInitStatus: (status) => this.emit('clientInitStatusUpdated', status),
@@ -2243,6 +2244,7 @@ export class Client
         this.mlsQueue = new MlsQueue(
             this,
             this,
+            this,
             mlsCrypto,
             this.persistenceStore,
             this.entitlementsDelegate,
@@ -2352,13 +2354,18 @@ export class Client
         }
         this.logDebug('Cache miss for cleartext', eventId)
 
+        const useMls = encryptedData.mlsCiphertext !== undefined
+        if (useMls) {
+            this.logError('Programmer error: decrypting mls event on non-mls code path', {
+                streamId,
+                eventId,
+            })
+        }
+
         if (!this.cryptoBackend) {
             throw new Error('crypto backend not initialized')
         }
-        const cleartext = await this.cryptoBackend.decryptGroupEvent(streamId, encryptedData)
-
-        await this.persistenceStore.saveCleartext(eventId, cleartext)
-        return cleartext
+        return await this.cryptoBackend.decryptGroupEvent(streamId, encryptedData)
     }
 
     public async encryptAndShareGroupSessions(

@@ -31,10 +31,18 @@ export abstract class StreamStateView_AbstractContent {
         if (cleartext) {
             event.decryptedContent = toDecryptedContent(kind, cleartext)
         } else {
-            encryptionEmitter?.emit('newEncryptedContent', this.streamId, event.hashStr, {
-                kind,
-                content,
-            })
+            const useMls = content.mlsCiphertext !== undefined
+            if (useMls) {
+                encryptionEmitter?.emit('mlsNewEncryptedContent', this.streamId, event.hashStr, {
+                    kind,
+                    content,
+                })
+            } else {
+                encryptionEmitter?.emit('newEncryptedContent', this.streamId, event.hashStr, {
+                    kind,
+                    content,
+                })
+            }
         }
     }
 

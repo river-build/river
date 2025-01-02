@@ -21,7 +21,7 @@ import {
 } from '../encryptedContentTypes'
 import { IPersistenceStore } from '../persistenceStore'
 import TypedEmitter from 'typed-emitter'
-import { StreamMlsEvents } from '../streamEvents'
+import { StreamEncryptionEvents, StreamMlsEvents } from '../streamEvents'
 
 interface MlsQueueItem {
     respondAfter: Date
@@ -98,6 +98,7 @@ export class MlsQueue {
     constructor(
         private readonly client: Client,
         private readonly mlsEventEmitter: TypedEmitter<StreamMlsEvents>,
+        private readonly encryptionEmitter: TypedEmitter<StreamEncryptionEvents>,
         public readonly mlsCrypto: MlsCrypto,
         private readonly persistenceStore: IPersistenceStore,
         _delegate: EntitlementsDelegate,
@@ -107,15 +108,8 @@ export class MlsQueue {
             info: dlog('csb:mls'),
             error: dlogError('csb:mls:error'),
         }
-        // to subscribe, call something like :
-        // client.on('mls...') and add corresponding event
-        // TODO: when the subscription should start?
-
-        this.mlsEventEmitter.on('mlsInitializeGroup', this.onMlsInitializeGroup)
-        this.mlsEventEmitter.on('mlsExternalJoin', this.onMlsExternalJoin)
-        this.mlsEventEmitter.on('mlsKeyAnnouncement', this.onMlsKeyAnnouncement)
-        this.mlsEventEmitter.on('mlsNewEncryptedContent', this.onNewEncryptedContent)
     }
+
     /// Enqueue Mls Events
     private enqueueMls(mlsEvent: MlsEncryptionEvent): void {
         this.insertMlsEncryptionEvent(mlsEvent)
@@ -129,6 +123,7 @@ export class MlsQueue {
         deviceKey: Uint8Array,
         groupInfoWithExternalKey: Uint8Array,
     ) => {
+        this.log.debug('onMlsInitializeGroup', {})
         this.enqueueMls({
             tag: 'MlsInitializeGroup',
             streamId,
@@ -178,7 +173,7 @@ export class MlsQueue {
         encryptedContent: EncryptedContent,
     ) => {
         const kind = encryptedContent.kind
-        // TODO: Add check
+        // TODO: Add check for MLS
         const encryptedData = encryptedContent.content
 
         this.pendingDecryption.push({
@@ -187,24 +182,32 @@ export class MlsQueue {
             kind,
             encryptedData,
         })
+        this.checkStartTicking()
     }
 
+    /// Subscribe and start processing MLS Events
     public start() {
-        check(!this.started, 'start() called twice, please re-instantiate instead')
+        this.log.info('start')
+        this.mlsEventEmitter.on('mlsInitializeGroup', this.onMlsInitializeGroup)
+        this.mlsEventEmitter.on('mlsExternalJoin', this.onMlsExternalJoin)
+        this.mlsEventEmitter.on('mlsKeyAnnouncement', this.onMlsKeyAnnouncement)
+        this.encryptionEmitter.on('mlsNewEncryptedContent', this.onNewEncryptedContent)
         this.started = true
     }
 
+    /// Unsubscribe and stop processing MLS Events
     public stop() {
         this.mlsEventEmitter.off('mlsInitializeGroup', this.onMlsInitializeGroup)
         this.mlsEventEmitter.off('mlsExternalJoin', this.onMlsExternalJoin)
         this.mlsEventEmitter.off('mlsKeyAnnouncement', this.onMlsKeyAnnouncement)
-        this.mlsEventEmitter.off('mlsNewEncryptedContent', this.onNewEncryptedContent)
+        this.encryptionEmitter.off('mlsNewEncryptedContent', this.onNewEncryptedContent)
+        this.started = false
         return
     }
 
-    checkStartTicking() {
+    private checkStartTicking() {
         // TODO: pause if take mobile safari is backgrounded (idb issue)
-        if (!this.started || this.timeoutId) {
+        if (this.timeoutId) {
             return
         }
 
@@ -219,11 +222,7 @@ export class MlsQueue {
         }, 0)
     }
 
-    stopTicking() {
-        return
-    }
-
-    async tick() {
+    private async tick() {
         // process first mlsEncryptionEvent
         const mlsEvent = this.dequeueMlsEncryptionEvent()
         if (mlsEvent !== undefined) {
@@ -237,7 +236,7 @@ export class MlsQueue {
         }
 
         // try decrypting a past message that we know have a key
-        const decryptionFailure = this.dequeueDecryptionFailure()
+        const decryptionFailure = await this.dequeueDecryptionFailure()
         if (decryptionFailure !== undefined) {
             return this.processEncryptedItem(decryptionFailure)
         }
@@ -529,7 +528,7 @@ export class MlsQueue {
     /**
      * Decrypts and updates events
      */
-    private async decryptGroupEvent(
+    public async decryptGroupEvent(
         streamId: string,
         eventId: string,
         kind: string, // kind of data
@@ -601,38 +600,79 @@ export class MlsQueue {
         perEpoch.push(item)
     }
 
-    private dequeueDecryptionFailure(): MlsEncryptedContentItem | undefined {
-        let result: MlsEncryptedContentItem | undefined = undefined
+    private async dequeueDecryptionFailure(): Promise<MlsEncryptedContentItem | undefined> {
+        // Create a Promise that will resolve as soon as first query to the
+        // storage finds a key that is suitable to decrypt content
 
-        for (const [streamId, perStream] of this.decryptionFailures) {
-            for (const [epoch, perEpoch] of perStream) {
-                if (perEpoch.length > 0) {
-                    result = perEpoch.shift()!
+        // Construct promises that are making a query to the storage,
+        // successful promise returns stream and epoch, unsuccessful,
+        // returns undefined
 
-                    // if perEpoch queue is empty, remove it
-                    if (perEpoch.length === 0) {
-                        perStream.delete(epoch)
-                    }
-                    break
-                }
+        const promises: Array<Promise<{ streamId: string; epoch: bigint }>> = []
+        let shortCircuit = false
+
+        // This function returns Promise that resolves for first open key
+        // and rejects otherwise.  The errors will be ignored, so we are
+        // throwing undefined
+        const tryGetEpochKey = async (streamId: string, epoch: bigint) => {
+            if (shortCircuit) {
+                throw undefined
             }
-            if (result) {
-                // if perStream Map is empty, remove it
-                if (perStream.size === 0) {
-                    this.decryptionFailures.delete(streamId)
-                }
-                break
+
+            const result = await this.mlsCrypto.epochKeyService.getEpochKey(streamId, epoch)
+
+            if (result === undefined) {
+                throw undefined
             }
+
+            if (result.state.status !== 'EPOCH_KEY_OPEN') {
+                throw undefined
+            }
+
+            shortCircuit = true
+            return { streamId: streamId, epoch: epoch }
         }
 
+        this.decryptionFailures.forEach((perStream, streamId) => {
+            perStream.forEach((perEpoch, epoch) => {
+                if (perEpoch.length > 0) {
+                    promises.push(tryGetEpochKey(streamId, epoch))
+                }
+            })
+        })
+
+        // Get first successful promise, and ignore all the errors
+        const firstSuccessful = await Promise.any(promises).catch(() => undefined)
+        let result: MlsEncryptedContentItem | undefined = undefined
+        if (firstSuccessful) {
+            // check if there is a map
+            const perStream = this.decryptionFailures.get(firstSuccessful.streamId)
+            if (perStream !== undefined) {
+                const perEpoch = perStream.get(firstSuccessful.epoch)
+                if (perEpoch !== undefined) {
+                    result = perEpoch.shift()
+
+                    // Cleaning up perEpoch
+                    if (perEpoch.length === 0) {
+                        perStream.delete(firstSuccessful.epoch)
+                    }
+                }
+
+                // Cleaning up perStream
+                if (perStream.size === 0) {
+                    this.decryptionFailures.delete(firstSuccessful.streamId)
+                }
+            }
+        }
         return result
     }
 
-    private processAvailableEpochKey(_availableEpochKey: bigint) {
-        throw new Error('Method not implemented.')
+    private dequeueAvailableEpochKey(): bigint | undefined {
+        // throw new Error('Method not implemented.')
+        return undefined
     }
 
-    private dequeueAvailableEpochKey(): bigint | undefined {
+    private processAvailableEpochKey(_availableEpochKey: bigint) {
         throw new Error('Method not implemented.')
     }
 }
