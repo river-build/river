@@ -196,7 +196,7 @@ func NewMiniblockInfoFromBytesWithOpts(bytes []byte, opts NewMiniblockInfoFromPr
 	if err != nil {
 		return nil, AsRiverError(err, Err_INVALID_ARGUMENT).
 			Message("Failed to decode miniblock from bytes").
-			Func("NewMiniblockInfoFromBytes")
+			Func("NewMiniblockInfoFromBytesWithOpts")
 	}
 
 	return NewMiniblockInfoFromProto(&pb, opts)
@@ -226,14 +226,21 @@ func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts
 	}
 
 	if opts.ExpectedBlockNumber >= 0 && blockHeader.MiniblockNum != int64(opts.ExpectedBlockNumber) {
+		return nil, RiverError(Err_BAD_BLOCK_NUMBER, "block number does not equal expected").
+			Func("NewMiniblockInfoFromProto").
+			Tag("expected", opts.ExpectedBlockNumber).
+			Tag("actual", blockHeader.MiniblockNum)
+	}
+
+	// Validate the number of events matches event hashes
+	// We will validate that the hashes match if the events are parsed.
+	if len(blockHeader.EventHashes) != len(pb.Events) {
 		return nil, RiverError(
-			Err_BAD_BLOCK_NUMBER,
-			"block number mismatch",
-			"expected",
-			opts.ExpectedBlockNumber,
-			"actual",
-			blockHeader.MiniblockNum,
-		)
+			Err_BAD_BLOCK,
+			"Length of events in block does not match length of event hashes in header",
+		).Func("NewMiniblockInfoFromProto").
+			Tag("eventHashesLength", len(blockHeader.EventHashes)).
+			Tag("eventsLength", len(pb.Events))
 	}
 
 	var events []*ParsedEvent
@@ -249,7 +256,8 @@ func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts
 				return nil, RiverError(
 					Err_BAD_BLOCK,
 					"Block event hash did not match hash in header",
-				).Tag("eventIndex", i).
+				).Func("NewMiniblockInfoFromProto").
+					Tag("eventIndex", i).
 					Tag("blockEventHash", event.Hash).
 					Tag("headerEventHash", blockHeader.EventHashes[i])
 			}
@@ -261,16 +269,17 @@ func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts
 			return nil, RiverError(
 				Err_BAD_BLOCK,
 				"Last miniblock hash does not equal expected",
-			).Tag("expectedLastMiniblockHash", opts.ExpectedLastMiniblockHash).
-				Tag("prevMiniblockHash", hex.EncodeToString(blockHeader.PrevMiniblockHash)).
-				Func("NewMiniblockInfoFromProto")
+			).Func("NewMiniblockInfoFromProto").
+				Tag("expectedLastMiniblockHash", opts.ExpectedLastMiniblockHash).
+				Tag("prevMiniblockHash", hex.EncodeToString(blockHeader.PrevMiniblockHash))
 		}
 	} else if blockHeader.MiniblockNum == 0 {
 		if blockHeader.PrevMiniblockHash != nil {
 			return nil, RiverError(
 				Err_BAD_BLOCK,
 				"Last miniblock hash for first block should be unset",
-			).Tag("prevMiniblockHash", hex.EncodeToString(blockHeader.PrevMiniblockHash))
+			).Func("NewMiniblockInfoFromProto").
+				Tag("prevMiniblockHash", hex.EncodeToString(blockHeader.PrevMiniblockHash))
 		}
 	}
 
@@ -279,17 +288,17 @@ func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts
 			return nil, RiverError(
 				Err_BAD_BLOCK,
 				"Miniblock header eventNumOffset does not equal expected",
-			).Tag("expectedEventNumOffset", opts.ExpectedEventNumOffset).
-				Tag("eventNumOffset", blockHeader.EventNumOffset).
-				Func("NewMiniblockInfoFromProto")
+			).Func("NewMiniblockInfoFromProto").
+				Tag("expectedEventNumOffset", opts.ExpectedEventNumOffset).
+				Tag("eventNumOffset", blockHeader.EventNumOffset)
 		}
 	} else if blockHeader.MiniblockNum == 0 {
 		if 0 != blockHeader.EventNumOffset {
 			return nil, RiverError(
 				Err_BAD_BLOCK,
 				"Header of first miniblock eventNumOffset is not zero",
-			).Tag("eventNumOffset", blockHeader.EventNumOffset).
-				Func("NewMiniblockInfoFromProto")
+			).Func("NewMiniblockInfoFromProto").
+				Tag("eventNumOffset", blockHeader.EventNumOffset)
 		}
 	}
 
@@ -297,9 +306,10 @@ func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts
 		if !blockHeader.Timestamp.AsTime().After(opts.ExpectedMinimumTimestampExclusive) {
 			return nil, RiverError(
 				Err_BAD_BLOCK,
-				"Expected header timestamp to occur after unix time",
-			).Tag("timestamp", blockHeader.Timestamp.AsTime()).
-				Tag("expectedBeforeTime", opts.ExpectedMinimumTimestampExclusive)
+				"Expected header timestamp to occur after minimum time",
+			).Func("NewMiniblockInfoFromProto").
+				Tag("headerTimestamp", blockHeader.Timestamp.AsTime()).
+				Tag("minimumTimeExclusive", opts.ExpectedMinimumTimestampExclusive)
 		}
 	}
 
@@ -308,7 +318,8 @@ func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts
 			return nil, RiverError(
 				Err_BAD_BLOCK,
 				"Previous snapshot miniblock num did not match expected",
-			).Tag("expectedPrevSnapshotMiniblockNum", opts.ExpectedPrevSnapshotMiniblockNum).
+			).Func("NewMiniblockInfoFromProto").
+				Tag("expectedPrevSnapshotMiniblockNum", opts.ExpectedPrevSnapshotMiniblockNum).
 				Tag("prevSnapshotMiniblockNum", blockHeader.PrevSnapshotMiniblockNum)
 		}
 	}
