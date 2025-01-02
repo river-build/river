@@ -37,8 +37,8 @@ LABEL org.opencontainers.image.title="River Node" \
     org.opencontainers.image.licenses="MIT"
 
 # Install dependencies
-RUN apk add --no-cache libcap curl && \
-    adduser -D riveruser
+RUN apk add --no-cache libcap curl libgcc
+RUN adduser -D riveruser
 
 COPY docker/run.sh /etc/run.sh
 COPY --from=builder /bin/river_node /usr/bin/river_node
