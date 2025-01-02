@@ -361,7 +361,8 @@ func NewMiniblockInfoFromProto(pb *Miniblock, opts *ParsedMiniblockInfoOpts) (*M
 				return nil, RiverError(
 					Err_BAD_BLOCK,
 					"Block event hash did not match hash in header",
-				).Tag("eventIndex", i).
+				).Func("NewMiniblockInfoFromProto").
+					Tag("eventIndex", i).
 					Tag("blockEventHash", event.Hash).
 					Tag("headerEventHash", blockHeader.EventHashes[i])
 			}

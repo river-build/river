@@ -156,6 +156,83 @@ func TestMiniblockScrubber(t *testing.T) {
 		scrubber.ScheduleStreamMiniblocksScrub(ctx, channelId, 3),
 		"Miniblock has not caught up to fromBlockNum",
 	)
+
+	store := tester.nodes[0].service.Storage()
+	blocks, err := store.ReadMiniblocks(ctx, channelId, 0, 3)
+	require.NoError(err)
+	require.Len(blocks, 3)
+
+	store.(*storage.PostgresStreamStore).DeleteStream(ctx, channelId)
+
+	// Parse miniblocks in order to re-write them
+	mb0, err := events.NewMiniblockInfoFromBytes(blocks[0], 0)
+	require.NoError(err)
+	require.NotNil(mb0)
+
+	mb1, err := events.NewMiniblockInfoFromBytes(blocks[1], 1)
+	require.NoError(err)
+	require.NotNil(mb1)
+
+	mb2, err := events.NewMiniblockInfoFromBytes(blocks[2], 2)
+	require.NoError(err)
+	require.NotNil(mb2)
+
+	// Pop a couple of events from block 1 to invalidate the event hashes in the
+	// header.
+	var pb protocol.Miniblock
+	err = proto.Unmarshal(blocks[1], &pb)
+	require.NoError(err)
+	pb.Events = pb.Events[0 : len(pb.Events)-2]
+	blocks[1], err = proto.Marshal(&pb)
+	require.NoError(err)
+
+	// re-write the stream with corrupt block 1
+	require.NoError(store.CreateStreamStorage(ctx, channelId, blocks[0]))
+	require.NoError(
+		store.WriteMiniblocks(
+			ctx,
+			channelId,
+			[]*storage.WriteMiniblockData{
+				{
+					Number:   1,
+					Hash:     mb1.Ref.Hash,
+					Snapshot: mb1.IsSnapshot(),
+					Data:     blocks[1],
+				},
+				{
+					Number:   2,
+					Hash:     mb2.Ref.Hash,
+					Snapshot: mb2.IsSnapshot(),
+					Data:     blocks[2],
+				},
+			},
+			3,
+			[][]byte{},
+			1,
+			0,
+		),
+	)
+
+	// Parsing block two should cause an error because block 1 cannot be parsed.
+	// However we will not consider the stream corrupt, because we are not considering
+	// block 1.
+	scrubber.ScheduleStreamMiniblocksScrub(ctx, channelId, 2)
+	report = <-reports
+
+	expectedErrString := "NewMiniblockInfoFromProto: (38:BAD_BLOCK) Length of events in block does not match length of event hashes in header"
+	require.Equal(channelId, report.StreamId)
+	require.ErrorContains(report.ScrubError, expectedErrString)
+	require.Equal(int64(1), report.LatestBlockScrubbed)
+	require.Equal(int64(-1), report.FirstCorruptBlock)
+
+	// Before block 2 - we will evaluate block 1 as corrupt and report it as so.
+	scrubber.ScheduleStreamMiniblocksScrub(ctx, channelId, 0)
+	report = <-reports
+
+	require.Equal(channelId, report.StreamId)
+	require.ErrorContains(report.ScrubError, expectedErrString)
+	require.Equal(int64(0), report.LatestBlockScrubbed)
+	require.Equal(int64(1), report.FirstCorruptBlock)
 }
 
 func createMultiblockChannelStream(
