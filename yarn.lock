@@ -6549,10 +6549,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@river-build/mls-rs-wasm@npm:^0.0.9":
-  version: 0.0.9
-  resolution: "@river-build/mls-rs-wasm@npm:0.0.9"
-  checksum: c0221954de5c0b981f656b497e9b72ac3a3c82cb7810c389f4cb25a84ffb1727718342eafc186edeb1b3d14580ff7a1dfb2fbac576cf792ac1054f04b4659cbb
+"@river-build/mls-rs-wasm@npm:^0.0.10":
+  version: 0.0.10
+  resolution: "@river-build/mls-rs-wasm@npm:0.0.10"
+  checksum: bf54157aa96f79d8b854a27874175d8b338e0a700a7f7db0ed48b7a554d83597718e4109dc2d7837878899ba2b70a600ebfe5f1d07601b6cfb4b9a804e222c38
   languageName: node
   linkType: hard
 
@@ -6693,7 +6693,7 @@ __metadata:
     "@river-build/dlog": "workspace:^"
     "@river-build/encryption": "workspace:^"
     "@river-build/generated": "workspace:^"
-    "@river-build/mls-rs-wasm": ^0.0.9
+    "@river-build/mls-rs-wasm": ^0.0.10
     "@river-build/proto": "workspace:^"
     "@river-build/web3": "workspace:^"
     "@testing-library/react": ^14.2.1
