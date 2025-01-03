@@ -302,15 +302,12 @@ func (r *streamViewImpl) makeMiniblockHeader(
 	}
 	if proposal.ShouldSnapshot {
 		snapshot = proto.Clone(r.snapshot).(*Snapshot)
-
-		mlsSnapshotRequest := mls_tools.SnapshotExternalGroupRequest {
-			ExternalGroupSnapshot: snapshot.Members.GetMls().ExternalGroupSnapshot,
-			GroupInfoMessage: snapshot.Members.GetMls().GroupInfoMessage,
-			Commits: make([]*mls_tools.SnapshotExternalGroupRequest_CommitInfo, 0),
-		}
-
+		mlsSnapshotRequest := r.makeMlsSnapshotRequest()
 		// TODO: this function should only run for streams with MLS support
 		mlsUpdateFn := func(e *ParsedEvent) {
+			if mlsSnapshotRequest == nil {
+				return
+			}
 			switch mlsContent := e.Event.GetMemberPayload().GetMls().Content.(type) {
 			case *MemberPayload_Mls_InitializeGroup_:
 				// TODO: should only do if request.externalGroupSnapshot is empty
@@ -363,8 +360,8 @@ func (r *streamViewImpl) makeMiniblockHeader(
 		}
 
 		// only attempt to snapshot the MLS state if MLS has been initialized for this stream.
-		if len(mlsSnapshotRequest.ExternalGroupSnapshot) > 0 {
-			resp, err := mls_service.SnapshotExternalGroupRequest(&mlsSnapshotRequest)
+		if mlsSnapshotRequest != nil && len(mlsSnapshotRequest.ExternalGroupSnapshot) > 0 {
+			resp, err := mls_service.SnapshotExternalGroupRequest(mlsSnapshotRequest)
 			if err != nil {
 				// what to do here...?
 				log.Error("Failed to update MLS snapshot",
@@ -845,5 +842,14 @@ func (r *streamViewImpl) AllEvents() iter.Seq[*ParsedEvent] {
 				return
 			}
 		}
+	}
+}
+
+func (r *streamViewImpl) makeMlsSnapshotRequest() *mls_tools.SnapshotExternalGroupRequest {
+	if r.snapshot.Members.GetMls() == nil { return nil }
+	return &mls_tools.SnapshotExternalGroupRequest {
+		ExternalGroupSnapshot: r.snapshot.Members.GetMls().ExternalGroupSnapshot,
+		GroupInfoMessage: r.snapshot.Members.GetMls().GroupInfoMessage,
+		Commits: make([]*mls_tools.SnapshotExternalGroupRequest_CommitInfo, 0),
 	}
 }
