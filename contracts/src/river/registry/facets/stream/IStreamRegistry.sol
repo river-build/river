@@ -7,8 +7,7 @@ import {Stream, StreamWithId, SetMiniblock} from "contracts/src/river/registry/l
 // libraries
 
 // contracts
-
-interface IStreamRegistry {
+interface IStreamRegistryBase {
   // =============================================================
   //                           Events
   // =============================================================
@@ -38,7 +37,9 @@ interface IStreamRegistry {
     address nodeAddress,
     bool isAdded
   );
+}
 
+interface IStreamRegistry is IStreamRegistryBase {
   // =============================================================
   //                           Streams
   // =============================================================
@@ -53,11 +54,6 @@ interface IStreamRegistry {
   ) external;
 
   function getStream(bytes32 streamId) external view returns (Stream memory);
-
-  /// @return stream, genesisMiniblockHash, genesisMiniblock
-  function getStreamWithGenesis(
-    bytes32 streamId
-  ) external view returns (Stream memory, bytes32, bytes memory);
 
   function setStreamLastMiniblock(
     bytes32 streamId,
