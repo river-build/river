@@ -50,6 +50,7 @@ async function makeInitAndStartClient(nickname?: string) {
 async function checkAllClientsAgreeOnAnEpoch(streamId: string, options?: ExpectPollOptions) {
     const expectedEpoch = BigInt(clients.length - 1)
     const getEpoch = async (client: Client) => {
+        await client.mlsQueue?.mlsCrypto.awaitGroupActive(streamId)
         return client.mlsQueue?.mlsCrypto.epochFor(streamId) ?? 0n
     }
     if (expectedEpoch <= 0n) {
@@ -84,7 +85,7 @@ describe('dmsMlsTests', () => {
         aliceClient = initialValues.aliceClient
         bobClient = initialValues.bobClient
         streamId = initialValues.streamId
-    })
+    }, 10_000)
 
     it('clientCanCreateDM', async () => {
         expect(aliceClient).toBeDefined()
@@ -238,7 +239,7 @@ describe('gdmMlsTests', () => {
         bobClient = initialValues.bobClient
         charlieClient = initialValues.charlieClient
         streamId = initialValues.streamId
-    })
+    }, 10_000)
 
     it('clientCanCreateGDM', async () => {
         expect(aliceClient).toBeDefined()
@@ -269,11 +270,6 @@ describe('gdmMlsTests', () => {
         await expect(
             aliceClient.sendMessage(streamId, 'hello bob', [], [], { useMls: true }),
         ).resolves.toBeDefined()
-
-        // Wait until all groups are active before checking epochs
-        await Promise.all(
-            clients.map(async (client) => client.mlsQueue?.mlsCrypto.awaitGroupActive(streamId)),
-        )
 
         // Ensure all clients agree on an epoch
         await checkAllClientsAgreeOnAnEpoch(streamId, { timeout: 10_000 })
@@ -345,65 +341,159 @@ describe('gdmMlsTests', () => {
                 () =>
                     checkTimelineContainsAll(
                         ['hello from alice', 'hello from bob', 'hello from charlie'],
-                        bobClient.streams.get(streamId)!.view.timeline,
+                        charlieClient.streams.get(streamId)!.view.timeline,
                     ),
                 { timeout: 10_000 },
             )
             .toBeTruthy()
     })
 
-    it('moreClientsCanJoinGDMAndObserveMls', async () => {
-        await expect(
-            aliceClient.sendMessage(streamId, 'hello everyone', [], [], { useMls: true }),
-        ).resolves.toBeDefined()
+    it('clientsCanSendManyMlsPayloadsInGDM', { timeout: 20_000 }, async () => {
+        const numbers = Array.from(Array(5).keys())
 
-        const addedClients: Client[] = []
+        const allMessages = await Promise.all(
+            clients.flatMap((client) => {
+                const logger = log.extend(`${client.nickname}:send`)
+                return numbers.map(async (number) => {
+                    const message = `${client.nickname} ${number}`
+                    await client.sendMessage(streamId, message, [], [], { useMls: true })
+                    logger(message)
+                    return message
+                })
+            }),
+        )
 
-        // add 3 more users
-        for (let i = 0; i < 2; i++) {
-            const client = await makeInitAndStartClient(`client-${i}`)
-            await expect(aliceClient.joinUser(streamId, client.userId)).resolves.toBeDefined()
-            addedClients.push(client)
-        }
-
-        // Wait for the clients to join
-        for (const client of addedClients) {
-            await expect(client.waitForStream(streamId)).resolves.toBeDefined()
-        }
-
+        // Check if all clients received all the messages
         await expect
-            .poll(() =>
-                clients.every((client) => getLatestGroupInfo(client, streamId) !== undefined),
+            .poll(
+                () =>
+                    clients.every((client) =>
+                        checkTimelineContainsAll(
+                            allMessages,
+                            client.streams.get(streamId)!.view.timeline,
+                        ),
+                    ),
+                { timeout: 10_000 },
             )
             .toBeTruthy()
     })
 
-    it('moreClientsCanJoinGDMAndAgreeOnEpoch', async () => {
-        await expect(
-            aliceClient.sendMessage(streamId, 'hello everyone', [], [], { useMls: true }),
-        ).resolves.toBeDefined()
-
+    describe('gdmWitExtraUsersTest', () => {
         const addedClients: Client[] = []
+        const numberOfAddedClients = 3
 
-        // add 3 more users
-        for (let i = 0; i < 3; i++) {
-            const client = await makeInitAndStartClient(`client-${i}`)
-            await expect(aliceClient.joinUser(streamId, client.userId)).resolves.toBeDefined()
-            addedClients.push(client)
-        }
+        beforeEach(async () => {
+            await aliceClient.sendMessage(streamId, 'hello everyone', [], [], { useMls: true })
 
-        // Wait for the clients to join
-        for (const client of addedClients) {
-            await expect(client.waitForStream(streamId)).resolves.toBeDefined()
-        }
+            // add 3 more users
+            for (let i = 0; i < numberOfAddedClients; i++) {
+                const client = await makeInitAndStartClient(`client-${i}`)
+                await aliceClient.joinUser(streamId, client.userId)
+                addedClients.push(client)
+            }
 
-        // Wait until all groups are active before checking epochs
-        await Promise.all(
-            clients.map(async (client) => client.mlsQueue?.mlsCrypto.awaitGroupActive(streamId)),
-        )
+            // await for those users to join the streams
+            await Promise.all(addedClients.map(async (client) => client.waitForStream(streamId)))
+        }, 10_000)
 
-        // Ensure all clients agree on an epoch
-        await checkAllClientsAgreeOnAnEpoch(streamId, { timeout: 20_000 })
+        afterEach(async () => {
+            // reset addedClients
+            addedClients.length = 0
+        })
+
+        it('moreClientsCanJoinGDM', async () => {
+            for (let i = 0; i < numberOfAddedClients; i++) {
+                expect(addedClients[i]).toBeDefined()
+            }
+        })
+
+        it('moreClientsCanJoinAndObserveMls', async () => {
+            await expect
+                .poll(() =>
+                    clients.every((client) => getLatestGroupInfo(client, streamId) !== undefined),
+                )
+                .toBeTruthy()
+        })
+
+        it('moreClientsCanJoinGDMAndAgreeOnEpoch', async () => {
+            // Ensure all clients agree on an epoch
+            await checkAllClientsAgreeOnAnEpoch(streamId, { timeout: 20_000 })
+        })
+
+        it('moreClientsCanObservePastMessages', async () => {
+            await expect
+                .poll(
+                    () =>
+                        clients.every((client) =>
+                            checkTimelineContainsAll(
+                                ['hello everyone'],
+                                client.streams.get(streamId)!.view.timeline,
+                            ),
+                        ),
+                    { timeout: 20_000 },
+                )
+                .toBeTruthy()
+        })
+
+        it('moreClientsCanSendOneMlsMessageInGDM', async () => {
+            const numbers = Array.from(Array(1).keys())
+
+            const allMessages = await Promise.all(
+                addedClients.flatMap((client) => {
+                    const logger = log.extend(`${client.nickname}:send`)
+                    return numbers.map(async (number) => {
+                        const message = `${client.nickname} ${number}`
+                        await client.sendMessage(streamId, message, [], [], { useMls: true })
+                        logger(message)
+                        return message
+                    })
+                }),
+            )
+
+            // Check if all clients received all the messages
+            await expect
+                .poll(
+                    () =>
+                        clients.every((client) =>
+                            checkTimelineContainsAll(
+                                allMessages,
+                                client.streams.get(streamId)!.view.timeline,
+                            ),
+                        ),
+                    { timeout: 10_000 },
+                )
+                .toBeTruthy()
+        })
+
+        it('moreClientsCanSendManyMlsPayloadsInGDM', async () => {
+            const numbers = Array.from(Array(5).keys())
+
+            const allMessages = await Promise.all(
+                clients.flatMap((client) => {
+                    const logger = log.extend(`${client.nickname}:send`)
+                    return numbers.map(async (number) => {
+                        const message = `${client.nickname} ${number}`
+                        await client.sendMessage(streamId, message, [], [], { useMls: true })
+                        logger(message)
+                        return message
+                    })
+                }),
+            )
+
+            // Check if all clients received all the messages
+            await expect
+                .poll(
+                    () =>
+                        clients.every((client) =>
+                            checkTimelineContainsAll(
+                                allMessages,
+                                client.streams.get(streamId)!.view.timeline,
+                            ),
+                        ),
+                    { timeout: 10_000 },
+                )
+                .toBeTruthy()
+        })
     })
 })
 
