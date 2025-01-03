@@ -15,6 +15,9 @@ type MlsStreamView interface {
 
 var _ MlsStreamView = (*streamViewImpl)(nil)
 
+// returns true if the stream has an MLS group initialized 
+// — the stream has processed exactly one MemberPayload_Mls_InitializeGroup
+// - OR the ExternalGroupSnapshot on Members.Mls is not empty
 func (r *streamViewImpl) IsMlsInitialized() (bool, error) {
 	s := r.snapshot
 	if s.Members.GetMls() == nil {
@@ -50,6 +53,7 @@ func (r *streamViewImpl) IsMlsInitialized() (bool, error) {
 	return isInitialized, nil
 }
 
+// populates an ExternalJoinRequest with the ExternalGroupSnapshot and all ExternalJoin commits
 func (r *streamViewImpl) GetMlsExternalJoinRequest() (*mls_tools.ExternalJoinRequest, error) {
 	s := r.snapshot
 	
