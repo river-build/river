@@ -15,7 +15,7 @@ import {
     ExportedTree,
 } from '@river-build/mls-rs-wasm'
 import { randomBytes } from 'crypto'
-import { equalsBytes } from 'ethereum-cryptography/utils'
+import { bin_equal } from '@river-build/dlog'
 
 describe('mlsTests', () => {
     let clients: Client[] = []
@@ -303,8 +303,8 @@ describe('mlsTests', () => {
         const mls = streamAfterSnapshot.membershipContent.mls
         expect(mls.externalGroupSnapshot).toBeDefined()
         expect(mls.groupInfoMessage).toBeDefined()
-        expect(equalsBytes(mls.externalGroupSnapshot!, externalGroupSnapshot)).toBe(true)
-        expect(equalsBytes(mls.groupInfoMessage!, groupInfoMessage)).toBe(true)
+        expect(bin_equal(mls.externalGroupSnapshot, externalGroupSnapshot)).toBe(true)
+        expect(bin_equal(mls.groupInfoMessage, groupInfoMessage)).toBe(true)
     })
 
     test('Valid external commits are accepted', async () => {
@@ -399,5 +399,70 @@ describe('mlsTests', () => {
         await expect(alicesClient._debugSendMls(streamId, aliceMlsPayload)).rejects.toThrow(
             'INVALID_PUBLIC_SIGNATURE_KEY',
         )
+    })
+
+    test.only('Signature public keys are mapped per user in the snapshot', async () => {
+        const bobsClient = await makeInitAndStartClient()
+        const alicesClient = await makeInitAndStartClient()
+        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
+        const stream = await bobsClient.waitForStream(streamId)
+
+        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
+            new Set([bobsClient.userId, alicesClient.userId]),
+        )
+
+        const bobMlsDeviceKey = new Uint8Array(randomBytes(32))
+        const bobMlsClient = await MlsClient.create(bobMlsDeviceKey)
+        const group = await bobMlsClient.createGroup()
+        const { groupInfoMessage, externalGroupSnapshot } =
+            await createGroupInfoAndExternalSnapshot(group)
+        const bobSignaturePublicKey = await bobMlsClient.signaturePublicKey()
+        const bobMlsPayload: PlainMessage<MemberPayload_Mls> = {
+            content: {
+                case: 'initializeGroup',
+                value: {
+                    signaturePublicKey: bobSignaturePublicKey,
+                    externalGroupSnapshot: externalGroupSnapshot,
+                    groupInfoMessage: groupInfoMessage,
+                },
+            },
+        }
+        await expect(bobsClient._debugSendMls(streamId, bobMlsPayload)).resolves.not.toThrow()
+
+        const aliceMlsDeviceKey = new Uint8Array(randomBytes(32))
+        const aliceMlsClient = await MlsClient.create(aliceMlsDeviceKey)
+        const aliceSignaturePublicKey = await aliceMlsClient.signaturePublicKey()
+        const { commit: aliceCommit, groupInfoMessage: aliceGroupInfoMessage } =
+            await commitExternal(aliceMlsClient, groupInfoMessage, externalGroupSnapshot)
+
+        const aliceMlsPayload: PlainMessage<MemberPayload_Mls> = {
+            content: {
+                case: 'externalJoin',
+                value: {
+                    signaturePublicKey: aliceSignaturePublicKey,
+                    commit: aliceCommit,
+                    groupInfoMessage: aliceGroupInfoMessage,
+                },
+            },
+        }
+        await expect(alicesClient._debugSendMls(streamId, aliceMlsPayload)).resolves.not.toThrow()
+
+        // force snapshot
+        await expect(
+            bobsClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true }),
+        ).resolves.not.toThrow()
+
+        // verify that the signature public keys are mapped per user
+        // and that the signature public keys are correct
+        const streamAfterSnapshot = await bobsClient.getStream(streamId)
+        const mls = streamAfterSnapshot.membershipContent.mls.members
+        expect(mls[bobsClient.userId].signaturePublicKeys.length).toBe(1)
+        expect(mls[alicesClient.userId].signaturePublicKeys.length).toBe(1)
+        expect(
+            bin_equal(mls[bobsClient.userId].signaturePublicKeys[0], bobSignaturePublicKey),
+        ).toBe(true)
+        expect(
+            bin_equal(mls[alicesClient.userId].signaturePublicKeys[0], aliceSignaturePublicKey),
+        ).toBe(true)
     })
 })
