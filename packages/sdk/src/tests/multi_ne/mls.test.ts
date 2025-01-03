@@ -2,7 +2,7 @@
  * @group main
  */
 
-import { makeTestClient } from '../testUtils'
+import { makeTestClient, waitFor } from '../testUtils'
 import { Client } from '../../client'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { MemberPayload_Mls } from '@river-build/proto'
@@ -464,5 +464,93 @@ describe('mlsTests', () => {
         expect(
             bin_equal(mls[alicesClient.userId].signaturePublicKeys[0], aliceSignaturePublicKey),
         ).toBe(true)
+    })
+
+    test('epoch secrets are accepted', async () => {
+        const bobsClient = await makeInitAndStartClient()
+        const alicesClient = await makeInitAndStartClient()
+        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
+        const stream = await bobsClient.waitForStream(streamId)
+
+        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
+            new Set([bobsClient.userId, alicesClient.userId]),
+        )
+
+        const deviceKey = new Uint8Array(randomBytes(32))
+        const client = await MlsClient.create(deviceKey)
+        const group = await client.createGroup()
+        const { groupInfoMessage, externalGroupSnapshot } =
+            await createGroupInfoAndExternalSnapshot(group)
+
+        const mlsPayload: PlainMessage<MemberPayload_Mls> = {
+            content: {
+                case: 'initializeGroup',
+                value: {
+                    signaturePublicKey: await client.signaturePublicKey(),
+                    externalGroupSnapshot: externalGroupSnapshot,
+                    groupInfoMessage: groupInfoMessage,
+                },
+            },
+        }
+        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).resolves.not.toThrow()
+
+        const aliceMlsDeviceKey = new Uint8Array(randomBytes(32))
+        const aliceMlsClient = await MlsClient.create(aliceMlsDeviceKey)
+        const { commit: aliceCommit, groupInfoMessage: aliceGroupInfoMessage } =
+            await commitExternal(aliceMlsClient, groupInfoMessage, externalGroupSnapshot)
+
+        const aliceMlsPayload: PlainMessage<MemberPayload_Mls> = {
+            content: {
+                case: 'externalJoin',
+                value: {
+                    signaturePublicKey: await aliceMlsClient.signaturePublicKey(),
+                    commit: aliceCommit,
+                    groupInfoMessage: aliceGroupInfoMessage,
+                },
+            },
+        }
+        await expect(alicesClient._debugSendMls(streamId, aliceMlsPayload)).resolves.not.toThrow()
+
+        const bobMlsSecretsPayload: PlainMessage<MemberPayload_Mls> = {
+            content: {
+                case: 'epochSecrets',
+                value: {
+                    secrets: [
+                        { epoch: 1n, secret: new Uint8Array([1, 2, 3, 4]) },
+                        { epoch: 2n, secret: new Uint8Array([3, 4, 5, 6]) }, // bogus for now
+                    ],
+                },
+            },
+        }
+
+        await expect(
+            bobsClient._debugSendMls(streamId, bobMlsSecretsPayload),
+        ).resolves.not.toThrow()
+        // sending the same epoch twice returns an error
+        await expect(bobsClient._debugSendMls(streamId, bobMlsSecretsPayload)).rejects.toThrow(
+            'epoch already exists',
+        )
+
+        // verify that the epoch secrets have been picked up in the stream state view
+        await waitFor(() => {
+            const mls = bobsClient.streams.get(streamId)?._view.membershipContent.mls
+            expect(bin_equal(mls!.epochSecrets[1n.toString()], new Uint8Array([1, 2, 3, 4]))).toBe(
+                true,
+            )
+            expect(bin_equal(mls!.epochSecrets[2n.toString()], new Uint8Array([3, 4, 5, 6]))).toBe(
+                true,
+            )
+        })
+
+        // force snapshot
+        await expect(
+            bobsClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true }),
+        ).resolves.not.toThrow()
+
+        // verify that the epoch secrets are picked up in the snapshot
+        const streamAfterSnapshot = await bobsClient.getStream(streamId)
+        const mls = streamAfterSnapshot.membershipContent.mls
+        expect(bin_equal(mls.epochSecrets[1n.toString()], new Uint8Array([1, 2, 3, 4]))).toBe(true)
+        expect(bin_equal(mls.epochSecrets[2n.toString()], new Uint8Array([3, 4, 5, 6]))).toBe(true)
     })
 })

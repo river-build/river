@@ -144,7 +144,10 @@ func make_SnapshotMembers(iInception IsInceptionPayload, creatorAddress []byte) 
 			}, &MemberPayload_Snapshot_Member{
 				UserAddress: inception.SecondPartyAddress,
 			}),
-			Mls: &MemberPayload_Snapshot_Mls{},
+			Mls: &MemberPayload_Snapshot_Mls{
+				Members: make(map[string]*MemberPayload_Snapshot_Mls_Member),
+				EpochSecrets: make(map[uint64][]byte),
+			},
 		}, nil
 	case *MediaPayload_Inception:
 		return &MemberPayload_Snapshot{
@@ -153,7 +156,12 @@ func make_SnapshotMembers(iInception IsInceptionPayload, creatorAddress []byte) 
 			}),
 		}, nil
 	default:
-		return &MemberPayload_Snapshot{}, nil
+		return &MemberPayload_Snapshot{
+			Mls: &MemberPayload_Snapshot_Mls{
+				Members: make(map[string]*MemberPayload_Snapshot_Mls_Member),
+				EpochSecrets: make(map[uint64][]byte),
+			},
+		}, nil
 	}
 }
 
@@ -622,11 +630,16 @@ func update_Snapshot_Mls(
 	if iSnapshot.Members.GetMls() == nil {
 		iSnapshot.Members.Mls = &MemberPayload_Snapshot_Mls{
 			Members: make(map[string]*MemberPayload_Snapshot_Mls_Member),
+			EpochSecrets: make(map[uint64][]byte),
 		}
 	}
 	snapshot := iSnapshot.Members.Mls
 	if snapshot.Members == nil {
 		snapshot.Members = make(map[string]*MemberPayload_Snapshot_Mls_Member)
+	}
+
+	if snapshot.EpochSecrets == nil {
+		snapshot.EpochSecrets = make(map[uint64][]byte)
 	}
 
 	switch content := mlsPayload.Content.(type) {
@@ -649,6 +662,11 @@ func update_Snapshot_Mls(
 			}
 		}
 		snapshot.Members[memberAddress].SignaturePublicKeys = append(snapshot.Members[memberAddress].SignaturePublicKeys, content.ExternalJoin.SignaturePublicKey)
+		return nil
+	case *MemberPayload_Mls_EpochSecrets_:
+		for _, secret := range content.EpochSecrets.Secrets {
+			snapshot.EpochSecrets[secret.Epoch] = secret.Secret
+		}
 		return nil
 	default:
 		return RiverError(Err_INVALID_ARGUMENT, fmt.Sprintf("unknown MLS payload type %T", mlsPayload.Content))

@@ -100,6 +100,9 @@ func (r *streamViewImpl) GetMlsEpochSecrets() (map[uint64][]byte, error) {
 		return nil, fmt.Errorf("MLS not initialized")
 	}
 	epochSecrets := s.Members.Mls.GetEpochSecrets()
+	if epochSecrets == nil {
+		epochSecrets = make(map[uint64][]byte)
+	}
 	updateFn := func(e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error) {
 		switch payload := e.Event.Payload.(type) {
 		case *protocol.StreamEvent_MemberPayload:
