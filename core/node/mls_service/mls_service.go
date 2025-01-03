@@ -36,14 +36,13 @@ func makeMlsRequest(request *mls_tools.MlsRequest) ([]byte, error) {
 		&outputLen,
 	)
 
-	defer C.free_bytes(outputPtr, outputLen)
-
 	if retCode != 0 {
 		return nil, fmt.Errorf("error calling Rust function: %d", retCode)
 	}
 
 	// Convert the result to a Go slice
 	output := C.GoBytes(unsafe.Pointer(outputPtr), C.int(outputLen))
+	C.free_bytes(outputPtr, outputLen)
 	return output, nil
 }
 
