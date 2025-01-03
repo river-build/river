@@ -49,6 +49,8 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
                     mlsEvent.content.value.signaturePublicKey,
                 )
                 break
+            case 'epochSecrets':
+                break
             case undefined:
                 break
             default:
