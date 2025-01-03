@@ -111,7 +111,7 @@ pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> 
     
     if members[0].signing_identity.signature_key.to_vec() != request.signature_public_key {
         return InitialGroupInfoResponse {
-            result: ValidationResult::InvalidExternalGroupTooManyMembers.into(),
+            result: ValidationResult::InvalidPublicSignatureKey.into(),
         };
     }
     return InitialGroupInfoResponse {
@@ -192,6 +192,8 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJ
 
 #[cfg(test)]
 mod tests {
+    use std::vec;
+
     use super::*;
     use mls_rs::group::ExportedTree;
     use mls_rs::{
@@ -280,6 +282,28 @@ mod tests {
 
         let response = validate_initial_group_info_request(request);
         assert_eq!(response.result, ValidationResult::Valid.into());
+    }
+
+    #[test]
+    fn test_validate_initial_group_info_request_invalid_public_signature_key() {
+        let bob_client = create_client("bob".to_string());
+        let bob_group = bob_client.create_group(Default::default(), Default::default()).unwrap();
+        let bob_group_info_message = bob_group.group_info_message_allowing_ext_commit(false).unwrap();
+
+        let external_client = create_external_client();
+        let tree_bytes = bob_group.export_tree().to_bytes().unwrap();
+        let tree = ExportedTree::from_bytes(&tree_bytes).unwrap();
+        let external_group = external_client.observe_group(bob_group_info_message.clone(), Some(tree)).unwrap();
+        let external_group_snapshot = external_group.snapshot();
+
+        let request = InitialGroupInfoRequest {
+            signature_public_key: vec![0; 1],
+            group_info_message: bob_group_info_message.to_bytes().unwrap(),
+            external_group_snapshot: external_group_snapshot.to_bytes().unwrap(),
+        };
+
+        let response = validate_initial_group_info_request(request);
+        assert_eq!(response.result, ValidationResult::InvalidPublicSignatureKey.into());
     }
 
     #[test]

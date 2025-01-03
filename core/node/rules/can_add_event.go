@@ -1379,6 +1379,7 @@ func (ru *aeMembershipRules) channelMembershipEntitlements() (*auth.ChainAuthArg
 
 func (ru *aeMlsInitializeGroupRules) validMlsInitializeGroup() (bool, error) {
 	request := mls_tools.InitialGroupInfoRequest{
+		SignaturePublicKey: ru.initializeGroup.DeviceKey,
 		GroupInfoMessage:      ru.initializeGroup.GroupInfoMessage,
 		ExternalGroupSnapshot: ru.initializeGroup.ExternalGroupSnapshot,
 	}
