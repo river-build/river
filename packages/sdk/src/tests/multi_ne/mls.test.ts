@@ -69,7 +69,7 @@ describe('mlsTests', () => {
             content: {
                 case: 'initializeGroup',
                 value: {
-                    deviceKey: deviceKey,
+                    signaturePublicKey: await client.signaturePublicKey(),
                     externalGroupSnapshot: externalGroupSnapshot,
                     groupInfoMessage: groupInfoMessage,
                 },
@@ -93,7 +93,7 @@ describe('mlsTests', () => {
             content: {
                 case: 'initializeGroup',
                 value: {
-                    deviceKey: deviceKey,
+                    signaturePublicKey: deviceKey,
                     externalGroupSnapshot: new Uint8Array([]),
                     groupInfoMessage: new Uint8Array([]),
                 },
@@ -124,7 +124,7 @@ describe('mlsTests', () => {
             content: {
                 case: 'initializeGroup',
                 value: {
-                    deviceKey: deviceKey,
+                    signaturePublicKey: await client.signaturePublicKey(),
                     externalGroupSnapshot: externalGroupSnapshot,
                     groupInfoMessage: groupInfoMessage,
                 },
@@ -161,7 +161,7 @@ describe('mlsTests', () => {
             content: {
                 case: 'initializeGroup',
                 value: {
-                    deviceKey: deviceKey,
+                    signaturePublicKey: await client.signaturePublicKey(),
                     externalGroupSnapshot: externalGroupSnapshot1,
                     groupInfoMessage: groupInfoMessage2,
                 },
@@ -198,7 +198,7 @@ describe('mlsTests', () => {
             content: {
                 case: 'initializeGroup',
                 value: {
-                    deviceKey: deviceKey2,
+                    signaturePublicKey: await client2.signaturePublicKey(),
                     externalGroupSnapshot: externalGroupSnapshot,
                     groupInfoMessage: groupInfoMessage,
                 },
@@ -229,7 +229,7 @@ describe('mlsTests', () => {
             content: {
                 case: 'initializeGroup',
                 value: {
-                    deviceKey: deviceKey,
+                    signaturePublicKey: await client.signaturePublicKey(),
                     externalGroupSnapshot: externalGroupSnapshot,
                     groupInfoMessage: groupInfoMessage,
                 },
