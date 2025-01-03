@@ -1378,17 +1378,17 @@ func (ru *aeMembershipRules) channelMembershipEntitlements() (*auth.ChainAuthArg
 }
 
 func (ru *aeMlsInitializeGroupRules) validMlsInitializeGroup() (bool, error) {
-	request := mls_tools.InitialGroupInfoRequest{
-		SignaturePublicKey: ru.initializeGroup.SignaturePublicKey,
-		GroupInfoMessage:      ru.initializeGroup.GroupInfoMessage,
-		ExternalGroupSnapshot: ru.initializeGroup.ExternalGroupSnapshot,
-	}
 	mlsInitialized, err := ru.params.streamView.(events.JoinableStreamView).IsMlsInitialized()
 	if err != nil {
 		return false, err
 	}
 	if mlsInitialized {
 		return false, RiverError(Err_INVALID_ARGUMENT, "group already initialized")
+	}
+	request := mls_tools.InitialGroupInfoRequest{
+		SignaturePublicKey: ru.initializeGroup.SignaturePublicKey,
+		GroupInfoMessage:      ru.initializeGroup.GroupInfoMessage,
+		ExternalGroupSnapshot: ru.initializeGroup.ExternalGroupSnapshot,
 	}
 	resp, err := mls_service.InitialGroupInfoRequest(&request)
 	if err != nil {
