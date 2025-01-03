@@ -319,6 +319,68 @@ describe('mlsTests', () => {
         expect(bin_equal(mls.groupInfoMessage, groupInfoMessage)).toBe(true)
     })
 
+    test.only('MLS group is snapshotted after external join', async () => {
+        const bobsClient = await makeInitAndStartClient()
+        const alicesClient = await makeInitAndStartClient()
+        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
+        const stream = await bobsClient.waitForStream(streamId)
+
+        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
+            new Set([bobsClient.userId, alicesClient.userId]),
+        )
+
+        const bobDeviceKey = new Uint8Array(randomBytes(32))
+        const bobMlsClient = await MlsClient.create(bobDeviceKey)
+        const group = await bobMlsClient.createGroup()
+        const { groupInfoMessage, externalGroupSnapshot } =
+            await createGroupInfoAndExternalSnapshot(group)
+
+        const mlsPayload = makeMlsPayloadInitializeGroup(
+            await bobMlsClient.signaturePublicKey(),
+            externalGroupSnapshot,
+            groupInfoMessage,
+        )
+        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).resolves.not.toThrow()
+        // force a snapshot
+        await expect(
+            bobsClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true }),
+        ).resolves.not.toThrow()
+
+        // fetch the stream again and check that the MLS group is snapshotted
+        const streamAfterSnapshot = await bobsClient.getStream(streamId)
+        const mls = streamAfterSnapshot.membershipContent.mls
+        expect(mls.externalGroupSnapshot).toBeDefined()
+        expect(mls.groupInfoMessage).toBeDefined()
+        expect(bin_equal(mls.externalGroupSnapshot, externalGroupSnapshot)).toBe(true)
+        expect(bin_equal(mls.groupInfoMessage, groupInfoMessage)).toBe(true)
+
+        const aliceMlsDeviceKey = new Uint8Array(randomBytes(32))
+        const aliceMlsClient = await MlsClient.create(aliceMlsDeviceKey)
+        const { commit: aliceCommit, groupInfoMessage: aliceGroupInfoMessage } =
+            await commitExternal(aliceMlsClient, groupInfoMessage, externalGroupSnapshot)
+
+        const aliceMlsPayload = makeMlsPayloadExternalJoin(
+            await aliceMlsClient.signaturePublicKey(),
+            aliceCommit,
+            aliceGroupInfoMessage,
+        )
+        await expect(alicesClient._debugSendMls(streamId, aliceMlsPayload)).resolves.not.toThrow()
+
+        // force another snapshot
+        await expect(
+            bobsClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true }),
+        ).resolves.not.toThrow()
+
+        // this time, the snapshot should contain the group info message from Alice
+        // the only way it can end up in the snapshot is if the external join was successfully snapshotted
+        // by the node
+        const streamAfterSnapshot2 = await alicesClient.getStream(streamId)
+        const mls2 = streamAfterSnapshot2.membershipContent.mls
+        expect(mls2.externalGroupSnapshot).toBeDefined()
+        expect(mls2.groupInfoMessage).toBeDefined()
+        expect(bin_equal(mls2.groupInfoMessage, aliceGroupInfoMessage)).toBe(true)
+    })
+
     test('Valid external commits are accepted', async () => {
         const bobsClient = await makeInitAndStartClient()
         const alicesClient = await makeInitAndStartClient()
