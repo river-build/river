@@ -308,22 +308,30 @@ func (r *streamViewImpl) makeMiniblockHeader(
 			if mlsSnapshotRequest == nil {
 				return
 			}
-			switch mlsContent := e.Event.GetMemberPayload().GetMls().Content.(type) {
-			case *MemberPayload_Mls_InitializeGroup_:
-				// TODO: should only do if request.externalGroupSnapshot is empty
-				mlsSnapshotRequest.ExternalGroupSnapshot = mlsContent.InitializeGroup.ExternalGroupSnapshot
-				mlsSnapshotRequest.GroupInfoMessage = mlsContent.InitializeGroup.GroupInfoMessage
-			case *MemberPayload_Mls_ExternalJoin_:
-				// external joins consist of a commit + a group info message.
-				// new clients rely on the group info message to join the group.
-				// for this reason, we cannot blindly assume that the latest group info message
-				// is the one that should be used — we need to make sure that the commit is applied correctly first.
-				// clients will replay the state locally before attempting to join the group.
-				commitInfo := &mls_tools.SnapshotExternalGroupRequest_CommitInfo{
-					Commit: mlsContent.ExternalJoin.Commit,
-					GroupInfoMessage: mlsContent.ExternalJoin.GroupInfoMessage,
+			switch payload := e.Event.Payload.(type) {
+			case *StreamEvent_MemberPayload:
+				switch content := payload.MemberPayload.Content.(type) {
+				case *MemberPayload_Mls_:
+					switch mlsContent := content.Mls.Content.(type) {
+					case *MemberPayload_Mls_InitializeGroup_:
+						// TODO: should only do if request.externalGroupSnapshot is empty
+						mlsSnapshotRequest.ExternalGroupSnapshot = mlsContent.InitializeGroup.ExternalGroupSnapshot
+						mlsSnapshotRequest.GroupInfoMessage = mlsContent.InitializeGroup.GroupInfoMessage
+					case *MemberPayload_Mls_ExternalJoin_:
+						// external joins consist of a commit + a group info message.
+						// new clients rely on the group info message to join the group.
+						// for this reason, we cannot blindly assume that the latest group info message
+						// is the one that should be used — we need to make sure that the commit is applied correctly first.
+						// clients will replay the state locally before attempting to join the group.
+						commitInfo := &mls_tools.SnapshotExternalGroupRequest_CommitInfo{
+							Commit:           mlsContent.ExternalJoin.Commit,
+							GroupInfoMessage: mlsContent.ExternalJoin.GroupInfoMessage,
+						}
+						mlsSnapshotRequest.Commits = append(mlsSnapshotRequest.Commits, commitInfo)
+					}
+				default:
+					break
 				}
-				mlsSnapshotRequest.Commits = append(mlsSnapshotRequest.Commits, commitInfo)
 			default:
 				break
 			}
@@ -343,7 +351,7 @@ func (r *streamViewImpl) makeMiniblockHeader(
 						"event", e.ShortDebugStr(),
 					)
 				}
-				mlsUpdateFn(e)	
+				mlsUpdateFn(e)
 			}
 		}
 		// update with current events in minipool
@@ -846,10 +854,12 @@ func (r *streamViewImpl) AllEvents() iter.Seq[*ParsedEvent] {
 }
 
 func (r *streamViewImpl) makeMlsSnapshotRequest() *mls_tools.SnapshotExternalGroupRequest {
-	if r.snapshot.Members.GetMls() == nil { return nil }
-	return &mls_tools.SnapshotExternalGroupRequest {
+	if r.snapshot.Members.GetMls() == nil {
+		return nil
+	}
+	return &mls_tools.SnapshotExternalGroupRequest{
 		ExternalGroupSnapshot: r.snapshot.Members.GetMls().ExternalGroupSnapshot,
-		GroupInfoMessage: r.snapshot.Members.GetMls().GroupInfoMessage,
-		Commits: make([]*mls_tools.SnapshotExternalGroupRequest_CommitInfo, 0),
+		GroupInfoMessage:      r.snapshot.Members.GetMls().GroupInfoMessage,
+		Commits:               make([]*mls_tools.SnapshotExternalGroupRequest_CommitInfo, 0),
 	}
 }
