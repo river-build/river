@@ -89,6 +89,11 @@ type aeMlsInitializeGroupRules struct {
 	initializeGroup *MemberPayload_Mls_InitializeGroup
 }
 
+type aeMlsExternalJoinRules struct {
+	params          *aeParams
+	externalJoin *MemberPayload_Mls_ExternalJoin
+}
+
 type aeMediaPayloadChunkRules struct {
 	params *aeParams
 	chunk  *MediaPayload_Chunk
@@ -595,6 +600,14 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 		return aeBuilder().
 			check(params.creatorIsMember).
 			check(ru.validMlsInitializeGroup)
+	case *MemberPayload_Mls_ExternalJoin_:
+		ru := &aeMlsExternalJoinRules{
+			params: 	  params,
+			externalJoin: content.ExternalJoin,
+		}
+		return aeBuilder().
+			check(params.creatorIsMember).
+			check(ru.validMlsExternalJoin)
 	default:
 		return aeBuilder().
 			fail(unknownContentType(content))
@@ -1383,7 +1396,7 @@ func (ru *aeMlsInitializeGroupRules) validMlsInitializeGroup() (bool, error) {
 		GroupInfoMessage:      ru.initializeGroup.GroupInfoMessage,
 		ExternalGroupSnapshot: ru.initializeGroup.ExternalGroupSnapshot,
 	}
-	mlsInitialized, err := ru.params.streamView.(events.JoinableStreamView).IsMlsInitialized()
+	mlsInitialized, err := ru.params.streamView.(events.MlsStreamView).IsMlsInitialized()
 	if err != nil {
 		return false, err
 	}
@@ -1396,6 +1409,25 @@ func (ru *aeMlsInitializeGroupRules) validMlsInitializeGroup() (bool, error) {
 	}
 	if resp.GetResult() != mls_tools.ValidationResult_VALID {
 		return false, RiverError(Err_INVALID_ARGUMENT, "invalid group init", "result", resp.GetResult())
+	}
+	return true, nil
+}
+
+func (ru *aeMlsExternalJoinRules) validMlsExternalJoin() (bool, error) {
+	view := ru.params.streamView.(events.MlsStreamView)
+	externalJoinRequest, err := view.GetMlsExternalJoinRequest()
+	if err != nil {
+		return false, err
+	}
+	externalJoinRequest.ProposedExternalJoinCommit = ru.externalJoin.Commit
+	externalJoinRequest.ProposedExternalJoinInfoMessage = ru.externalJoin.GroupInfoMessage
+	externalJoinRequest.SignaturePublicKey = ru.externalJoin.SignaturePublicKey
+	resp, err := mls_service.ExternalJoinRequest(externalJoinRequest)
+	if err != nil {
+		return false, err
+	}
+	if resp.GetResult() != mls_tools.ValidationResult_VALID {
+		return false, RiverError(Err_INVALID_ARGUMENT, "invalid external join", "result", resp.GetResult())
 	}
 	return true, nil
 }

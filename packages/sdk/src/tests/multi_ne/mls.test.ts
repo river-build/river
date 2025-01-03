@@ -6,7 +6,14 @@ import { makeTestClient } from '../testUtils'
 import { Client } from '../../client'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { MemberPayload_Mls } from '@river-build/proto'
-import { ExternalClient, Group as MlsGroup, Client as MlsClient } from '@river-build/mls-rs-wasm'
+import {
+    ExternalClient,
+    Group as MlsGroup,
+    Client as MlsClient,
+    ExternalSnapshot,
+    MlsMessage,
+    ExportedTree,
+} from '@river-build/mls-rs-wasm'
 import { randomBytes } from 'crypto'
 import { equalsBytes } from 'ethereum-cryptography/utils'
 
@@ -46,6 +53,27 @@ describe('mlsTests', () => {
         return {
             groupInfoMessage: groupInfoMessage.toBytes(),
             externalGroupSnapshot: externalGroupSnapshot.toBytes(),
+        }
+    }
+
+    async function commitExternal(
+        client: MlsClient,
+        groupInfoMessage: Uint8Array,
+        externalGroupSnapshot: Uint8Array,
+    ): Promise<{ commit: Uint8Array; groupInfoMessage: Uint8Array }> {
+        const externalClient = new ExternalClient()
+        const externalSnapshot = ExternalSnapshot.fromBytes(externalGroupSnapshot)
+        const externalGroup = await externalClient.loadGroup(externalSnapshot)
+        const tree = externalGroup.exportTree()
+        const exportedTree = ExportedTree.fromBytes(tree)
+        const mlsGroupInfoMessage = MlsMessage.fromBytes(groupInfoMessage)
+        const commitOutput = await client.commitExternal(mlsGroupInfoMessage, exportedTree)
+        const updatedGroupInfoMessage = await commitOutput.group.groupInfoMessageAllowingExtCommit(
+            false,
+        )
+        return {
+            commit: commitOutput.commit.toBytes(),
+            groupInfoMessage: updatedGroupInfoMessage.toBytes(),
         }
     }
 
@@ -277,5 +305,99 @@ describe('mlsTests', () => {
         expect(mls.groupInfoMessage).toBeDefined()
         expect(equalsBytes(mls.externalGroupSnapshot!, externalGroupSnapshot)).toBe(true)
         expect(equalsBytes(mls.groupInfoMessage!, groupInfoMessage)).toBe(true)
+    })
+
+    test('Valid external commits are accepted', async () => {
+        const bobsClient = await makeInitAndStartClient()
+        const alicesClient = await makeInitAndStartClient()
+        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
+        const stream = await bobsClient.waitForStream(streamId)
+
+        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
+            new Set([bobsClient.userId, alicesClient.userId]),
+        )
+
+        const bobMlsDeviceKey = new Uint8Array(randomBytes(32))
+        const bobMlsClient = await MlsClient.create(bobMlsDeviceKey)
+        const group = await bobMlsClient.createGroup()
+        const { groupInfoMessage, externalGroupSnapshot } =
+            await createGroupInfoAndExternalSnapshot(group)
+
+        const bobMlsPayload: PlainMessage<MemberPayload_Mls> = {
+            content: {
+                case: 'initializeGroup',
+                value: {
+                    signaturePublicKey: await bobMlsClient.signaturePublicKey(),
+                    externalGroupSnapshot: externalGroupSnapshot,
+                    groupInfoMessage: groupInfoMessage,
+                },
+            },
+        }
+        await expect(bobsClient._debugSendMls(streamId, bobMlsPayload)).resolves.not.toThrow()
+
+        const aliceMlsDeviceKey = new Uint8Array(randomBytes(32))
+        const aliceMlsClient = await MlsClient.create(aliceMlsDeviceKey)
+        const { commit: aliceCommit, groupInfoMessage: aliceGroupInfoMessage } =
+            await commitExternal(aliceMlsClient, groupInfoMessage, externalGroupSnapshot)
+
+        const aliceMlsPayload: PlainMessage<MemberPayload_Mls> = {
+            content: {
+                case: 'externalJoin',
+                value: {
+                    signaturePublicKey: await aliceMlsClient.signaturePublicKey(),
+                    commit: aliceCommit,
+                    groupInfoMessage: aliceGroupInfoMessage,
+                },
+            },
+        }
+        await expect(alicesClient._debugSendMls(streamId, aliceMlsPayload)).resolves.not.toThrow()
+    })
+
+    test('External commits with invalid signature public keys are not accepted', async () => {
+        const bobsClient = await makeInitAndStartClient()
+        const alicesClient = await makeInitAndStartClient()
+        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
+        const stream = await bobsClient.waitForStream(streamId)
+
+        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
+            new Set([bobsClient.userId, alicesClient.userId]),
+        )
+
+        const bobMlsDeviceKey = new Uint8Array(randomBytes(32))
+        const bobMlsClient = await MlsClient.create(bobMlsDeviceKey)
+        const group = await bobMlsClient.createGroup()
+        const { groupInfoMessage, externalGroupSnapshot } =
+            await createGroupInfoAndExternalSnapshot(group)
+
+        const bobMlsPayload: PlainMessage<MemberPayload_Mls> = {
+            content: {
+                case: 'initializeGroup',
+                value: {
+                    signaturePublicKey: await bobMlsClient.signaturePublicKey(),
+                    externalGroupSnapshot: externalGroupSnapshot,
+                    groupInfoMessage: groupInfoMessage,
+                },
+            },
+        }
+        await expect(bobsClient._debugSendMls(streamId, bobMlsPayload)).resolves.not.toThrow()
+
+        const aliceMlsDeviceKey = new Uint8Array(randomBytes(32))
+        const aliceMlsClient = await MlsClient.create(aliceMlsDeviceKey)
+        const { commit: aliceCommit, groupInfoMessage: aliceGroupInfoMessage } =
+            await commitExternal(aliceMlsClient, groupInfoMessage, externalGroupSnapshot)
+
+        const aliceMlsPayload: PlainMessage<MemberPayload_Mls> = {
+            content: {
+                case: 'externalJoin',
+                value: {
+                    signaturePublicKey: new Uint8Array([1, 2, 3]),
+                    commit: aliceCommit,
+                    groupInfoMessage: aliceGroupInfoMessage,
+                },
+            },
+        }
+        await expect(alicesClient._debugSendMls(streamId, aliceMlsPayload)).rejects.toThrow(
+            'INVALID_PUBLIC_SIGNATURE_KEY',
+        )
     })
 })
