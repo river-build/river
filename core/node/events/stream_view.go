@@ -13,6 +13,8 @@ import (
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/mls_service"
+	"github.com/river-build/river/core/node/mls_service/mls_tools"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
@@ -300,6 +302,41 @@ func (r *streamViewImpl) makeMiniblockHeader(
 	}
 	if proposal.ShouldSnapshot {
 		snapshot = proto.Clone(r.snapshot).(*Snapshot)
+		mlsSnapshotRequest := r.makeMlsSnapshotRequest()
+		// TODO: this function should only run for streams with MLS support
+		mlsUpdateFn := func(e *ParsedEvent) {
+			if mlsSnapshotRequest == nil {
+				return
+			}
+			switch payload := e.Event.Payload.(type) {
+			case *StreamEvent_MemberPayload:
+				switch content := payload.MemberPayload.Content.(type) {
+				case *MemberPayload_Mls_:
+					switch mlsContent := content.Mls.Content.(type) {
+					case *MemberPayload_Mls_InitializeGroup_:
+						// TODO: should only do if request.externalGroupSnapshot is empty
+						mlsSnapshotRequest.ExternalGroupSnapshot = mlsContent.InitializeGroup.ExternalGroupSnapshot
+						mlsSnapshotRequest.GroupInfoMessage = mlsContent.InitializeGroup.GroupInfoMessage
+					case *MemberPayload_Mls_ExternalJoin_:
+						// external joins consist of a commit + a group info message.
+						// new clients rely on the group info message to join the group.
+						// for this reason, we cannot blindly assume that the latest group info message
+						// is the one that should be used — we need to make sure that the commit is applied correctly first.
+						// clients will replay the state locally before attempting to join the group.
+						commitInfo := &mls_tools.SnapshotExternalGroupRequest_CommitInfo{
+							Commit:           mlsContent.ExternalJoin.Commit,
+							GroupInfoMessage: mlsContent.ExternalJoin.GroupInfoMessage,
+						}
+						mlsSnapshotRequest.Commits = append(mlsSnapshotRequest.Commits, commitInfo)
+					}
+				default:
+					break
+				}
+			default:
+				break
+			}
+		}
+
 		// update all blocks since last snapshot
 		for i := r.snapshotIndex + 1; i < len(r.blocks); i++ {
 			block := r.blocks[i]
@@ -314,6 +351,7 @@ func (r *streamViewImpl) makeMiniblockHeader(
 						"event", e.ShortDebugStr(),
 					)
 				}
+				mlsUpdateFn(e)
 			}
 		}
 		// update with current events in minipool
@@ -326,6 +364,21 @@ func (r *streamViewImpl) makeMiniblockHeader(
 					"event", e.ShortDebugStr(),
 				)
 			}
+			mlsUpdateFn(e) // is it wrong that we're calling this for events in the minipool?
+		}
+
+		// only attempt to snapshot the MLS state if MLS has been initialized for this stream.
+		if mlsSnapshotRequest != nil && len(mlsSnapshotRequest.ExternalGroupSnapshot) > 0 {
+			resp, err := mls_service.SnapshotExternalGroupRequest(mlsSnapshotRequest)
+			if err != nil {
+				// what to do here...?
+				log.Error("Failed to update MLS snapshot",
+					"error", err,
+					"streamId", r.streamId,
+				)
+			}
+			snapshot.Members.Mls.ExternalGroupSnapshot = resp.ExternalGroupSnapshot
+			snapshot.Members.Mls.GroupInfoMessage = resp.GroupInfoMessage
 		}
 	}
 
@@ -797,5 +850,16 @@ func (r *streamViewImpl) AllEvents() iter.Seq[*ParsedEvent] {
 				return
 			}
 		}
+	}
+}
+
+func (r *streamViewImpl) makeMlsSnapshotRequest() *mls_tools.SnapshotExternalGroupRequest {
+	if r.snapshot.Members.GetMls() == nil {
+		return nil
+	}
+	return &mls_tools.SnapshotExternalGroupRequest{
+		ExternalGroupSnapshot: r.snapshot.Members.GetMls().ExternalGroupSnapshot,
+		GroupInfoMessage:      r.snapshot.Members.GetMls().GroupInfoMessage,
+		Commits:               make([]*mls_tools.SnapshotExternalGroupRequest_CommitInfo, 0),
 	}
 }
