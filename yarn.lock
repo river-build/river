@@ -20694,6 +20694,7 @@ __metadata:
   resolution: "merkle-worker@workspace:packages/workers/merkle-worker"
   dependencies:
     "@cloudflare/workers-types": ^4.20241022.0
+    "@ethersproject/keccak256": ^5.7.0
     "@openzeppelin/merkle-tree": ^1.0.7
     "@types/jest": ^29.5.3
     eslint: ^8.53.0

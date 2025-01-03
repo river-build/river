@@ -21,8 +21,8 @@
         "test:unit": "yarn node --experimental-vm-modules $(yarn bin jest)"
     },
     "dependencies": {
-        "@openzeppelin/merkle-tree": "^1.0.7",
         "@ethersproject/keccak256": "^5.7.0",
+        "@openzeppelin/merkle-tree": "^1.0.7",
         "itty-router": "^2.6.6",
         "worker-common": "workspace:^"
     },
