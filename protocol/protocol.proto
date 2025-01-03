@@ -156,7 +156,6 @@ message MiniblockHeader {
 */
 message MemberPayload {
     message Snapshot {
-
         // contains the current MLS group state
         message Mls {
             message Member {
@@ -166,6 +165,7 @@ message MemberPayload {
             bytes group_info_message = 2;
             // user_address -> Member
             map<string, Member> members = 3;
+            map<uint64, bytes> epoch_secrets = 4;
         }
 
         message Member {
@@ -240,9 +240,18 @@ message MemberPayload {
             bytes group_info_message = 3;
         }
 
+        message EpochSecrets {
+            message EpochSecret {
+                bytes secret = 1;
+                uint64 epoch = 2;
+            }
+            repeated EpochSecret secrets = 1;
+        }
+
         oneof content {
             InitializeGroup initialize_group = 1;
             ExternalJoin external_join = 2;
+            EpochSecrets epoch_secrets = 3;
         }
     }
 
