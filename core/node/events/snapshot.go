@@ -125,6 +125,14 @@ func make_SnapshotMembers(iInception IsInceptionPayload, creatorAddress []byte) 
 		return nil, RiverError(Err_INVALID_ARGUMENT, "inceptionEvent is not an inception event")
 	}
 
+	// initialize the snapshot with an empty maps
+	snapshot := &MemberPayload_Snapshot{
+		Mls: &MemberPayload_Snapshot_Mls{
+			Members:      make(map[string]*MemberPayload_Snapshot_Mls_Member),
+			EpochSecrets: make(map[uint64][]byte),
+		},
+	}
+
 	switch inception := iInception.(type) {
 	case *UserPayload_Inception, *UserSettingsPayload_Inception, *UserInboxPayload_Inception, *UserMetadataPayload_Inception:
 		// for all user streams, get the address from the stream id
@@ -132,36 +140,27 @@ func make_SnapshotMembers(iInception IsInceptionPayload, creatorAddress []byte) 
 		if err != nil {
 			return nil, err
 		}
-		return &MemberPayload_Snapshot{
-			Joined: insertMember(nil, &MemberPayload_Snapshot_Member{
-				UserAddress: userAddress.Bytes(),
-			}),
-		}, nil
+		snapshot.Joined = insertMember(nil, &MemberPayload_Snapshot_Member{
+			UserAddress: userAddress.Bytes(),
+		})
+		return snapshot, nil
 	case *DmChannelPayload_Inception:
-		return &MemberPayload_Snapshot{
-			Joined: insertMember(nil, &MemberPayload_Snapshot_Member{
-				UserAddress: inception.FirstPartyAddress,
-			}, &MemberPayload_Snapshot_Member{
-				UserAddress: inception.SecondPartyAddress,
-			}),
-			Mls: &MemberPayload_Snapshot_Mls{
-				Members: make(map[string]*MemberPayload_Snapshot_Mls_Member),
-				EpochSecrets: make(map[uint64][]byte),
-			},
-		}, nil
+		// for dm channels, add both parties are members
+		snapshot.Joined = insertMember(nil, &MemberPayload_Snapshot_Member{
+			UserAddress: inception.FirstPartyAddress,
+		}, &MemberPayload_Snapshot_Member{
+			UserAddress: inception.SecondPartyAddress,
+		})
+		return snapshot, nil
 	case *MediaPayload_Inception:
-		return &MemberPayload_Snapshot{
-			Joined: insertMember(nil, &MemberPayload_Snapshot_Member{
-				UserAddress: creatorAddress,
-			}),
-		}, nil
+		// for media payloads, add the creator as a member
+		snapshot.Joined = insertMember(nil, &MemberPayload_Snapshot_Member{
+			UserAddress: creatorAddress,
+		})
+		return snapshot, nil
 	default:
-		return &MemberPayload_Snapshot{
-			Mls: &MemberPayload_Snapshot_Mls{
-				Members: make(map[string]*MemberPayload_Snapshot_Mls_Member),
-				EpochSecrets: make(map[uint64][]byte),
-			},
-		}, nil
+		// for all other payloads, leave them memberless by default
+		return snapshot, nil
 	}
 }
 
@@ -629,7 +628,7 @@ func update_Snapshot_Mls(
 ) error {
 	if iSnapshot.Members.GetMls() == nil {
 		iSnapshot.Members.Mls = &MemberPayload_Snapshot_Mls{
-			Members: make(map[string]*MemberPayload_Snapshot_Mls_Member),
+			Members:      make(map[string]*MemberPayload_Snapshot_Mls_Member),
 			EpochSecrets: make(map[uint64][]byte),
 		}
 	}
@@ -651,7 +650,7 @@ func update_Snapshot_Mls(
 		snapshot.ExternalGroupSnapshot = content.InitializeGroup.ExternalGroupSnapshot
 		snapshot.GroupInfoMessage = content.InitializeGroup.GroupInfoMessage
 		snapshot.Members[memberAddress] = &MemberPayload_Snapshot_Mls_Member{
-			SignaturePublicKeys: [][]byte{ content.InitializeGroup.SignaturePublicKey },
+			SignaturePublicKeys: [][]byte{content.InitializeGroup.SignaturePublicKey},
 		}
 		return nil
 	case *MemberPayload_Mls_ExternalJoin_:
