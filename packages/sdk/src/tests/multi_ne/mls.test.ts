@@ -8,6 +8,7 @@ import { PlainMessage } from '@bufbuild/protobuf'
 import { MemberPayload_Mls } from '@river-build/proto'
 import { ExternalClient, Group as MlsGroup, Client as MlsClient } from '@river-build/mls-rs-wasm'
 import { randomBytes } from 'crypto'
+import { equalsBytes } from 'ethereum-cryptography/utils'
 
 describe('mlsTests', () => {
     let clients: Client[] = []
@@ -206,5 +207,44 @@ describe('mlsTests', () => {
         await expect(bobsClient._debugSendMls(streamId, mlsPayload)).rejects.toThrow(
             'INVALID_GROUP_INFO_EPOCH',
         )
+    })
+
+    test('MLS group is snapshotted', async () => {
+        const bobsClient = await makeInitAndStartClient()
+        const alicesClient = await makeInitAndStartClient()
+        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
+        const stream = await bobsClient.waitForStream(streamId)
+
+        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
+            new Set([bobsClient.userId, alicesClient.userId]),
+        )
+
+        const deviceKey = new Uint8Array(randomBytes(32))
+        const client = await MlsClient.create(deviceKey)
+        const group = await client.createGroup()
+        const { groupInfoMessage, externalGroupSnapshot } =
+            await createGroupInfoAndExternalSnapshot(group)
+
+        const mlsPayload: PlainMessage<MemberPayload_Mls> = {
+            content: {
+                case: 'initializeGroup',
+                value: {
+                    deviceKey: deviceKey,
+                    externalGroupSnapshot: externalGroupSnapshot,
+                    groupInfoMessage: groupInfoMessage,
+                },
+            },
+        }
+        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).resolves.not.toThrow()
+        // force a snapshot
+        await bobsClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true })
+
+        // fetch the stream again and check that the MLS group is snapshotted
+        const streamAfterSnapshot = await bobsClient.getStream(streamId)
+        const mls = streamAfterSnapshot.membershipContent.mls
+        expect(mls.externalGroupSnapshot).toBeDefined()
+        expect(mls.groupInfoMessage).toBeDefined()
+        expect(equalsBytes(mls.externalGroupSnapshot!, externalGroupSnapshot)).toBe(true)
+        expect(equalsBytes(mls.groupInfoMessage!, groupInfoMessage)).toBe(true)
     })
 })

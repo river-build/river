@@ -607,8 +607,31 @@ func update_Snapshot_Member(
 		default:
 			return RiverError(Err_INVALID_ARGUMENT, fmt.Sprintf("unknown member blockchain transaction type %T", transactionContent))
 		}
+	case *MemberPayload_Mls_:
+		return update_Snapshot_Mls(iSnapshot, content.Mls)
 	default:
 		return RiverError(Err_INVALID_ARGUMENT, fmt.Sprintf("unknown membership payload type %T", memberPayload.Content))
+	}
+}
+
+func update_Snapshot_Mls(
+	iSnapshot *Snapshot,
+	mlsPayload *MemberPayload_Mls,
+) error {
+	if iSnapshot.Members.GetMls() == nil {
+		iSnapshot.Members.Mls = &MemberPayload_Snapshot_Mls{}
+	}
+	snapshot := iSnapshot.Members.Mls
+	switch content := mlsPayload.Content.(type) {
+	case *MemberPayload_Mls_InitializeGroup_:
+		if len(snapshot.ExternalGroupSnapshot) > 0 || len(snapshot.GroupInfoMessage) > 0 {
+			return RiverError(Err_INVALID_ARGUMENT, "duplicate mls initialization")
+		}
+		snapshot.ExternalGroupSnapshot = content.InitializeGroup.ExternalGroupSnapshot
+		snapshot.GroupInfoMessage = content.InitializeGroup.GroupInfoMessage
+		return nil
+	default:
+		return RiverError(Err_INVALID_ARGUMENT, fmt.Sprintf("unknown MLS payload type %T", mlsPayload.Content))
 	}
 }
 
