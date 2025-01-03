@@ -608,7 +608,7 @@ func update_Snapshot_Member(
 			return RiverError(Err_INVALID_ARGUMENT, fmt.Sprintf("unknown member blockchain transaction type %T", transactionContent))
 		}
 	case *MemberPayload_Mls_:
-		return update_Snapshot_Mls(iSnapshot, content.Mls)
+		return update_Snapshot_Mls(iSnapshot, content.Mls, creatorAddress)
 	default:
 		return RiverError(Err_INVALID_ARGUMENT, fmt.Sprintf("unknown membership payload type %T", memberPayload.Content))
 	}
@@ -617,18 +617,38 @@ func update_Snapshot_Member(
 func update_Snapshot_Mls(
 	iSnapshot *Snapshot,
 	mlsPayload *MemberPayload_Mls,
+	creatorAddress []byte,
 ) error {
 	if iSnapshot.Members.GetMls() == nil {
-		iSnapshot.Members.Mls = &MemberPayload_Snapshot_Mls{}
+		iSnapshot.Members.Mls = &MemberPayload_Snapshot_Mls{
+			Members: make(map[string]*MemberPayload_Snapshot_Mls_Member),
+		}
 	}
 	snapshot := iSnapshot.Members.Mls
+	if snapshot.Members == nil {
+		snapshot.Members = make(map[string]*MemberPayload_Snapshot_Mls_Member)
+	}
+
 	switch content := mlsPayload.Content.(type) {
 	case *MemberPayload_Mls_InitializeGroup_:
 		if len(snapshot.ExternalGroupSnapshot) > 0 || len(snapshot.GroupInfoMessage) > 0 {
 			return RiverError(Err_INVALID_ARGUMENT, "duplicate mls initialization")
 		}
+		memberAddress := common.BytesToAddress(creatorAddress).Hex()
 		snapshot.ExternalGroupSnapshot = content.InitializeGroup.ExternalGroupSnapshot
 		snapshot.GroupInfoMessage = content.InitializeGroup.GroupInfoMessage
+		snapshot.Members[memberAddress] = &MemberPayload_Snapshot_Mls_Member{
+			SignaturePublicKeys: [][]byte{ content.InitializeGroup.SignaturePublicKey },
+		}
+		return nil
+	case *MemberPayload_Mls_ExternalJoin_:
+		memberAddress := common.BytesToAddress(creatorAddress).Hex()
+		if _, ok := snapshot.Members[memberAddress]; !ok {
+			snapshot.Members[memberAddress] = &MemberPayload_Snapshot_Mls_Member{
+				SignaturePublicKeys: make([][]byte, 0),
+			}
+		}
+		snapshot.Members[memberAddress].SignaturePublicKeys = append(snapshot.Members[memberAddress].SignaturePublicKeys, content.ExternalJoin.SignaturePublicKey)
 		return nil
 	default:
 		return RiverError(Err_INVALID_ARGUMENT, fmt.Sprintf("unknown MLS payload type %T", mlsPayload.Content))
