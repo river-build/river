@@ -1386,7 +1386,7 @@ func (ru *aeMlsInitializeGroupRules) validMlsInitializeGroup() (bool, error) {
 		return false, RiverError(Err_INVALID_ARGUMENT, "group already initialized")
 	}
 	request := mls_tools.InitialGroupInfoRequest{
-		SignaturePublicKey: ru.initializeGroup.SignaturePublicKey,
+		SignaturePublicKey:    ru.initializeGroup.SignaturePublicKey,
 		GroupInfoMessage:      ru.initializeGroup.GroupInfoMessage,
 		ExternalGroupSnapshot: ru.initializeGroup.ExternalGroupSnapshot,
 	}
