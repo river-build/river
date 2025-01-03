@@ -13,6 +13,7 @@ enum ValidationResult {
     INVALID_GROUP_INFO_MISSING_PUB_KEY_EXTENSION = 7;
     INVALID_COMMIT = 8;
     INVALID_GROUP_INFO_GROUP_ID_MISMATCH = 9;
+    INVALID_EXTERNAL_GROUP_TOO_MANY_MEMBERS = 10;
 }
 
 message MlsRequest {
@@ -30,8 +31,9 @@ message MlsResponse {
 }
 
 message InitialGroupInfoRequest {
-    bytes group_info_message = 1;
-    bytes external_group_snapshot = 2;
+    bytes signature_public_key = 1;
+    bytes group_info_message = 2;
+    bytes external_group_snapshot = 3;
 }
 
 message InitialGroupInfoResponse {

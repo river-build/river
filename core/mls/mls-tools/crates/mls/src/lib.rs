@@ -101,6 +101,19 @@ pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> 
             };
         }
     }
+
+    let members = external_group.roster().members();
+    if members.len() != 1 {
+        return InitialGroupInfoResponse {
+            result: ValidationResult::InvalidExternalGroupTooManyMembers.into(),
+        };
+    }
+    
+    if members[0].signing_identity.signature_key.to_vec() != request.signature_public_key {
+        return InitialGroupInfoResponse {
+            result: ValidationResult::InvalidExternalGroupTooManyMembers.into(),
+        };
+    }
     return InitialGroupInfoResponse {
         result: ValidationResult::Valid.into(),
     };
@@ -260,6 +273,7 @@ mod tests {
         let external_group_snapshot = external_group.snapshot();
 
         let request = InitialGroupInfoRequest {
+            signature_public_key: bob_client.signing_identity().unwrap().0.signature_key.to_vec(),
             group_info_message: bob_group_info_message.to_bytes().unwrap(),
             external_group_snapshot: external_group_snapshot.to_bytes().unwrap(),
         };
@@ -281,10 +295,11 @@ mod tests {
         let external_group_snapshot = external_group.snapshot();
 
         let request = InitialGroupInfoRequest {
+            signature_public_key: bob_client.signing_identity().unwrap().0.signature_key.to_vec(),
             group_info_message: bob_group_info_message.to_bytes().unwrap(),
             external_group_snapshot: external_group_snapshot.to_bytes().unwrap(),
         };
-
+        
         let response = validate_initial_group_info_request(request);
         assert_eq!(response.result, ValidationResult::InvalidGroupInfoMissingPubKeyExtension.into());
     }
