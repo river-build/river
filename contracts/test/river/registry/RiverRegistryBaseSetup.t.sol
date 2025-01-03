@@ -104,7 +104,7 @@ contract RiverRegistryBaseSetup is TestUtils {
     vm.assume(nodeOperator != address(0));
 
     vm.prank(nodeOperator);
-    vm.expectEmit();
+    vm.expectEmit(address(nodeRegistry));
     emit INodeRegistryBase.NodeAdded(
       node,
       nodeOperator,
