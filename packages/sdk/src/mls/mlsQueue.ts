@@ -81,8 +81,6 @@ type MlsEncryptedContentItem = {
 type MlsCommand = {
     command: 'JoinOrCreateGroup'
     streamId: string
-    promise: Promise<void>
-    resolve: () => void
 }
 
 /// MlsQueue mimics how DecryptionExtensions handles encrypted content
@@ -96,7 +94,7 @@ export class MlsQueue {
     // streamId: epochId: EncryptedContentItem[]
     private decryptionFailures: Map<string, Map<bigint, EncryptedContentItem[]>> = new Map()
     private mlsCommands: MlsCommand[] = []
-    private delayMs = 1000
+    private delayMs = 15
 
     protected log: {
         debug: DLogger
@@ -224,39 +222,27 @@ export class MlsQueue {
 
     private checkStartTicking() {
         // TODO: pause if take mobile safari is backgrounded (idb issue)
-        this.log.debug('checkStartTicking', this.timeoutId)
 
         if (!this.started || this.timeoutId) {
             this.log.debug('ticking in progress')
             return
         }
 
-        this.log.debug('setting timeout')
         this.timeoutId = setTimeout(() => {
-            this.log.debug('timeout fired')
             this.inProgressTick = this.tick()
-                .then(() => {
-                    this.log.debug('tick done')
-                })
                 .catch((e) => this.log.error('MLS ProcessTick Error', e))
                 .finally(() => {
-                    this.log.debug('clearing timeout')
                     this.timeoutId = undefined
                     this.checkStartTicking()
                 })
-            this.log.debug('tock', this.inProgressTick)
         }, this.getDelayMs())
     }
 
     private getDelayMs() {
-        if (this.client.nickname === 'alice') {
-            return 1000
-        }
         return this.delayMs
     }
 
     private async tick() {
-        this.log.debug('tick')
         // process MLS command
         const mlsCommand = this.dequeueMlsCommand()
         if (mlsCommand !== undefined) {
@@ -341,6 +327,7 @@ export class MlsQueue {
     }
 
     private async didReceiveMlsInitializeGroup(item: MlsInitializeGroup) {
+        this.log.debug('didReceiveMlsInitializeGroup', item)
         const before = this.mlsCrypto.groupStore.getGroup(item.streamId)
         const after = await this.mlsCrypto.handleInitializeGroup(
             item.streamId,
@@ -352,11 +339,13 @@ export class MlsQueue {
         if (!after) {
             // Try rejoining the group
             this.mlsCrypto.log('trying to join group')
-            await this.joinOrCreateGroup(item.streamId)
+            // Do not wait on join or createGroup
+            void this.joinOrCreateGroup(item.streamId)
         }
     }
 
     private async didReceiveMlsExternalJoin(externalJoin: MlsExternalJoin) {
+        this.log.debug('didReceiveMlsExternalJoin', externalJoin)
         const before = this.mlsCrypto.groupStore.getGroup(externalJoin.streamId)
         const after = await this.mlsCrypto?.handleExternalJoin(
             externalJoin.streamId,
@@ -370,7 +359,7 @@ export class MlsQueue {
         if (!after) {
             // Try rejoining the group
             this.mlsCrypto.log('trying to rejoin group')
-            await this.joinOrCreateGroup(externalJoin.streamId)
+            this.joinOrCreateGroup(externalJoin.streamId)
         } else {
             // We can announce the group key now that we are switching to a different epoch.
             // NOTE: we need to await this, otherwise weird stuff will happen
@@ -379,6 +368,7 @@ export class MlsQueue {
     }
 
     private async didReceiveMlsKeyAnnouncement(keyAnnouncement: MlsKeyAnnouncement) {
+        this.log.debug('didReceiveMlsKeyAnnouncement', keyAnnouncement)
         this.mlsCrypto.log('didReceiveKeyAnnouncement', {
             epoch: keyAnnouncement.key.epoch,
             key: shortenHexString(bin_toHexString(keyAnnouncement.key.key)),
@@ -390,7 +380,8 @@ export class MlsQueue {
     }
 
     private async retryMls(_streamId: string) {
-        throw new Error('Method not implemented.')
+        // throw new Error('Method not implemented.')
+        this.log.error('retryMls not implemented')
     }
 
     private async announceKeys(
@@ -472,34 +463,13 @@ export class MlsQueue {
         }
     }
 
-    private joinOrCreateGroup(streamId: string): Promise<void> {
-        if (!this.mlsCrypto) {
-            throw new Error('mls backend not initialized')
-        }
-        this.log.info('joinOrCreateGroup', streamId)
-
-        // check if there is a matching event in the queue
-        const found = this.mlsCommands
-            .filter((x) => x.command === 'JoinOrCreateGroup' && streamId === streamId)
-            .shift()
-
-        if (found) {
-            return found.promise
-        }
-
-        let resolve_: () => void = () => {}
-        const promise = new Promise<void>((resolve) => {
-            resolve_ = resolve
-        })
+    private joinOrCreateGroup(streamId: string): void {
+        this.log.debug('joinOrCreateGroup', streamId)
 
         this.enqueueMlsCommand({
             command: 'JoinOrCreateGroup',
             streamId,
-            promise,
-            resolve: resolve_,
         })
-
-        return promise
     }
 
     // Sends an event
@@ -567,20 +537,21 @@ export class MlsQueue {
             throw new Error('mls backend not initialized')
         }
         if (!(await this.mlsCrypto.groupStore.hasGroup(streamId))) {
-            await this.joinOrCreateGroup(streamId)
+            this.joinOrCreateGroup(streamId)
         }
         // NOTE: We recheck the group status
-        let group = await this.mlsCrypto.groupStore.getGroup(streamId)
-        if (group?.state.status !== 'GROUP_ACTIVE') {
-            this.mlsCrypto.log('waiting for group to become active')
-            await this.mlsCrypto.awaitGroupActive(streamId)
-            // Reload the group
-            group = await this.mlsCrypto.groupStore.getGroup(streamId)
-        }
+        await this.mlsCrypto.awaitGroupActive(streamId)
+        const group = await this.mlsCrypto.groupStore.getGroup(streamId)
 
         if (!group) {
             throw new Error(
                 `Programmer error: group not found after becoming active for streamId ${streamId}`,
+            )
+        }
+
+        if (group.state.status !== 'GROUP_ACTIVE') {
+            throw new Error(
+                `Programmer error: group not active after becoming active for streamId ${streamId}`,
             )
         }
 
@@ -636,6 +607,7 @@ export class MlsQueue {
     }
 
     private async processEncryptedItem(item: MlsEncryptedContentItem) {
+        this.log.debug('processEncryptedItem', item)
         // check if the epoch key is open
         const epochKey = await this.mlsCrypto.epochKeyService.getEpochKey(
             item.streamId,
@@ -746,6 +718,7 @@ export class MlsQueue {
     }
 
     private processAvailableEpochKey(_availableEpochKey: bigint) {
+        this.log.debug('processAvailableEpochKey', _availableEpochKey)
         throw new Error('Method not implemented.')
     }
 
@@ -775,20 +748,17 @@ export class MlsQueue {
 
                 if (mlsView?.latestGroupInfo === undefined) {
                     // if there is no group info we try to create it
-                    return this.createGroup(mlsCommand.streamId, mlsCommand)
+                    return this.createGroup(mlsCommand.streamId)
                 }
                 // if there is group info try external join
-                return this.externalJoin(mlsCommand.streamId, mlsView.latestGroupInfo, mlsCommand)
+                return this.externalJoin(mlsCommand.streamId, mlsView.latestGroupInfo)
             // default:
             //     logNever(mlsCommand, `Unhandled MLS command ${mlsCommand}`)
         }
     }
 
     /// Create a Group
-    private async createGroup(
-        streamId: string,
-        signal: { promise: Promise<void>; resolve: () => void },
-    ): Promise<void> {
+    private async createGroup(streamId: string): Promise<void> {
         const groupInfoWithExternalKey = await this.mlsCrypto.createGroup(streamId)
         const deviceKey = this.mlsCrypto.deviceKey
         this.log.debug('trying to initialize a group', {
@@ -806,26 +776,16 @@ export class MlsQueue {
         })
         try {
             await this.client.makeEventAndAddToStream(streamId, createEvent)
-            signal.resolve()
         } catch (error) {
             this.log.error('error creating group', error)
             // reschedule
-            this.log.debug('rescheduling join or create group')
-            this.enqueueMlsCommand({
-                command: 'JoinOrCreateGroup',
-                streamId,
-                promise: signal.promise,
-                resolve: signal.resolve,
-            })
+            this.log.debug('trying to rejoin group')
+            this.joinOrCreateGroup(streamId)
         }
     }
 
     /// External Join
-    private async externalJoin(
-        streamId: string,
-        latestGroupInfo: Uint8Array,
-        signal: { promise: Promise<void>; resolve: () => void },
-    ): Promise<void> {
+    private async externalJoin(streamId: string, latestGroupInfo: Uint8Array): Promise<void> {
         const groupJoinResult = await this.mlsCrypto.externalJoin(streamId, latestGroupInfo)
         this.log.debug('trying to externally add', {
             epoch: groupJoinResult.epoch,
@@ -846,7 +806,6 @@ export class MlsQueue {
         })
         try {
             await this.client.makeEventAndAddToStream(streamId, joinEvent)
-            signal.resolve()
         } catch (error) {
             this.log.error('error during external join', error)
             // reschedule
@@ -854,8 +813,6 @@ export class MlsQueue {
             this.enqueueMlsCommand({
                 command: 'JoinOrCreateGroup',
                 streamId,
-                promise: signal.promise,
-                resolve: signal.resolve,
             })
         }
     }

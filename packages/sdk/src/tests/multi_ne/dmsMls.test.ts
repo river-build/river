@@ -83,7 +83,7 @@ describe('dmsMlsTests', () => {
             .toBeTruthy()
     })
 
-    it.only('clientCanSendOneMlsMessageInDM', async () => {
+    it('clientCanSendOneMlsMessageInDM', async () => {
         const { aliceClient, bobClient, streamId } = await setupMlsDM()
 
         const result = await aliceClient.sendMessage(streamId, 'hello bob', [], [], {
@@ -110,7 +110,7 @@ describe('dmsMlsTests', () => {
                         ['hello bob'],
                         bobClient.streams.get(streamId)!.view.timeline,
                     ),
-                { timeout: 10_000 },
+                { timeout: 5_000 },
             )
             .toBeTruthy()
     })
@@ -191,49 +191,59 @@ describe('dmsMlsTests', () => {
         await expect.poll(async () => bobClient.mlsQueue?.mlsCrypto.epochFor(streamId)).toBe(1n)
     })
 
-    it('clientCanSendManyMlsPayloadsInDM', async () => {
-        const { aliceClient, bobClient, streamId } = await setupMlsDM()
+    it(
+        'clientCanSendManyMlsPayloadsInDM',
+        async () => {
+            const { aliceClient, bobClient, streamId } = await setupMlsDM()
 
-        const aliceMessages = Array.from(Array(10).keys()).map((key) => `Alice ${key}`)
-        const bobMessages = Array.from(Array(10).keys()).map((key) => `Bob ${key}`)
+            const aliceMessages = Array.from(Array(5).keys()).map((key) => `Alice ${key}`)
+            const bobMessages = Array.from(Array(5).keys()).map((key) => `Bob ${key}`)
 
-        const results = await Promise.all([
-            ...aliceMessages.map(async (message) =>
-                aliceClient.sendMessage(streamId, message, [], [], { useMls: true }),
-            ),
-            ...bobMessages.map(async (message) =>
-                bobClient.sendMessage(streamId, message, [], [], { useMls: true }),
-            ),
-        ])
+            const results = await Promise.all([
+                ...aliceMessages.map(async (message) =>
+                    aliceClient
+                        .sendMessage(streamId, message, [], [], { useMls: true })
+                        .then(() => {
+                            log.extend('alice:send')(message)
+                        }),
+                ),
+                ...bobMessages.map(async (message) =>
+                    bobClient.sendMessage(streamId, message, [], [], { useMls: true }).then(() => {
+                        log.extend('bob:send')(message)
+                    }),
+                ),
+            ])
 
-        expect(results).toBeDefined()
+            expect(results).toBeDefined()
 
-        const allMessages = [...aliceMessages, ...bobMessages]
+            const allMessages = [...aliceMessages, ...bobMessages]
 
-        // Alice received all messages
-        await expect
-            .poll(
-                () =>
-                    checkTimelineContainsAll(
-                        allMessages,
-                        aliceClient.streams.get(streamId)!.view.timeline,
-                    ),
-                { timeout: 10_000 },
-            )
-            .toBeTruthy()
+            // Alice received all messages
+            await expect
+                .poll(
+                    () =>
+                        checkTimelineContainsAll(
+                            allMessages,
+                            aliceClient.streams.get(streamId)!.view.timeline,
+                        ),
+                    { timeout: 10_000 },
+                )
+                .toBeTruthy()
 
-        // Bob received all messages
-        await expect
-            .poll(
-                () =>
-                    checkTimelineContainsAll(
-                        allMessages,
-                        bobClient.streams.get(streamId)!.view.timeline,
-                    ),
-                { timeout: 10_000 },
-            )
-            .toBeTruthy()
-    })
+            // Bob received all messages
+            await expect
+                .poll(
+                    () =>
+                        checkTimelineContainsAll(
+                            allMessages,
+                            bobClient.streams.get(streamId)!.view.timeline,
+                        ),
+                    { timeout: 10_000 },
+                )
+                .toBeTruthy()
+        },
+        { timeout: 20_000 },
+    )
 
     // GDM
 

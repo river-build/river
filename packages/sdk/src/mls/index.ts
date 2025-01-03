@@ -33,6 +33,7 @@ export class Awaiter {
     // resolve handler to the inner promise
     public resolve!: () => void
     public constructor(timeoutMS: number, msg: string = 'Awaiter timed out') {
+        log('creating awaiter')
         let timeout: NodeJS.Timeout
         const timeoutPromise = new Promise<never>((_resolve, reject) => {
             timeout = setTimeout(() => {
@@ -41,9 +42,13 @@ export class Awaiter {
         })
         const internalPromise: Promise<void> = new Promise(
             (resolve: (value: void) => void, _reject) => {
-                this.resolve = resolve
+                this.resolve = () => {
+                    log('resolve')
+                    resolve()
+                }
             },
         ).finally(() => {
+            log('clearing timeout')
             clearTimeout(timeout)
         })
         this.promise = Promise.race([internalPromise, timeoutPromise])
@@ -202,22 +207,24 @@ export class MlsCrypto {
 
     public async awaitGroupActive(streamId: string): Promise<void> {
         this.log(`awaitGroupActive ${streamId}`)
+        if ((await this.groupStore.getGroup(streamId))?.state.status === 'GROUP_ACTIVE') {
+            return
+        }
+        // NOTE: Critical section, no awaits permitted
         const awaiting = this.awaitingGroupActive.get(streamId)
         if (awaiting) {
             return await awaiting.promise
-        }
-        if ((await this.groupStore.getGroup(streamId))?.state.status === 'GROUP_ACTIVE') {
-            return
         }
         const awaiter = new Awaiter(
             this.awaitTimeoutMS,
             `Await group timed out for ${this.nickname} ${streamId}`,
         )
-        this.awaitingGroupActive.set(streamId, awaiter)
-        await awaiter.promise
-        this.awaitingGroupActive.delete(streamId)
 
-        return awaiter.promise
+        this.awaitingGroupActive.set(streamId, awaiter)
+
+        return awaiter.promise.finally(() => {
+            this.awaitingGroupActive.delete(streamId)
+        })
     }
 
     public async handleInitializeGroup(
@@ -258,6 +265,7 @@ export class MlsCrypto {
             const epochSecret = await group.state.group.currentEpochSecret()
             await this.epochKeyService.addOpenEpochSecret(streamId, epoch, epochSecret.toBytes())
             // check if anyone is waiting for it
+            this.log('resolve')
             this.awaitingGroupActive.get(streamId)?.resolve()
             return group
         } else {
@@ -346,6 +354,7 @@ export class MlsCrypto {
                     joinedEpoch,
                     epochSecret.toBytes(),
                 )
+                this.log('resolve')
                 this.awaitingGroupActive.get(streamId)?.resolve()
                 return group
             }
