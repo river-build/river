@@ -316,7 +316,6 @@ func (r *streamViewImpl) makeMiniblockHeader(
 				// TODO: should only do if request.externalGroupSnapshot is empty
 				mlsSnapshotRequest.ExternalGroupSnapshot = mlsContent.InitializeGroup.ExternalGroupSnapshot
 				mlsSnapshotRequest.GroupInfoMessage = mlsContent.InitializeGroup.GroupInfoMessage
-				break
 			case *MemberPayload_Mls_ExternalJoin_:
 				// external joins consist of a commit + a group info message.
 				// new clients rely on the group info message to join the group.
@@ -328,7 +327,6 @@ func (r *streamViewImpl) makeMiniblockHeader(
 					GroupInfoMessage: mlsContent.ExternalJoin.GroupInfoMessage,
 				}
 				mlsSnapshotRequest.Commits = append(mlsSnapshotRequest.Commits, commitInfo)
-				break
 			default:
 				break
 			}
