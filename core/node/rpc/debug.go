@@ -71,7 +71,7 @@ func (s *Service) registerDebugHandlers(enableDebugEndpoints bool, cfg config.De
 	handler.HandleFunc(mux, "/debug/multi/json", s.handleDebugMultiJson)
 	handler.Handle(mux, "/debug/config", &onChainConfigHandler{onChainConfig: s.chainConfig})
 
-	if enableDebugEndpoints && cfg.EnableStorageEndpoint {
+	if cfg.EnableStorageEndpoint || enableDebugEndpoints {
 		handler.HandleFunc(mux, "/debug/storage", s.handleDebugStorage)
 	}
 
@@ -100,7 +100,7 @@ func (s *Service) registerDebugHandlers(enableDebugEndpoints bool, cfg config.De
 		handler.Handle(mux, "/debug/txpool", &txpoolHandler{riverTxPool: s.riverChain.TxPool})
 	}
 
-	if enableDebugEndpoints {
+	if cfg.Stream || enableDebugEndpoints {
 		handler.Handle(mux, "/debug/stream/{streamIdStr}", &streamHandler{store: s.storage})
 	}
 }
@@ -170,7 +170,7 @@ func (s *streamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			err,
 			"streamIdString",
 			streamIdStr)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Stream id is not parsable: `%v`", err), http.StatusInternalServerError)
 		return
 	}
 
