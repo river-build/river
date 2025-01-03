@@ -137,19 +137,12 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJ
         }
     };
 
+    // in the off-chance that an invalid commit slips through, we don't want to stop processing, just keep going.
     for commit_bytes in request.commits {
-        let commit = match MlsMessage::from_bytes(&commit_bytes) {
-            Ok(commit) => commit,
-            Err(_) => return ExternalJoinResponse {
-                result: ValidationResult::InvalidCommit.into(),
-            }
+        let _ = match MlsMessage::from_bytes(&commit_bytes) {
+            Ok(commit) => external_group.process_incoming_message(commit),
+            Err(_) => break
         };
-
-        if external_group.process_incoming_message(commit).is_err() {
-            return ExternalJoinResponse {
-                result: ValidationResult::InvalidCommit.into(),
-            };
-        }
     }
 
     let proposed_group_info_mls_message = match MlsMessage::from_bytes(&request.proposed_external_join_info_message) {
