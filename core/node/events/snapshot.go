@@ -625,6 +625,9 @@ func update_Snapshot_Mls(
 		}
 	}
 	snapshot := iSnapshot.Members.Mls
+	if snapshot.Members == nil {
+		snapshot.Members = make(map[string]*MemberPayload_Snapshot_Mls_Member)
+	}
 
 	switch content := mlsPayload.Content.(type) {
 	case *MemberPayload_Mls_InitializeGroup_:
