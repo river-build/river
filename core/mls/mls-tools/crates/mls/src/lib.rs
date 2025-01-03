@@ -71,7 +71,7 @@ pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> 
 
     if group_info.group_context().group_id() != external_group.group_context().group_id() {
         return InitialGroupInfoResponse {
-            result: ValidationResult::InvalidGroupInfo.into(),
+            result: ValidationResult::InvalidGroupInfoGroupIdMismatch.into(),
         };
     }
 
@@ -80,7 +80,6 @@ pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> 
             match extensions {
                 Some(_) => {}
                 None => {
-                    println!("no external pub extension");
                     return InitialGroupInfoResponse {
                         result: ValidationResult::InvalidGroupInfoMissingPubKeyExtension.into(),
                     };
@@ -89,7 +88,7 @@ pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> 
         }
         Err(_) => {
             return InitialGroupInfoResponse {
-                result: ValidationResult::InvalidGroupInfo.into(),
+                result: ValidationResult::InvalidGroupInfoMissingPubKeyExtension.into(),
             };
         }
     }

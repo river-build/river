@@ -85,7 +85,7 @@ type aeUnpinRules struct {
 }
 
 type aeMlsInitializeGroupRules struct {
-	params *aeParams
+	params          *aeParams
 	initializeGroup *MemberPayload_Mls_InitializeGroup
 }
 
@@ -575,7 +575,7 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 			check(ru.validMemberBlockchainTransaction_ReceiptMetadata)
 	case *MemberPayload_Mls_:
 		return params.canAddMlsPayload(content.Mls)
-		
+
 	case *MemberPayload_EncryptionAlgorithm_:
 		return aeBuilder().
 			check(params.creatorIsMember)
@@ -1378,8 +1378,15 @@ func (ru *aeMembershipRules) channelMembershipEntitlements() (*auth.ChainAuthArg
 }
 
 func (ru *aeMlsInitializeGroupRules) validMlsInitializeGroup() (bool, error) {
+	mlsInitialized, err := ru.params.streamView.(events.JoinableStreamView).IsMlsInitialized()
+	if err != nil {
+		return false, err
+	}
+	if mlsInitialized {
+		return false, RiverError(Err_INVALID_ARGUMENT, "group already initialized")
+	}
 	request := mls_tools.InitialGroupInfoRequest{
-		GroupInfoMessage: ru.initializeGroup.GroupInfoMessage,
+		GroupInfoMessage:      ru.initializeGroup.GroupInfoMessage,
 		ExternalGroupSnapshot: ru.initializeGroup.ExternalGroupSnapshot,
 	}
 	resp, err := mls_service.InitialGroupInfoRequest(&request)
