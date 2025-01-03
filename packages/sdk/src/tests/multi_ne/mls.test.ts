@@ -36,6 +36,53 @@ describe('mlsTests', () => {
         clients = []
     })
 
+    function makeMlsPayloadInitializeGroup(
+        signaturePublicKey: Uint8Array,
+        externalGroupSnapshot: Uint8Array,
+        groupInfoMessage: Uint8Array,
+    ): PlainMessage<MemberPayload_Mls> {
+        return {
+            content: {
+                case: 'initializeGroup',
+                value: {
+                    signaturePublicKey: signaturePublicKey,
+                    externalGroupSnapshot: externalGroupSnapshot,
+                    groupInfoMessage: groupInfoMessage,
+                },
+            },
+        }
+    }
+
+    function makeMlsPayloadExternalJoin(
+        signaturePublicKey: Uint8Array,
+        commit: Uint8Array,
+        groupInfoMessage: Uint8Array,
+    ): PlainMessage<MemberPayload_Mls> {
+        return {
+            content: {
+                case: 'externalJoin',
+                value: {
+                    signaturePublicKey: signaturePublicKey,
+                    commit: commit,
+                    groupInfoMessage: groupInfoMessage,
+                },
+            },
+        }
+    }
+
+    function makeMlsPayloadEpochSecrets(
+        secrets: { epoch: bigint; secret: Uint8Array }[],
+    ): PlainMessage<MemberPayload_Mls> {
+        return {
+            content: {
+                case: 'epochSecrets',
+                value: {
+                    secrets: secrets,
+                },
+            },
+        }
+    }
+
     // helper function to create a group + external snapshot
     async function createGroupInfoAndExternalSnapshot(group: MlsGroup): Promise<{
         groupInfoMessage: Uint8Array
@@ -93,16 +140,11 @@ describe('mlsTests', () => {
         const { groupInfoMessage, externalGroupSnapshot } =
             await createGroupInfoAndExternalSnapshot(group)
 
-        const mlsPayload: PlainMessage<MemberPayload_Mls> = {
-            content: {
-                case: 'initializeGroup',
-                value: {
-                    signaturePublicKey: await client.signaturePublicKey(),
-                    externalGroupSnapshot: externalGroupSnapshot,
-                    groupInfoMessage: groupInfoMessage,
-                },
-            },
-        }
+        const mlsPayload = makeMlsPayloadInitializeGroup(
+            await client.signaturePublicKey(),
+            externalGroupSnapshot,
+            groupInfoMessage,
+        )
         await expect(bobsClient._debugSendMls(streamId, mlsPayload)).resolves.not.toThrow()
     })
 
@@ -122,16 +164,11 @@ describe('mlsTests', () => {
         const { groupInfoMessage, externalGroupSnapshot } =
             await createGroupInfoAndExternalSnapshot(group)
 
-        const mlsPayload: PlainMessage<MemberPayload_Mls> = {
-            content: {
-                case: 'initializeGroup',
-                value: {
-                    signaturePublicKey: (await client.signaturePublicKey()).slice(1), // slice 1 byte to make it invalid
-                    externalGroupSnapshot: externalGroupSnapshot,
-                    groupInfoMessage: groupInfoMessage,
-                },
-            },
-        }
+        const mlsPayload = makeMlsPayloadInitializeGroup(
+            (await client.signaturePublicKey()).slice(1), // slice 1 byte to make it invalid
+            externalGroupSnapshot,
+            groupInfoMessage,
+        )
         await expect(bobsClient._debugSendMls(streamId, mlsPayload)).rejects.toThrow(
             'INVALID_PUBLIC_SIGNATURE_KEY',
         )
@@ -148,16 +185,11 @@ describe('mlsTests', () => {
         )
 
         const deviceKey = new Uint8Array(randomBytes(32))
-        const mlsPayload: PlainMessage<MemberPayload_Mls> = {
-            content: {
-                case: 'initializeGroup',
-                value: {
-                    signaturePublicKey: deviceKey,
-                    externalGroupSnapshot: new Uint8Array([]),
-                    groupInfoMessage: new Uint8Array([]),
-                },
-            },
-        }
+        const mlsPayload = makeMlsPayloadInitializeGroup(
+            deviceKey,
+            new Uint8Array([]),
+            new Uint8Array([]),
+        )
         await expect(bobsClient._debugSendMls(streamId, mlsPayload)).rejects.to.toThrow(
             'INVALID_GROUP_INFO',
         )
@@ -179,16 +211,11 @@ describe('mlsTests', () => {
         const { groupInfoMessage, externalGroupSnapshot } =
             await createGroupInfoAndExternalSnapshot(group)
 
-        const mlsPayload: PlainMessage<MemberPayload_Mls> = {
-            content: {
-                case: 'initializeGroup',
-                value: {
-                    signaturePublicKey: await client.signaturePublicKey(),
-                    externalGroupSnapshot: externalGroupSnapshot,
-                    groupInfoMessage: groupInfoMessage,
-                },
-            },
-        }
+        const mlsPayload = makeMlsPayloadInitializeGroup(
+            await client.signaturePublicKey(),
+            externalGroupSnapshot,
+            groupInfoMessage,
+        )
         await expect(bobsClient._debugSendMls(streamId, mlsPayload)).resolves.not.toThrow()
         // trying to initialize the group again throws an error
         await expect(bobsClient._debugSendMls(streamId, mlsPayload)).rejects.toThrow(
@@ -216,16 +243,11 @@ describe('mlsTests', () => {
             group2,
         )
 
-        const mlsPayload: PlainMessage<MemberPayload_Mls> = {
-            content: {
-                case: 'initializeGroup',
-                value: {
-                    signaturePublicKey: await client.signaturePublicKey(),
-                    externalGroupSnapshot: externalGroupSnapshot1,
-                    groupInfoMessage: groupInfoMessage2,
-                },
-            },
-        }
+        const mlsPayload = makeMlsPayloadInitializeGroup(
+            await client.signaturePublicKey(),
+            externalGroupSnapshot1,
+            groupInfoMessage2,
+        )
         await expect(bobsClient._debugSendMls(streamId, mlsPayload)).rejects.toThrow(
             'INVALID_GROUP_INFO_GROUP_ID_MISMATCH',
         )
@@ -253,16 +275,11 @@ describe('mlsTests', () => {
         const { groupInfoMessage, externalGroupSnapshot } =
             await createGroupInfoAndExternalSnapshot(groupAtEpoch1)
 
-        const mlsPayload: PlainMessage<MemberPayload_Mls> = {
-            content: {
-                case: 'initializeGroup',
-                value: {
-                    signaturePublicKey: await client2.signaturePublicKey(),
-                    externalGroupSnapshot: externalGroupSnapshot,
-                    groupInfoMessage: groupInfoMessage,
-                },
-            },
-        }
+        const mlsPayload = makeMlsPayloadInitializeGroup(
+            await client2.signaturePublicKey(),
+            externalGroupSnapshot,
+            groupInfoMessage,
+        )
         await expect(bobsClient._debugSendMls(streamId, mlsPayload)).rejects.toThrow(
             'INVALID_GROUP_INFO_EPOCH',
         )
@@ -284,16 +301,11 @@ describe('mlsTests', () => {
         const { groupInfoMessage, externalGroupSnapshot } =
             await createGroupInfoAndExternalSnapshot(group)
 
-        const mlsPayload: PlainMessage<MemberPayload_Mls> = {
-            content: {
-                case: 'initializeGroup',
-                value: {
-                    signaturePublicKey: await client.signaturePublicKey(),
-                    externalGroupSnapshot: externalGroupSnapshot,
-                    groupInfoMessage: groupInfoMessage,
-                },
-            },
-        }
+        const mlsPayload = makeMlsPayloadInitializeGroup(
+            await client.signaturePublicKey(),
+            externalGroupSnapshot,
+            groupInfoMessage,
+        )
         await expect(bobsClient._debugSendMls(streamId, mlsPayload)).resolves.not.toThrow()
         // force a snapshot
         await bobsClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true })
@@ -323,16 +335,11 @@ describe('mlsTests', () => {
         const { groupInfoMessage, externalGroupSnapshot } =
             await createGroupInfoAndExternalSnapshot(group)
 
-        const bobMlsPayload: PlainMessage<MemberPayload_Mls> = {
-            content: {
-                case: 'initializeGroup',
-                value: {
-                    signaturePublicKey: await bobMlsClient.signaturePublicKey(),
-                    externalGroupSnapshot: externalGroupSnapshot,
-                    groupInfoMessage: groupInfoMessage,
-                },
-            },
-        }
+        const bobMlsPayload = makeMlsPayloadInitializeGroup(
+            await bobMlsClient.signaturePublicKey(),
+            externalGroupSnapshot,
+            groupInfoMessage,
+        )
         await expect(bobsClient._debugSendMls(streamId, bobMlsPayload)).resolves.not.toThrow()
 
         const aliceMlsDeviceKey = new Uint8Array(randomBytes(32))
@@ -340,16 +347,11 @@ describe('mlsTests', () => {
         const { commit: aliceCommit, groupInfoMessage: aliceGroupInfoMessage } =
             await commitExternal(aliceMlsClient, groupInfoMessage, externalGroupSnapshot)
 
-        const aliceMlsPayload: PlainMessage<MemberPayload_Mls> = {
-            content: {
-                case: 'externalJoin',
-                value: {
-                    signaturePublicKey: await aliceMlsClient.signaturePublicKey(),
-                    commit: aliceCommit,
-                    groupInfoMessage: aliceGroupInfoMessage,
-                },
-            },
-        }
+        const aliceMlsPayload = makeMlsPayloadExternalJoin(
+            await aliceMlsClient.signaturePublicKey(),
+            aliceCommit,
+            aliceGroupInfoMessage,
+        )
         await expect(alicesClient._debugSendMls(streamId, aliceMlsPayload)).resolves.not.toThrow()
     })
 
@@ -369,16 +371,12 @@ describe('mlsTests', () => {
         const { groupInfoMessage, externalGroupSnapshot } =
             await createGroupInfoAndExternalSnapshot(group)
 
-        const bobMlsPayload: PlainMessage<MemberPayload_Mls> = {
-            content: {
-                case: 'initializeGroup',
-                value: {
-                    signaturePublicKey: await bobMlsClient.signaturePublicKey(),
-                    externalGroupSnapshot: externalGroupSnapshot,
-                    groupInfoMessage: groupInfoMessage,
-                },
-            },
-        }
+        const bobMlsPayload = makeMlsPayloadInitializeGroup(
+            await bobMlsClient.signaturePublicKey(),
+            externalGroupSnapshot,
+            groupInfoMessage,
+        )
+
         await expect(bobsClient._debugSendMls(streamId, bobMlsPayload)).resolves.not.toThrow()
 
         const aliceMlsDeviceKey = new Uint8Array(randomBytes(32))
@@ -386,16 +384,11 @@ describe('mlsTests', () => {
         const { commit: aliceCommit, groupInfoMessage: aliceGroupInfoMessage } =
             await commitExternal(aliceMlsClient, groupInfoMessage, externalGroupSnapshot)
 
-        const aliceMlsPayload: PlainMessage<MemberPayload_Mls> = {
-            content: {
-                case: 'externalJoin',
-                value: {
-                    signaturePublicKey: new Uint8Array([1, 2, 3]),
-                    commit: aliceCommit,
-                    groupInfoMessage: aliceGroupInfoMessage,
-                },
-            },
-        }
+        const aliceMlsPayload = makeMlsPayloadExternalJoin(
+            new Uint8Array([1, 2, 3]),
+            aliceCommit,
+            aliceGroupInfoMessage,
+        )
         await expect(alicesClient._debugSendMls(streamId, aliceMlsPayload)).rejects.toThrow(
             'INVALID_PUBLIC_SIGNATURE_KEY',
         )
@@ -417,16 +410,11 @@ describe('mlsTests', () => {
         const { groupInfoMessage, externalGroupSnapshot } =
             await createGroupInfoAndExternalSnapshot(group)
         const bobSignaturePublicKey = await bobMlsClient.signaturePublicKey()
-        const bobMlsPayload: PlainMessage<MemberPayload_Mls> = {
-            content: {
-                case: 'initializeGroup',
-                value: {
-                    signaturePublicKey: bobSignaturePublicKey,
-                    externalGroupSnapshot: externalGroupSnapshot,
-                    groupInfoMessage: groupInfoMessage,
-                },
-            },
-        }
+        const bobMlsPayload = makeMlsPayloadInitializeGroup(
+            bobSignaturePublicKey,
+            externalGroupSnapshot,
+            groupInfoMessage,
+        )
         await expect(bobsClient._debugSendMls(streamId, bobMlsPayload)).resolves.not.toThrow()
 
         const aliceMlsDeviceKey = new Uint8Array(randomBytes(32))
@@ -435,16 +423,11 @@ describe('mlsTests', () => {
         const { commit: aliceCommit, groupInfoMessage: aliceGroupInfoMessage } =
             await commitExternal(aliceMlsClient, groupInfoMessage, externalGroupSnapshot)
 
-        const aliceMlsPayload: PlainMessage<MemberPayload_Mls> = {
-            content: {
-                case: 'externalJoin',
-                value: {
-                    signaturePublicKey: aliceSignaturePublicKey,
-                    commit: aliceCommit,
-                    groupInfoMessage: aliceGroupInfoMessage,
-                },
-            },
-        }
+        const aliceMlsPayload = makeMlsPayloadExternalJoin(
+            aliceSignaturePublicKey,
+            aliceCommit,
+            aliceGroupInfoMessage,
+        )
         await expect(alicesClient._debugSendMls(streamId, aliceMlsPayload)).resolves.not.toThrow()
 
         // force snapshot
@@ -482,16 +465,11 @@ describe('mlsTests', () => {
         const { groupInfoMessage, externalGroupSnapshot } =
             await createGroupInfoAndExternalSnapshot(group)
 
-        const mlsPayload: PlainMessage<MemberPayload_Mls> = {
-            content: {
-                case: 'initializeGroup',
-                value: {
-                    signaturePublicKey: await client.signaturePublicKey(),
-                    externalGroupSnapshot: externalGroupSnapshot,
-                    groupInfoMessage: groupInfoMessage,
-                },
-            },
-        }
+        const mlsPayload = makeMlsPayloadInitializeGroup(
+            await client.signaturePublicKey(),
+            externalGroupSnapshot,
+            groupInfoMessage,
+        )
         await expect(bobsClient._debugSendMls(streamId, mlsPayload)).resolves.not.toThrow()
 
         const aliceMlsDeviceKey = new Uint8Array(randomBytes(32))
@@ -499,29 +477,17 @@ describe('mlsTests', () => {
         const { commit: aliceCommit, groupInfoMessage: aliceGroupInfoMessage } =
             await commitExternal(aliceMlsClient, groupInfoMessage, externalGroupSnapshot)
 
-        const aliceMlsPayload: PlainMessage<MemberPayload_Mls> = {
-            content: {
-                case: 'externalJoin',
-                value: {
-                    signaturePublicKey: await aliceMlsClient.signaturePublicKey(),
-                    commit: aliceCommit,
-                    groupInfoMessage: aliceGroupInfoMessage,
-                },
-            },
-        }
+        const aliceMlsPayload = makeMlsPayloadExternalJoin(
+            await aliceMlsClient.signaturePublicKey(),
+            aliceCommit,
+            aliceGroupInfoMessage,
+        )
         await expect(alicesClient._debugSendMls(streamId, aliceMlsPayload)).resolves.not.toThrow()
 
-        const bobMlsSecretsPayload: PlainMessage<MemberPayload_Mls> = {
-            content: {
-                case: 'epochSecrets',
-                value: {
-                    secrets: [
-                        { epoch: 1n, secret: new Uint8Array([1, 2, 3, 4]) },
-                        { epoch: 2n, secret: new Uint8Array([3, 4, 5, 6]) }, // bogus for now
-                    ],
-                },
-            },
-        }
+        const bobMlsSecretsPayload = makeMlsPayloadEpochSecrets([
+            { epoch: 1n, secret: new Uint8Array([1, 2, 3, 4]) },
+            { epoch: 2n, secret: new Uint8Array([3, 4, 5, 6]) }, // bogus for now
+        ])
 
         await expect(
             bobsClient._debugSendMls(streamId, bobMlsSecretsPayload),
