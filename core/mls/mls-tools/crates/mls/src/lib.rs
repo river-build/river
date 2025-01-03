@@ -249,8 +249,13 @@ pub fn snapshot_external_group_request(request: SnapshotExternalGroupRequest) ->
     }
 
     let external_group_snapshot = external_group.snapshot();
+    let external_group_snapshot_bytes = match external_group_snapshot.to_bytes() {
+        Ok(bytes) => bytes,
+        Err(_) => { return SnapshotExternalGroupResponse::default() }
+    };
+
     let response = SnapshotExternalGroupResponse {
-        external_group_snapshot: external_group_snapshot.to_bytes().unwrap(),
+        external_group_snapshot: external_group_snapshot_bytes,
         group_info_message: last_valid_group_info_message,
     };
     return response;
