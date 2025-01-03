@@ -224,40 +224,44 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
 
   function _getDelegationByDelegator(
     address delegator
-  ) internal view returns (Delegation memory) {
-    return MainnetDelegationStorage.layout().delegationByDelegator[delegator];
+  ) internal view returns (Delegation memory delegation) {
+    assembly ("memory-safe") {
+      // By default, memory has been implicitly allocated for `delegation`.
+      // But we don't need this implicitly allocated memory.
+      // So we just set the free memory pointer to what it was before `delegation` has been allocated.
+      mstore(0x40, delegation)
+    }
+    delegation = MainnetDelegationStorage.layout().delegationByDelegator[
+      delegator
+    ];
   }
 
   function _getMainnetDelegationsByOperator(
     address operator
-  ) internal view returns (Delegation[] memory) {
+  ) internal view returns (Delegation[] memory delegations) {
     MainnetDelegationStorage.Layout storage ds = MainnetDelegationStorage
       .layout();
     EnumerableSet.AddressSet storage delegators = ds.delegatorsByOperator[
       operator
     ];
     uint256 length = delegators.length();
-    Delegation[] memory delegations = new Delegation[](length);
+    delegations = new Delegation[](length);
 
     for (uint256 i; i < length; ++i) {
       address delegator = delegators.at(i);
       delegations[i] = ds.delegationByDelegator[delegator];
     }
-
-    return delegations;
   }
 
   function _getDelegatedStakeByOperator(
     address operator
-  ) internal view returns (uint256) {
-    uint256 stake = 0;
+  ) internal view returns (uint256 stake) {
     Delegation[] memory delegations = _getMainnetDelegationsByOperator(
       operator
     );
     for (uint256 i; i < delegations.length; ++i) {
       stake += delegations[i].quantity;
     }
-    return stake;
   }
 
   function _setAuthorizedClaimer(address delegator, address claimer) internal {
