@@ -137,19 +137,12 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJ
         }
     };
 
+    // in the off-chance that an invalid commit slips through, we don't want to stop processing, just keep going.
     for commit_bytes in request.commits {
-        let commit = match MlsMessage::from_bytes(&commit_bytes) {
-            Ok(commit) => commit,
-            Err(_) => return ExternalJoinResponse {
-                result: ValidationResult::InvalidCommit.into(),
-            }
+        let _ = match MlsMessage::from_bytes(&commit_bytes) {
+            Ok(commit) => external_group.process_incoming_message(commit),
+            Err(_) => break
         };
-
-        if external_group.process_incoming_message(commit).is_err() {
-            return ExternalJoinResponse {
-                result: ValidationResult::InvalidCommit.into(),
-            };
-        }
     }
 
     let proposed_group_info_mls_message = match MlsMessage::from_bytes(&request.proposed_external_join_info_message) {
@@ -183,6 +176,33 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJ
         return ExternalJoinResponse {
             result: ValidationResult::InvalidExternalGroupEpoch.into(),
         };
+    }
+
+    let member_count_before_commit = external_group.roster().members().len();
+    match external_group.process_incoming_message(proposed_external_join_commit) {
+        Ok(_) => {}
+        Err(_) => {
+            return ExternalJoinResponse {
+                result: ValidationResult::InvalidCommit.into(),
+            };
+        }
+    }
+
+    if member_count_before_commit + 1 != external_group.roster().members().len() {
+        return ExternalJoinResponse {
+            result: ValidationResult::InvalidCommit.into(),
+        };
+    }
+
+    match external_group.roster().members().iter().any(|member| 
+        member.signing_identity.signature_key.to_vec() == request.signature_public_key 
+    ) {
+        false => {
+            return ExternalJoinResponse {
+                result: ValidationResult::InvalidPublicSignatureKey.into(),
+            };
+        }
+        true => {}
     }
 
     return ExternalJoinResponse {
@@ -353,8 +373,10 @@ mod tests {
         }
 
         let alice = create_client("alice".to_string());
+        let signature_public_key = alice.signing_identity().unwrap().0.signature_key.to_vec();
         let (alice_group_info_message, alice_commit) = perform_external_join(external_group_snapshot.clone(), commits.clone(), latest_group_info_message_without_tree, alice);
         let request = ExternalJoinRequest {
+            signature_public_key: signature_public_key,
             external_group_snapshot: external_group_snapshot.to_bytes().unwrap(),
             commits: commits.iter().map(|commit| commit.to_bytes().unwrap()).collect(),
             proposed_external_join_info_message: alice_group_info_message.to_bytes().unwrap(),

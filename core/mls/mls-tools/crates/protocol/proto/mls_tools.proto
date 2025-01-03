@@ -46,6 +46,7 @@ message ExternalJoinRequest {
     repeated bytes commits = 2;
     bytes proposed_external_join_info_message = 3;
     bytes proposed_external_join_commit = 4;
+    bytes signature_public_key = 5;
 }
 
 message ExternalJoinResponse {
