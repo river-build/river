@@ -22,6 +22,7 @@ import {
 import { IPersistenceStore } from '../persistenceStore'
 import TypedEmitter from 'typed-emitter'
 import { StreamEncryptionEvents, StreamMlsEvents } from '../streamEvents'
+import {short} from "@ethereumjs/util";
 
 interface MlsQueueItem {
     respondAfter: Date
@@ -138,7 +139,7 @@ export class MlsQueue {
         deviceKey: Uint8Array,
         groupInfoWithExternalKey: Uint8Array,
     ) => {
-        this.log.debug('onMlsInitializeGroup', {})
+        this.log.debug('onMlsInitializeGroup', { streamId: shortenHexString(streamId) })
         this.enqueueMls({
             tag: 'MlsInitializeGroup',
             streamId,
