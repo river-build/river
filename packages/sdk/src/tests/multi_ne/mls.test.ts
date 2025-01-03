@@ -319,7 +319,7 @@ describe('mlsTests', () => {
         expect(bin_equal(mls.groupInfoMessage, groupInfoMessage)).toBe(true)
     })
 
-    test.only('MLS group is snapshotted after external join', async () => {
+    test('MLS group is snapshotted after external join', async () => {
         const bobsClient = await makeInitAndStartClient()
         const alicesClient = await makeInitAndStartClient()
         const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
