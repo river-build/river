@@ -69,13 +69,44 @@ describe('mlsTests', () => {
             content: {
                 case: 'initializeGroup',
                 value: {
-                    deviceKey: deviceKey,
+                    signaturePublicKey: await client.signaturePublicKey(),
                     externalGroupSnapshot: externalGroupSnapshot,
                     groupInfoMessage: groupInfoMessage,
                 },
             },
         }
         await expect(bobsClient._debugSendMls(streamId, mlsPayload)).resolves.not.toThrow()
+    })
+
+    test('invalid signature public key is not accepted', async () => {
+        const bobsClient = await makeInitAndStartClient()
+        const alicesClient = await makeInitAndStartClient()
+        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
+        const stream = await bobsClient.waitForStream(streamId)
+
+        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
+            new Set([bobsClient.userId, alicesClient.userId]),
+        )
+
+        const deviceKey = new Uint8Array(randomBytes(32))
+        const client = await MlsClient.create(deviceKey)
+        const group = await client.createGroup()
+        const { groupInfoMessage, externalGroupSnapshot } =
+            await createGroupInfoAndExternalSnapshot(group)
+
+        const mlsPayload: PlainMessage<MemberPayload_Mls> = {
+            content: {
+                case: 'initializeGroup',
+                value: {
+                    signaturePublicKey: (await client.signaturePublicKey()).slice(1), // slice 1 byte to make it invalid
+                    externalGroupSnapshot: externalGroupSnapshot,
+                    groupInfoMessage: groupInfoMessage,
+                },
+            },
+        }
+        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).rejects.toThrow(
+            'INVALID_PUBLIC_SIGNATURE_KEY',
+        )
     })
 
     test('invalid MLS group is not accepted', async () => {
@@ -93,7 +124,7 @@ describe('mlsTests', () => {
             content: {
                 case: 'initializeGroup',
                 value: {
-                    deviceKey: deviceKey,
+                    signaturePublicKey: deviceKey,
                     externalGroupSnapshot: new Uint8Array([]),
                     groupInfoMessage: new Uint8Array([]),
                 },
@@ -124,7 +155,7 @@ describe('mlsTests', () => {
             content: {
                 case: 'initializeGroup',
                 value: {
-                    deviceKey: deviceKey,
+                    signaturePublicKey: await client.signaturePublicKey(),
                     externalGroupSnapshot: externalGroupSnapshot,
                     groupInfoMessage: groupInfoMessage,
                 },
@@ -161,7 +192,7 @@ describe('mlsTests', () => {
             content: {
                 case: 'initializeGroup',
                 value: {
-                    deviceKey: deviceKey,
+                    signaturePublicKey: await client.signaturePublicKey(),
                     externalGroupSnapshot: externalGroupSnapshot1,
                     groupInfoMessage: groupInfoMessage2,
                 },
@@ -198,7 +229,7 @@ describe('mlsTests', () => {
             content: {
                 case: 'initializeGroup',
                 value: {
-                    deviceKey: deviceKey2,
+                    signaturePublicKey: await client2.signaturePublicKey(),
                     externalGroupSnapshot: externalGroupSnapshot,
                     groupInfoMessage: groupInfoMessage,
                 },
@@ -229,7 +260,7 @@ describe('mlsTests', () => {
             content: {
                 case: 'initializeGroup',
                 value: {
-                    deviceKey: deviceKey,
+                    signaturePublicKey: await client.signaturePublicKey(),
                     externalGroupSnapshot: externalGroupSnapshot,
                     groupInfoMessage: groupInfoMessage,
                 },

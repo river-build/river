@@ -159,8 +159,13 @@ message MemberPayload {
 
         // contains the current MLS group state
         message Mls {
+            message Member {
+                repeated bytes device_keys = 1;
+            }
             bytes external_group_snapshot = 1;
             bytes group_info_message = 2;
+            // user_address -> Member
+            map<string, Member> members = 3;
         }
 
         message Member {
@@ -224,13 +229,20 @@ message MemberPayload {
 
     message Mls {
         message InitializeGroup {
+            bytes group_info_message = 1;
+            bytes external_group_snapshot = 2;
+            bytes signature_public_key = 3;
+        }
+
+        message ExternalJoin {
             bytes device_key = 1;
-            bytes group_info_message = 2;
-            bytes external_group_snapshot = 3;
+            bytes commit = 2;
+            bytes group_info_message = 3;
         }
 
         oneof content {
             InitializeGroup initialize_group = 1;
+            ExternalJoin external_join = 2;
         }
     }
 
