@@ -401,7 +401,7 @@ describe('mlsTests', () => {
         )
     })
 
-    test.only('Signature public keys are mapped per user in the snapshot', async () => {
+    test('Signature public keys are mapped per user in the snapshot', async () => {
         const bobsClient = await makeInitAndStartClient()
         const alicesClient = await makeInitAndStartClient()
         const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
