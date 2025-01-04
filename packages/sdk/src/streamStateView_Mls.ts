@@ -12,6 +12,8 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
     externalGroupSnapshot?: Uint8Array
     groupInfoMessage?: Uint8Array
     members: { [key: string]: PlainMessage<MemberPayload_Snapshot_Mls_Member> } = {}
+    epochSecrets: { [key: string]: Uint8Array } = {}
+
     constructor(streamId: string) {
         super()
         this.streamId = streamId
@@ -21,6 +23,7 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
         this.externalGroupSnapshot = content.externalGroupSnapshot
         this.groupInfoMessage = content.groupInfoMessage
         this.members = content.members
+        this.epochSecrets = content.epochSecrets
     }
 
     appendEvent(
@@ -48,6 +51,13 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
                 this.members[event.creatorUserId].signaturePublicKeys.push(
                     mlsEvent.content.value.signaturePublicKey,
                 )
+                break
+            case 'epochSecrets':
+                for (const secret of mlsEvent.content.value.secrets) {
+                    if (!this.epochSecrets[secret.epoch.toString()]) {
+                        this.epochSecrets[secret.epoch.toString()] = secret.secret
+                    }
+                }
                 break
             case undefined:
                 break

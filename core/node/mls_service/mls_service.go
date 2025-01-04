@@ -82,3 +82,21 @@ func ExternalJoinRequest(request *mls_tools.ExternalJoinRequest) (*mls_tools.Ext
 	}
 	return &result, nil
 }
+
+func SnapshotExternalGroupRequest(request *mls_tools.SnapshotExternalGroupRequest) (*mls_tools.SnapshotExternalGroupResponse, error) {
+	r := &mls_tools.MlsRequest{
+		Content: &mls_tools.MlsRequest_SnapshotExternalGroup{
+			SnapshotExternalGroup: request,
+		},
+	}
+	responseBytes, err := makeMlsRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	result := mls_tools.SnapshotExternalGroupResponse{}
+	err = proto.Unmarshal(responseBytes, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
