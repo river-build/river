@@ -841,7 +841,7 @@ func updateMlsSnapshotRequest(mlsSnapshotRequest *mls_tools.SnapshotExternalGrou
 		case *MemberPayload_Mls_:
 			switch mlsContent := content.Mls.Content.(type) {
 			case *MemberPayload_Mls_InitializeGroup_:
-				if mlsSnapshotRequest.ExternalGroupSnapshot == nil || len(mlsSnapshotRequest.ExternalGroupSnapshot) == 0 {
+				if len(mlsSnapshotRequest.ExternalGroupSnapshot) == 0 {
 					mlsSnapshotRequest.ExternalGroupSnapshot = mlsContent.InitializeGroup.ExternalGroupSnapshot
 					mlsSnapshotRequest.GroupInfoMessage = mlsContent.InitializeGroup.GroupInfoMessage
 				}
