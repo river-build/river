@@ -89,6 +89,16 @@ type aeMlsInitializeGroupRules struct {
 	initializeGroup *MemberPayload_Mls_InitializeGroup
 }
 
+type aeMlsExternalJoinRules struct {
+	params          *aeParams
+	externalJoin *MemberPayload_Mls_ExternalJoin
+}
+
+type aeMlsEpochSecrets struct {
+	params *aeParams
+	secrets *MemberPayload_Mls_EpochSecrets
+}
+
 type aeMediaPayloadChunkRules struct {
 	params *aeParams
 	chunk  *MediaPayload_Chunk
@@ -595,6 +605,24 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 		return aeBuilder().
 			check(params.creatorIsMember).
 			check(ru.validMlsInitializeGroup)
+	case *MemberPayload_Mls_ExternalJoin_:
+		ru := &aeMlsExternalJoinRules{
+			params: 	  params,
+			externalJoin: content.ExternalJoin,
+		}
+		return aeBuilder().
+			check(params.creatorIsMember).
+			check(params.mlsInitialized).
+			check(ru.validMlsExternalJoin)
+	case *MemberPayload_Mls_EpochSecrets_:
+		ru := &aeMlsEpochSecrets{
+			params: params,
+			secrets: content.EpochSecrets,
+		}
+		return aeBuilder().
+			check(params.creatorIsMember).
+			check(params.mlsInitialized).
+			check(ru.validMlsEpochSecrets)
 	default:
 		return aeBuilder().
 			fail(unknownContentType(content))
@@ -632,6 +660,14 @@ func (params *aeParams) creatorIsMember() (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func (params *aeParams) mlsInitialized() (bool, error) {
+	mlsInitialized, err := params.streamView.(events.MlsStreamView).IsMlsInitialized()
+	if err != nil {
+		return false, err
+	}
+	return mlsInitialized, nil
 }
 
 func (ru *aeMemberBlockchainTransactionRules) validMemberBlockchainTransaction_ReceiptMetadata() (bool, error) {
@@ -1378,7 +1414,7 @@ func (ru *aeMembershipRules) channelMembershipEntitlements() (*auth.ChainAuthArg
 }
 
 func (ru *aeMlsInitializeGroupRules) validMlsInitializeGroup() (bool, error) {
-	mlsInitialized, err := ru.params.streamView.(events.JoinableStreamView).IsMlsInitialized()
+	mlsInitialized, err := ru.params.streamView.(events.MlsStreamView).IsMlsInitialized()
 	if err != nil {
 		return false, err
 	}
@@ -1396,6 +1432,42 @@ func (ru *aeMlsInitializeGroupRules) validMlsInitializeGroup() (bool, error) {
 	}
 	if resp.GetResult() != mls_tools.ValidationResult_VALID {
 		return false, RiverError(Err_INVALID_ARGUMENT, "invalid group init", "result", resp.GetResult())
+	}
+	return true, nil
+}
+
+func (ru *aeMlsExternalJoinRules) validMlsExternalJoin() (bool, error) {
+	view := ru.params.streamView.(events.MlsStreamView)
+	externalJoinRequest, err := view.GetMlsExternalJoinRequest()
+	if err != nil {
+		return false, err
+	}
+	externalJoinRequest.ProposedExternalJoinCommit = ru.externalJoin.Commit
+	externalJoinRequest.ProposedExternalJoinInfoMessage = ru.externalJoin.GroupInfoMessage
+	externalJoinRequest.SignaturePublicKey = ru.externalJoin.SignaturePublicKey
+	resp, err := mls_service.ExternalJoinRequest(externalJoinRequest)
+	if err != nil {
+		return false, err
+	}
+	if resp.GetResult() != mls_tools.ValidationResult_VALID {
+		return false, RiverError(Err_INVALID_ARGUMENT, "invalid external join", "result", resp.GetResult())
+	}
+	return true, nil
+}
+
+func (ru *aeMlsEpochSecrets) validMlsEpochSecrets() (bool, error) {
+	if len(ru.secrets.Secrets) == 0 {
+		return false, RiverError(Err_INVALID_ARGUMENT, "no secrets provided")
+	}
+	view := ru.params.streamView.(events.MlsStreamView)
+	epochSecrets, err := view.GetMlsEpochSecrets()
+	if err != nil {
+		return false, err
+	}
+	for _, secret := range ru.secrets.Secrets {
+		if _, ok := epochSecrets[secret.Epoch]; ok {
+			return false, RiverError(Err_INVALID_ARGUMENT, "epoch already exists", "epoch", secret.Epoch)
+		}
 	}
 	return true, nil
 }
