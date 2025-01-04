@@ -27,9 +27,27 @@ describe('mlsTests', () => {
         return client
     }
 
-    beforeEach(async () => {})
+    let bobClient: Client
+    let aliceClient: Client
+    let bobMlsClient: MlsClient
+    let aliceMlsClient: MlsClient
+    let streamId: string
+    let latestGroupInfoMessage: Uint8Array
+    let latestExternalGroupSnapshot: Uint8Array
 
-    afterEach(async () => {
+    beforeAll(async () => {
+        bobClient = await makeInitAndStartClient()
+        aliceClient = await makeInitAndStartClient()
+        bobMlsClient = await MlsClient.create(new Uint8Array(randomBytes(32)))
+        aliceMlsClient = await MlsClient.create(new Uint8Array(randomBytes(32)))
+
+        const { streamId: dmStreamId } = await bobClient.createDMChannel(aliceClient.userId)
+        await bobClient.waitForStream(dmStreamId)
+        await aliceClient.waitForStream(dmStreamId)
+        streamId = dmStreamId
+    })
+
+    afterAll(async () => {
         for (const client of clients) {
             await client.stop()
         }
@@ -124,119 +142,35 @@ describe('mlsTests', () => {
         }
     }
 
-    test('valid MLS group is accepted', async () => {
-        const bobsClient = await makeInitAndStartClient()
-        const alicesClient = await makeInitAndStartClient()
-        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
-        const stream = await bobsClient.waitForStream(streamId)
-
-        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
-            new Set([bobsClient.userId, alicesClient.userId]),
-        )
-
-        const deviceKey = new Uint8Array(randomBytes(32))
-        const client = await MlsClient.create(deviceKey)
-        const group = await client.createGroup()
-        const { groupInfoMessage, externalGroupSnapshot } =
-            await createGroupInfoAndExternalSnapshot(group)
-
-        const mlsPayload = makeMlsPayloadInitializeGroup(
-            await client.signaturePublicKey(),
-            externalGroupSnapshot,
-            groupInfoMessage,
-        )
-        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).resolves.not.toThrow()
-    })
-
     test('invalid signature public key is not accepted', async () => {
-        const bobsClient = await makeInitAndStartClient()
-        const alicesClient = await makeInitAndStartClient()
-        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
-        const stream = await bobsClient.waitForStream(streamId)
-
-        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
-            new Set([bobsClient.userId, alicesClient.userId]),
-        )
-
-        const deviceKey = new Uint8Array(randomBytes(32))
-        const client = await MlsClient.create(deviceKey)
-        const group = await client.createGroup()
+        const group = await bobMlsClient.createGroup()
         const { groupInfoMessage, externalGroupSnapshot } =
             await createGroupInfoAndExternalSnapshot(group)
 
         const mlsPayload = makeMlsPayloadInitializeGroup(
-            (await client.signaturePublicKey()).slice(1), // slice 1 byte to make it invalid
+            (await bobMlsClient.signaturePublicKey()).slice(1), // slice 1 byte to make it invalid
             externalGroupSnapshot,
             groupInfoMessage,
         )
-        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).rejects.toThrow(
+        await expect(bobClient._debugSendMls(streamId, mlsPayload)).rejects.toThrow(
             'INVALID_PUBLIC_SIGNATURE_KEY',
         )
     })
 
     test('invalid MLS group is not accepted', async () => {
-        const bobsClient = await makeInitAndStartClient()
-        const alicesClient = await makeInitAndStartClient()
-        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
-        const stream = await bobsClient.waitForStream(streamId)
-
-        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
-            new Set([bobsClient.userId, alicesClient.userId]),
-        )
-
-        const deviceKey = new Uint8Array(randomBytes(32))
         const mlsPayload = makeMlsPayloadInitializeGroup(
-            deviceKey,
+            await bobMlsClient.signaturePublicKey(),
             new Uint8Array([]),
             new Uint8Array([]),
         )
-        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).rejects.to.toThrow(
+        await expect(bobClient._debugSendMls(streamId, mlsPayload)).rejects.to.toThrow(
             'INVALID_GROUP_INFO',
         )
     })
 
-    test('initializing MLS group twice throws an error', async () => {
-        const bobsClient = await makeInitAndStartClient()
-        const alicesClient = await makeInitAndStartClient()
-        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
-        const stream = await bobsClient.waitForStream(streamId)
-
-        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
-            new Set([bobsClient.userId, alicesClient.userId]),
-        )
-
-        const deviceKey = new Uint8Array(randomBytes(32))
-        const client = await MlsClient.create(deviceKey)
-        const group = await client.createGroup()
-        const { groupInfoMessage, externalGroupSnapshot } =
-            await createGroupInfoAndExternalSnapshot(group)
-
-        const mlsPayload = makeMlsPayloadInitializeGroup(
-            await client.signaturePublicKey(),
-            externalGroupSnapshot,
-            groupInfoMessage,
-        )
-        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).resolves.not.toThrow()
-        // trying to initialize the group again throws an error
-        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).rejects.toThrow(
-            'group already initialized',
-        )
-    })
-
     test('mismatching group ids throws an error', async () => {
-        const bobsClient = await makeInitAndStartClient()
-        const alicesClient = await makeInitAndStartClient()
-        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
-        const stream = await bobsClient.waitForStream(streamId)
-
-        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
-            new Set([bobsClient.userId, alicesClient.userId]),
-        )
-
-        const deviceKey = new Uint8Array(randomBytes(32))
-        const client = await MlsClient.create(deviceKey)
-        const group1 = await client.createGroup()
-        const group2 = await client.createGroup()
+        const group1 = await bobMlsClient.createGroup()
+        const group2 = await bobMlsClient.createGroup()
         const { externalGroupSnapshot: externalGroupSnapshot1 } =
             await createGroupInfoAndExternalSnapshot(group1)
         const { groupInfoMessage: groupInfoMessage2 } = await createGroupInfoAndExternalSnapshot(
@@ -244,324 +178,160 @@ describe('mlsTests', () => {
         )
 
         const mlsPayload = makeMlsPayloadInitializeGroup(
-            await client.signaturePublicKey(),
+            await bobMlsClient.signaturePublicKey(),
             externalGroupSnapshot1,
             groupInfoMessage2,
         )
-        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).rejects.toThrow(
+        await expect(bobClient._debugSendMls(streamId, mlsPayload)).rejects.toThrow(
             'INVALID_GROUP_INFO_GROUP_ID_MISMATCH',
         )
     })
 
     test('epoch not at 0 throws error', async () => {
-        const bobsClient = await makeInitAndStartClient()
-        const alicesClient = await makeInitAndStartClient()
-        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
-        const stream = await bobsClient.waitForStream(streamId)
-
-        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
-            new Set([bobsClient.userId, alicesClient.userId]),
-        )
-
-        const deviceKey1 = new Uint8Array(randomBytes(32))
-        const deviceKey2 = new Uint8Array(randomBytes(32))
-        const client = await MlsClient.create(deviceKey1)
-        const client2 = await MlsClient.create(deviceKey2)
-        const groupAtEpoch0 = await client.createGroup()
-
+        const groupAtEpoch0 = await bobMlsClient.createGroup()
         const groupInfoMessageAtEpoch0 = await groupAtEpoch0.groupInfoMessageAllowingExtCommit(true)
-        const output = await client2.commitExternal(groupInfoMessageAtEpoch0)
+        const output = await aliceMlsClient.commitExternal(groupInfoMessageAtEpoch0)
         const groupAtEpoch1 = output.group
         const { groupInfoMessage, externalGroupSnapshot } =
             await createGroupInfoAndExternalSnapshot(groupAtEpoch1)
 
         const mlsPayload = makeMlsPayloadInitializeGroup(
-            await client2.signaturePublicKey(),
+            await aliceMlsClient.signaturePublicKey(),
             externalGroupSnapshot,
             groupInfoMessage,
         )
-        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).rejects.toThrow(
+        await expect(aliceClient._debugSendMls(streamId, mlsPayload)).rejects.toThrow(
             'INVALID_GROUP_INFO_EPOCH',
         )
     })
 
+    test('clients can create MLS Groups in channels', async () => {
+        const bobGroup = await bobMlsClient.createGroup()
+        const { groupInfoMessage, externalGroupSnapshot } =
+            await createGroupInfoAndExternalSnapshot(bobGroup)
+        const mlsPayload = makeMlsPayloadInitializeGroup(
+            await bobMlsClient.signaturePublicKey(),
+            externalGroupSnapshot,
+            groupInfoMessage,
+        )
+        await expect(bobClient._debugSendMls(streamId, mlsPayload)).resolves.not.toThrow()
+
+        // save for later
+        latestExternalGroupSnapshot = externalGroupSnapshot
+        latestGroupInfoMessage = groupInfoMessage
+    })
+
+    test('initializing MLS groups twice throws an error', async () => {
+        const group = await bobMlsClient.createGroup()
+        const { groupInfoMessage, externalGroupSnapshot } =
+            await createGroupInfoAndExternalSnapshot(group)
+        const mlsPayload = makeMlsPayloadInitializeGroup(
+            await bobMlsClient.signaturePublicKey(),
+            externalGroupSnapshot,
+            groupInfoMessage,
+        )
+        await expect(bobClient._debugSendMls(streamId, mlsPayload)).rejects.toThrow(
+            'group already initialized',
+        )
+    })
+
     test('MLS group is snapshotted', async () => {
-        const bobsClient = await makeInitAndStartClient()
-        const alicesClient = await makeInitAndStartClient()
-        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
-        const stream = await bobsClient.waitForStream(streamId)
-
-        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
-            new Set([bobsClient.userId, alicesClient.userId]),
-        )
-
-        const deviceKey = new Uint8Array(randomBytes(32))
-        const client = await MlsClient.create(deviceKey)
-        const group = await client.createGroup()
-        const { groupInfoMessage, externalGroupSnapshot } =
-            await createGroupInfoAndExternalSnapshot(group)
-
-        const mlsPayload = makeMlsPayloadInitializeGroup(
-            await client.signaturePublicKey(),
-            externalGroupSnapshot,
-            groupInfoMessage,
-        )
-        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).resolves.not.toThrow()
         // force a snapshot
-        await bobsClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true })
-
+        await bobClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true })
         // fetch the stream again and check that the MLS group is snapshotted
-        const streamAfterSnapshot = await bobsClient.getStream(streamId)
+        const streamAfterSnapshot = await bobClient.getStream(streamId)
         const mls = streamAfterSnapshot.membershipContent.mls
         expect(mls.externalGroupSnapshot).toBeDefined()
         expect(mls.groupInfoMessage).toBeDefined()
-        expect(bin_equal(mls.externalGroupSnapshot, externalGroupSnapshot)).toBe(true)
-        expect(bin_equal(mls.groupInfoMessage, groupInfoMessage)).toBe(true)
-    })
-
-    test('MLS group is snapshotted after external join', async () => {
-        const bobsClient = await makeInitAndStartClient()
-        const alicesClient = await makeInitAndStartClient()
-        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
-        const stream = await bobsClient.waitForStream(streamId)
-
-        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
-            new Set([bobsClient.userId, alicesClient.userId]),
-        )
-
-        const bobDeviceKey = new Uint8Array(randomBytes(32))
-        const bobMlsClient = await MlsClient.create(bobDeviceKey)
-        const group = await bobMlsClient.createGroup()
-        const { groupInfoMessage, externalGroupSnapshot } =
-            await createGroupInfoAndExternalSnapshot(group)
-
-        const mlsPayload = makeMlsPayloadInitializeGroup(
-            await bobMlsClient.signaturePublicKey(),
-            externalGroupSnapshot,
-            groupInfoMessage,
-        )
-        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).resolves.not.toThrow()
-        // force a snapshot
-        await expect(
-            bobsClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true }),
-        ).resolves.not.toThrow()
-
-        // fetch the stream again and check that the MLS group is snapshotted
-        const streamAfterSnapshot = await bobsClient.getStream(streamId)
-        const mls = streamAfterSnapshot.membershipContent.mls
-        expect(mls.externalGroupSnapshot).toBeDefined()
-        expect(mls.groupInfoMessage).toBeDefined()
-        expect(bin_equal(mls.externalGroupSnapshot, externalGroupSnapshot)).toBe(true)
-        expect(bin_equal(mls.groupInfoMessage, groupInfoMessage)).toBe(true)
-
-        const aliceMlsDeviceKey = new Uint8Array(randomBytes(32))
-        const aliceMlsClient = await MlsClient.create(aliceMlsDeviceKey)
-        const { commit: aliceCommit, groupInfoMessage: aliceGroupInfoMessage } =
-            await commitExternal(aliceMlsClient, groupInfoMessage, externalGroupSnapshot)
-
-        const aliceMlsPayload = makeMlsPayloadExternalJoin(
-            await aliceMlsClient.signaturePublicKey(),
-            aliceCommit,
-            aliceGroupInfoMessage,
-        )
-        await expect(alicesClient._debugSendMls(streamId, aliceMlsPayload)).resolves.not.toThrow()
-
-        // force another snapshot
-        await expect(
-            bobsClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true }),
-        ).resolves.not.toThrow()
-
-        // this time, the snapshot should contain the group info message from Alice
-        // the only way it can end up in the snapshot is if the external join was successfully snapshotted
-        // by the node
-        const streamAfterSnapshot2 = await alicesClient.getStream(streamId)
-        const mls2 = streamAfterSnapshot2.membershipContent.mls
-        expect(mls2.externalGroupSnapshot).toBeDefined()
-        expect(mls2.groupInfoMessage).toBeDefined()
-        expect(bin_equal(mls2.groupInfoMessage, aliceGroupInfoMessage)).toBe(true)
-    })
-
-    test('Valid external commits are accepted', async () => {
-        const bobsClient = await makeInitAndStartClient()
-        const alicesClient = await makeInitAndStartClient()
-        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
-        const stream = await bobsClient.waitForStream(streamId)
-
-        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
-            new Set([bobsClient.userId, alicesClient.userId]),
-        )
-
-        const bobMlsDeviceKey = new Uint8Array(randomBytes(32))
-        const bobMlsClient = await MlsClient.create(bobMlsDeviceKey)
-        const group = await bobMlsClient.createGroup()
-        const { groupInfoMessage, externalGroupSnapshot } =
-            await createGroupInfoAndExternalSnapshot(group)
-
-        const bobMlsPayload = makeMlsPayloadInitializeGroup(
-            await bobMlsClient.signaturePublicKey(),
-            externalGroupSnapshot,
-            groupInfoMessage,
-        )
-        await expect(bobsClient._debugSendMls(streamId, bobMlsPayload)).resolves.not.toThrow()
-
-        const aliceMlsDeviceKey = new Uint8Array(randomBytes(32))
-        const aliceMlsClient = await MlsClient.create(aliceMlsDeviceKey)
-        const { commit: aliceCommit, groupInfoMessage: aliceGroupInfoMessage } =
-            await commitExternal(aliceMlsClient, groupInfoMessage, externalGroupSnapshot)
-
-        const aliceMlsPayload = makeMlsPayloadExternalJoin(
-            await aliceMlsClient.signaturePublicKey(),
-            aliceCommit,
-            aliceGroupInfoMessage,
-        )
-        await expect(alicesClient._debugSendMls(streamId, aliceMlsPayload)).resolves.not.toThrow()
+        expect(bin_equal(mls.externalGroupSnapshot, latestExternalGroupSnapshot)).toBe(true)
+        expect(bin_equal(mls.groupInfoMessage, latestGroupInfoMessage)).toBe(true)
     })
 
     test('External commits with invalid signature public keys are not accepted', async () => {
-        const bobsClient = await makeInitAndStartClient()
-        const alicesClient = await makeInitAndStartClient()
-        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
-        const stream = await bobsClient.waitForStream(streamId)
-
-        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
-            new Set([bobsClient.userId, alicesClient.userId]),
-        )
-
-        const bobMlsDeviceKey = new Uint8Array(randomBytes(32))
-        const bobMlsClient = await MlsClient.create(bobMlsDeviceKey)
-        const group = await bobMlsClient.createGroup()
-        const { groupInfoMessage, externalGroupSnapshot } =
-            await createGroupInfoAndExternalSnapshot(group)
-
-        const bobMlsPayload = makeMlsPayloadInitializeGroup(
-            await bobMlsClient.signaturePublicKey(),
-            externalGroupSnapshot,
-            groupInfoMessage,
-        )
-
-        await expect(bobsClient._debugSendMls(streamId, bobMlsPayload)).resolves.not.toThrow()
-
-        const aliceMlsDeviceKey = new Uint8Array(randomBytes(32))
-        const aliceMlsClient = await MlsClient.create(aliceMlsDeviceKey)
         const { commit: aliceCommit, groupInfoMessage: aliceGroupInfoMessage } =
-            await commitExternal(aliceMlsClient, groupInfoMessage, externalGroupSnapshot)
+            await commitExternal(
+                aliceMlsClient,
+                latestGroupInfoMessage,
+                latestExternalGroupSnapshot,
+            )
 
         const aliceMlsPayload = makeMlsPayloadExternalJoin(
             new Uint8Array([1, 2, 3]),
             aliceCommit,
             aliceGroupInfoMessage,
         )
-        await expect(alicesClient._debugSendMls(streamId, aliceMlsPayload)).rejects.toThrow(
+        await expect(aliceClient._debugSendMls(streamId, aliceMlsPayload)).rejects.toThrow(
             'INVALID_PUBLIC_SIGNATURE_KEY',
         )
     })
 
-    test('Signature public keys are mapped per user in the snapshot', async () => {
-        const bobsClient = await makeInitAndStartClient()
-        const alicesClient = await makeInitAndStartClient()
-        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
-        const stream = await bobsClient.waitForStream(streamId)
-
-        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
-            new Set([bobsClient.userId, alicesClient.userId]),
-        )
-
-        const bobMlsDeviceKey = new Uint8Array(randomBytes(32))
-        const bobMlsClient = await MlsClient.create(bobMlsDeviceKey)
-        const group = await bobMlsClient.createGroup()
-        const { groupInfoMessage, externalGroupSnapshot } =
-            await createGroupInfoAndExternalSnapshot(group)
-        const bobSignaturePublicKey = await bobMlsClient.signaturePublicKey()
-        const bobMlsPayload = makeMlsPayloadInitializeGroup(
-            bobSignaturePublicKey,
-            externalGroupSnapshot,
-            groupInfoMessage,
-        )
-        await expect(bobsClient._debugSendMls(streamId, bobMlsPayload)).resolves.not.toThrow()
-
-        const aliceMlsDeviceKey = new Uint8Array(randomBytes(32))
-        const aliceMlsClient = await MlsClient.create(aliceMlsDeviceKey)
-        const aliceSignaturePublicKey = await aliceMlsClient.signaturePublicKey()
+    test('Valid external commits are accepted', async () => {
         const { commit: aliceCommit, groupInfoMessage: aliceGroupInfoMessage } =
-            await commitExternal(aliceMlsClient, groupInfoMessage, externalGroupSnapshot)
-
-        const aliceMlsPayload = makeMlsPayloadExternalJoin(
-            aliceSignaturePublicKey,
-            aliceCommit,
-            aliceGroupInfoMessage,
-        )
-        await expect(alicesClient._debugSendMls(streamId, aliceMlsPayload)).resolves.not.toThrow()
-
-        // force snapshot
-        await expect(
-            bobsClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true }),
-        ).resolves.not.toThrow()
-
-        // verify that the signature public keys are mapped per user
-        // and that the signature public keys are correct
-        const streamAfterSnapshot = await bobsClient.getStream(streamId)
-        const mls = streamAfterSnapshot.membershipContent.mls.members
-        expect(mls[bobsClient.userId].signaturePublicKeys.length).toBe(1)
-        expect(mls[alicesClient.userId].signaturePublicKeys.length).toBe(1)
-        expect(
-            bin_equal(mls[bobsClient.userId].signaturePublicKeys[0], bobSignaturePublicKey),
-        ).toBe(true)
-        expect(
-            bin_equal(mls[alicesClient.userId].signaturePublicKeys[0], aliceSignaturePublicKey),
-        ).toBe(true)
-    })
-
-    test('epoch secrets are accepted', async () => {
-        const bobsClient = await makeInitAndStartClient()
-        const alicesClient = await makeInitAndStartClient()
-        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
-        const stream = await bobsClient.waitForStream(streamId)
-
-        expect(stream.view.getMembers().membership.joinedUsers).toEqual(
-            new Set([bobsClient.userId, alicesClient.userId]),
-        )
-
-        const deviceKey = new Uint8Array(randomBytes(32))
-        const client = await MlsClient.create(deviceKey)
-        const group = await client.createGroup()
-        const { groupInfoMessage, externalGroupSnapshot } =
-            await createGroupInfoAndExternalSnapshot(group)
-
-        const mlsPayload = makeMlsPayloadInitializeGroup(
-            await client.signaturePublicKey(),
-            externalGroupSnapshot,
-            groupInfoMessage,
-        )
-        await expect(bobsClient._debugSendMls(streamId, mlsPayload)).resolves.not.toThrow()
-
-        const aliceMlsDeviceKey = new Uint8Array(randomBytes(32))
-        const aliceMlsClient = await MlsClient.create(aliceMlsDeviceKey)
-        const { commit: aliceCommit, groupInfoMessage: aliceGroupInfoMessage } =
-            await commitExternal(aliceMlsClient, groupInfoMessage, externalGroupSnapshot)
+            await commitExternal(
+                aliceMlsClient,
+                latestGroupInfoMessage,
+                latestExternalGroupSnapshot,
+            )
 
         const aliceMlsPayload = makeMlsPayloadExternalJoin(
             await aliceMlsClient.signaturePublicKey(),
             aliceCommit,
             aliceGroupInfoMessage,
         )
-        await expect(alicesClient._debugSendMls(streamId, aliceMlsPayload)).resolves.not.toThrow()
+        await expect(aliceClient._debugSendMls(streamId, aliceMlsPayload)).resolves.not.toThrow()
+        latestGroupInfoMessage = aliceGroupInfoMessage
+    })
 
+    test('MLS group is snapshotted after external commit', async () => {
+        // force another snapshot
+        await expect(
+            bobClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true }),
+        ).resolves.not.toThrow()
+
+        // this time, the snapshot should contain the group info message from Alice
+        // the only way it can end up in the snapshot is if the external join was successfully snapshotted
+        // by the node
+        const streamAfterSnapshot = await aliceClient.getStream(streamId)
+        const mls = streamAfterSnapshot.membershipContent.mls
+        expect(mls.externalGroupSnapshot).toBeDefined()
+        expect(mls.groupInfoMessage).toBeDefined()
+        expect(bin_equal(mls.groupInfoMessage, latestGroupInfoMessage)).toBe(true)
+    })
+
+    test('Signature public keys are mapped per user in the snapshot', async () => {
+        // force snapshot
+        await expect(
+            bobClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true }),
+        ).resolves.not.toThrow()
+
+        const bobSignaturePublicKey = await bobMlsClient.signaturePublicKey()
+        const aliceSignaturePublicKey = await aliceMlsClient.signaturePublicKey()
+        // verify that the signature public keys are mapped per user
+        // and that the signature public keys are correct
+        const streamAfterSnapshot = await bobClient.getStream(streamId)
+        const mls = streamAfterSnapshot.membershipContent.mls.members
+        expect(mls[bobClient.userId].signaturePublicKeys.length).toBe(1)
+        expect(mls[aliceClient.userId].signaturePublicKeys.length).toBe(1)
+        expect(bin_equal(mls[bobClient.userId].signaturePublicKeys[0], bobSignaturePublicKey)).toBe(
+            true,
+        )
+        expect(
+            bin_equal(mls[aliceClient.userId].signaturePublicKeys[0], aliceSignaturePublicKey),
+        ).toBe(true)
+    })
+
+    test('epoch secrets are accepted', async () => {
         const bobMlsSecretsPayload = makeMlsPayloadEpochSecrets([
             { epoch: 1n, secret: new Uint8Array([1, 2, 3, 4]) },
             { epoch: 2n, secret: new Uint8Array([3, 4, 5, 6]) }, // bogus for now
         ])
 
-        await expect(
-            bobsClient._debugSendMls(streamId, bobMlsSecretsPayload),
-        ).resolves.not.toThrow()
-        // sending the same epoch twice returns an error
-        await expect(bobsClient._debugSendMls(streamId, bobMlsSecretsPayload)).rejects.toThrow(
-            'epoch already exists',
-        )
+        await expect(bobClient._debugSendMls(streamId, bobMlsSecretsPayload)).resolves.not.toThrow()
 
         // verify that the epoch secrets have been picked up in the stream state view
         await waitFor(() => {
-            const mls = bobsClient.streams.get(streamId)?._view.membershipContent.mls
+            const mls = bobClient.streams.get(streamId)?.view.membershipContent.mls
+            expect(mls).toBeDefined()
             expect(bin_equal(mls!.epochSecrets[1n.toString()], new Uint8Array([1, 2, 3, 4]))).toBe(
                 true,
             )
@@ -569,14 +339,28 @@ describe('mlsTests', () => {
                 true,
             )
         })
+    })
 
+    test('epoch secrets can only be sent once', async () => {
+        // sending the same epoch twice returns an error
+        const bobMlsSecretsPayload = makeMlsPayloadEpochSecrets([
+            { epoch: 1n, secret: new Uint8Array([1, 2, 3, 4]) },
+            { epoch: 2n, secret: new Uint8Array([3, 4, 5, 6]) }, // bogus for now
+        ])
+
+        await expect(bobClient._debugSendMls(streamId, bobMlsSecretsPayload)).rejects.toThrow(
+            'epoch already exists',
+        )
+    })
+
+    test('epoch secrets are snapshotted', async () => {
         // force snapshot
         await expect(
-            bobsClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true }),
+            bobClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true }),
         ).resolves.not.toThrow()
 
         // verify that the epoch secrets are picked up in the snapshot
-        const streamAfterSnapshot = await bobsClient.getStream(streamId)
+        const streamAfterSnapshot = await bobClient.getStream(streamId)
         const mls = streamAfterSnapshot.membershipContent.mls
         expect(bin_equal(mls.epochSecrets[1n.toString()], new Uint8Array([1, 2, 3, 4]))).toBe(true)
         expect(bin_equal(mls.epochSecrets[2n.toString()], new Uint8Array([3, 4, 5, 6]))).toBe(true)
