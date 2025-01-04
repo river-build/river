@@ -68,19 +68,6 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
     return ds.streams.contains(streamId);
   }
 
-  /// @return stream, genesisMiniblockHash, genesisMiniblock
-  function getStreamWithGenesis(
-    bytes32 streamId
-  ) external view returns (Stream memory, bytes32, bytes memory) {
-    if (!ds.streams.contains(streamId)) revert(RiverRegistryErrors.NOT_FOUND);
-
-    return (
-      ds.streamById[streamId],
-      ds.genesisMiniblockHashByStreamId[streamId],
-      ds.genesisMiniblockByStreamId[streamId]
-    );
-  }
-
   function setStreamLastMiniblock(
     bytes32 streamId,
     bytes32, // prevMiniblockHash
