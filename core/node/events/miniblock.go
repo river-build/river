@@ -1,6 +1,10 @@
 package events
 
 import (
+	"bytes"
+	"encoding/hex"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -162,6 +166,18 @@ func (b *MiniblockInfo) forEachEvent(
 	return true, nil
 }
 
+func NewMiniblockFromBytesWithOpts(bytes []byte, opts NewMiniblockInfoFromProtoOpts) (*MiniblockInfo, error) {
+	var pb Miniblock
+	err := proto.Unmarshal(bytes, &pb)
+	if err != nil {
+		return nil, AsRiverError(err, Err_INVALID_ARGUMENT).
+			Message("Failed to decode miniblock from bytes").
+			Func("NewMiniblockInfoFromBytes")
+	}
+
+	return NewMiniblockInfoFromProto(&pb, opts)
+}
+
 func NewMiniblockInfoFromBytes(bytes []byte, expectedBlockNumber int64) (*MiniblockInfo, error) {
 	var pb Miniblock
 	err := proto.Unmarshal(bytes, &pb)
@@ -180,17 +196,24 @@ func NewMiniblockInfoFromBytesWithOpts(bytes []byte, opts NewMiniblockInfoFromPr
 	if err != nil {
 		return nil, AsRiverError(err, Err_INVALID_ARGUMENT).
 			Message("Failed to decode miniblock from bytes").
-			Func("NewMiniblockInfoFromBytes")
+			Func("NewMiniblockInfoFromBytesWithOpts")
 	}
 
 	return NewMiniblockInfoFromProto(&pb, opts)
 }
 
 type NewMiniblockInfoFromProtoOpts struct {
-	ExpectedBlockNumber int64
-	DontParseEvents     bool
+	ExpectedBlockNumber               int64
+	ExpectedLastMiniblockHash         common.Hash
+	ExpectedEventNumOffset            int64
+	ExpectedMinimumTimestampExclusive time.Time
+	ExpectedPrevSnapshotMiniblockNum  int64
+	DontParseEvents                   bool
 }
 
+// NewMiniblockInfoFromProto initializes a MiniblockInfo from a proto, applying validation based
+// on whatever is set in the opts. If an empty opts is passed in, the method will still perform
+// some minimal validation if the requested miniblock is block 0.
 func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts) (*MiniblockInfo, error) {
 	headerEvent, err := ParseEvent(pb.Header)
 	if err != nil {
@@ -201,15 +224,23 @@ func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts
 	if blockHeader == nil {
 		return nil, RiverError(Err_BAD_EVENT, "header event must be a block header")
 	}
+
 	if opts.ExpectedBlockNumber >= 0 && blockHeader.MiniblockNum != int64(opts.ExpectedBlockNumber) {
+		return nil, RiverError(Err_BAD_BLOCK_NUMBER, "block number does not equal expected").
+			Func("NewMiniblockInfoFromProto").
+			Tag("expected", opts.ExpectedBlockNumber).
+			Tag("actual", blockHeader.MiniblockNum)
+	}
+
+	// Validate the number of events matches event hashes
+	// We will validate that the hashes match if the events are parsed.
+	if len(blockHeader.EventHashes) != len(pb.Events) {
 		return nil, RiverError(
-			Err_BAD_EVENT,
-			"block number mismatch",
-			"expected",
-			opts.ExpectedBlockNumber,
-			"actual",
-			blockHeader.MiniblockNum,
-		)
+			Err_BAD_BLOCK,
+			"Length of events in block does not match length of event hashes in header",
+		).Func("NewMiniblockInfoFromProto").
+			Tag("eventHashesLength", len(blockHeader.EventHashes)).
+			Tag("eventsLength", len(pb.Events))
 	}
 
 	var events []*ParsedEvent
@@ -218,9 +249,81 @@ func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts
 		if err != nil {
 			return nil, err
 		}
+
+		// Validate event hashes match the hashes stored in the header.
+		for i, event := range events {
+			if event.Hash != common.Hash(blockHeader.EventHashes[i]) {
+				return nil, RiverError(
+					Err_BAD_BLOCK,
+					"Block event hash did not match hash in header",
+				).Func("NewMiniblockInfoFromProto").
+					Tag("eventIndex", i).
+					Tag("blockEventHash", event.Hash).
+					Tag("headerEventHash", blockHeader.EventHashes[i])
+			}
+		}
 	}
 
-	// TODO: add header validation, num of events, prev block hash, block num, etc
+	if (opts.ExpectedLastMiniblockHash != common.Hash{}) {
+		if !bytes.Equal(opts.ExpectedLastMiniblockHash[:], blockHeader.PrevMiniblockHash) {
+			return nil, RiverError(
+				Err_BAD_BLOCK,
+				"Last miniblock hash does not equal expected",
+			).Func("NewMiniblockInfoFromProto").
+				Tag("expectedLastMiniblockHash", opts.ExpectedLastMiniblockHash).
+				Tag("prevMiniblockHash", hex.EncodeToString(blockHeader.PrevMiniblockHash))
+		}
+	} else if blockHeader.MiniblockNum == 0 {
+		if blockHeader.PrevMiniblockHash != nil {
+			return nil, RiverError(
+				Err_BAD_BLOCK,
+				"Last miniblock hash for first block should be unset",
+			).Func("NewMiniblockInfoFromProto").
+				Tag("prevMiniblockHash", hex.EncodeToString(blockHeader.PrevMiniblockHash))
+		}
+	}
+
+	if opts.ExpectedEventNumOffset > 0 {
+		if opts.ExpectedEventNumOffset != blockHeader.EventNumOffset {
+			return nil, RiverError(
+				Err_BAD_BLOCK,
+				"Miniblock header eventNumOffset does not equal expected",
+			).Func("NewMiniblockInfoFromProto").
+				Tag("expectedEventNumOffset", opts.ExpectedEventNumOffset).
+				Tag("eventNumOffset", blockHeader.EventNumOffset)
+		}
+	} else if blockHeader.MiniblockNum == 0 && blockHeader.EventNumOffset != 0 {
+		return nil, RiverError(
+			Err_BAD_BLOCK,
+			"Header of first miniblock eventNumOffset is not zero",
+		).Func("NewMiniblockInfoFromProto").
+			Tag("eventNumOffset", blockHeader.EventNumOffset)
+	}
+
+	if (opts.ExpectedMinimumTimestampExclusive != time.Time{}) {
+		if !blockHeader.Timestamp.AsTime().After(opts.ExpectedMinimumTimestampExclusive) {
+			return nil, RiverError(
+				Err_BAD_BLOCK,
+				"Expected header timestamp to occur after minimum time",
+			).Func("NewMiniblockInfoFromProto").
+				Tag("headerTimestamp", blockHeader.Timestamp.AsTime()).
+				Tag("minimumTimeExclusive", opts.ExpectedMinimumTimestampExclusive)
+		}
+	}
+
+	if opts.ExpectedPrevSnapshotMiniblockNum != 0 || blockHeader.MiniblockNum == 0 {
+		if blockHeader.PrevSnapshotMiniblockNum != opts.ExpectedPrevSnapshotMiniblockNum {
+			return nil, RiverError(
+				Err_BAD_BLOCK,
+				"Previous snapshot miniblock num did not match expected",
+			).Func("NewMiniblockInfoFromProto").
+				Tag("expectedPrevSnapshotMiniblockNum", opts.ExpectedPrevSnapshotMiniblockNum).
+				Tag("prevSnapshotMiniblockNum", blockHeader.PrevSnapshotMiniblockNum)
+		}
+	}
+
+	// TODO: snapshot validation if requested
+	// (How to think about versioning?)
 
 	return &MiniblockInfo{
 		Ref: &MiniblockRef{
