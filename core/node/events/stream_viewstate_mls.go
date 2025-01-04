@@ -11,6 +11,7 @@ type MlsStreamView interface {
 	StreamView
 	IsMlsInitialized() (bool, error)
 	GetMlsExternalJoinRequest() (*mls_tools.ExternalJoinRequest, error)
+	GetMlsEpochSecrets() (map[uint64][]byte, error)
 }
 
 var _ MlsStreamView = (*streamViewImpl)(nil)
@@ -29,7 +30,7 @@ func (r *streamViewImpl) IsMlsInitialized() (bool, error) {
 	}
 
 	isInitialized := false
-	updateFn := func(e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error) {
+	updateFn := func(e *ParsedEvent, miniblockNum int64, eventNum int64) (bool, error) {
 		switch payload := e.Event.Payload.(type) {
 		case *protocol.StreamEvent_MemberPayload:
 			switch content := payload.MemberPayload.Content.(type) {
@@ -66,7 +67,7 @@ func (r *streamViewImpl) GetMlsExternalJoinRequest() (*mls_tools.ExternalJoinReq
 		ExternalGroupSnapshot: s.Members.GetMls().ExternalGroupSnapshot,
 	}
 
-	updateFn := func(e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error) {
+	updateFn := func(e *ParsedEvent, miniblockNum int64, eventNum int64) (bool, error) {
 		switch payload := e.Event.Payload.(type) {
 		case *protocol.StreamEvent_MemberPayload:
 			switch content := payload.MemberPayload.Content.(type) {
@@ -91,4 +92,41 @@ func (r *streamViewImpl) GetMlsExternalJoinRequest() (*mls_tools.ExternalJoinReq
 	}
 
 	return &externalJoinRequest, nil
+}
+
+func (r *streamViewImpl) GetMlsEpochSecrets() (map[uint64][]byte, error) {
+	s := r.snapshot
+	if s.Members.GetMls() == nil {
+		return nil, fmt.Errorf("MLS not initialized")
+	}
+	epochSecrets := s.Members.Mls.GetEpochSecrets()
+	if epochSecrets == nil {
+		epochSecrets = make(map[uint64][]byte)
+	}
+	updateFn := func(e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error) {
+		switch payload := e.Event.Payload.(type) {
+		case *protocol.StreamEvent_MemberPayload:
+			switch content := payload.MemberPayload.Content.(type) {
+			case *protocol.MemberPayload_Mls_:
+				switch content.Mls.Content.(type) {
+				case *protocol.MemberPayload_Mls_EpochSecrets_:
+					for _, secret := range content.Mls.GetEpochSecrets().GetSecrets() {
+						if _, ok := epochSecrets[secret.Epoch]; !ok {
+							epochSecrets[secret.Epoch] = secret.Secret
+						}
+					}
+				default:
+					break
+				}
+			}
+		default:
+			break
+		}
+		return true, nil
+	}
+	err := r.forEachEvent(r.snapshotIndex+1, updateFn)
+	if err != nil {
+		return nil, err
+	}
+	return epochSecrets, nil
 }

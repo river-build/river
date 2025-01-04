@@ -350,6 +350,7 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
                 break
             }
             case 'mls':
+                this.mls.appendEvent(event, cleartext, encryptionEmitter, stateEmitter)
                 break
             case 'encryptionAlgorithm':
                 this.encryptionAlgorithm = payload.content.value.algorithm
