@@ -612,6 +612,7 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 		}
 		return aeBuilder().
 			check(params.creatorIsMember).
+			check(params.mlsInitialized).
 			check(ru.validMlsExternalJoin)
 	case *MemberPayload_Mls_EpochSecrets_:
 		ru := &aeMlsEpochSecrets{
@@ -620,6 +621,7 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 		}
 		return aeBuilder().
 			check(params.creatorIsMember).
+			check(params.mlsInitialized).
 			check(ru.validMlsEpochSecrets)
 	default:
 		return aeBuilder().
@@ -658,6 +660,14 @@ func (params *aeParams) creatorIsMember() (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func (params *aeParams) mlsInitialized() (bool, error) {
+	mlsInitialized, err := params.streamView.(events.MlsStreamView).IsMlsInitialized()
+	if err != nil {
+		return false, err
+	}
+	return mlsInitialized, nil
 }
 
 func (ru *aeMemberBlockchainTransactionRules) validMemberBlockchainTransaction_ReceiptMetadata() (bool, error) {
@@ -1428,15 +1438,6 @@ func (ru *aeMlsInitializeGroupRules) validMlsInitializeGroup() (bool, error) {
 
 func (ru *aeMlsExternalJoinRules) validMlsExternalJoin() (bool, error) {
 	view := ru.params.streamView.(events.MlsStreamView)
-	
-	mlsInitialized, err := view.IsMlsInitialized()
-	if err != nil {
-		return false, err
-	}
-	if !mlsInitialized {
-		return false, RiverError(Err_INVALID_ARGUMENT, "group not initialized")
-	}
-
 	externalJoinRequest, err := view.GetMlsExternalJoinRequest()
 	if err != nil {
 		return false, err
@@ -1455,19 +1456,10 @@ func (ru *aeMlsExternalJoinRules) validMlsExternalJoin() (bool, error) {
 }
 
 func (ru *aeMlsEpochSecrets) validMlsEpochSecrets() (bool, error) {
-	view := ru.params.streamView.(events.MlsStreamView)
-	mlsInitialized, err := view.IsMlsInitialized()
-	if err != nil {
-		return false, err
-	}
-	if !mlsInitialized {
-		return false, RiverError(Err_INVALID_ARGUMENT, "group not initialized")
-	}
-
 	if len(ru.secrets.Secrets) == 0 {
 		return false, RiverError(Err_INVALID_ARGUMENT, "no secrets provided")
 	}
-
+	view := ru.params.streamView.(events.MlsStreamView)
 	epochSecrets, err := view.GetMlsEpochSecrets()
 	if err != nil {
 		return false, err
