@@ -54,7 +54,9 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
                 break
             case 'epochSecrets':
                 for (const secret of mlsEvent.content.value.secrets) {
-                    this.epochSecrets[secret.epoch.toString()] = secret.secret
+                    if (!this.epochSecrets[secret.epoch.toString()]) {
+                        this.epochSecrets[secret.epoch.toString()] = secret.secret
+                    }
                 }
                 break
             case undefined:
