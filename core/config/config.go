@@ -347,6 +347,10 @@ type ArchiveConfig struct {
 
 	WorkerPoolSize int // If 0, default to 20.
 
+	MiniblockScrubQueueSize int // If 0, default to 10.
+
+	MiniblockScrubWorkerPoolSize int // If 0, default to 20
+
 	StreamsContractCallPageSize int64 // If 0, default to 5000.
 }
 
@@ -500,6 +504,20 @@ func (ac *ArchiveConfig) GetStreamsContractCallPageSize() int64 {
 		return 1000
 	}
 	return ac.StreamsContractCallPageSize
+}
+
+func (ac *ArchiveConfig) GetMiniblockScrubQueueSize() int {
+	if ac.MiniblockScrubQueueSize <= 0 {
+		return 10
+	}
+	return ac.MiniblockScrubQueueSize
+}
+
+func (ac *ArchiveConfig) GetMiniblockScrubWorkerPoolSize() int {
+	if ac.MiniblockScrubWorkerPoolSize <= 0 {
+		return 20
+	}
+	return ac.MiniblockScrubWorkerPoolSize
 }
 
 type ScrubbingConfig struct {
