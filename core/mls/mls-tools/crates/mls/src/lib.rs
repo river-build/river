@@ -8,6 +8,8 @@ use mls_rs::external_client::ExternalClient;
 use mls_rs::identity::basic::BasicIdentityProvider;
 use mls_rs_crypto_rustcrypto::RustCryptoProvider;
 
+use river_mls_protocol::SnapshotExternalGroupRequest;
+use river_mls_protocol::SnapshotExternalGroupResponse;
 use river_mls_protocol::{InitialGroupInfoRequest, 
     InitialGroupInfoResponse, 
     ExternalJoinRequest, 
@@ -208,6 +210,55 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJ
     return ExternalJoinResponse {
         result: ValidationResult::Valid.into(),
     };
+}
+
+pub fn snapshot_external_group_request(request: SnapshotExternalGroupRequest) -> SnapshotExternalGroupResponse {
+    let external_client = create_external_client();
+    let external_group_snapshot = match ExternalSnapshot::from_bytes(&request.external_group_snapshot) {
+        Ok(external_group_snapshot) => external_group_snapshot,
+        Err(_) => { return SnapshotExternalGroupResponse::default() }
+    };
+
+    let mut external_group = match external_client.load_group(external_group_snapshot) {
+        Ok(group) => group,
+        Err(_) => { return SnapshotExternalGroupResponse::default() }
+    };
+
+    // keep track of the last valid group info message, 
+    // ie the one that was sent along with the latest valid commit
+    let mut last_valid_group_info_message = request.group_info_message;
+    for commit_info in request.commits {
+        // in the off-chance that an invalid commit has slipped through, we don't want to stop processing, just keep going.
+        let commit = match MlsMessage::from_bytes(&commit_info.commit) {
+            Ok(commit) => commit,
+            Err(_) => continue
+        };
+
+        match external_group.process_incoming_message(commit) {
+            Ok(_) => {},
+            Err(_) => continue
+        };
+
+        // if the commit was valid, update the last valid group info message
+        match commit_info.group_info_message {
+            Some(group_info_message) => {
+                last_valid_group_info_message = group_info_message;
+            }
+            None => {}
+        }
+    }
+
+    let external_group_snapshot = external_group.snapshot();
+    let external_group_snapshot_bytes = match external_group_snapshot.to_bytes() {
+        Ok(bytes) => bytes,
+        Err(_) => { return SnapshotExternalGroupResponse::default() }
+    };
+
+    let response = SnapshotExternalGroupResponse {
+        external_group_snapshot: external_group_snapshot_bytes,
+        group_info_message: last_valid_group_info_message,
+    };
+    return response;
 }
 
 #[cfg(test)]
