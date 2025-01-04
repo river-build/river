@@ -664,7 +664,9 @@ func update_Snapshot_Mls(
 		return nil
 	case *MemberPayload_Mls_EpochSecrets_:
 		for _, secret := range content.EpochSecrets.Secrets {
-			snapshot.EpochSecrets[secret.Epoch] = secret.Secret
+			if _, ok := snapshot.EpochSecrets[secret.Epoch]; !ok {
+				snapshot.EpochSecrets[secret.Epoch] = secret.Secret
+			}
 		}
 		return nil
 	default:

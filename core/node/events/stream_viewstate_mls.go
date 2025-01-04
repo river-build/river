@@ -110,8 +110,10 @@ func (r *streamViewImpl) GetMlsEpochSecrets() (map[uint64][]byte, error) {
 			case *protocol.MemberPayload_Mls_:
 				switch content.Mls.Content.(type) {
 				case *protocol.MemberPayload_Mls_EpochSecrets_:
-					for _, epochSecret := range content.Mls.GetEpochSecrets().GetSecrets() {
-						epochSecrets[epochSecret.Epoch] = epochSecret.Secret
+					for _, secret := range content.Mls.GetEpochSecrets().GetSecrets() {
+						if _, ok := epochSecrets[secret.Epoch]; !ok {
+							epochSecrets[secret.Epoch] = secret.Secret
+						}
 					}
 				default:
 					break
