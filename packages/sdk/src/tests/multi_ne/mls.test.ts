@@ -279,6 +279,23 @@ describe('mlsTests', () => {
             aliceGroupInfoMessage,
         )
         await expect(aliceClient._debugSendMls(streamId, aliceMlsPayload)).resolves.not.toThrow()
+        latestGroupInfoMessage = aliceGroupInfoMessage
+    })
+
+    test('MLS group is snapshotted after external commit', async () => {
+        // force another snapshot
+        await expect(
+            bobClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true }),
+        ).resolves.not.toThrow()
+
+        // this time, the snapshot should contain the group info message from Alice
+        // the only way it can end up in the snapshot is if the external join was successfully snapshotted
+        // by the node
+        const streamAfterSnapshot = await aliceClient.getStream(streamId)
+        const mls = streamAfterSnapshot.membershipContent.mls
+        expect(mls.externalGroupSnapshot).toBeDefined()
+        expect(mls.groupInfoMessage).toBeDefined()
+        expect(bin_equal(mls.groupInfoMessage, latestGroupInfoMessage)).toBe(true)
     })
 
     test('Signature public keys are mapped per user in the snapshot', async () => {
