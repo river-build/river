@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gammazero/workerpool"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
@@ -24,6 +25,7 @@ import (
 	"github.com/river-build/river/core/node/registries"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
+	"github.com/river-build/river/core/node/testutils"
 	"github.com/river-build/river/core/node/testutils/dbtestutils"
 	"github.com/river-build/river/core/node/testutils/testcert"
 )
@@ -581,4 +583,109 @@ func TestArchiveContinuous(t *testing.T) {
 	stats := arch.Archiver.GetStats()
 	require.Equal(uint64(2), stats.StreamsExamined)
 	require.Zero(stats.FailedOpsCount)
+}
+
+func TestCorruptionTracker(t *testing.T) {
+	stream := NewArchiveStream(testutils.FakeStreamId(STREAM_SPACE_BIN), &[]common.Address{}, 0)
+	ct := NewStreamCorruptionTracker()
+	ct.parent = stream
+
+	require := require.New(t)
+	for range maxFailedConsecutiveUpdates - 1 {
+		require.False(ct.IsCorrupt())
+		require.Equal(NotCorrupt, ct.GetCorruptionReason())
+		require.Nil(ct.GetScrubError())
+		ct.IncrementConsecutiveBlockUpdateFailures()
+	}
+	require.False(ct.IsCorrupt())
+	require.Equal(NotCorrupt, ct.GetCorruptionReason())
+	require.Nil(ct.GetScrubError())
+	require.Equal(int64(-1), ct.GetFirstCorruptBlock())
+
+	// Calling this method will reset the internal failure counter
+	ct.ResetConsecutiveBlockUpdateFailures()
+
+	for range maxFailedConsecutiveUpdates {
+		require.False(ct.IsCorrupt())
+		require.Equal(NotCorrupt, ct.GetCorruptionReason())
+		require.Nil(ct.GetScrubError())
+		ct.IncrementConsecutiveBlockUpdateFailures()
+	}
+
+	require.True(ct.IsCorrupt())
+	require.Equal(FetchFailed, ct.GetCorruptionReason())
+	require.Nil(ct.GetScrubError())
+	require.Equal(int64(0), ct.GetFirstCorruptBlock())
+
+	// Resetting a corrupt stream that was corrupted due to being
+	// unavailable will reset the stream to a non-corrupt state
+	ct.ResetConsecutiveBlockUpdateFailures()
+
+	require.False(ct.IsCorrupt())
+	require.Equal(NotCorrupt, ct.GetCorruptionReason())
+	require.Nil(ct.GetScrubError())
+	require.Equal(int64(-1), ct.GetFirstCorruptBlock())
+
+	ctx := context.Background()
+
+	// Report scrub success
+	ct.ReportScrubSuccess(ctx, 0)
+	require.Equal(int64(0), ct.GetLatestScrubbedBlock())
+	require.False(ct.IsCorrupt())
+
+	ct.ReportScrubSuccess(ctx, 2)
+	require.Equal(int64(2), ct.GetLatestScrubbedBlock())
+
+	// Reporting a block as successful that we've already passed is a no-op
+	ct.ReportScrubSuccess(ctx, 1)
+	require.Equal(int64(2), ct.GetLatestScrubbedBlock())
+
+	ct.ReportScrubSuccess(ctx, 3)
+	require.Equal(int64(3), ct.GetLatestScrubbedBlock())
+	require.Equal(int64(-1), ct.GetFirstCorruptBlock())
+
+	// Marking a block as corrupt that we've already reported as well-formed will return
+	// an error
+	err := ct.MarkBlockCorrupt(1, fmt.Errorf("scrub error block 1"))
+	require.ErrorContains(err, "Corrupt block was already marked well-formed")
+
+	// In this case, the stream corruption tracker state doesn't change
+	require.Equal(int64(3), ct.GetLatestScrubbedBlock())
+	require.False(ct.IsCorrupt())
+	require.Equal(NotCorrupt, ct.GetCorruptionReason())
+	require.Equal(int64(-1), ct.GetFirstCorruptBlock())
+
+	// Mark the stream as corrupt with a block that is more recent than the last scrubbed block.
+	// Note: if we mark the stream as corrupt due to a scrub failure, it should not be affected
+	// by resets.
+	require.Nil(ct.MarkBlockCorrupt(5, fmt.Errorf("scrub error block 5")))
+	require.True(ct.IsCorrupt())
+	require.Equal(ScrubFailed, ct.GetCorruptionReason())
+	require.ErrorContains(ct.GetScrubError(), "scrub error block 5")
+	require.Equal(int64(5), ct.GetFirstCorruptBlock())
+
+	// We cannot go back in time to mark a block as corrupt. The tracker requires that the user
+	// run the scrubber from the lowest block number that has not yet been scrubbed, and it disallows
+	// reporting a corrupt block that has already been marked as well-formed.
+	err = ct.MarkBlockCorrupt(4, fmt.Errorf("scrub error block 4"))
+	require.ErrorContains(err, "Corrupt block was already marked well-formed")
+
+	require.True(ct.IsCorrupt())
+	require.Equal(ScrubFailed, ct.GetCorruptionReason())
+	require.ErrorContains(ct.GetScrubError(), "scrub error block 5")
+	require.Equal(int64(5), ct.GetFirstCorruptBlock())
+
+	// Once a scrub error has been reported, reporting block unavailability makes no difference.
+	for range maxFailedConsecutiveUpdates {
+		ct.IncrementConsecutiveBlockUpdateFailures()
+	}
+	require.True(ct.IsCorrupt())
+	require.Equal(ScrubFailed, ct.GetCorruptionReason())
+
+	ct.ResetConsecutiveBlockUpdateFailures()
+
+	require.True(ct.IsCorrupt())
+	require.Equal(ScrubFailed, ct.GetCorruptionReason())
+	require.ErrorContains(ct.GetScrubError(), "scrub error block 5")
+	require.Equal(int64(5), ct.GetFirstCorruptBlock())
 }
