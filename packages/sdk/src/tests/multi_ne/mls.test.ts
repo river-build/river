@@ -314,8 +314,7 @@ describe('mlsTests', () => {
 
         // verify that the epoch secrets have been picked up in the stream state view
         await waitFor(() => {
-            const mls = aliceClient.streams.get(streamId)?._view.membershipContent.mls
-            console.log('EVALATING', mls?.epochSecrets)
+            const mls = aliceClient.streams.get(streamId)?.view.membershipContent.mls
             expect(mls).toBeDefined()
             expect(bin_equal(mls!.epochSecrets[1n.toString()], new Uint8Array([1, 2, 3, 4]))).toBe(
                 true,
