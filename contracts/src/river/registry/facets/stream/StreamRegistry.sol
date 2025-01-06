@@ -142,47 +142,6 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
     }
   }
 
-  function placeStreamOnNode(
-    bytes32 streamId,
-    address nodeAddress
-  ) external onlyStream(streamId) onlyNode(msg.sender) {
-    Stream storage stream = ds.streamById[streamId];
-
-    // validate that the node is not already on the stream
-    uint256 nodeCount = stream.nodes.length;
-
-    for (uint256 i = 0; i < nodeCount; ++i) {
-      if (stream.nodes[i] == nodeAddress)
-        revert(RiverRegistryErrors.ALREADY_EXISTS);
-    }
-
-    stream.nodes.push(nodeAddress);
-
-    emit StreamPlacementUpdated(streamId, nodeAddress, true);
-  }
-
-  function removeStreamFromNode(
-    bytes32 streamId,
-    address nodeAddress
-  ) external onlyStream(streamId) onlyNode(msg.sender) {
-    Stream storage stream = ds.streamById[streamId];
-
-    bool found = false;
-    uint256 nodeCount = stream.nodes.length;
-
-    for (uint256 i = 0; i < nodeCount; ++i) {
-      if (stream.nodes[i] == nodeAddress) {
-        stream.nodes[i] = stream.nodes[nodeCount - 1];
-        stream.nodes.pop();
-        found = true;
-        break;
-      }
-    }
-    if (!found) revert(RiverRegistryErrors.NODE_NOT_FOUND);
-
-    emit StreamPlacementUpdated(streamId, nodeAddress, false);
-  }
-
   function getStreamCount() external view returns (uint256) {
     return ds.streams.length();
   }
@@ -224,5 +183,47 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
     }
 
     return (streams, stop >= streamCount);
+  }
+
+  function placeStreamOnNode(
+    bytes32 streamId,
+    address nodeAddress
+  ) external onlyStream(streamId) onlyNode(msg.sender) {
+    Stream storage stream = ds.streamById[streamId];
+
+    // validate that the node is not already on the stream
+    uint256 nodeCount = stream.nodes.length;
+
+    for (uint256 i = 0; i < nodeCount; ++i) {
+      if (stream.nodes[i] == nodeAddress)
+        revert(RiverRegistryErrors.ALREADY_EXISTS);
+    }
+
+    stream.nodes.push(nodeAddress);
+
+    emit StreamPlacementUpdated(streamId, nodeAddress, true);
+  }
+
+  function removeStreamFromNode(
+    bytes32 streamId,
+    address nodeAddress
+  ) external onlyStream(streamId) onlyNode(msg.sender) {
+    Stream storage stream = ds.streamById[streamId];
+
+    bool found = false;
+    uint256 nodeCount = stream.nodes.length;
+
+    for (uint256 i = 0; i < nodeCount; ++i) {
+      if (stream.nodes[i] == nodeAddress) {
+        stream.nodes[i] = stream.nodes[nodeCount - 1];
+        stream.nodes.pop();
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) revert(RiverRegistryErrors.NODE_NOT_FOUND);
+
+    emit StreamPlacementUpdated(streamId, nodeAddress, false);
   }
 }

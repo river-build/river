@@ -16,9 +16,9 @@ contract StreamRegistryTest is
   IOwnableBase,
   IStreamRegistryBase
 {
-  // =============================================================
-  //                        allocateStream
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                       allocateStream                       */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
   function test_fuzz_allocateStream(
     address nodeOperator,
     TestNode[] memory nodes,
@@ -52,6 +52,7 @@ contract StreamRegistryTest is
     );
 
     assertEq(streamRegistry.getStreamCount(), 1);
+    assertEq(streamRegistry.getStreamCountOnNode(nodes[0].node), 1);
     assertTrue(streamRegistry.isStream(testStream.streamId));
 
     Stream memory stream = streamRegistry.getStream(testStream.streamId);
@@ -134,239 +135,9 @@ contract StreamRegistryTest is
     );
   }
 
-  // function test_streamCount(
-  //   address nodeOperator,
-  //   TestNode memory firstNode,
-  // )
-  //   external
-  //   givenNodeOperatorIsApproved(nodeOperator)
-  //   givenNodeIsRegistered(nodeOperator, firstNode, url1)
-  //   givenNodeIsRegistered(nodeOperator, secondNode, url2)
-  // {
-  //   address[] memory nodes = new address[](1);
-  //   nodes[0] = firstNode;
-  //   bytes memory genesisMiniblock = abi.encodePacked("genesisMiniblock");
-  //   bytes32 streamIdOne = 0x0000000000000000000000000000000000000000000000000000000000000001;
-  //   bytes32 streamIdTwo = 0x0000000000000000000000000000000000000000000000000000000000000002;
-  //   bytes32 genesisMiniblockHash = 0;
-
-  //   assertEq(streamRegistry.getStreamCount(), 0);
-
-  //   vm.prank(node1);
-  //   streamRegistry.allocateStream(
-  //     streamIdOne,
-  //     nodes,
-  //     genesisMiniblockHash,
-  //     genesisMiniblock
-  //   );
-
-  //   assertEq(streamRegistry.getStreamCount(), 1);
-
-  //   nodes[0] = node2;
-
-  //   vm.prank(node2);
-  //   streamRegistry.allocateStream(
-  //     streamIdTwo,
-  //     nodes,
-  //     genesisMiniblockHash,
-  //     genesisMiniblock
-  //   );
-
-  //   assertEq(streamRegistry.getStreamCount(), 2);
-  // }
-
-  // function test_getStreams(
-  //   address nodeOperator
-  // )
-  //   external
-  //   givenNodeOperatorIsApproved(nodeOperator)
-  //   givenNodeIsRegistered(nodeOperator, node1, url1)
-  //   givenNodeIsRegistered(nodeOperator, node2, url2)
-  // {
-  //   address[] memory nodes = new address[](1);
-  //   nodes[0] = node1;
-  //   bytes memory genesisMiniblock = abi.encodePacked("genesisMiniblock");
-  //   bytes32 streamIdOne = 0x0000000000000000000000000000000000000000000000000000000000000001;
-  //   bytes32 genesisMiniblockHash = 0;
-
-  //   assertEq(streamRegistry.getStreamCount(), 0);
-
-  //   vm.prank(node1);
-  //   streamRegistry.allocateStream(
-  //     streamIdOne,
-  //     nodes,
-  //     genesisMiniblockHash,
-  //     genesisMiniblock
-  //   );
-
-  //   assertEq(streamRegistry.getStreamCount(), 1);
-
-  //   nodes[0] = node2;
-  //   bytes32 streamIdTwo = 0x0000000000000000000000000000000000000000000000000000000000000002;
-
-  //   vm.prank(node2);
-  //   streamRegistry.allocateStream(
-  //     streamIdTwo,
-  //     nodes,
-  //     genesisMiniblockHash,
-  //     genesisMiniblock
-  //   );
-
-  //   bytes32 streamIdThree = 0x0000000000000000000000000000000000000000000000000000000000000003;
-
-  //   bytes32[] memory dynamicStreamIds = new bytes32[](
-  //     [streamIdOne, streamIdTwo, streamIdThree].length
-  //   );
-  //   for (
-  //     uint256 i = 0;
-  //     i < [streamIdOne, streamIdTwo, streamIdThree].length;
-  //     i++
-  //   ) {
-  //     dynamicStreamIds[i] = [streamIdOne, streamIdTwo, streamIdThree][i];
-  //   }
-  //   assertEq(streamRegistry.getStreamCount(), 2);
-  // }
-
-  // function allocateStream(
-  //   address node,
-  //   bytes32 streamId,
-  //   uint256 expectedCount
-  // ) private {
-  //   address[] memory nodes = new address[](1);
-  //   nodes[0] = node;
-  //   bytes memory genesisMiniblock = abi.encodePacked("genesisMiniblock");
-  //   bytes32 genesisMiniblockHash = 0;
-  //   vm.prank(node);
-  //   streamRegistry.allocateStream(
-  //     streamId,
-  //     nodes,
-  //     genesisMiniblockHash,
-  //     genesisMiniblock
-  //   );
-  //   assertEq(streamRegistry.getStreamCount(), expectedCount);
-  // }
-
-  // function assertStreamsEqual(
-  //   StreamWithId[] memory result,
-  //   bytes32[] memory expectedIds
-  // ) private pure {
-  //   assertEq(result.length, expectedIds.length);
-  //   for (uint256 i = 0; i < result.length; i++) {
-  //     assertEq(result[i].id, expectedIds[i]);
-  //   }
-  // }
-
-  // function test_getPaginatedStreams(
-  //   address nodeOperator
-  // )
-  //   external
-  //   givenNodeOperatorIsApproved(nodeOperator)
-  //   givenNodeIsRegistered(nodeOperator, node1, url1)
-  //   givenNodeIsRegistered(nodeOperator, node2, url2)
-  // {
-  //   assertEq(streamRegistry.getStreamCount(), 0);
-
-  //   // Allocate 4 streams.
-  //   allocateStream(
-  //     node1,
-  //     0x0000000000000000000000000000000000000000000000000000000000000001,
-  //     1
-  //   );
-
-  //   allocateStream(
-  //     node2,
-  //     0x0000000000000000000000000000000000000000000000000000000000000002,
-  //     2
-  //   );
-
-  //   allocateStream(
-  //     node1,
-  //     0x0000000000000000000000000000000000000000000000000000000000000003,
-  //     3
-  //   );
-
-  //   allocateStream(
-  //     node2,
-  //     0x0000000000000000000000000000000000000000000000000000000000000004,
-  //     4
-  //   );
-
-  //   StreamWithId[] memory streams;
-  //   bool lastPage;
-
-  //   // Fetch a single stream.
-  //   (streams, lastPage) = streamRegistry.getPaginatedStreams(0, 1);
-  //   bytes32[] memory expectedIds = new bytes32[](1);
-  //   expectedIds[
-  //     0
-  //   ] = 0x0000000000000000000000000000000000000000000000000000000000000001;
-  //   assertStreamsEqual(streams, expectedIds);
-  //   assertEq(lastPage, false);
-
-  //   // Fetch the rest of thte streams.
-  //   (streams, lastPage) = streamRegistry.getPaginatedStreams(1, 4);
-  //   expectedIds = new bytes32[](3);
-  //   expectedIds[
-  //     0
-  //   ] = 0x0000000000000000000000000000000000000000000000000000000000000002;
-  //   expectedIds[
-  //     1
-  //   ] = 0x0000000000000000000000000000000000000000000000000000000000000003;
-  //   expectedIds[
-  //     2
-  //   ] = 0x0000000000000000000000000000000000000000000000000000000000000004;
-  //   assertStreamsEqual(streams, expectedIds);
-  //   assertEq(lastPage, true);
-
-  //   // Fetch past the end of the set of streams and expect an appropriately sized return value.
-  //   (streams, lastPage) = streamRegistry.getPaginatedStreams(2, 6);
-  //   expectedIds = new bytes32[](2);
-  //   expectedIds[
-  //     0
-  //   ] = 0x0000000000000000000000000000000000000000000000000000000000000003;
-  //   expectedIds[
-  //     1
-  //   ] = 0x0000000000000000000000000000000000000000000000000000000000000004;
-  //   assertStreamsEqual(streams, expectedIds);
-  //   assertEq(lastPage, true);
-
-  //   // Invalid fetch params (start >= stop) should revert.
-  //   vm.expectRevert(bytes(RiverRegistryErrors.BAD_ARG));
-  //   streamRegistry.getPaginatedStreams(1, 1);
-  // }
-
-  // function test_streamCountOnNode(
-  //   address nodeOperator,
-  //   address node
-  // )
-  //   external
-  //   givenNodeOperatorIsApproved(nodeOperator)
-  //   givenNodeIsRegistered(nodeOperator, node, url1)
-  // {
-  //   address[] memory nodes = new address[](1);
-  //   nodes[0] = node;
-  //   bytes memory genesisMiniblock = abi.encodePacked("genesisMiniblock");
-  //   bytes32 streamIdOne = 0x0000000000000000000000000000000000000000000000000000000000000001;
-  //   bytes32 streamIdTwo = 0x0000000000000000000000000000000000000000000000000000000000000002;
-  //   bytes32 genesisMiniblockHash = 0;
-
-  //   vm.prank(node);
-  //   streamRegistry.allocateStream(
-  //     streamIdOne,
-  //     nodes,
-  //     genesisMiniblockHash,
-  //     genesisMiniblock
-  //   );
-
-  //   vm.prank(node);
-  //   streamRegistry.allocateStream(
-  //     streamIdTwo,
-  //     nodes,
-  //     genesisMiniblockHash,
-  //     genesisMiniblock
-  //   );
-  // }
-
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                 setStreamLastMiniblockBatch                */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
   function test_setStreamLastMiniblockBatch(
     address nodeOperator,
     bytes32 genesisMiniblockHash,
@@ -397,6 +168,96 @@ contract StreamRegistryTest is
     }
 
     vm.prank(node.node);
+    streamRegistry.setStreamLastMiniblockBatch(miniblocks);
+
+    for (uint256 i = 0; i < miniblocks.length; i++) {
+      assertEq(
+        streamRegistry.getStream(miniblocks[i].streamId).lastMiniblockHash,
+        miniblocks[i].lastMiniblockHash
+      );
+    }
+
+    (StreamWithId[] memory streams, bool isLastPage) = streamRegistry
+      .getPaginatedStreams(0, miniblocks.length);
+    assertEq(streams.length, miniblocks.length);
+    assertTrue(isLastPage);
+  }
+
+  function test_revertWhen_setStreamLastMiniblockBatch_noMiniblocks(
+    address nodeOperator,
+    TestNode memory node
+  )
+    external
+    givenNodeOperatorIsApproved(nodeOperator)
+    givenNodeIsRegistered(nodeOperator, node.node, node.url)
+  {
+    SetMiniblock[] memory miniblocks = new SetMiniblock[](0);
+
+    vm.prank(node.node);
+    vm.expectRevert(bytes(RiverRegistryErrors.BAD_ARG));
+    streamRegistry.setStreamLastMiniblockBatch(miniblocks);
+  }
+
+  function test_revertWhen_setStreamLastMiniblockBatch_streamNotFound(
+    address nodeOperator,
+    SetMiniblock memory miniblock,
+    TestNode memory node
+  )
+    external
+    givenNodeOperatorIsApproved(nodeOperator)
+    givenNodeIsRegistered(nodeOperator, node.node, node.url)
+  {
+    SetMiniblock[] memory miniblocks = new SetMiniblock[](1);
+    miniblocks[0] = miniblock;
+
+    vm.prank(node.node);
+    vm.expectEmit(address(streamRegistry));
+    emit StreamLastMiniblockUpdateFailed(
+      miniblock.streamId,
+      miniblock.lastMiniblockHash,
+      miniblock.lastMiniblockNum,
+      RiverRegistryErrors.NOT_FOUND
+    );
+    streamRegistry.setStreamLastMiniblockBatch(miniblocks);
+  }
+
+  function test_revertWhen_setStreamLastMiniblockBatch_streamSealed(
+    address nodeOperator,
+    TestNode memory node,
+    TestStream memory testStream,
+    SetMiniblock memory miniblock
+  )
+    external
+    givenNodeOperatorIsApproved(nodeOperator)
+    givenNodeIsRegistered(nodeOperator, node.node, node.url)
+  {
+    address[] memory nodes = new address[](1);
+    nodes[0] = node.node;
+
+    vm.prank(node.node);
+    streamRegistry.allocateStream(
+      testStream.streamId,
+      nodes,
+      testStream.genesisMiniblockHash,
+      testStream.genesisMiniblock
+    );
+
+    SetMiniblock[] memory miniblocks = new SetMiniblock[](1);
+    miniblock.isSealed = true;
+    miniblock.streamId = testStream.streamId;
+    miniblocks[0] = miniblock;
+
+    vm.prank(node.node);
+    streamRegistry.setStreamLastMiniblockBatch(miniblocks);
+
+    vm.prank(node.node);
+    vm.expectEmit(address(streamRegistry));
+    emit StreamLastMiniblockUpdateFailed(
+      miniblock.streamId,
+      miniblock.lastMiniblockHash,
+      miniblock.lastMiniblockNum,
+      RiverRegistryErrors.STREAM_SEALED
+    );
     streamRegistry.setStreamLastMiniblockBatch(miniblocks);
   }
 }
