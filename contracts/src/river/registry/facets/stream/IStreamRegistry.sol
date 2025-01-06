@@ -55,14 +55,6 @@ interface IStreamRegistry is IStreamRegistryBase {
 
   function getStream(bytes32 streamId) external view returns (Stream memory);
 
-  function setStreamLastMiniblock(
-    bytes32 streamId,
-    bytes32 prevMiniBlockHash,
-    bytes32 lastMiniblockHash,
-    uint64 lastMiniblockNum,
-    bool isSealed
-  ) external;
-
   function setStreamLastMiniblockBatch(
     SetMiniblock[] calldata miniblocks
   ) external;
