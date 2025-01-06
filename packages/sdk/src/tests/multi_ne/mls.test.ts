@@ -332,7 +332,7 @@ describe('mlsTests', () => {
         expect(bin_equal(mlsSnapshot.mls?.commitsSinceLastSnapshot[0], commits[0])).toBe(true)
     })
 
-    test('Clients can join MLS groups at epoch > 1', async () => {
+    test('Clients can join an MLS group from a fresh snapshot', async () => {
         // the MLS state has been snapshotted, all commits are now compressed
         // into stream.membershipContent.mls.externalGroupSnapshot
         const stream = await charlieClient.getStream(streamId)
