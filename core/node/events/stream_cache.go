@@ -219,7 +219,7 @@ func (s *streamCacheImpl) onStreamAllocated(
 		stream.nodesLocked.Reset(event.Nodes, s.params.Wallet.Address)
 		stream, created, err := s.createStreamStorage(ctx, stream, event.GenesisMiniblock)
 		if err != nil {
-			dlog.FromCtx(ctx).Error("Failed to allocate stream", "err", err) // , "streamId", stream.streamId)
+			dlog.FromCtx(ctx).Error("Failed to allocate stream", "err", err, "streamId", stream.streamId)
 		}
 		if created && len(otherEvents) > 0 {
 			stream.applyStreamEvents(ctx, otherEvents, blockNum)
