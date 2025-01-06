@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -38,21 +37,24 @@ const (
 	ScrubFailed
 )
 
+// StreamCorruptionTracker tracks events and metadata that determine a stream's corrupted state.
+// Strams are considered corrupt if they are reported as corrupt from a miniblcok scrub, or they
+// can be considered corrupt if the archiver consistently fails to update the stream to the current
+// block. New trackers are best made with the NewStreamCorruptionTracker method, as the default
+// value of some field types do not match what the initial values should be upon creation.
+// StreamCorruptionTracker method access is thread safe.
 type StreamCorruptionTracker struct {
-	// The following fields track metadata for determining stream corruption state.
-	// Streams are considered corrupt if they are reported as corrupt from a miniblock
-	// scrub or if the archiver fails to update the stream to the current block after
-	// a set number of update attempts.
+	mu sync.RWMutex
 
 	// All below fields must be updated in tandem under lock.
-	mu sync.RWMutex
 
 	corrupt          bool
 	corruptionReason CorruptionReason
 
+	firstCorruptBlock int64
+
 	// Scrubbing metadata
 	latestScrubbedBlock int64
-	firstCorruptBlock   int64
 	corruptionError     error
 
 	// Update failure metadata
@@ -394,18 +396,33 @@ func (a *Archiver) setupStatisticsMetrics(factory infra.MetricsFactory) {
 	)
 }
 
-// getCorruptStreams iterates over all streams in the in-memory cache and collects ids for
-// streams that are considered corrupt. This list does not represent a snapshot of the archiver
-// at any particular state, as the cache iteration is not thread-safe. However, for the purposes
-// of generating a periodic report of corrupt streams, this is good enough.
-func (a *Archiver) getCorruptStreams(ctx context.Context) map[StreamId]*ArchiveStream {
-	corruptStreams := make(map[StreamId]*ArchiveStream, 0)
+func (a *Archiver) GetCorruptStreams(ctx context.Context) []scrub.CorruptStreamRecord {
+	corruptStreams := []scrub.CorruptStreamRecord{}
 
 	a.streams.Range(
 		func(key, value any) bool {
 			stream, ok := value.(*ArchiveStream)
-			if ok && stream.corrupt.IsCorrupt() {
-				corruptStreams[stream.streamId] = stream
+			if ok {
+				// Take a lock on the corruption tracker to get a coherent state from it
+				// this will require us to access members directly since the getters use RLocks
+				stream.corrupt.mu.Lock()
+				defer stream.corrupt.mu.Unlock()
+
+				if stream.corrupt.corrupt {
+					corruptionReason := "unable_to_update_stream"
+					if stream.corrupt.corruptionReason == ScrubFailed {
+						corruptionReason = "scrub_failed"
+					}
+					record := scrub.CorruptStreamRecord{
+						StreamId:             stream.streamId,
+						Nodes:                stream.nodes.GetNodes(),
+						MostRecentBlock:      stream.numBlocksInContract.Load(),
+						MostRecentLocalBlock: stream.numBlocksInDb.Load(),
+						FirstCorruptBlock:    stream.corrupt.firstCorruptBlock,
+						CorruptionReason:     corruptionReason,
+					}
+					corruptStreams = append(corruptStreams, record)
+				}
 			} else if !ok {
 				dlog.FromCtx(ctx).
 					Error("Unexpected value stored in stream cache (not an ArchiveStream)", "value", value)
@@ -617,34 +634,8 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) (er
 	return nil
 }
 
-func (a *Archiver) emitPeriodicCorruptStreamReport(ctx context.Context) {
-	ticker := time.NewTicker(15 * time.Minute)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			corruptStreams := a.getCorruptStreams(ctx)
-
-			var builder strings.Builder
-			builder.WriteString("StreamId")
-			for _, as := range corruptStreams {
-				builder.WriteString(as.streamId.String())
-				builder.WriteString(",")
-				builder.WriteString(fmt.Sprintf("%d", as.corrupt.GetFirstCorruptBlock()))
-				builder.WriteString("\n")
-			}
-			dlog.FromCtx(ctx).
-				Info("Corrupt streams report", "total", len(corruptStreams), "streams", builder.String())
-		}
-	}
-}
-
 func (a *Archiver) Start(ctx context.Context, once bool, metrics infra.MetricsFactory, exitSignal chan<- error) {
 	defer a.startedWG.Done()
-	go a.emitPeriodicCorruptStreamReport(ctx)
 	err := a.startImpl(ctx, once, metrics)
 	if err != nil {
 		exitSignal <- err

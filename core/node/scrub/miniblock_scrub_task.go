@@ -14,6 +14,19 @@ import (
 	"github.com/river-build/river/core/node/storage"
 )
 
+type CorruptStreamRecord struct {
+	StreamId             shared.StreamId
+	Nodes                []common.Address
+	MostRecentBlock      int64
+	MostRecentLocalBlock int64
+	FirstCorruptBlock    int64
+	CorruptionReason     string
+}
+
+type CorruptStreamTrackingService interface {
+	GetCorruptStreams(ctx context.Context) []CorruptStreamRecord
+}
+
 type MiniblockScrubber interface {
 	ScheduleStreamMiniblocksScrub(
 		ctx context.Context,

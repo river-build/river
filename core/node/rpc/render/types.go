@@ -1,8 +1,11 @@
 package render
 
 import (
+	"strings"
+
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/rpc/statusinfo"
+	"github.com/river-build/river/core/node/scrub"
 	"github.com/river-build/river/core/node/storage"
 )
 
@@ -17,10 +20,50 @@ type RenderableData interface {
 		*InfoIndexData |
 		*DebugMultiData |
 		*StorageData |
-		*StreamSummaryData
+		*StreamSummaryData |
+		*CorruptStreamData
 
 	// TemplateName returns the name of the template to be used for rendering
 	TemplateName() string
+}
+
+// DebugCorruptStreamRecord represents all the same information as scrub.CorruptStreamRecord,
+// but here all non-trivial types have been converted to strings for ease of html template
+// rendering.
+type DebugCorruptStreamRecord struct {
+	StreamId             string
+	Nodes                string
+	MostRecentBlock      int64
+	MostRecentLocalBlock int64
+	FirstCorruptBlock    int64
+	CorruptionReason     string
+}
+
+type CorruptStreamData struct {
+	Streams []DebugCorruptStreamRecord
+}
+
+func createDebugStreamRecord(apiRecord scrub.CorruptStreamRecord) DebugCorruptStreamRecord {
+	var nodesBuilder strings.Builder
+	for i, node := range apiRecord.Nodes {
+		nodesBuilder.WriteString(node.Hex())
+		if i < len(apiRecord.Nodes)-1 {
+			nodesBuilder.WriteString(",")
+		}
+	}
+
+	return DebugCorruptStreamRecord{
+		StreamId:             apiRecord.StreamId.String(),
+		Nodes:                nodesBuilder.String(),
+		MostRecentBlock:      apiRecord.MostRecentBlock,
+		MostRecentLocalBlock: apiRecord.MostRecentLocalBlock,
+		FirstCorruptBlock:    apiRecord.FirstCorruptBlock,
+		CorruptionReason:     apiRecord.CorruptionReason,
+	}
+}
+
+func (d CorruptStreamData) TemplateName() string {
+	return "templates/debug/corruptStreams.template.html"
 }
 
 type CacheData struct {

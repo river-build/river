@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Corrupt Streams</title>
+
+    <style>
+
+  
+    </style>
+  
+  </head>
+  
+  <body>
+    <table>
+        <tr>
+            <th>Stream Id</th>
+            <th>First Corrupt Block</th>
+            <th>Most Recent Block</th>
+            <th>Most Recent Local Block</th>
+            <th>Corruption Reason</th>
+            <th>Nodes</th>
+        </tr>
+        {{range .Streams}}
+        <tr>
+            <td>{{.StreamId}}</td>
+            <td>{{.FirstCorruptBlock}}</td>
+        </tr>
+        {{end}}
+    </table>
+    
+  </body>
+</html>  

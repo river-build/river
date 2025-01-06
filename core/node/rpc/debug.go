@@ -20,8 +20,12 @@ import (
 	. "github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/rpc/render"
+<<<<<<< HEAD
 	"github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
+=======
+	"github.com/river-build/river/core/node/scrub"
+>>>>>>> eb0616a2 (Partial work - expose corrupt streams on a debug endpoint.)
 )
 
 type debugHandler struct {
@@ -103,6 +107,32 @@ func (s *Service) registerDebugHandlers(enableDebugEndpoints bool, cfg config.De
 	if cfg.Stream || enableDebugEndpoints {
 		handler.Handle(mux, "/debug/stream/{streamIdStr}", &streamHandler{store: s.storage})
 	}
+	if s.mode == ServerModeArchive && enableDebugEndpoints {
+		handler.Handle(mux, "/debug/corrupt_streams", &corruptStreamsHandler{service: s.Archiver})
+	}
+}
+
+type corruptStreamsHandler struct {
+	service scrub.CorruptStreamTrackingService
+}
+
+func (h *corruptStreamsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	var (
+		ctx   = r.Context()
+		reply render.CorruptStreamData
+	)
+
+	reply.Streams = h.service.GetCorruptStreams(ctx)
+	output, err := render.Execute(&reply)
+	if err != nil {
+		dlog.FromCtx(ctx).Error("unable to render stack data", "err", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(output.Bytes())
 }
 
 type stacksHandler struct {
