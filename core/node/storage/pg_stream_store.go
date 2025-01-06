@@ -1909,7 +1909,7 @@ func (s *PostgresStreamStore) DebugReadStreamStatistics(
 	streamId StreamId,
 ) (*DebugReadStreamStatisticsResult, error) {
 	var ret *DebugReadStreamStatisticsResult
-	err := s.txRunnerWithUUIDCheck(
+	err := s.txRunner(
 		ctx,
 		"DebugReadStreamStatistics",
 		pgx.ReadWrite,
