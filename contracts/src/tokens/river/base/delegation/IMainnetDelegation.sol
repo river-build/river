@@ -71,6 +71,7 @@ interface IMainnetDelegation is IMainnetDelegationBase {
   function setDelegationDigest(bytes32 digest) external;
 
   /// @notice Relay cross-chain delegations
+  /// @dev Only the owner can call this function
   /// @param encodedMsgs The encoded delegation messages
   function relayDelegations(bytes calldata encodedMsgs) external;
 
