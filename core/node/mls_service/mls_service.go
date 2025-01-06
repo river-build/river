@@ -99,3 +99,21 @@ func SnapshotExternalGroupRequest(request *mls_tools.SnapshotExternalGroupReques
 	}
 	return &result, nil
 }
+
+func CommitLeavesRequest(request *mls_tools.CommitLeavesRequest) (*mls_tools.CommitLeavesResponse, error) {
+	r := &mls_tools.MlsRequest{
+		Content: &mls_tools.MlsRequest_CommitLeaves{
+			CommitLeaves: request,
+		},
+	}
+	responseBytes, err := makeMlsRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	result := mls_tools.CommitLeavesResponse{}
+	err = proto.Unmarshal(responseBytes, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}

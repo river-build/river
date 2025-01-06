@@ -14,7 +14,9 @@ use river_mls_protocol::{InitialGroupInfoRequest,
     InitialGroupInfoResponse, 
     ExternalJoinRequest, 
     ExternalJoinResponse, 
-    ValidationResult
+    ValidationResult,
+    CommitLeavesRequest,
+    CommitLeavesResponse,
 };
 
 type ExternalConfig = ExternalWithIdentityProvider<
@@ -122,10 +124,16 @@ pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> 
 }
 
 pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJoinResponse {
+    let group_state = match request.group_state {
+        Some(group_state) => group_state,
+        None => return ExternalJoinResponse {
+            result: ValidationResult::InvalidExternalGroup.into(),
+        }
+        
+    };
 
     let external_client = create_external_client();
-
-    let external_group_snapshot = match ExternalSnapshot::from_bytes(&request.external_group_snapshot) {
+    let external_group_snapshot = match ExternalSnapshot::from_bytes(&group_state.external_group_snapshot) {
         Ok(external_group_snapshot) => external_group_snapshot,
         Err(_) => return ExternalJoinResponse {
             result: ValidationResult::InvalidExternalGroup.into(),
@@ -140,7 +148,7 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJ
     };
 
     // in the off-chance that an invalid commit slips through, we don't want to stop processing, just keep going.
-    for commit_bytes in request.commits {
+    for commit_bytes in group_state.commits {
         let _ = match MlsMessage::from_bytes(&commit_bytes) {
             Ok(commit) => external_group.process_incoming_message(commit),
             Err(_) => break
@@ -212,6 +220,56 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJ
     };
 }
 
+pub fn validate_commit_leaves_request(request: CommitLeavesRequest) -> CommitLeavesResponse {
+    let group_state = match request.group_state {
+        Some(group_state) => group_state,
+        None => return CommitLeavesResponse {
+            result: ValidationResult::InvalidExternalGroup.into(),
+        }
+        
+    };
+    let external_client = create_external_client();
+    let external_group_snapshot = match ExternalSnapshot::from_bytes(&group_state.external_group_snapshot) {
+        Ok(external_group_snapshot) => external_group_snapshot,
+        // return explicit err
+        Err(_) => { return CommitLeavesResponse::default() }
+    };
+
+    let mut external_group = match external_client.load_group(external_group_snapshot) {
+        Ok(group) => group,
+        // return explicit err
+        Err(_) => { return CommitLeavesResponse::default() }
+    };
+
+    // in the off-chance that an invalid commit slips through, we don't want to stop processing, just keep going.
+    for commit_bytes in group_state.commits {
+        let _ = match MlsMessage::from_bytes(&commit_bytes) {
+            Ok(commit) => external_group.process_incoming_message(commit),
+            Err(_) => break
+        };
+    }
+
+
+    let proposed_commit_leaves_commit = match MlsMessage::from_bytes(&request.commit) {
+        Ok(commit) => commit,
+        Err(_) => return CommitLeavesResponse {
+            result: ValidationResult::InvalidCommit.into(),
+        }
+    };
+    
+    match external_group.process_incoming_message(proposed_commit_leaves_commit) {
+        Ok(_) => {}
+        Err(_) => return CommitLeavesResponse {
+            result: ValidationResult::InvalidCommit.into(),
+        }
+    
+    }
+
+    return CommitLeavesResponse {
+        result: ValidationResult::Valid.into(),
+    };
+}
+
 pub fn snapshot_external_group_request(request: SnapshotExternalGroupRequest) -> SnapshotExternalGroupResponse {
     let external_client = create_external_client();
     let external_group_snapshot = match ExternalSnapshot::from_bytes(&request.external_group_snapshot) {
@@ -278,6 +336,7 @@ mod tests {
     };
     const CIPHERSUITE: CipherSuite = CipherSuite::P256_AES128;
     use mls_rs::mls_rules::{CommitOptions, DefaultMlsRules};
+    use river_mls_protocol::MlsGroupState;
     type ClientConfig = WithIdentityProvider<BasicIdentityProvider, WithCryptoProvider<RustCryptoProvider, BaseConfig>>;
     type ProviderCipherSuite = <RustCryptoProvider as CryptoProvider>::CipherSuiteProvider;
     
@@ -427,9 +486,11 @@ mod tests {
         let signature_public_key = alice.signing_identity().unwrap().0.signature_key.to_vec();
         let (alice_group_info_message, alice_commit) = perform_external_join(external_group_snapshot.clone(), commits.clone(), latest_group_info_message_without_tree, alice);
         let request = ExternalJoinRequest {
+            group_state: Some(MlsGroupState {
+                external_group_snapshot: external_group_snapshot.to_bytes().unwrap(),
+                commits: commits.iter().map(|commit| commit.to_bytes().unwrap()).collect(),
+            }),
             signature_public_key: signature_public_key,
-            external_group_snapshot: external_group_snapshot.to_bytes().unwrap(),
-            commits: commits.iter().map(|commit| commit.to_bytes().unwrap()).collect(),
             proposed_external_join_info_message: alice_group_info_message.to_bytes().unwrap(),
             proposed_external_join_commit: alice_commit.to_bytes().unwrap(),
         };

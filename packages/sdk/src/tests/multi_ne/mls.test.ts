@@ -383,7 +383,7 @@ describe('mlsTests', () => {
         expect(bin_equal(mls.epochSecrets[2n.toString()], new Uint8Array([3, 4, 5, 6]))).toBe(true)
     })
 
-    test('removing stream members who left MLS groups is allowed', async () => {
+    test('removing stream members with invalid commits is not allowed', async () => {
         await expect(aliceClient.leaveStream(streamId)).resolves.not.toThrow()
         const bobPayload: PlainMessage<MemberPayload_Mls> = {
             content: {
@@ -394,6 +394,9 @@ describe('mlsTests', () => {
                 },
             },
         }
-        await expect(bobClient._debugSendMls(streamId, bobPayload)).resolves.not.toThrow()
+
+        await expect(bobClient._debugSendMls(streamId, bobPayload)).rejects.toThrow(
+            'INVALID_COMMIT',
+        )
     })
 })

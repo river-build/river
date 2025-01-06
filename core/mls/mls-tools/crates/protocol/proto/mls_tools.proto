@@ -22,7 +22,13 @@ message MlsRequest {
         InitialGroupInfoRequest initial_group_info = 1;
         ExternalJoinRequest external_join = 2;
         SnapshotExternalGroupRequest snapshot_external_group = 3;
+        CommitLeavesRequest commit_leaves = 4;
     }
+}
+
+message MlsGroupState {
+    bytes external_group_snapshot = 1;
+    repeated bytes commits = 2;
 }
 
 message InitialGroupInfoRequest {
@@ -36,11 +42,10 @@ message InitialGroupInfoResponse {
 }
 
 message ExternalJoinRequest {
-    bytes external_group_snapshot = 1;
-    repeated bytes commits = 2;
-    bytes proposed_external_join_info_message = 3;
-    bytes proposed_external_join_commit = 4;
-    bytes signature_public_key = 5;
+    MlsGroupState group_state = 1;
+    bytes proposed_external_join_info_message = 2;
+    bytes proposed_external_join_commit = 3;
+    bytes signature_public_key = 4;
 }
 
 message ExternalJoinResponse {
@@ -61,6 +66,16 @@ message SnapshotExternalGroupRequest {
 message SnapshotExternalGroupResponse {
     bytes external_group_snapshot = 1;
     bytes group_info_message = 2;
+}
+
+message CommitLeavesRequest {
+    MlsGroupState group_state = 1;
+    bytes commit = 2;
+    repeated bytes signature_public_keys = 3;
+}
+
+message CommitLeavesResponse {
+    ValidationResult result = 1;
 }
 
 message InfoRequest {}

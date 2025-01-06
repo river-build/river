@@ -1453,13 +1453,18 @@ func (ru *aeMlsInitializeGroupRules) validMlsInitializeGroup() (bool, error) {
 
 func (ru *aeMlsExternalJoinRules) validMlsExternalJoin() (bool, error) {
 	view := ru.params.streamView.(events.MlsStreamView)
-	externalJoinRequest, err := view.GetMlsExternalJoinRequest()
+	mlsGroupState, err := view.GetMlsGroupState()
 	if err != nil {
 		return false, err
 	}
-	externalJoinRequest.ProposedExternalJoinCommit = ru.externalJoin.Commit
-	externalJoinRequest.ProposedExternalJoinInfoMessage = ru.externalJoin.GroupInfoMessage
-	externalJoinRequest.SignaturePublicKey = ru.externalJoin.SignaturePublicKey
+
+	externalJoinRequest := &mls_tools.ExternalJoinRequest {
+		GroupState: mlsGroupState,
+		ProposedExternalJoinCommit: ru.externalJoin.Commit,
+		ProposedExternalJoinInfoMessage: ru.externalJoin.GroupInfoMessage,
+		SignaturePublicKey: ru.externalJoin.SignaturePublicKey,
+	}
+
 	resp, err := mls_service.ExternalJoinRequest(externalJoinRequest)
 	if err != nil {
 		return false, err
@@ -1504,20 +1509,38 @@ func (ru *aeMlsCommitLeavesRules) validCommitLeaves() (bool, error) {
 		}	
 	}
 
-	publicSignatureKeys := make([][]byte, 0)
+	signaturePublicKeys := make([][]byte, 0)
 	for _, userAddress := range ru.commitLeaves.UserAddresses {
 		memberAddress := common.BytesToAddress(userAddress).Hex()
 		if keys, ok := members[memberAddress]; ok {
 			for _, key := range keys.SignaturePublicKeys {
-				publicSignatureKeys = append(publicSignatureKeys, key)
+				signaturePublicKeys = append(signaturePublicKeys, key)
 			}
 		}
 	}
 
-	if len(publicSignatureKeys) == 0 {
+	if len(signaturePublicKeys) == 0 {
 		return false, RiverError(Err_INVALID_ARGUMENT, "no public signature keys found")
 	}
 
+	mlsGroupState, err := view.GetMlsGroupState()
+	if err != nil {
+		return false, err
+	}
+
+	commitLeavesRequest := &mls_tools.CommitLeavesRequest{
+		GroupState: mlsGroupState,
+		Commit: ru.commitLeaves.Commit,
+		SignaturePublicKeys: signaturePublicKeys,
+	}
+
+	resp, err := mls_service.CommitLeavesRequest(commitLeavesRequest)
+	if err != nil {
+		return false, err
+	}
+	if resp.GetResult() != mls_tools.ValidationResult_VALID {
+		return false, RiverError(Err_INVALID_ARGUMENT, "invalid external join", "result", resp.GetResult())
+	}
 	return true, nil
 }
 

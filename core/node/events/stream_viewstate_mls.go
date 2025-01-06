@@ -11,7 +11,7 @@ import (
 type MlsStreamView interface {
 	StreamView
 	IsMlsInitialized() (bool, error)
-	GetMlsExternalJoinRequest() (*mls_tools.ExternalJoinRequest, error)
+	GetMlsGroupState() (*mls_tools.MlsGroupState, error)
 	GetMlsEpochSecrets() (map[uint64][]byte, error)
 	GetMlsMembers() (map[string]*protocol.MemberPayload_Snapshot_Mls_Member, error)
 }
@@ -57,14 +57,14 @@ func (r *streamViewImpl) IsMlsInitialized() (bool, error) {
 }
 
 // populates an ExternalJoinRequest with the ExternalGroupSnapshot and all ExternalJoin commits
-func (r *streamViewImpl) GetMlsExternalJoinRequest() (*mls_tools.ExternalJoinRequest, error) {
+func (r *streamViewImpl) GetMlsGroupState() (*mls_tools.MlsGroupState, error) {
 	s := r.snapshot
 	
 	if s.Members.GetMls() == nil {
 		return nil, fmt.Errorf("MLS not initialized")
 	}
 	
-	externalJoinRequest := mls_tools.ExternalJoinRequest{
+	mlsGroupState := mls_tools.MlsGroupState{
 		Commits: make([][]byte, 0),
 		ExternalGroupSnapshot: s.Members.GetMls().ExternalGroupSnapshot,
 	}
@@ -76,9 +76,9 @@ func (r *streamViewImpl) GetMlsExternalJoinRequest() (*mls_tools.ExternalJoinReq
 			case *protocol.MemberPayload_Mls_:
 				switch content.Mls.Content.(type) {
 				case *protocol.MemberPayload_Mls_InitializeGroup_:
-					externalJoinRequest.ExternalGroupSnapshot = content.Mls.GetInitializeGroup().ExternalGroupSnapshot
+					mlsGroupState.ExternalGroupSnapshot = content.Mls.GetInitializeGroup().ExternalGroupSnapshot
 				case *protocol.MemberPayload_Mls_ExternalJoin_:
-					externalJoinRequest.Commits = append(externalJoinRequest.Commits, content.Mls.GetExternalJoin().Commit)
+					mlsGroupState.Commits = append(mlsGroupState.Commits, content.Mls.GetExternalJoin().Commit)
 				default:
 					break
 				}
@@ -93,7 +93,7 @@ func (r *streamViewImpl) GetMlsExternalJoinRequest() (*mls_tools.ExternalJoinReq
 		return nil, err
 	}
 
-	return &externalJoinRequest, nil
+	return &mlsGroupState, nil
 }
 
 func (r *streamViewImpl) GetMlsEpochSecrets() (map[uint64][]byte, error) {
