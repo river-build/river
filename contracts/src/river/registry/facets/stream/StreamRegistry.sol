@@ -142,6 +142,65 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
     }
   }
 
+  /// @dev Deprecated
+  function setStreamLastMiniblock(
+    bytes32 streamId,
+    bytes32, // prevMiniblockHash
+    bytes32 lastMiniblockHash,
+    uint64 lastMiniblockNum,
+    bool isSealed
+  ) external onlyNode(msg.sender) {
+    // Validate that the streamId is in the registry
+    if (!ds.streams.contains(streamId)) {
+      revert(RiverRegistryErrors.NOT_FOUND);
+    }
+
+    Stream storage stream = ds.streamById[streamId];
+
+    // Check if the stream is already sealed using bitwise AND
+    if ((stream.flags & StreamFlags.SEALED) != 0) {
+      revert(RiverRegistryErrors.STREAM_SEALED);
+    }
+
+    // Ensure that the lastMiniblockNum is newer than the current head.
+    if (stream.lastMiniblockNum >= lastMiniblockNum) {
+      revert(RiverRegistryErrors.BAD_ARG);
+    }
+
+    // Delete genesis miniblock
+    delete ds.genesisMiniblockByStreamId[streamId];
+
+    // Update the stream information
+    stream.lastMiniblockHash = lastMiniblockHash;
+    stream.lastMiniblockNum = lastMiniblockNum;
+
+    // Set the sealed flag if requested
+    if (isSealed) {
+      stream.flags |= StreamFlags.SEALED;
+    }
+
+    emit StreamLastMiniblockUpdated(
+      streamId,
+      lastMiniblockHash,
+      lastMiniblockNum,
+      isSealed
+    );
+  }
+
+  /// @return stream, genesisMiniblockHash, genesisMiniblock
+  /// @dev Deprecated
+  function getStreamWithGenesis(
+    bytes32 streamId
+  ) external view returns (Stream memory, bytes32, bytes memory) {
+    if (!ds.streams.contains(streamId)) revert(RiverRegistryErrors.NOT_FOUND);
+
+    return (
+      ds.streamById[streamId],
+      ds.genesisMiniblockHashByStreamId[streamId],
+      ds.genesisMiniblockByStreamId[streamId]
+    );
+  }
+
   function getStreamCount() external view returns (uint256) {
     return ds.streams.length();
   }
