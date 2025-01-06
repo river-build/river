@@ -186,62 +186,6 @@ const _abi = [
   },
   {
     type: "function",
-    name: "getStreamWithGenesis",
-    inputs: [
-      {
-        name: "streamId",
-        type: "bytes32",
-        internalType: "bytes32",
-      },
-    ],
-    outputs: [
-      {
-        name: "",
-        type: "tuple",
-        internalType: "struct Stream",
-        components: [
-          {
-            name: "lastMiniblockHash",
-            type: "bytes32",
-            internalType: "bytes32",
-          },
-          {
-            name: "lastMiniblockNum",
-            type: "uint64",
-            internalType: "uint64",
-          },
-          {
-            name: "reserved0",
-            type: "uint64",
-            internalType: "uint64",
-          },
-          {
-            name: "flags",
-            type: "uint64",
-            internalType: "uint64",
-          },
-          {
-            name: "nodes",
-            type: "address[]",
-            internalType: "address[]",
-          },
-        ],
-      },
-      {
-        name: "",
-        type: "bytes32",
-        internalType: "bytes32",
-      },
-      {
-        name: "",
-        type: "bytes",
-        internalType: "bytes",
-      },
-    ],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
     name: "isStream",
     inputs: [
       {
@@ -290,39 +234,6 @@ const _abi = [
         name: "nodeAddress",
         type: "address",
         internalType: "address",
-      },
-    ],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "setStreamLastMiniblock",
-    inputs: [
-      {
-        name: "streamId",
-        type: "bytes32",
-        internalType: "bytes32",
-      },
-      {
-        name: "prevMiniBlockHash",
-        type: "bytes32",
-        internalType: "bytes32",
-      },
-      {
-        name: "lastMiniblockHash",
-        type: "bytes32",
-        internalType: "bytes32",
-      },
-      {
-        name: "lastMiniblockNum",
-        type: "uint64",
-        internalType: "uint64",
-      },
-      {
-        name: "isSealed",
-        type: "bool",
-        internalType: "bool",
       },
     ],
     outputs: [],

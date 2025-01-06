@@ -306,62 +306,6 @@
         ],
         "stateMutability": "view",
         "type": "function",
-        "name": "getStreamWithGenesis",
-        "outputs": [
-          {
-            "internalType": "struct Stream",
-            "name": "",
-            "type": "tuple",
-            "components": [
-              {
-                "internalType": "bytes32",
-                "name": "lastMiniblockHash",
-                "type": "bytes32"
-              },
-              {
-                "internalType": "uint64",
-                "name": "lastMiniblockNum",
-                "type": "uint64"
-              },
-              {
-                "internalType": "uint64",
-                "name": "reserved0",
-                "type": "uint64"
-              },
-              {
-                "internalType": "uint64",
-                "name": "flags",
-                "type": "uint64"
-              },
-              {
-                "internalType": "address[]",
-                "name": "nodes",
-                "type": "address[]"
-              }
-            ]
-          },
-          {
-            "internalType": "bytes32",
-            "name": "",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes",
-            "name": "",
-            "type": "bytes"
-          }
-        ]
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "bytes32",
-            "name": "streamId",
-            "type": "bytes32"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function",
         "name": "isStream",
         "outputs": [
           {
@@ -408,38 +352,6 @@
       {
         "inputs": [
           {
-            "internalType": "bytes32",
-            "name": "streamId",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "lastMiniblockHash",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "uint64",
-            "name": "lastMiniblockNum",
-            "type": "uint64"
-          },
-          {
-            "internalType": "bool",
-            "name": "isSealed",
-            "type": "bool"
-          }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function",
-        "name": "setStreamLastMiniblock"
-      },
-      {
-        "inputs": [
-          {
             "internalType": "struct SetMiniblock[]",
             "name": "miniblocks",
             "type": "tuple[]",
@@ -482,11 +394,6 @@
       "methods": {
         "getPaginatedStreams(uint256,uint256)": {
           "details": "Recommended range is 5000 streams, returns true if on the last page."
-        },
-        "getStreamWithGenesis(bytes32)": {
-          "returns": {
-            "_0": "stream, genesisMiniblockHash, genesisMiniblock"
-          }
         }
       },
       "version": 1
@@ -525,18 +432,18 @@
   },
   "sources": {
     "contracts/src/river/registry/facets/stream/IStreamRegistry.sol": {
-      "keccak256": "0x6300eec53f69b04c0230bff8180c590a9c9986b5816ca77836e0436a2f0178f7",
+      "keccak256": "0x992b27ca16746abe046988f79bfe73eff154df986c0adda23265698aefb0f56d",
       "urls": [
-        "bzz-raw://f7a0f8969b4ec51de95181a7c0da27bd648bc8deeff2572e4b2dafb93549dc39",
-        "dweb:/ipfs/QmYhcZh533cyb6cj5r8D9TRyHwVSwYtYyg4BVyVdoyoKt7"
+        "bzz-raw://37f6eecc0c4009c1c9c8567ea305af61b6d4d4f307c8115c449534ec5de42b91",
+        "dweb:/ipfs/QmReVocUPNHpbxnYcH1Pua34RgYHEJUpxXatYWzey7pCWE"
       ],
       "license": "MIT"
     },
     "contracts/src/river/registry/facets/stream/StreamRegistry.sol": {
-      "keccak256": "0x882a24cd682d1138f7ab4fd864c970140022556afb83aba7c60db2d0d98ce1a2",
+      "keccak256": "0x2a23c209c1f171e65beb102ced3ff3f2c6fab3db196ded5ef0d1ce77b3502e22",
       "urls": [
-        "bzz-raw://560a79691495a940bb29eea020e61297293214c708a4a79b14ca2492e1bb3c4a",
-        "dweb:/ipfs/QmR1ZDxvPFRV4fTgapUNArqeyHGuuW18rvW1CNJ4gFv1Es"
+        "bzz-raw://1cb7b16246b619e7c4d3a12c68d433a3274731adc838ac3904e4aab1e95599d3",
+        "dweb:/ipfs/QmUfzUkM9w6DKhGA1BQjCi5zXH2xerbTG9YXAo2cjTge2F"
       ],
       "license": "MIT"
     },
