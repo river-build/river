@@ -28,11 +28,6 @@
       {
         "inputs": [],
         "type": "error",
-        "name": "SenderIsNotMember"
-      },
-      {
-        "inputs": [],
-        "type": "error",
         "name": "TokenDoesNotExist"
       },
       {
@@ -124,10 +119,10 @@
   },
   "sources": {
     "contracts/src/spaces/facets/tipping/ITipping.sol": {
-      "keccak256": "0xd355586e5c85f3ea4e394862e8f8e8902b6ef9024a06a6b0c88546371dd6a97a",
+      "keccak256": "0x17626bc66cb1e815c6cbfc637cfac7c76b6de7dd57af29a0e6433b2591260ea2",
       "urls": [
-        "bzz-raw://cd77ed121cffdc5121a16dd4f367dec96c8d5b34a8b5bd64f72feea87d393148",
-        "dweb:/ipfs/Qmefw7ESa4WPE4RKyC6HE3sxsMgZS5PepJp8YpWYC7DeAU"
+        "bzz-raw://a12bd98f0636ccb28606103683938a5f300b7e02dbf0d87e2c51824b0e4e1606",
+        "dweb:/ipfs/QmPZkKxvrHB95To54hwsSQSCHHjkvsYCKP1dsvtzp92gvJ"
       ],
       "license": "MIT"
     }

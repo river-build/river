@@ -193,11 +193,6 @@ const _abi = [
   },
   {
     type: "error",
-    name: "SenderIsNotMember",
-    inputs: [],
-  },
-  {
-    type: "error",
     name: "TokenDoesNotExist",
     inputs: [],
   },
