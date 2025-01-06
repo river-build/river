@@ -1636,7 +1636,10 @@ func (s *PostgresStreamStore) listOtherInstancesTx(ctx context.Context, tx pgx.T
 		}
 		if delay > 0 {
 			log.Info("singlenodekey is not empty; Delaying startup to let other instance exit", "delay", delay)
-			time.Sleep(delay)
+			err = SleepWithContext(ctx, delay)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -1688,7 +1691,9 @@ func (s *PostgresStreamStore) acquireListeningConnection(ctx context.Context) *p
 		log.Debug("Failed to acquire listening connection, retrying", "error", err)
 
 		// In the event of networking issues, wait a small period of time for recovery.
-		time.Sleep(100 * time.Millisecond)
+		if err = SleepWithContext(ctx, 100*time.Millisecond); err != nil {
+			return nil
+		}
 	}
 }
 
@@ -1724,7 +1729,9 @@ func (s *PostgresStreamStore) acquireConnection(ctx context.Context) (*pgxpool.C
 		)
 
 		// In the event of networking issues, wait a small period of time for recovery.
-		time.Sleep(500 * time.Millisecond)
+		if err = SleepWithContext(ctx, 500*time.Millisecond); err != nil {
+			break
+		}
 	}
 
 	log.Error("Failed to acquire pgx connection", "error", err)
