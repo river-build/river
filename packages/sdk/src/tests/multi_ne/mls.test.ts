@@ -31,9 +31,12 @@ describe('mlsTests', () => {
     let aliceClient: Client
     let bobMlsClient: MlsClient
     let aliceMlsClient: MlsClient
+
+    // state variables
     let streamId: string
     let latestGroupInfoMessage: Uint8Array
     let latestExternalGroupSnapshot: Uint8Array
+    const commits: Uint8Array[] = []
 
     beforeAll(async () => {
         bobClient = await makeInitAndStartClient()
@@ -280,6 +283,7 @@ describe('mlsTests', () => {
         )
         await expect(aliceClient._debugSendMls(streamId, aliceMlsPayload)).resolves.not.toThrow()
         latestGroupInfoMessage = aliceGroupInfoMessage
+        commits.push(aliceCommit)
     })
 
     test('MLS group is snapshotted after external commit', async () => {
@@ -296,6 +300,19 @@ describe('mlsTests', () => {
         expect(mls.externalGroupSnapshot).toBeDefined()
         expect(mls.groupInfoMessage).toBeDefined()
         expect(bin_equal(mls.groupInfoMessage, latestGroupInfoMessage)).toBe(true)
+    })
+
+    test('MLS commits since the last snapshot are snapshotted', async () => {
+        const stream = await bobClient.getStream(streamId)
+        const miniblockNum = stream.miniblockInfo?.min
+        expect(miniblockNum).toBeDefined()
+
+        const mlsSnapshot = await bobClient.getMlsSnapshot(streamId, miniblockNum!)
+        expect(mlsSnapshot.mls).toBeDefined()
+        expect(mlsSnapshot.mls?.commitsSinceLastSnapshot.length).toBe(commits.length)
+        for (let i = 0; i < commits.length; i++) {
+            expect(bin_equal(mlsSnapshot.mls?.commitsSinceLastSnapshot[i], commits[i])).toBe(true)
+        }
     })
 
     test('Signature public keys are mapped per user in the snapshot', async () => {

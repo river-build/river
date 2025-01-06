@@ -166,6 +166,7 @@ message MemberPayload {
             // user_address -> Member
             map<string, Member> members = 3;
             map<uint64, bytes> epoch_secrets = 4;
+            repeated bytes commits_since_last_snapshot = 5;
         }
 
         message Member {
@@ -831,6 +832,19 @@ message GetLastMiniblockHashResponse {
     int64 miniblock_num = 2;
 }
 
+// GetMLSSnapshotRequest is a request to get exclusively MLS-related snapshot
+// data at a given miniblock number.
+message GetMlsSnapshotRequest {
+    bytes stream_id = 1;
+    int64 miniblock_num = 2;
+}
+
+message GetMlsSnapshotResponse {
+    MemberPayload.Snapshot.Mls mls = 1;
+    bool terminus = 2;
+    int64 prev_snapshot_miniblock_num = 3;
+}
+
 message AddEventRequest {
     bytes stream_id = 1;
     Envelope event = 2;
@@ -955,6 +969,7 @@ service StreamService {
     rpc AddEvent(AddEventRequest) returns (AddEventResponse);
     rpc SyncStreams(SyncStreamsRequest) returns (stream SyncStreamsResponse);
     rpc AddStreamToSync(AddStreamToSyncRequest) returns (AddStreamToSyncResponse);
+    rpc GetMlsSnapshot(GetMlsSnapshotRequest) returns (GetMlsSnapshotResponse);
     // ModifySync adds/removes streams to/from an in progress sync session.
     // The client must check ModifySyncResponse to determine which streams failed to add/remove.
     //
