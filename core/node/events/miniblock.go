@@ -349,12 +349,12 @@ func NewMiniblocksInfoFromProtos(pbs []*Miniblock, opts NewMiniblockInfoFromProt
 	mbs := make([]*MiniblockInfo, len(pbs))
 	for i, pb := range pbs {
 		o := opts
-		if *o.ExpectedBlockNumber >= 0 {
-			*o.ExpectedBlockNumber += int64(i)
-		}
 		mbs[i], err = NewMiniblockInfoFromProto(pb, o)
+		if o.ExpectedBlockNumber != nil && *o.ExpectedBlockNumber >= 0 {
+			*o.ExpectedBlockNumber += 1
+		}
 		if err != nil {
-			return nil, err
+			return nil, AsRiverError(err, Err_BAD_BLOCK).Func("NewMiniblockInfoFromProtos").Tag("ithBlock", i)
 		}
 	}
 	return mbs, nil
