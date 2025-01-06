@@ -156,6 +156,12 @@ message MiniblockHeader {
 */
 message MemberPayload {
     message Snapshot {
+
+        // contains the current MLS group state
+        message Mls {
+            
+        }
+
         message Member {
             bytes user_address = 1;
             int64 miniblock_num = 2;
@@ -169,6 +175,10 @@ message MemberPayload {
         
         repeated Member joined = 1;
         repeated SnappedPin pins = 2;
+        Mls mls = 3;
+        EncryptionAlgorithm encryption_algorithm = 4;
+        // tips sent in this stream: map<currency, amount>
+        map<string, uint64> tips = 5;
     }
 
     message Membership {
@@ -211,6 +221,27 @@ message MemberPayload {
         bytes event_id = 1;
     }
 
+    message Mls {
+        message InitializeGroup {
+            bytes device_key = 1;
+            bytes group_info_message = 2;
+            bytes external_group_snapshot = 3;
+        }
+
+        oneof content {
+            InitializeGroup initialize_group = 1;
+        }
+    }
+
+    message EncryptionAlgorithm {
+        optional string algorithm = 1;
+    }
+
+    message MemberBlockchainTransaction {
+        BlockchainTransaction transaction = 1;
+        bytes from_user_address = 2;
+    }
+
     oneof content {
         Membership membership = 1;
         KeySolicitation key_solicitation = 2;
@@ -221,6 +252,9 @@ message MemberPayload {
         Nft nft = 7;
         Pin pin = 8;
         Unpin unpin = 9;
+        Mls mls = 10;
+        MemberBlockchainTransaction member_blockchain_transaction = 11;
+        EncryptionAlgorithm encryption_algorithm = 12;
     }
 }
 
@@ -367,6 +401,10 @@ message UserPayload {
         Inception inception = 1;
         // memberships, sorted by stream_id
         repeated UserMembership memberships = 2;
+        // tips sent by this user: map<currency, amount>
+        map<string, uint64> tips_sent = 3;
+        // tips received by this user: map<currency, amount>
+        map<string, uint64> tips_received = 4;
     }
 
     message Inception {
@@ -390,10 +428,18 @@ message UserPayload {
         optional bytes stream_parent_id = 4;
     }
 
+    // derived event, only send from nodes
+    message ReceivedBlockchainTransaction {
+        BlockchainTransaction transaction = 1;
+        bytes from_user_address = 2;
+    }
+
     oneof content {
         Inception inception = 1;
         UserMembership user_membership = 2;
         UserMembershipAction user_membership_action = 3;
+        BlockchainTransaction blockchain_transaction = 4; // added by user
+        ReceivedBlockchainTransaction received_blockchain_transaction = 5; // added by nodes
     }
 }
 
@@ -575,6 +621,44 @@ message Snapshot {
         GdmChannelPayload.Snapshot gdm_channel_content = 108;
         UserInboxPayload.Snapshot user_inbox_content = 109;
     }
+}
+
+message BlockchainTransaction {
+    // metadata for tip transactions
+    message Tip {
+        message Event {
+            uint64 token_id = 1;
+            bytes currency = 2;
+            bytes sender = 3; // wallet that sent funds
+            bytes receiver = 4; // wallet that received funds
+            uint64 amount = 5;
+            bytes message_id = 6;
+            bytes channel_id = 7;
+        }
+        Event event = 1; // event emitted by the tipping facet
+        bytes toUserAddress = 2; // user that received funds
+    }
+    // required fields
+    BlockchainTransactionReceipt receipt = 1;
+    // optional metadata to be verified by the node
+    oneof content {
+        Tip tip = 101;
+    }
+}
+
+/** blockchain transaction receipt */
+message BlockchainTransactionReceipt {
+    message Log {
+        bytes address = 1;
+        repeated bytes topics = 2;
+        bytes data = 3;
+    }
+    uint64 chain_id = 1;
+    bytes transaction_hash = 2;
+    uint64 block_number = 3;
+    bytes to = 4;
+    bytes from = 5;
+    repeated Log logs = 6;
 }
 
 /**
@@ -897,7 +981,6 @@ enum GroupMentionType {
     GROUP_MENTION_TYPE_UNSPECIFIED = 0;
     GROUP_MENTION_TYPE_AT_CHANNEL = 1;
 }
-
 
 // Codes from 1 to 16 match gRPC/Connect codes.
 enum Err {

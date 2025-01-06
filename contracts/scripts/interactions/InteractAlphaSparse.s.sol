@@ -2,28 +2,25 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {IDiamondLoupe, IDiamondLoupeBase} from "contracts/src/diamond/facets/loupe/IDiamondLoupe.sol";
-import {IDiamondCut} from "contracts/src/diamond/facets/cut/IDiamondCut.sol";
-import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import {IERC173} from "contracts/src/diamond/facets/ownable/IERC173.sol";
-import {IOwnablePending} from "contracts/src/diamond/facets/ownable/pending/IOwnablePending.sol";
+import {IDiamondCut} from "@river-build/diamond/src/facets/cut/IDiamondCut.sol";
 import {IDiamondInitHelper} from "contracts/test/diamond/Diamond.t.sol";
 
-import {Diamond} from "contracts/src/diamond/Diamond.sol";
-import {DiamondHelper} from "contracts/test/diamond/Diamond.t.sol";
+import {Diamond} from "@river-build/diamond/src/Diamond.sol";
+import {DiamondHelper} from "@river-build/diamond/scripts/common/helpers/DiamondHelper.s.sol";
 
 // libraries
 import {stdJson} from "forge-std/StdJson.sol";
 import "forge-std/console.sol";
 
 // contracts
-import {DeployHelpers} from "../common/DeployHelpers.s.sol";
-import {AlphaHelper} from "contracts/scripts/interactions/helpers/AlphaHelper.sol";
+
+import {AlphaHelper, DiamondFacetData, FacetData} from "contracts/scripts/interactions/helpers/AlphaHelper.sol";
 
 import {DeploySpace} from "contracts/scripts/deployments/diamonds/DeploySpace.s.sol";
 import {DeploySpaceFactory} from "contracts/scripts/deployments/diamonds/DeploySpaceFactory.s.sol";
 import {DeployBaseRegistry} from "contracts/scripts/deployments/diamonds/DeployBaseRegistry.s.sol";
 import {DeploySpaceOwner} from "contracts/scripts/deployments/diamonds/DeploySpaceOwner.s.sol";
+//import {DeployRiverAirdrop} from "contracts/scripts/deployments/diamonds/DeployRiverAirdrop.s.sol";
 
 contract InteractAlphaSparse is AlphaHelper {
   using stdJson for string;
@@ -35,22 +32,12 @@ contract InteractAlphaSparse is AlphaHelper {
     diamondDeployments["spaceFactory"] = address(new DeploySpaceFactory());
     diamondDeployments["baseRegistry"] = address(new DeployBaseRegistry());
     diamondDeployments["spaceOwner"] = address(new DeploySpaceOwner());
+    // todo: implement river airdrop here
+    //diamondDeployments["riverAirdrop"] = address(new DeployRiverAirdrop());
   }
 
   string constant DEFAULT_JSON_FILE = "compiled_source_diff.json";
   string constant DEFAULT_REPORT_PATH = "/scripts/bytecode-diff/source-diffs/";
-
-  struct DiamondFacets {
-    string diamond;
-    FacetData[] facets;
-    uint256 numFacets;
-  }
-
-  struct FacetData {
-    address deployedAddress;
-    string facetName;
-    bytes32 sourceHash;
-  }
 
   string private jsonData;
 
@@ -62,28 +49,30 @@ contract InteractAlphaSparse is AlphaHelper {
    * @notice Decodes diamond and facet data from a JSON file output by the bytecode-diff script
    * @dev Reads the JSON file specified by the DEFAULT_JSON_FILE constant
    *      and parses it to extract information about updated diamonds and their facets
-   * @return An array of DiamondFacets structs containing the decoded information
+   * @return An array of DiamondFacetData structs containing the decoded information
    */
 
   function decodeDiamondsFromJSON()
     internal
     view
-    returns (DiamondFacets[] memory)
+    returns (DiamondFacetData[] memory)
   {
     uint256 updatedDiamondLen = abi.decode(
       vm.parseJson(jsonData, ".numUpdated"),
       (uint256)
     );
-    DiamondFacets[] memory diamonds = new DiamondFacets[](updatedDiamondLen);
+    DiamondFacetData[] memory diamonds = new DiamondFacetData[](
+      updatedDiamondLen
+    );
 
     for (uint256 i = 0; i < updatedDiamondLen; i++) {
       // Decode diamond name and number of facets
-      DiamondFacets memory diamondData = abi.decode(
+      DiamondFacetData memory diamondData = abi.decode(
         vm.parseJson(
           jsonData,
           string.concat("$.updated[", vm.toString(i), "]")
         ),
-        (DiamondFacets)
+        (DiamondFacetData)
       );
 
       diamonds[i] = diamondData;
@@ -122,7 +111,8 @@ contract InteractAlphaSparse is AlphaHelper {
 
     readJSON(jsonPath);
 
-    DiamondFacets[] memory diamonds = decodeDiamondsFromJSON();
+    DiamondFacetData[] memory diamonds = decodeDiamondsFromJSON();
+    console.log("interact::diamonds decoded", diamonds.length);
 
     // Iterate over diamonds array and process each diamond
     for (uint256 i = 0; i < diamonds.length; i++) {

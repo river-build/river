@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 import { Message, PlainMessage } from '@bufbuild/protobuf'
 import { Permission } from '@river-build/web3'
 import {
@@ -30,6 +27,8 @@ import {
     ChunkedMedia,
     UserBio,
     Tags,
+    BlockchainTransaction,
+    MemberPayload_Mls,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -133,6 +132,10 @@ import {
     make_SpacePayload_SpaceImage,
     make_UserMetadataPayload_ProfileImage,
     make_UserMetadataPayload_Bio,
+    make_UserPayload_BlockchainTransaction,
+    ContractReceipt,
+    make_MemberPayload_EncryptionAlgorithm,
+    make_MemberPayload_Mls,
 } from './types'
 
 import debug from 'debug'
@@ -148,6 +151,7 @@ import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
 import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from './crypto_utils'
 import { makeTags } from './tags'
+import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -873,6 +877,29 @@ export class Client
         return this.makeEventAndAddToStream(streamId, event, {
             method: 'updateGDMChannelProperties',
         })
+    }
+
+    async setStreamEncryptionAlgorithm(streamId: string, encryptionAlgorithm?: string) {
+        assert(
+            isChannelStreamId(streamId) ||
+                isSpaceStreamId(streamId) ||
+                isDMChannelStreamId(streamId) ||
+                isGDMChannelStreamId(streamId),
+            'channelId must be a valid streamId',
+        )
+        const stream = this.stream(streamId)
+        check(isDefined(stream), 'stream not found')
+        check(
+            stream.view.membershipContent.encryptionAlgorithm != encryptionAlgorithm,
+            `mlsEnabled is already set to ${encryptionAlgorithm}`,
+        )
+        return this.makeEventAndAddToStream(
+            streamId,
+            make_MemberPayload_EncryptionAlgorithm(encryptionAlgorithm),
+            {
+                method: 'setMlsEnabled',
+            },
+        )
     }
 
     async sendFullyReadMarkers(
@@ -1877,6 +1904,57 @@ export class Client
         )
     }
 
+    // upload transactions made on the base chain
+    async addTransaction(
+        chainId: number,
+        receipt: ContractReceipt,
+        content?: PlainMessage<BlockchainTransaction>['content'],
+    ): Promise<{ eventId: string }> {
+        check(isDefined(this.userStreamId))
+        const transaction = {
+            receipt: {
+                chainId: BigInt(chainId),
+                transactionHash: bin_fromHexString(receipt.transactionHash),
+                blockNumber: BigInt(receipt.blockNumber),
+                to: bin_fromHexString(receipt.to),
+                from: bin_fromHexString(receipt.from),
+                logs: receipt.logs.map((log) => ({
+                    address: bin_fromHexString(log.address),
+                    topics: log.topics.map(bin_fromHexString),
+                    data: bin_fromHexString(log.data),
+                })),
+            },
+            content: content ?? { case: undefined },
+        } satisfies PlainMessage<BlockchainTransaction>
+        const event = make_UserPayload_BlockchainTransaction(transaction)
+        return this.makeEventAndAddToStream(this.userStreamId, event, {
+            method: 'addTransaction',
+        })
+    }
+
+    async addTransaction_Tip(
+        chainId: number,
+        receipt: ContractReceipt,
+        event: TipEventObject,
+        toUserId: string,
+    ): Promise<{ eventId: string }> {
+        return this.addTransaction(chainId, receipt, {
+            case: 'tip',
+            value: {
+                event: {
+                    tokenId: event.tokenId.toBigInt(),
+                    currency: bin_fromHexString(event.currency),
+                    sender: addressFromUserId(event.sender),
+                    receiver: addressFromUserId(event.receiver),
+                    amount: event.amount.toBigInt(),
+                    messageId: bin_fromHexString(event.messageId),
+                    channelId: streamIdAsBytes(event.channelId),
+                },
+                toUserAddress: addressFromUserId(toUserId),
+            },
+        })
+    }
+
     async getMiniblocks(
         streamId: string | Uint8Array,
         fromInclusive: bigint,
@@ -1924,7 +2002,7 @@ export class Client
 
         return {
             terminus: terminus,
-            miniblocks: [...cachedMiniblocks, ...miniblocks],
+            miniblocks: [...miniblocks, ...cachedMiniblocks],
         }
     }
 
@@ -2420,5 +2498,14 @@ export class Client
 
     public async debugDropStream(syncId: string, streamId: string): Promise<void> {
         await this.rpcClient.info({ debug: ['drop_stream', syncId, streamId] })
+    }
+
+    public async _debugSendMls(
+        streamId: string | Uint8Array,
+        payload: PlainMessage<MemberPayload_Mls>,
+    ) {
+        return this.makeEventAndAddToStream(streamId, make_MemberPayload_Mls(payload), {
+            method: 'mls',
+        })
     }
 }

@@ -9,9 +9,9 @@ import {IMembershipPricing} from "./pricing/IMembershipPricing.sol";
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
 
 // contracts
-import {ReentrancyGuard} from "contracts/src/diamond/facets/reentrancy/ReentrancyGuard.sol";
+import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
 import {MembershipJoin} from "./join/MembershipJoin.sol";
-import {Facet} from "contracts/src/diamond/facets/Facet.sol";
+import {Facet} from "@river-build/diamond/src/facets/Facet.sol";
 
 contract MembershipFacet is
   IMembership,
@@ -20,7 +20,7 @@ contract MembershipFacet is
   Facet
 {
   // =============================================================
-  //                           Withdrawal
+  //                           Funds
   // =============================================================
 
   /// @inheritdoc IMembership
@@ -42,6 +42,11 @@ contract MembershipFacet is
       account,
       balance
     );
+  }
+
+  /// @inheritdoc IMembership
+  function revenue() external view returns (uint256) {
+    return _getCreatorBalance();
   }
 
   // =============================================================

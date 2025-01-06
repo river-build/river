@@ -29,10 +29,10 @@ interface ITippingBase {
     address indexed currency,
     address sender,
     address receiver,
-    uint256 amount
+    uint256 amount,
+    bytes32 messageId,
+    bytes32 channelId
   );
-
-  event TipMessage(bytes32 indexed messageId, bytes32 indexed channelId);
 
   // =============================================================
   //                           Errors
@@ -51,7 +51,7 @@ interface ITipping is ITippingBase {
   /// @param tipRequest The tip request containing token ID, currency, amount, message ID and channel ID
   /// @dev Requires sender and receiver to be members of the space
   /// @dev Requires amount > 0 and valid currency address
-  /// @dev Emits Tip and TipMessage events
+  /// @dev Emits Tip event
   function tip(TipRequest calldata tipRequest) external payable;
 
   /// @notice Gets the total tips received for a token ID in a specific currency

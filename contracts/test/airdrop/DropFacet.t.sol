@@ -6,17 +6,17 @@ import {Vm} from "forge-std/Test.sol";
 
 //interfaces
 
-import {IDropFacetBase} from "contracts/src/tokens/drop/IDropFacet.sol";
-import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
+import {IDropFacetBase} from "contracts/src/airdrop/drop/IDropFacet.sol";
+import {IOwnableBase} from "@river-build/diamond/src/facets/ownable/IERC173.sol";
 import {IRewardsDistributionBase} from "contracts/src/base/registry/facets/distribution/v2/IRewardsDistribution.sol";
 
 //libraries
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {MerkleTree} from "contracts/test/utils/MerkleTree.sol";
-import {DropFacet} from "contracts/src/tokens/drop/DropFacet.sol";
+import {DropFacet} from "contracts/src/airdrop/drop/DropFacet.sol";
 import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistribution.sol";
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
-import {DropStorage} from "contracts/src/tokens/drop/DropStorage.sol";
+import {DropStorage} from "contracts/src/airdrop/drop/DropStorage.sol";
 import {EIP712Utils} from "contracts/test/utils/EIP712Utils.sol";
 import {NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
 
@@ -24,7 +24,7 @@ import {NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/No
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {River} from "contracts/src/tokens/river/base/River.sol";
 import {NodeOperatorFacet} from "contracts/src/base/registry/facets/operator/NodeOperatorFacet.sol";
-import {EIP712Facet} from "contracts/src/diamond/utils/cryptography/signature/EIP712Facet.sol";
+import {EIP712Facet} from "@river-build/diamond/src/utils/cryptography/signature/EIP712Facet.sol";
 import {StakingRewards} from "contracts/src/base/registry/facets/distribution/v2/StakingRewards.sol";
 
 contract DropFacetTest is

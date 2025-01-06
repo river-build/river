@@ -66,29 +66,22 @@
             "name": "amount",
             "type": "uint256",
             "indexed": false
-          }
-        ],
-        "type": "event",
-        "name": "Tip",
-        "anonymous": false
-      },
-      {
-        "inputs": [
+          },
           {
             "internalType": "bytes32",
             "name": "messageId",
             "type": "bytes32",
-            "indexed": true
+            "indexed": false
           },
           {
             "internalType": "bytes32",
             "name": "channelId",
             "type": "bytes32",
-            "indexed": true
+            "indexed": false
           }
         ],
         "type": "event",
-        "name": "TipMessage",
+        "name": "Tip",
         "anonymous": false
       }
     ],
@@ -108,6 +101,7 @@
       "@openzeppelin/=node_modules/@openzeppelin/",
       "@prb/math/=node_modules/@prb/math/src/",
       "@prb/test/=node_modules/@prb/test/src/",
+      "@river-build/diamond/=node_modules/@river-build/diamond/",
       "account-abstraction/=node_modules/account-abstraction/contracts/",
       "ds-test/=node_modules/ds-test/src/",
       "forge-std/=node_modules/forge-std/src/",
@@ -130,10 +124,10 @@
   },
   "sources": {
     "contracts/src/spaces/facets/tipping/ITipping.sol": {
-      "keccak256": "0x8bfc4f6d2405a8438f09085e0f6d918abc45bf4f1a486c903f3736f4e0e9102c",
+      "keccak256": "0xd355586e5c85f3ea4e394862e8f8e8902b6ef9024a06a6b0c88546371dd6a97a",
       "urls": [
-        "bzz-raw://e56e221ee9f88e221c4c05d542c98581a1fa44ce46a0a147ecfba854961861dd",
-        "dweb:/ipfs/QmQvAgxi5T4kBpPxzkJ4wdCWei2arhd7cWt2UNxSEvQVAR"
+        "bzz-raw://cd77ed121cffdc5121a16dd4f367dec96c8d5b34a8b5bd64f72feea87d393148",
+        "dweb:/ipfs/Qmefw7ESa4WPE4RKyC6HE3sxsMgZS5PepJp8YpWYC7DeAU"
       ],
       "license": "MIT"
     }

@@ -36,6 +36,7 @@ import { SpaceInfo } from '../types'
 import {
     IRuleEntitlementBase,
     IRuleEntitlementV2Base,
+    RiverAirdropDapp,
     UNKNOWN_ERROR,
     UserEntitlementShim,
 } from './index'
@@ -52,6 +53,7 @@ import { PlatformRequirements } from './PlatformRequirements'
 import { EntitlementDataStructOutput } from './IEntitlementDataQueryableShim'
 import { CacheResult, EntitlementCache, Keyable } from '../EntitlementCache'
 import { RuleEntitlementV2Shim } from './RuleEntitlementV2Shim'
+import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
 
 const logger = dlogger('csb:SpaceDapp:debug')
 
@@ -157,6 +159,7 @@ export class SpaceDapp implements ISpaceDapp {
     public readonly pricingModules: PricingModules
     public readonly walletLink: WalletLink
     public readonly platformRequirements: PlatformRequirements
+    public readonly airdrop: RiverAirdropDapp
 
     public readonly entitlementCache: EntitlementCache<EntitlementRequest, EntitlementData[]>
     public readonly entitledWalletCache: EntitlementCache<EntitlementRequest, EntitledWallet>
@@ -173,6 +176,7 @@ export class SpaceDapp implements ISpaceDapp {
             config.addresses.spaceFactory,
             provider,
         )
+        this.airdrop = new RiverAirdropDapp(config, provider)
 
         // For RPC providers that pool for events, we need to set the polling interval to a lower value
         // so that we don't miss events that may be emitted in between polling intervals. The Ethers
@@ -1620,6 +1624,18 @@ export class SpaceDapp implements ISpaceDapp {
         return undefined
     }
 
+    public getTipEvent(
+        spaceId: string,
+        receipt: ContractReceipt,
+        senderAddress: string,
+    ): TipEventObject | undefined {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        return space.Tipping.getTipEvent(receipt, senderAddress)
+    }
+
     public withdrawSpaceFunds(spaceId: string, recipient: string, signer: ethers.Signer) {
         const space = this.getSpace(spaceId)
         if (!space) {
@@ -1697,8 +1713,8 @@ export class SpaceDapp implements ISpaceDapp {
                 tokenId,
                 currency,
                 amount,
-                messageId,
-                channelId,
+                messageId: ensureHexPrefix(messageId),
+                channelId: ensureHexPrefix(channelId),
             },
             {
                 value: amount,

@@ -2,24 +2,25 @@
 pragma solidity ^0.8.19;
 
 //interfaces
-import {IDiamond} from "contracts/src/diamond/IDiamond.sol";
+import {IDiamond} from "@river-build/diamond/src/IDiamond.sol";
 
 //libraries
 
 //contracts
-import {Diamond} from "contracts/src/diamond/Diamond.sol";
+import {FacetHelper} from "contracts/test/diamond/Facet.t.sol";
+import {Diamond} from "@river-build/diamond/src/Diamond.sol";
 import {DiamondHelper} from "contracts/test/diamond/Diamond.t.sol";
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 
 // deployers
-import {MultiInit} from "contracts/src/diamond/initializers/MultiInit.sol";
+import {MultiInit} from "@river-build/diamond/src/initializers/MultiInit.sol";
 import {DeployMultiInit} from "contracts/scripts/deployments/utils/DeployMultiInit.s.sol";
 import {DeployDiamondCut} from "contracts/scripts/deployments/facets/DeployDiamondCut.s.sol";
 import {DeployDiamondLoupe} from "contracts/scripts/deployments/facets/DeployDiamondLoupe.s.sol";
 import {DeployIntrospection} from "contracts/scripts/deployments/facets/DeployIntrospection.s.sol";
 import {DeployOwnable} from "contracts/scripts/deployments/facets/DeployOwnable.s.sol";
 import {DeployDropFacet} from "contracts/scripts/deployments/facets/DeployDropFacet.s.sol";
-import {DeployRiverPoints} from "contracts/scripts/deployments/facets/DeployRiverPoints.s.sol";
+import {DeployTownsPoints} from "contracts/scripts/deployments/facets/DeployTownsPoints.s.sol";
 import {DeployMetadata} from "contracts/scripts/deployments/facets/DeployMetadata.s.sol";
 
 contract DeployRiverAirdrop is DiamondHelper, Deployer {
@@ -32,7 +33,7 @@ contract DeployRiverAirdrop is DiamondHelper, Deployer {
   DeployIntrospection introspectionHelper = new DeployIntrospection();
   DeployOwnable ownableHelper = new DeployOwnable();
   DeployDropFacet dropHelper = new DeployDropFacet();
-  DeployRiverPoints pointsHelper = new DeployRiverPoints();
+  DeployTownsPoints pointsHelper = new DeployTownsPoints();
   DeployMetadata metadataHelper = new DeployMetadata();
 
   address multiInit;
@@ -44,6 +45,14 @@ contract DeployRiverAirdrop is DiamondHelper, Deployer {
   address dropFacet;
   address pointsFacet;
   address metadata;
+
+  mapping(string => address) private facetDeployments;
+
+  constructor() {
+    facetDeployments["dropHelper"] = address(dropHelper);
+    facetDeployments["pointsHelper"] = address(pointsHelper);
+    facetDeployments["metadataHelper"] = address(metadataHelper);
+  }
 
   function versionName() public pure override returns (string memory) {
     return "riverAirdrop";
@@ -135,6 +144,36 @@ contract DeployRiverAirdrop is DiamondHelper, Deployer {
           _initDatas
         )
       });
+  }
+
+  function diamondInitParamsFromFacets(
+    address deployer,
+    string[] memory facets
+  ) public {
+    for (uint256 i = 0; i < facets.length; i++) {
+      string memory facetName = facets[i];
+      address facetHelperAddress = facetDeployments[facetName];
+      if (facetHelperAddress != address(0)) {
+        // deploy facet
+        address facetAddress = Deployer(facetHelperAddress).deploy(deployer);
+        (FacetCut memory cut, bytes memory config) = FacetHelper(
+          facetHelperAddress
+        ).facetInitHelper(deployer, facetAddress);
+        if (config.length > 0) {
+          addFacet(cut, facetAddress, config);
+        } else {
+          addCut(cut);
+        }
+      }
+    }
+  }
+
+  function diamondInitHelper(
+    address deployer,
+    string[] memory facetNames
+  ) external override returns (FacetCut[] memory) {
+    diamondInitParamsFromFacets(deployer, facetNames);
+    return this.getCuts();
   }
 
   function __deploy(address deployer) public override returns (address) {

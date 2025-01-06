@@ -11,6 +11,9 @@ import type {
     ChannelOp,
     SpacePayload_ChannelSettings,
     ChannelProperties,
+    BlockchainTransaction,
+    UserPayload_ReceivedBlockchainTransaction,
+    BlockchainTransaction_Tip,
 } from '@river-build/proto'
 import type { PlainMessage } from '@bufbuild/protobuf'
 import type { DecryptionSessionError } from '@river-build/encryption'
@@ -37,15 +40,15 @@ export interface TimelineEvent {
     localEventId?: string // if this event was created locally and appended before addEvent, this will be set
     eventNum: bigint
     latestEventId: string // if a message was edited or deleted, this will be set to the latest event id
-    latestEventNum: bigint | undefined // if a message was edited or deleted, this will be set to the latest event id
+    latestEventNum: bigint // if a message was edited or deleted, this will be set to the latest event id
     status: EventStatus
     createdAtEpochMs: number // created at times are generated client side, do not trust them
     updatedAtEpochMs?: number // updated at times are generated client side, do not trust them
     content: TimelineEvent_OneOf | undefined // TODO: would be great to have this non optional
     fallbackContent: string
     isEncrypting: boolean // local only, isLocalPending should also be true
-    // isLocalPending: boolean /// true if we're waiting for the event to get sent back from the server
-    // isSendFailed: boolean
+    isLocalPending: boolean /// true if we're waiting for the event to get sent back from the server
+    isSendFailed: boolean
     confirmedEventNum?: bigint
     confirmedInBlockNum?: bigint
     threadParentId?: string
@@ -61,48 +64,53 @@ export interface TimelineEvent {
 
 /// a timeline event should have one or none of the following fields set
 export type TimelineEvent_OneOf =
-    | MiniblockHeaderEvent
-    | ReactionEvent
+    | ChannelCreateEvent
+    | ChannelMessageEncryptedEvent
+    | ChannelMessageEncryptedRefEvent
+    | ChannelMessageEvent
+    | ChannelMessageMissingEvent
+    | ChannelPropertiesEvent
     | FulfillmentEvent
+    | InceptionEvent
     | KeySolicitationEvent
+    | MiniblockHeaderEvent
+    | MemberBlockchainTransactionEvent
+    | MlsEvent
     | PinEvent
+    | ReactionEvent
     | RedactedEvent
     | RedactionActionEvent
-    | RoomCreateEvent
-    | RoomMessageEncryptedEvent
-    | RoomMessageMissingEvent
-    | RoomMemberEvent
-    | RoomMessageEvent
-    | RoomPropertiesEvent // TODO: maybe change this to ChannelPropertiesEvent (?)
-    | ChannelCreateEvent
-    | SpaceUpdateAutojoinEvent
-    | SpaceUpdateHideUserJoinLeavesEvent
-    | SpaceImageEvent
-    | SpaceUsernameEvent
+    | StreamEncryptionAlgorithmEvent
+    | StreamMembershipEvent
     | SpaceDisplayNameEvent
     | SpaceEnsAddressEvent
+    | SpaceImageEvent
     | SpaceNftEvent
-    | RoomMessageEncryptedRefEvent
+    | SpaceUpdateAutojoinEvent
+    | SpaceUpdateHideUserJoinLeavesEvent
+    | SpaceUsernameEvent
+    | TipEvent
+    | UserBlockchainTransactionEvent
+    | UserReceivedBlockchainTransactionEvent
     | UnpinEvent
 
 export enum RiverTimelineEvent {
-    BlockchainTransaction = 'blockchain.transaction',
-    MiniblockHeader = 'm.miniblockheader',
-    Reaction = 'm.reaction',
+    ChannelCreate = 'm.channel.create',
+    ChannelMessage = 'm.channel.message',
+    ChannelMessageEncrypted = 'm.channel.encrypted',
+    ChannelMessageEncryptedWithRef = 'm.channel.encrypted_with_ref',
+    ChannelMessageMissing = 'm.channel.missing',
+    ChannelProperties = 'm.channel.properties',
     Fulfillment = 'm.fulfillment',
+    Inception = 'm.inception', // TODO: would be great to name this after space / channel name
     KeySolicitation = 'm.key_solicitation',
+    MemberBlockchainTransaction = 'm.member_blockchain_transaction',
+    MiniblockHeader = 'm.miniblockheader',
+    Mls = 'm.mls',
     Pin = 'm.pin',
+    Reaction = 'm.reaction',
     RedactedEvent = 'm.redacted_event',
     RedactionActionEvent = 'm.redaction_action',
-    RoomCreate = 'm.room.create', // TODO: would be great to name this after space / channel name
-    RoomJoinRules = 'm.room.join_rules',
-    RoomMember = 'm.room.member',
-    RoomMessage = 'm.room.message',
-    RoomMessageEncrypted = 'm.room.encrypted',
-    RoomMessageEncryptedWithRef = 'm.room.encrypted_with_ref',
-    RoomMessageMissing = 'm.room.missing',
-    RoomProperties = 'm.room.properties',
-    ChannelCreate = 'm.channel.create',
     SpaceUpdateAutojoin = 'm.space.update_autojoin',
     SpaceUpdateHideUserJoinLeaves = 'm.space.update_channel_hide_user_join_leaves',
     SpaceImage = 'm.space.image',
@@ -110,7 +118,12 @@ export enum RiverTimelineEvent {
     SpaceDisplayName = 'm.space.display_name',
     SpaceEnsAddress = 'm.space.ens_name',
     SpaceNft = 'm.space.nft',
+    StreamEncryptionAlgorithm = 'm.stream_encryption_algorithm',
+    StreamMembership = 'm.stream_membership',
+    TipEvent = 'm.tip_event',
     Unpin = 'm.unpin',
+    UserBlockchainTransaction = 'm.user_blockchain_transaction',
+    UserReceivedBlockchainTransaction = 'm.user_received_blockchain_transaction',
 }
 
 export interface MiniblockHeaderEvent {
@@ -133,8 +146,8 @@ export interface KeySolicitationEvent {
     isNewDevice: boolean
 }
 
-export interface RoomCreateEvent {
-    kind: RiverTimelineEvent.RoomCreate
+export interface InceptionEvent {
+    kind: RiverTimelineEvent.Inception
     creatorId: string
     type?: PayloadCaseType
     spaceId?: string // valid on casablanca channel streams
@@ -208,23 +221,32 @@ export interface UnpinEvent {
     unpinnedEventId: string
 }
 
-export interface RoomMessageEncryptedEvent {
-    kind: RiverTimelineEvent.RoomMessageEncrypted
+export interface MlsEvent {
+    kind: RiverTimelineEvent.Mls
+}
+
+export interface StreamEncryptionAlgorithmEvent {
+    kind: RiverTimelineEvent.StreamEncryptionAlgorithm
+    algorithm?: string
+}
+
+export interface ChannelMessageEncryptedEvent {
+    kind: RiverTimelineEvent.ChannelMessageEncrypted
     error?: DecryptionSessionError
 }
 
-export interface RoomMessageEncryptedRefEvent {
-    kind: RiverTimelineEvent.RoomMessageEncryptedWithRef
+export interface ChannelMessageEncryptedRefEvent {
+    kind: RiverTimelineEvent.ChannelMessageEncryptedWithRef
     refEventId: string
 }
 
-export interface RoomPropertiesEvent {
-    kind: RiverTimelineEvent.RoomProperties
+export interface ChannelPropertiesEvent {
+    kind: RiverTimelineEvent.ChannelProperties
     properties: ChannelProperties
 }
 
-export interface RoomMessageMissingEvent {
-    kind: RiverTimelineEvent.RoomMessageMissing
+export interface ChannelMessageMissingEvent {
+    kind: RiverTimelineEvent.ChannelMessageMissing
     eventId: string
 }
 
@@ -237,12 +259,38 @@ export enum Membership {
     None = '',
 }
 
-export interface RoomMemberEvent {
-    kind: RiverTimelineEvent.RoomMember
+export interface StreamMembershipEvent {
+    kind: RiverTimelineEvent.StreamMembership
     userId: string
     initiatorId: string
     membership: Membership
     streamId?: string // in a case of an invitation to a channel with a streamId
+}
+
+export interface UserBlockchainTransactionEvent {
+    kind: RiverTimelineEvent.UserBlockchainTransaction
+    transaction: PlainMessage<BlockchainTransaction>
+}
+
+export interface UserReceivedBlockchainTransactionEvent {
+    kind: RiverTimelineEvent.UserReceivedBlockchainTransaction
+    receivedTransaction: PlainMessage<UserPayload_ReceivedBlockchainTransaction>
+}
+
+export interface MemberBlockchainTransactionEvent {
+    kind: RiverTimelineEvent.MemberBlockchainTransaction
+    transaction?: PlainMessage<BlockchainTransaction>
+    fromUserId: string
+}
+
+export interface TipEvent {
+    kind: RiverTimelineEvent.TipEvent
+    transaction: PlainMessage<BlockchainTransaction>
+    tip: PlainMessage<BlockchainTransaction_Tip>
+    transactionHash: string
+    fromUserId: string
+    refEventId: string
+    toUserId: string
 }
 
 export enum MessageType {
@@ -251,7 +299,7 @@ export enum MessageType {
     Image = 'm.image',
 }
 
-export interface RoomMessageEventContent_Image {
+export interface ChannelMessageEventContent_Image {
     msgType: MessageType.Image
     info?:
         | ChannelMessage_Post_Content_Image_Info
@@ -261,37 +309,40 @@ export interface RoomMessageEventContent_Image {
         | PlainMessage<ChannelMessage_Post_Content_Image_Info>
 }
 
-export interface RoomMessageEventContent_GM {
+export interface ChannelMessageEventContent_GM {
     msgType: MessageType.GM
     data?: Uint8Array
 }
 
-export interface RoomMessageEventContent_Text {
+export interface ChannelMessageEventContent_Text {
     msgType: MessageType.Text
 }
 
-export type RoomMessageEventContentOneOf =
-    | RoomMessageEventContent_Image
-    | RoomMessageEventContent_GM
-    | RoomMessageEventContent_Text
+export type ChannelMessageEventContentOneOf =
+    | ChannelMessageEventContent_Image
+    | ChannelMessageEventContent_GM
+    | ChannelMessageEventContent_Text
 
-export interface RoomMessageEvent {
-    kind: RiverTimelineEvent.RoomMessage
+export interface Mention {
+    displayName: string
+    userId: string
+    atChannel?: boolean
+}
+
+// mentions should always have a user id, but it's data over the wire
+// and we can't guarantee that it will be there (we have issues in prod as i write this)
+export type OTWMention = Omit<Mention, 'userId'> & { userId?: string }
+
+export interface ChannelMessageEvent {
+    kind: RiverTimelineEvent.ChannelMessage
     threadId?: string
     threadPreview?: string
     replyId?: string
     replyPreview?: string
     body: string
-    mentions: {
-        // mentions should always have a user id, but it's data over the wire
-        // and we can't guarantee that it will be there (we have issues in prod as i write this)
-        // TODO: would be nice to preprocess and dont add the mention if the user id is not there
-        userId: string | undefined
-        displayName: string
-        atChannel?: boolean
-    }[]
+    mentions: OTWMention[]
     editsEventId?: string
-    content: RoomMessageEventContentOneOf
+    content: ChannelMessageEventContentOneOf
     attachments?: Attachment[]
 }
 
@@ -321,7 +372,7 @@ export interface ThreadStatsData {
     latestTs: number
     parentId: string
     parentEvent?: TimelineEvent
-    parentMessageContent?: RoomMessageEvent
+    parentMessageContent?: ChannelMessageEvent
     isParticipating: boolean
 }
 
@@ -380,7 +431,7 @@ export type EmbeddedMessageAttachment = {
     type: 'embedded_message'
     url: string
     post?: ChannelMessage_Post | PlainMessage<ChannelMessage_Post>
-    roomMessageEvent?: RoomMessageEvent
+    channelMessageEvent?: ChannelMessageEvent
     info: PlainMessage<ChannelMessage_Post_Content_EmbeddedMessage_Info>
     staticInfo?: PlainMessage<ChannelMessage_Post_Content_EmbeddedMessage_StaticInfo>
     id: string

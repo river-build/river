@@ -36,6 +36,8 @@ import {
     MemberPayload_KeySolicitation,
     MemberPayload,
     MemberPayload_Nft,
+    BlockchainTransaction,
+    MemberPayload_Mls,
 } from '@river-build/proto'
 import { keccak256 } from 'ethereum-cryptography/keccak'
 import { bin_toHexString } from '@river-build/dlog'
@@ -96,6 +98,19 @@ export type DecryptedTimelineEvent = Omit<
 > & {
     remoteEvent: ParsedEvent
     decryptedContent: DecryptedContent
+}
+
+// ContractReceipt is based off of the ethers ContractReceipt type,
+export type ContractReceipt = {
+    transactionHash: string
+    blockNumber: number
+    to: string
+    from: string
+    logs: {
+        address: string
+        topics: string[]
+        data: string
+    }[]
 }
 
 export function isLocalEvent(event: StreamTimelineEvent): event is LocalTimelineEvent {
@@ -231,6 +246,20 @@ export const make_UserPayload_UserMembershipAction = (
     }
 }
 
+export const make_UserPayload_BlockchainTransaction = (
+    value: PlainMessage<BlockchainTransaction>,
+): PlainMessage<StreamEvent>['payload'] => {
+    return {
+        case: 'userPayload',
+        value: {
+            content: {
+                case: 'blockchainTransaction',
+                value,
+            },
+        },
+    }
+}
+
 export const make_SpacePayload_Inception = (
     value: PlainMessage<SpacePayload_Inception>,
 ): PlainMessage<StreamEvent>['payload'] => {
@@ -324,6 +353,20 @@ export const make_MemberPayload_Unpin = (
             content: {
                 case: 'unpin',
                 value: { eventId },
+            },
+        },
+    }
+}
+
+export const make_MemberPayload_Mls = (
+    value: PlainMessage<MemberPayload_Mls>,
+): PlainMessage<StreamEvent>['payload'] => {
+    return {
+        case: 'memberPayload',
+        value: {
+            content: {
+                case: 'mls',
+                value,
             },
         },
     }
@@ -750,6 +793,22 @@ export const make_ChannelPayload_Redaction = (
                 case: 'redaction',
                 value: {
                     eventId,
+                },
+            },
+        },
+    }
+}
+
+export const make_MemberPayload_EncryptionAlgorithm = (
+    content?: string,
+): PlainMessage<StreamEvent>['payload'] => {
+    return {
+        case: 'memberPayload',
+        value: {
+            content: {
+                case: 'encryptionAlgorithm',
+                value: {
+                    algorithm: content,
                 },
             },
         },

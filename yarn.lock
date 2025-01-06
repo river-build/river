@@ -6434,6 +6434,7 @@ __metadata:
     "@openzeppelin/contracts-upgradeable": ^5.1.0
     "@prb/math": ^4.1.0
     "@prb/test": ^0.6.4
+    "@river-build/diamond": "github:river-build/diamond#5b9f60d7ff0d4ff99c560d95c15a5e7e8caf922a"
     account-abstraction: "github:eth-infinitism/account-abstraction"
     ds-test: "github:dapphub/ds-test"
     forge-std: "github:foundry-rs/forge-std#v1.9.4"
@@ -6441,8 +6442,19 @@ __metadata:
     prettier-plugin-solidity: ^1.4.1
     solady: ^0.0.267
     solhint: ^5.0.3
+    turbo: ^2.0.12
   languageName: unknown
   linkType: soft
+
+"@river-build/diamond@github:river-build/diamond#5b9f60d7ff0d4ff99c560d95c15a5e7e8caf922a":
+  version: 1.1.0
+  resolution: "@river-build/diamond@https://github.com/river-build/diamond.git#commit=5b9f60d7ff0d4ff99c560d95c15a5e7e8caf922a"
+  dependencies:
+    "@openzeppelin/contracts": ^5.1.0
+    solady: ^0.0.281
+  checksum: 2666668787f50af79a76004ccea89798fb362f07eea88557cdcf13a70d1164b2ad58c9278fd19ff5b304d9fc1439d097d57e03676b6c1dfeeb98535dd5059b50
+  languageName: node
+  linkType: hard
 
 "@river-build/dlog@workspace:^, @river-build/dlog@workspace:packages/dlog":
   version: 0.0.0-use.local
@@ -6530,17 +6542,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@river-build/mls-rs-wasm-node@npm:^0.0.4":
-  version: 0.0.4
-  resolution: "@river-build/mls-rs-wasm-node@npm:0.0.4"
-  checksum: 11983d654e4b48f3f5c61a3c662717e9697b72e986e41b19e26876c8f96136ee896e5eaf9ed166273f220d46ed63d41c7a0d55be4af0dbd2571be23c73a835c4
+"@river-build/mls-rs-wasm-node@npm:^0.0.7":
+  version: 0.0.7
+  resolution: "@river-build/mls-rs-wasm-node@npm:0.0.7"
+  checksum: 8450e798b0bb2e8e826f16a63a0bd2f12b678eb0dd419d741b0cf8ad5a290419a95c4c492c0f1cb1fad3b5583a16f8d1cd86b4c8478e4a3cf3fe933b7ff13d0d
   languageName: node
   linkType: hard
 
-"@river-build/mls-rs-wasm@npm:^0.0.4":
-  version: 0.0.4
-  resolution: "@river-build/mls-rs-wasm@npm:0.0.4"
-  checksum: 9cb4cca4222bc260ae880395441b21b75a79486b07aeb0cdc39342ad510e836bd4ec87f93b5fd483da8827f2460cbe588c1e2703d7542be25acffe10f6d78eaa
+"@river-build/mls-rs-wasm@npm:^0.0.9":
+  version: 0.0.9
+  resolution: "@river-build/mls-rs-wasm@npm:0.0.9"
+  checksum: c0221954de5c0b981f656b497e9b72ac3a3c82cb7810c389f4cb25a84ffb1727718342eafc186edeb1b3d14580ff7a1dfb2fbac576cf792ac1054f04b4659cbb
   languageName: node
   linkType: hard
 
@@ -6599,7 +6611,7 @@ __metadata:
     vite-plugin-checker: ^0.8.0
     vite-plugin-node-polyfills: ^0.22.0
     vite-plugin-replace: ^0.1.1
-    vite-plugin-wasm: ^3.3.0
+    vite-plugin-wasm: ^3.4.1
     vite-tsconfig-paths: ^5.1.3
     wagmi: ^2.13.0
     zod: ^3.21.4
@@ -6680,7 +6692,8 @@ __metadata:
     "@ethereumjs/util": ^8.0.1
     "@river-build/dlog": "workspace:^"
     "@river-build/encryption": "workspace:^"
-    "@river-build/mls-rs-wasm": ^0.0.4
+    "@river-build/generated": "workspace:^"
+    "@river-build/mls-rs-wasm": ^0.0.9
     "@river-build/proto": "workspace:^"
     "@river-build/web3": "workspace:^"
     "@testing-library/react": ^14.2.1
@@ -6709,6 +6722,7 @@ __metadata:
     seedrandom: ^3.0.5
     typed-emitter: ^2.1.0
     typescript: ^5.1.6
+    vite-plugin-wasm: ^3.4.1
     vitest: ^2.1.5
   languageName: unknown
   linkType: soft
@@ -6764,7 +6778,7 @@ __metadata:
     "@bufbuild/protobuf": ^1.9.0
     "@river-build/dlog": "workspace:^"
     "@river-build/encryption": "workspace:^"
-    "@river-build/mls-rs-wasm-node": ^0.0.4
+    "@river-build/mls-rs-wasm-node": ^0.0.7
     "@river-build/proto": "workspace:^"
     "@river-build/sdk": "workspace:^"
     "@river-build/web3": "workspace:^"
@@ -26824,6 +26838,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"solady@npm:^0.0.281":
+  version: 0.0.281
+  resolution: "solady@npm:0.0.281"
+  checksum: c36dafdde5d732d13d2f28a1437350ecd2ba71000ab765bc74028d41fbe098bc934714bf28af7323feb5c227d9ab110a015fca8ae077b3ebca6f6dfa01b44224
+  languageName: node
+  linkType: hard
+
 "solhint@npm:^5.0.3":
   version: 5.0.3
   resolution: "solhint@npm:5.0.3"
@@ -29848,12 +29869,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite-plugin-wasm@npm:^3.3.0":
-  version: 3.3.0
-  resolution: "vite-plugin-wasm@npm:3.3.0"
+"vite-plugin-wasm@npm:^3.4.1":
+  version: 3.4.1
+  resolution: "vite-plugin-wasm@npm:3.4.1"
   peerDependencies:
-    vite: ^2 || ^3 || ^4 || ^5
-  checksum: 844034955d6650f89988eebb543e4b3307a54d7b800365052f5b97683223d3b99640ecb22d1fd770e768239576629d975bdefc0c9545999564e206b331f0ac3b
+    vite: ^2 || ^3 || ^4 || ^5 || ^6
+  checksum: 50176a45ae9c185bab8922874d7ab74e85a008cc4896cfff3f2b155c482d8efb5caa50559f0458b1974ac374e52787fa1e979af870a083eedb81a3f512c65b1d
   languageName: node
   linkType: hard
 

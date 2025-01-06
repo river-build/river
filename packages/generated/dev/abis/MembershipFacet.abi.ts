@@ -204,6 +204,19 @@ export default [
   },
   {
     "type": "function",
+    "name": "revenue",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "setMembershipFreeAllocation",
     "inputs": [
       {
@@ -1370,7 +1383,7 @@ export default [
   },
   {
     "type": "error",
-    "name": "ReentrancyGuard__ReentrantCall",
+    "name": "Reentrancy",
     "inputs": []
   },
   {

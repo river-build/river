@@ -125,10 +125,10 @@ func TestStreamReconciliationFromGenesis(t *testing.T) {
 	latestMbNum := int64(0)
 
 	mbRef := MiniblockRefFromCookie(cookie)
-	for range N {
+	for i := range N {
 		require.NoError(addUserBlockedFillerEvent(ctx, wallet, client, streamId, mbRef))
 		mbRef, err = tt.nodes[2].service.mbProducer.TestMakeMiniblock(ctx, streamId, false)
-		require.NoError(err)
+		require.NoError(err, "Failed to make miniblock on round %d", i)
 
 		if mbChain[latestMbNum] != mbRef.Hash {
 			latestMbNum = mbRef.Num
@@ -181,7 +181,7 @@ func TestStreamReconciliationFromGenesis(t *testing.T) {
 // TestStreamReconciliationForKnownStreams ensures that a node reconciles local streams that it already knows
 // but advanced when the node was down.
 func TestStreamReconciliationForKnownStreams(t *testing.T) {
-	t.Skip("SKIPPED: TODO: REPLICATION: fix")
+	//	t.Skip("SKIPPED: TODO: REPLICATION: fix")
 
 	var (
 		opts    = serviceTesterOpts{numNodes: 5, replicationFactor: 5, start: true}

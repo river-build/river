@@ -1,0 +1,103 @@
+{
+  "compiler": {
+    "version": "0.8.24+commit.e11b9ed9"
+  },
+  "language": "Solidity",
+  "output": {
+    "abi": [
+      {
+        "inputs": [],
+        "type": "error",
+        "name": "TownsPoints__CheckInPeriodNotPassed"
+      },
+      {
+        "inputs": [],
+        "type": "error",
+        "name": "TownsPoints__InvalidArrayLength"
+      },
+      {
+        "inputs": [],
+        "type": "error",
+        "name": "TownsPoints__InvalidSpace"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "user",
+            "type": "address",
+            "indexed": true
+          },
+          {
+            "internalType": "uint256",
+            "name": "points",
+            "type": "uint256",
+            "indexed": false
+          },
+          {
+            "internalType": "uint256",
+            "name": "streak",
+            "type": "uint256",
+            "indexed": false
+          },
+          {
+            "internalType": "uint256",
+            "name": "lastCheckIn",
+            "type": "uint256",
+            "indexed": false
+          }
+        ],
+        "type": "event",
+        "name": "CheckedIn",
+        "anonymous": false
+      }
+    ],
+    "devdoc": {
+      "kind": "dev",
+      "methods": {},
+      "version": 1
+    },
+    "userdoc": {
+      "kind": "user",
+      "methods": {},
+      "version": 1
+    }
+  },
+  "settings": {
+    "remappings": [
+      "@openzeppelin/=node_modules/@openzeppelin/",
+      "@prb/math/=node_modules/@prb/math/src/",
+      "@prb/test/=node_modules/@prb/test/src/",
+      "@river-build/diamond/=node_modules/@river-build/diamond/",
+      "account-abstraction/=node_modules/account-abstraction/contracts/",
+      "ds-test/=node_modules/ds-test/src/",
+      "forge-std/=node_modules/forge-std/src/",
+      "hardhat-deploy/=node_modules/hardhat-deploy/",
+      "solady/=node_modules/solady/src/"
+    ],
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "metadata": {
+      "bytecodeHash": "none",
+      "appendCBOR": false
+    },
+    "compilationTarget": {
+      "contracts/src/airdrop/points/ITownsPoints.sol": "ITownsPointsBase"
+    },
+    "evmVersion": "paris",
+    "libraries": {}
+  },
+  "sources": {
+    "contracts/src/airdrop/points/ITownsPoints.sol": {
+      "keccak256": "0xf507ad2a91ab58166c2e850b93085320bc483e12a3fe2aef808c0b254a0b656e",
+      "urls": [
+        "bzz-raw://5dc159159e4cbe755e18661831ce80a4ca183a43edc21a01504585e73e595ebc",
+        "dweb:/ipfs/QmUELy6xZ8fpcpYfV1VV7oGbF5UAButoYteUNMX1ZAUsj7"
+      ],
+      "license": "MIT"
+    }
+  },
+  "version": 1
+}

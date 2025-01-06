@@ -95,13 +95,18 @@ export async function getMiniblocks(
         )
 
         allMiniblocks.push(...miniblocks)
-        currentFromInclusive = nextFromInclusive
 
         // Set the terminus to true if we got at least one response with reached terminus
         // The behaviour around this flag is not implemented yet
         if (terminus && !reachedTerminus) {
             reachedTerminus = true
         }
+
+        if (currentFromInclusive === nextFromInclusive) {
+            break
+        }
+
+        currentFromInclusive = nextFromInclusive
     }
 
     return {
@@ -110,17 +115,13 @@ export async function getMiniblocks(
     }
 }
 
-export async function fetchMiniblocksFromRpc(
+async function fetchMiniblocksFromRpc(
     client: StreamRpcClient,
     streamId: string | Uint8Array,
     fromInclusive: bigint,
     toExclusive: bigint,
     unpackEnvelopeOpts: UnpackEnvelopeOpts | undefined,
-): Promise<{
-    miniblocks: ParsedMiniblock[]
-    terminus: boolean
-    nextFromInclusive: bigint
-}> {
+) {
     const response = await client.getMiniblocks({
         streamId: streamIdAsBytes(streamId),
         fromInclusive,
@@ -133,9 +134,12 @@ export async function fetchMiniblocksFromRpc(
         miniblocks.push(unpackedMiniblock)
     }
 
+    const respondedFromInclusive =
+        miniblocks.length > 0 ? miniblocks[0].header.miniblockNum : fromInclusive
+
     return {
         miniblocks: miniblocks,
         terminus: response.terminus,
-        nextFromInclusive: response.fromInclusive + BigInt(response.miniblocks.length),
+        nextFromInclusive: respondedFromInclusive + BigInt(response.miniblocks.length),
     }
 }
