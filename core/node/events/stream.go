@@ -942,9 +942,10 @@ func (s *streamImpl) getStatus() *streamImplStatus {
 // Note: saving the candidate itself, without applying it, does not modify the stream's in-memory
 // cached state at all.
 func (s *streamImpl) SaveMiniblockCandidate(ctx context.Context, mb *Miniblock) error {
+	expected := int64(-1)
 	mbInfo, err := NewMiniblockInfoFromProto(
 		mb,
-		NewMiniblockInfoFromProtoOpts{ExpectedBlockNumber: -1},
+		NewMiniblockInfoFromProtoOpts{ExpectedBlockNumber: &expected},
 	)
 	if err != nil {
 		return err

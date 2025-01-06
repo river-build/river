@@ -108,12 +108,15 @@ func optsFromPrevMiniblock(prevMb *events.MiniblockInfo) events.NewMiniblockInfo
 	if prevMb.Header().Snapshot != nil {
 		expectedPrevSnapshotNum = prevMb.Header().MiniblockNum
 	}
+	expectedBlockNum := prevMb.Header().MiniblockNum + 1
+	expectedEventNumOffset := prevMb.Header().EventNumOffset + int64(len(prevMb.Events())+1)
+	expectedMinTimestamp := prevMb.Header().Timestamp.AsTime()
 	return events.NewMiniblockInfoFromProtoOpts{
-		ExpectedBlockNumber:               prevMb.Header().MiniblockNum + 1,
-		ExpectedLastMiniblockHash:         prevMb.Ref.Hash,
-		ExpectedEventNumOffset:            prevMb.Header().EventNumOffset + int64(len(prevMb.Events())+1),
-		ExpectedMinimumTimestampExclusive: prevMb.Header().Timestamp.AsTime(),
-		ExpectedPrevSnapshotMiniblockNum:  expectedPrevSnapshotNum,
+		ExpectedBlockNumber:               &expectedBlockNum,
+		ExpectedLastMiniblockHash:         &prevMb.Ref.Hash,
+		ExpectedEventNumOffset:            &expectedEventNumOffset,
+		ExpectedMinimumTimestampExclusive: &expectedMinTimestamp,
+		ExpectedPrevSnapshotMiniblockNum:  &expectedPrevSnapshotNum,
 	}
 }
 

@@ -32,9 +32,10 @@ func MakeGenesisMiniblockForSpaceStream(
 	mb, err := MakeGenesisMiniblock(nodeWallet, []*ParsedEvent{inception})
 	require.NoError(t, err)
 
+	expected := int64(0)
 	mbInfo, err := NewMiniblockInfoFromProto(
 		mb,
-		NewMiniblockInfoFromProtoOpts{ExpectedBlockNumber: 0, DontParseEvents: true},
+		NewMiniblockInfoFromProtoOpts{ExpectedBlockNumber: &expected, DontParseEvents: true},
 	)
 	require.NoError(t, err)
 	return mbInfo
@@ -56,9 +57,10 @@ func MakeGenesisMiniblockForUserSettingsStream(
 	mb, err := MakeGenesisMiniblock(nodeWallet, []*ParsedEvent{inception})
 	require.NoError(t, err)
 
+	expected := int64(0)
 	mbInfo, err := NewMiniblockInfoFromProto(
 		mb,
-		NewMiniblockInfoFromProtoOpts{ExpectedBlockNumber: 0, DontParseEvents: true},
+		NewMiniblockInfoFromProtoOpts{ExpectedBlockNumber: &expected, DontParseEvents: true},
 	)
 	require.NoError(t, err)
 

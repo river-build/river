@@ -165,10 +165,11 @@ func compareStreamMiniblocks(
 	}
 
 	for i, mb := range miniblocks {
+		expected := int64(i)
 		info, err := events.NewMiniblockInfoFromBytesWithOpts(
 			mb,
 			events.NewMiniblockInfoFromProtoOpts{
-				ExpectedBlockNumber: int64(i),
+				ExpectedBlockNumber: &expected,
 				DontParseEvents:     true,
 			},
 		)

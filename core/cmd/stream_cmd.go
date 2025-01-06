@@ -98,10 +98,11 @@ func runStreamGetEventCmd(cmd *cobra.Command, args []string) error {
 
 	for n, miniblock := range miniblocks.Msg.GetMiniblocks() {
 		// Parse header
+		expectedBlockNumber := from + int64(n)
 		info, err := events.NewMiniblockInfoFromProto(
 			miniblock,
 			events.NewMiniblockInfoFromProtoOpts{
-				ExpectedBlockNumber: from + int64(n),
+				ExpectedBlockNumber: &expectedBlockNumber,
 			},
 		)
 		if err != nil {
@@ -201,10 +202,11 @@ func runStreamGetMiniblockCmd(cmd *cobra.Command, args []string) error {
 
 	for n, miniblock := range miniblocks.Msg.GetMiniblocks() {
 		// Parse header
+		expectedBlockNum := from + int64(n)
 		info, err := events.NewMiniblockInfoFromProto(
 			miniblock,
 			events.NewMiniblockInfoFromProtoOpts{
-				ExpectedBlockNumber: from + int64(n),
+				ExpectedBlockNumber: &expectedBlockNum,
 			},
 		)
 		if err != nil {

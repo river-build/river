@@ -115,8 +115,9 @@ func (s *streamCacheImpl) syncStreamFromSinglePeer(
 
 		mbs := make([]*MiniblockInfo, len(mbProtos))
 		for i, mbProto := range mbProtos {
+			expectedBlockNum := currentFromInclusive + int64(i)
 			mb, err := NewMiniblockInfoFromProto(mbProto, NewMiniblockInfoFromProtoOpts{
-				ExpectedBlockNumber: currentFromInclusive + int64(i),
+				ExpectedBlockNumber: &expectedBlockNum,
 			})
 			if err != nil {
 				return currentFromInclusive, err

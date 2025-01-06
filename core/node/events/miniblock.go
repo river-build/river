@@ -186,8 +186,11 @@ func NewMiniblockInfoFromBytes(bytes []byte, expectedBlockNumber int64) (*Minibl
 			Message("Failed to decode miniblock from bytes").
 			Func("NewMiniblockInfoFromBytes")
 	}
-
-	return NewMiniblockInfoFromProto(&pb, NewMiniblockInfoFromProtoOpts{ExpectedBlockNumber: expectedBlockNumber})
+	expected := (*int64)(nil)
+	if expectedBlockNumber > -1 {
+		expected = &expectedBlockNumber
+	}
+	return NewMiniblockInfoFromProto(&pb, NewMiniblockInfoFromProtoOpts{ExpectedBlockNumber: expected})
 }
 
 func NewMiniblockInfoFromBytesWithOpts(bytes []byte, opts NewMiniblockInfoFromProtoOpts) (*MiniblockInfo, error) {
@@ -203,11 +206,11 @@ func NewMiniblockInfoFromBytesWithOpts(bytes []byte, opts NewMiniblockInfoFromPr
 }
 
 type NewMiniblockInfoFromProtoOpts struct {
-	ExpectedBlockNumber               int64
-	ExpectedLastMiniblockHash         common.Hash
-	ExpectedEventNumOffset            int64
-	ExpectedMinimumTimestampExclusive time.Time
-	ExpectedPrevSnapshotMiniblockNum  int64
+	ExpectedBlockNumber               *int64
+	ExpectedLastMiniblockHash         *common.Hash
+	ExpectedEventNumOffset            *int64
+	ExpectedMinimumTimestampExclusive *time.Time
+	ExpectedPrevSnapshotMiniblockNum  *int64
 	DontParseEvents                   bool
 }
 
@@ -217,18 +220,23 @@ type NewMiniblockInfoFromProtoOpts struct {
 func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts) (*MiniblockInfo, error) {
 	headerEvent, err := ParseEvent(pb.Header)
 	if err != nil {
-		return nil, err
+		return nil, AsRiverError(
+			err,
+			Err_BAD_EVENT,
+		).Message("Error parsing header event").
+			Func("NewMiniblockInfoFromProto")
 	}
 
 	blockHeader := headerEvent.Event.GetMiniblockHeader()
 	if blockHeader == nil {
-		return nil, RiverError(Err_BAD_EVENT, "header event must be a block header")
+		return nil, RiverError(Err_BAD_EVENT, "Header event must be a block header").Func("NewMiniblockInfoFromProto")
 	}
 
-	if opts.ExpectedBlockNumber >= 0 && blockHeader.MiniblockNum != int64(opts.ExpectedBlockNumber) {
+	if opts.ExpectedBlockNumber != nil && *opts.ExpectedBlockNumber >= 0 &&
+		blockHeader.MiniblockNum != *opts.ExpectedBlockNumber {
 		return nil, RiverError(Err_BAD_BLOCK_NUMBER, "block number does not equal expected").
 			Func("NewMiniblockInfoFromProto").
-			Tag("expected", opts.ExpectedBlockNumber).
+			Tag("expected", *opts.ExpectedBlockNumber).
 			Tag("actual", blockHeader.MiniblockNum)
 	}
 
@@ -247,7 +255,7 @@ func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts
 	if !opts.DontParseEvents {
 		events, err = ParseEvents(pb.Events)
 		if err != nil {
-			return nil, err
+			return nil, AsRiverError(err, Err_BAD_EVENT_HASH).Func("NewMiniblockInfoFromProto")
 		}
 
 		// Validate event hashes match the hashes stored in the header.
@@ -264,13 +272,13 @@ func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts
 		}
 	}
 
-	if (opts.ExpectedLastMiniblockHash != common.Hash{}) {
+	if opts.ExpectedLastMiniblockHash != nil {
 		if !bytes.Equal(opts.ExpectedLastMiniblockHash[:], blockHeader.PrevMiniblockHash) {
 			return nil, RiverError(
 				Err_BAD_BLOCK,
 				"Last miniblock hash does not equal expected",
 			).Func("NewMiniblockInfoFromProto").
-				Tag("expectedLastMiniblockHash", opts.ExpectedLastMiniblockHash).
+				Tag("expectedLastMiniblockHash", *opts.ExpectedLastMiniblockHash).
 				Tag("prevMiniblockHash", hex.EncodeToString(blockHeader.PrevMiniblockHash))
 		}
 	} else if blockHeader.MiniblockNum == 0 {
@@ -283,13 +291,13 @@ func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts
 		}
 	}
 
-	if opts.ExpectedEventNumOffset > 0 {
-		if opts.ExpectedEventNumOffset != blockHeader.EventNumOffset {
+	if opts.ExpectedEventNumOffset != nil {
+		if *opts.ExpectedEventNumOffset != blockHeader.EventNumOffset {
 			return nil, RiverError(
 				Err_BAD_BLOCK,
 				"Miniblock header eventNumOffset does not equal expected",
 			).Func("NewMiniblockInfoFromProto").
-				Tag("expectedEventNumOffset", opts.ExpectedEventNumOffset).
+				Tag("expectedEventNumOffset", *opts.ExpectedEventNumOffset).
 				Tag("eventNumOffset", blockHeader.EventNumOffset)
 		}
 	} else if blockHeader.MiniblockNum == 0 && blockHeader.EventNumOffset != 0 {
@@ -300,24 +308,24 @@ func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts
 			Tag("eventNumOffset", blockHeader.EventNumOffset)
 	}
 
-	if (opts.ExpectedMinimumTimestampExclusive != time.Time{}) {
-		if !blockHeader.Timestamp.AsTime().After(opts.ExpectedMinimumTimestampExclusive) {
+	if opts.ExpectedMinimumTimestampExclusive != nil {
+		if !blockHeader.Timestamp.AsTime().After(*opts.ExpectedMinimumTimestampExclusive) {
 			return nil, RiverError(
 				Err_BAD_BLOCK,
 				"Expected header timestamp to occur after minimum time",
 			).Func("NewMiniblockInfoFromProto").
 				Tag("headerTimestamp", blockHeader.Timestamp.AsTime()).
-				Tag("minimumTimeExclusive", opts.ExpectedMinimumTimestampExclusive)
+				Tag("minimumTimeExclusive", *opts.ExpectedMinimumTimestampExclusive)
 		}
 	}
 
-	if opts.ExpectedPrevSnapshotMiniblockNum != 0 || blockHeader.MiniblockNum == 0 {
-		if blockHeader.PrevSnapshotMiniblockNum != opts.ExpectedPrevSnapshotMiniblockNum {
+	if opts.ExpectedPrevSnapshotMiniblockNum != nil {
+		if blockHeader.PrevSnapshotMiniblockNum != *opts.ExpectedPrevSnapshotMiniblockNum {
 			return nil, RiverError(
 				Err_BAD_BLOCK,
 				"Previous snapshot miniblock num did not match expected",
 			).Func("NewMiniblockInfoFromProto").
-				Tag("expectedPrevSnapshotMiniblockNum", opts.ExpectedPrevSnapshotMiniblockNum).
+				Tag("expectedPrevSnapshotMiniblockNum", *opts.ExpectedPrevSnapshotMiniblockNum).
 				Tag("prevSnapshotMiniblockNum", blockHeader.PrevSnapshotMiniblockNum)
 		}
 	}
@@ -341,8 +349,8 @@ func NewMiniblocksInfoFromProtos(pbs []*Miniblock, opts NewMiniblockInfoFromProt
 	mbs := make([]*MiniblockInfo, len(pbs))
 	for i, pb := range pbs {
 		o := opts
-		if o.ExpectedBlockNumber >= 0 {
-			o.ExpectedBlockNumber += int64(i)
+		if *o.ExpectedBlockNumber >= 0 {
+			*o.ExpectedBlockNumber += int64(i)
 		}
 		mbs[i], err = NewMiniblockInfoFromProto(pb, o)
 		if err != nil {

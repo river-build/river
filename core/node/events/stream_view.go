@@ -141,9 +141,10 @@ func MakeRemoteStreamView(ctx context.Context, stream *StreamAndCookie) (*stream
 	lastMiniblockNumber := int64(-2)
 	snapshotIndex := 0
 	for i, binMiniblock := range stream.Miniblocks {
+		expected := lastMiniblockNumber + 1
 		miniblock, err := NewMiniblockInfoFromProto(
 			binMiniblock,
-			NewMiniblockInfoFromProtoOpts{ExpectedBlockNumber: lastMiniblockNumber + 1},
+			NewMiniblockInfoFromProtoOpts{ExpectedBlockNumber: &expected},
 		)
 		if err != nil {
 			return nil, err
