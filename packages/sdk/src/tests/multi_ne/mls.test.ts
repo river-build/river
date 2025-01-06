@@ -2,7 +2,7 @@
  * @group main
  */
 
-import { makeTestClient, waitFor } from '../testUtils'
+import { makeTestClient, makeUniqueSpaceStreamId, waitFor } from '../testUtils'
 import { Client } from '../../client'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { MemberPayload_Mls } from '@river-build/proto'
@@ -16,6 +16,7 @@ import {
 } from '@river-build/mls-rs-wasm'
 import { randomBytes } from 'crypto'
 import { bin_equal } from '@river-build/dlog'
+import { makeUniqueChannelStreamId } from '../../id'
 
 describe('mlsTests', () => {
     let clients: Client[] = []
@@ -31,6 +32,8 @@ describe('mlsTests', () => {
     let aliceClient: Client
     let bobMlsClient: MlsClient
     let aliceMlsClient: MlsClient
+    let charlieClient: Client
+    let charlieMlsClient: MlsClient
 
     // state variables
     let streamId: string
@@ -41,13 +44,28 @@ describe('mlsTests', () => {
     beforeAll(async () => {
         bobClient = await makeInitAndStartClient()
         aliceClient = await makeInitAndStartClient()
+        charlieClient = await makeInitAndStartClient()
+
         bobMlsClient = await MlsClient.create(new Uint8Array(randomBytes(32)))
         aliceMlsClient = await MlsClient.create(new Uint8Array(randomBytes(32)))
+        charlieMlsClient = await MlsClient.create(new Uint8Array(randomBytes(32)))
 
-        const { streamId: dmStreamId } = await bobClient.createDMChannel(aliceClient.userId)
-        await bobClient.waitForStream(dmStreamId)
-        await aliceClient.waitForStream(dmStreamId)
-        streamId = dmStreamId
+        const spaceId = makeUniqueSpaceStreamId()
+        await expect(bobClient.createSpace(spaceId)).resolves.not.toThrow()
+
+        const channelId = makeUniqueChannelStreamId(spaceId)
+        await expect(
+            bobClient.createChannel(spaceId, 'Channel', '', channelId),
+        ).resolves.not.toThrow()
+
+        await bobClient.waitForStream(channelId)
+        await aliceClient.joinStream(spaceId)
+        await aliceClient.joinStream(channelId)
+        await aliceClient.waitForStream(channelId)
+        await charlieClient.joinStream(spaceId)
+        await charlieClient.joinStream(channelId)
+        await charlieClient.waitForStream(channelId)
+        streamId = channelId
     })
 
     afterAll(async () => {
@@ -302,17 +320,59 @@ describe('mlsTests', () => {
         expect(bin_equal(mls.groupInfoMessage, latestGroupInfoMessage)).toBe(true)
     })
 
-    test('MLS commits since the last snapshot are snapshotted', async () => {
+    test('MLS commits since the last snapshot are snapshotted (Alice)', async () => {
         const stream = await bobClient.getStream(streamId)
         const miniblockNum = stream.miniblockInfo?.min
         expect(miniblockNum).toBeDefined()
 
+        // we expect Alice's commit to be in there
         const mlsSnapshot = await bobClient.getMlsSnapshot(streamId, miniblockNum!)
         expect(mlsSnapshot.mls).toBeDefined()
-        expect(mlsSnapshot.mls?.commitsSinceLastSnapshot.length).toBe(commits.length)
-        for (let i = 0; i < commits.length; i++) {
-            expect(bin_equal(mlsSnapshot.mls?.commitsSinceLastSnapshot[i], commits[i])).toBe(true)
-        }
+        expect(mlsSnapshot.mls?.commitsSinceLastSnapshot.length).toBe(1)
+        expect(bin_equal(mlsSnapshot.mls?.commitsSinceLastSnapshot[0], commits[0])).toBe(true)
+    })
+
+    test('Clients can join MLS groups at epoch > 1', async () => {
+        // the MLS state has been snapshotted, all commits are now compressed
+        // into stream.membershipContent.mls.externalGroupSnapshot
+        const stream = await charlieClient.getStream(streamId)
+
+        const { commit: charlieCommit, groupInfoMessage: charlieGroupInfoMessage } =
+            await commitExternal(
+                charlieMlsClient,
+                latestGroupInfoMessage,
+                stream.membershipContent.mls.externalGroupSnapshot!,
+            )
+
+        const charlieMlsPayload = makeMlsPayloadExternalJoin(
+            await charlieMlsClient.signaturePublicKey(),
+            charlieCommit,
+            charlieGroupInfoMessage,
+        )
+        await expect(
+            charlieClient._debugSendMls(streamId, charlieMlsPayload),
+        ).resolves.not.toThrow()
+        latestGroupInfoMessage = charlieGroupInfoMessage
+        commits.push(charlieCommit)
+    })
+
+    test('MLS commits since the last snapshot are snapshotted (Charlie)', async () => {
+        // force another snapshot
+        await expect(
+            bobClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true }),
+        ).resolves.not.toThrow()
+
+        const stream = await bobClient.getStream(streamId)
+        const miniblockNum = stream.miniblockInfo?.min
+        expect(miniblockNum).toBeDefined()
+
+        // this time, we onluy expect Charlie's commit to be in there
+        const mlsSnapshot = await bobClient.getMlsSnapshot(streamId, miniblockNum!)
+        expect(mlsSnapshot.mls).toBeDefined()
+        expect(mlsSnapshot.mls?.commitsSinceLastSnapshot.length).toBe(1)
+        expect(
+            bin_equal(mlsSnapshot.mls?.commitsSinceLastSnapshot[0], commits[commits.length - 1]),
+        ).toBe(true)
     })
 
     test('Signature public keys are mapped per user in the snapshot', async () => {
@@ -381,5 +441,28 @@ describe('mlsTests', () => {
         const mls = streamAfterSnapshot.membershipContent.mls
         expect(bin_equal(mls.epochSecrets[1n.toString()], new Uint8Array([1, 2, 3, 4]))).toBe(true)
         expect(bin_equal(mls.epochSecrets[2n.toString()], new Uint8Array([3, 4, 5, 6]))).toBe(true)
+    })
+
+    test('"Close the gap" — roll up all commits from snapshots, check against list of commits', async () => {
+        const stream = await charlieClient.getStream(streamId)
+        expect(stream.miniblockInfo?.min).toBeDefined()
+        let prevSnapshotMiniblockNum = stream.miniblockInfo!.min
+        let snapshottedCommits: Uint8Array[] = []
+        while (prevSnapshotMiniblockNum > 0) {
+            const snapshot = await charlieClient.getMlsSnapshot(streamId, prevSnapshotMiniblockNum)
+            expect(snapshot.mls).toBeDefined()
+            if (snapshot.mls!.commitsSinceLastSnapshot.length > 0) {
+                snapshottedCommits = [
+                    ...snapshot.mls!.commitsSinceLastSnapshot,
+                    ...snapshottedCommits,
+                ]
+            }
+            prevSnapshotMiniblockNum = snapshot.prevSnapshotMiniblockNum
+        }
+
+        expect(snapshottedCommits.length).toBe(commits.length)
+        for (let i = 0; i < snapshottedCommits.length; i++) {
+            expect(bin_equal(snapshottedCommits[i], commits[i])).toBe(true)
+        }
     })
 })

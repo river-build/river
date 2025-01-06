@@ -56,7 +56,6 @@ func (s *Service) localGetMlsSnapshot(
 	req *connect.Request[GetMlsSnapshotRequest],
 	stream SyncStream,
 ) (*connect.Response[GetMlsSnapshotResponse], error) {
-
 	miniblocks, terminus, err := stream.GetMiniblocks(ctx, req.Msg.MiniblockNum, req.Msg.MiniblockNum + 1)
 	if err != nil {
 		return nil, err
