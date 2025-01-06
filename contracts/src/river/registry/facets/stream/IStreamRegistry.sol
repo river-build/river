@@ -76,4 +76,17 @@ interface IStreamRegistry is IStreamRegistryBase {
     uint256 start,
     uint256 stop
   ) external view returns (StreamWithId[] memory, bool);
+
+  // deprecated
+  function getStreamWithGenesis(
+    bytes32 streamId
+  ) external view returns (Stream memory, bytes32, bytes memory);
+
+  function setStreamLastMiniblock(
+    bytes32 streamId,
+    bytes32 prevMiniblockHash,
+    bytes32 lastMiniblockHash,
+    uint64 lastMiniblockNum,
+    bool isSealed
+  ) external;
 }

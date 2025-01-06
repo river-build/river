@@ -44,10 +44,10 @@
   },
   "sources": {
     "contracts/src/river/registry/facets/stream/IStreamRegistry.sol": {
-      "keccak256": "0x992b27ca16746abe046988f79bfe73eff154df986c0adda23265698aefb0f56d",
+      "keccak256": "0x2c4b0c7e0f1066e4d8a47d913493e510ddda3c15047a297dcdc6d835cdfdd4ba",
       "urls": [
-        "bzz-raw://37f6eecc0c4009c1c9c8567ea305af61b6d4d4f307c8115c449534ec5de42b91",
-        "dweb:/ipfs/QmReVocUPNHpbxnYcH1Pua34RgYHEJUpxXatYWzey7pCWE"
+        "bzz-raw://2caf1f42b8ae03a5b394ccc4a7664bf4710e131ace6c84fa47fa6b2662afc35c",
+        "dweb:/ipfs/QmV78ct38KqXWxYUYo65XYrrdxd9fw2JTaiMpwzxp885bv"
       ],
       "license": "MIT"
     },

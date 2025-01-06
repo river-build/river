@@ -25,8 +25,8 @@ contract DeployStreamRegistry is FacetHelper, Deployer {
     addSelector(StreamRegistry.isStream.selector); // returns if stream exists
     addSelector(StreamRegistry.getStreamCountOnNode.selector);
 
-    // addSelector(StreamRegistry.getStreamWithGenesis.selector);
-    // addSelector(StreamRegistry.setStreamLastMiniblock.selector);
+    addSelector(StreamRegistry.getStreamWithGenesis.selector);
+    addSelector(StreamRegistry.setStreamLastMiniblock.selector);
     // addSelector(StreamRegistry.getStreams.selector);
     // addSelector(StreamRegistry.getStreamByIndex.selector);
     // addSelector(StreamRegistry.getAllStreamIds.selector);
