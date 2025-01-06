@@ -162,18 +162,10 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 	defer conn.Release()
 
 	lockId := s.computeLockIdFromSchema()
-
-	count := 0
 	for {
 		// Check for connection health with a ping. Also, maintain the connection in the
 		// case of idle timeouts.
 		err := conn.Ping(ctx)
-		count++
-
-		if count%100 == 0 {
-			log.Debug("DB Ping!", "error", err)
-		}
-
 		if err != nil {
 			// We expect cancellation only on node shutdown. In this case,
 			// do not send an error signal.
@@ -239,10 +231,10 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 					LogError(dlog.FromCtx(ctx))
 				s.exitSignal <- err
 			}
-
-			if err = SleepWithContext(ctx, 1*time.Second); err != nil {
-				return
-			}
+		}
+		// Sleep 1s between polls, being sure to return if the context is cancelled.
+		if err = SleepWithContext(ctx, 1*time.Second); err != nil {
+			return
 		}
 	}
 }
