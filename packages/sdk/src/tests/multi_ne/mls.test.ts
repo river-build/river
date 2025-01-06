@@ -16,6 +16,7 @@ import {
 } from '@river-build/mls-rs-wasm'
 import { randomBytes } from 'crypto'
 import { bin_equal } from '@river-build/dlog'
+import { hexToBytes } from 'ethereum-cryptography/utils'
 
 describe('mlsTests', () => {
     let clients: Client[] = []
@@ -265,6 +266,22 @@ describe('mlsTests', () => {
         )
     })
 
+    test('removing stream members from MLS groups is not allowed', async () => {
+        const bobPayload: PlainMessage<MemberPayload_Mls> = {
+            content: {
+                case: 'commitLeaves',
+                value: {
+                    userAddresses: [hexToBytes(aliceClient.userId)],
+                    commit: new Uint8Array(randomBytes(32)),
+                },
+            },
+        }
+
+        await expect(bobClient._debugSendMls(streamId, bobPayload)).rejects.toThrow(
+            'user is a member',
+        )
+    })
+
     test('Valid external commits are accepted', async () => {
         const { commit: aliceCommit, groupInfoMessage: aliceGroupInfoMessage } =
             await commitExternal(
@@ -364,5 +381,19 @@ describe('mlsTests', () => {
         const mls = streamAfterSnapshot.membershipContent.mls
         expect(bin_equal(mls.epochSecrets[1n.toString()], new Uint8Array([1, 2, 3, 4]))).toBe(true)
         expect(bin_equal(mls.epochSecrets[2n.toString()], new Uint8Array([3, 4, 5, 6]))).toBe(true)
+    })
+
+    test('removing stream members who left MLS groups is allowed', async () => {
+        await expect(aliceClient.leaveStream(streamId)).resolves.not.toThrow()
+        const bobPayload: PlainMessage<MemberPayload_Mls> = {
+            content: {
+                case: 'commitLeaves',
+                value: {
+                    userAddresses: [hexToBytes(aliceClient.userId)],
+                    commit: new Uint8Array(randomBytes(32)),
+                },
+            },
+        }
+        await expect(bobClient._debugSendMls(streamId, bobPayload)).resolves.not.toThrow()
     })
 })

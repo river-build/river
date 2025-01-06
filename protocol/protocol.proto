@@ -248,10 +248,16 @@ message MemberPayload {
             repeated EpochSecret secrets = 1;
         }
 
+        message CommitLeaves {
+            repeated bytes user_addresses = 1;
+            bytes commit = 2;
+        }
+        
         oneof content {
             InitializeGroup initialize_group = 1;
             ExternalJoin external_join = 2;
             EpochSecrets epoch_secrets = 3;
+            CommitLeaves commit_leaves = 4;
         }
     }
 

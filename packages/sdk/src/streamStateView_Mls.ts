@@ -13,6 +13,7 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
     groupInfoMessage?: Uint8Array
     members: { [key: string]: PlainMessage<MemberPayload_Snapshot_Mls_Member> } = {}
     epochSecrets: { [key: string]: Uint8Array } = {}
+    pendingLeaves = new Set<Uint8Array>()
 
     constructor(streamId: string) {
         super()
@@ -58,6 +59,8 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
                         this.epochSecrets[secret.epoch.toString()] = secret.secret
                     }
                 }
+                break
+            case 'commitLeaves':
                 break
             case undefined:
                 break

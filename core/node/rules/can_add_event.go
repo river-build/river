@@ -99,6 +99,11 @@ type aeMlsEpochSecrets struct {
 	secrets *MemberPayload_Mls_EpochSecrets
 }
 
+type aeMlsCommitLeavesRules struct {
+	params       *aeParams
+	commitLeaves *MemberPayload_Mls_CommitLeaves
+}
+
 type aeMediaPayloadChunkRules struct {
 	params *aeParams
 	chunk  *MediaPayload_Chunk
@@ -623,6 +628,16 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 			check(params.creatorIsMember).
 			check(params.mlsInitialized).
 			check(ru.validMlsEpochSecrets)
+	case *MemberPayload_Mls_CommitLeaves_:
+		ru := &aeMlsCommitLeavesRules{
+			params:       params,
+			commitLeaves: content.CommitLeaves,
+		}
+		return aeBuilder().
+			check(params.creatorIsMember).
+			check(params.mlsInitialized).
+			check(ru.validCommitLeaves)
+
 	default:
 		return aeBuilder().
 			fail(unknownContentType(content))
@@ -1469,6 +1484,40 @@ func (ru *aeMlsEpochSecrets) validMlsEpochSecrets() (bool, error) {
 			return false, RiverError(Err_INVALID_ARGUMENT, "epoch already exists", "epoch", secret.Epoch)
 		}
 	}
+	return true, nil
+}
+
+func (ru *aeMlsCommitLeavesRules) validCommitLeaves() (bool, error) {
+	view := ru.params.streamView.(events.MlsStreamView)
+	members, err := view.GetMlsMembers()
+	if err != nil {
+		return false, err
+	}
+
+	for _, userAddress := range ru.commitLeaves.UserAddresses {
+		isMember, err := view.IsMember(userAddress)
+		if err != nil {
+			return false, err
+		}
+		if isMember {
+			return false, RiverError(Err_PERMISSION_DENIED, "user is a member", "user", userAddress)
+		}	
+	}
+
+	publicSignatureKeys := make([][]byte, 0)
+	for _, userAddress := range ru.commitLeaves.UserAddresses {
+		memberAddress := common.BytesToAddress(userAddress).Hex()
+		if keys, ok := members[memberAddress]; ok {
+			for _, key := range keys.SignaturePublicKeys {
+				publicSignatureKeys = append(publicSignatureKeys, key)
+			}
+		}
+	}
+
+	if len(publicSignatureKeys) == 0 {
+		return false, RiverError(Err_INVALID_ARGUMENT, "no public signature keys found")
+	}
+
 	return true, nil
 }
 

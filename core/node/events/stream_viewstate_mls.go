@@ -3,6 +3,7 @@ package events
 import (
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/node/mls_service/mls_tools"
 	"github.com/river-build/river/core/node/protocol"
 )
@@ -12,6 +13,7 @@ type MlsStreamView interface {
 	IsMlsInitialized() (bool, error)
 	GetMlsExternalJoinRequest() (*mls_tools.ExternalJoinRequest, error)
 	GetMlsEpochSecrets() (map[uint64][]byte, error)
+	GetMlsMembers() (map[string]*protocol.MemberPayload_Snapshot_Mls_Member, error)
 }
 
 var _ MlsStreamView = (*streamViewImpl)(nil)
@@ -103,7 +105,7 @@ func (r *streamViewImpl) GetMlsEpochSecrets() (map[uint64][]byte, error) {
 	if epochSecrets == nil {
 		epochSecrets = make(map[uint64][]byte)
 	}
-	updateFn := func(e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error) {
+	updateFn := func(e *ParsedEvent, miniblockNum int64, eventNum int64) (bool, error) {
 		switch payload := e.Event.Payload.(type) {
 		case *protocol.StreamEvent_MemberPayload:
 			switch content := payload.MemberPayload.Content.(type) {
@@ -129,4 +131,48 @@ func (r *streamViewImpl) GetMlsEpochSecrets() (map[uint64][]byte, error) {
 		return nil, err
 	}
 	return epochSecrets, nil
+}
+
+func (r *streamViewImpl) GetMlsMembers() (map[string]*protocol.MemberPayload_Snapshot_Mls_Member, error) {
+	s := r.snapshot
+	mls := s.Members.GetMls()
+	if mls == nil {
+		return nil, fmt.Errorf("MLS not initialized")
+	}
+
+	retVal := mls.GetMembers()
+
+	updateFn := func(e *ParsedEvent, miniblockNum int64, eventNum int64) (bool, error) {
+		switch payload := e.Event.Payload.(type) {
+		case *protocol.StreamEvent_MemberPayload:
+			switch content := payload.MemberPayload.Content.(type) {
+			case *protocol.MemberPayload_Mls_:
+				switch content.Mls.Content.(type) {
+				case *protocol.MemberPayload_Mls_InitializeGroup_:
+					memberAddress := common.BytesToAddress(e.Event.CreatorAddress).Hex()
+					if _, ok := retVal[memberAddress]; !ok {
+						retVal[memberAddress] = &protocol.MemberPayload_Snapshot_Mls_Member{}
+					}
+					retVal[memberAddress].SignaturePublicKeys = append(retVal[memberAddress].SignaturePublicKeys, content.Mls.GetInitializeGroup().SignaturePublicKey)
+				case *protocol.MemberPayload_Mls_ExternalJoin_:
+					memberAddress := common.BytesToAddress(e.Event.CreatorAddress).Hex()
+					if _, ok := retVal[memberAddress]; !ok {
+						retVal[memberAddress] = &protocol.MemberPayload_Snapshot_Mls_Member{}
+					}
+					retVal[memberAddress].SignaturePublicKeys = append(retVal[memberAddress].SignaturePublicKeys, content.Mls.GetExternalJoin().SignaturePublicKey)
+				default:
+					break
+				}
+			}
+		default:
+			break
+		}
+		return true, nil
+	}
+
+	err := r.forEachEvent(r.snapshotIndex+1, updateFn)
+	if err != nil {
+		return nil, err
+	}
+	return retVal, nil
 }
