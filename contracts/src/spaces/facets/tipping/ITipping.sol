@@ -39,7 +39,6 @@ interface ITippingBase {
   // =============================================================
 
   error TokenDoesNotExist();
-  error SenderIsNotMember();
   error ReceiverIsNotMember();
   error CannotTipSelf();
   error AmountIsZero();

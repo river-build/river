@@ -83,12 +83,10 @@ contract TippingFacet is ITipping, ERC721ABase, Facet {
     address receiver,
     address currency,
     uint256 amount
-  ) internal view {
+  ) internal pure {
     if (currency == address(0))
       CustomRevert.revertWith(CurrencyIsZero.selector);
     if (sender == receiver) CustomRevert.revertWith(CannotTipSelf.selector);
     if (amount == 0) CustomRevert.revertWith(AmountIsZero.selector);
-    if (_balanceOf(sender) == 0)
-      CustomRevert.revertWith(SenderIsNotMember.selector);
   }
 }
