@@ -29,6 +29,7 @@ import {
     Tags,
     BlockchainTransaction,
     MemberPayload_Mls,
+    GetMlsSnapshotResponse,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -2500,6 +2501,15 @@ export class Client
         await this.rpcClient.info({ debug: ['drop_stream', syncId, streamId] })
     }
 
+    public async getMlsSnapshot(
+        streamId: string | Uint8Array,
+        miniblockNum: bigint,
+    ): Promise<GetMlsSnapshotResponse> {
+        return await this.rpcClient.getMlsSnapshot({
+            streamId: streamIdAsBytes(streamId),
+            miniblockNum: miniblockNum,
+        })
+    }
     public async _debugSendMls(
         streamId: string | Uint8Array,
         payload: PlainMessage<MemberPayload_Mls>,

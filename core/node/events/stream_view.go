@@ -302,6 +302,13 @@ func (r *streamViewImpl) makeMiniblockHeader(
 	}
 	if proposal.ShouldSnapshot {
 		snapshot = proto.Clone(r.snapshot).(*Snapshot)
+
+		if snapshot.Members.GetMls() == nil {
+			snapshot.Members.Mls = &MemberPayload_Snapshot_Mls{}
+		}
+		// reset the MLS commits
+		snapshot.Members.Mls.CommitsSinceLastSnapshot = make([][]byte, 0)
+
 		mlsSnapshotRequest := r.makeMlsSnapshotRequest()
 
 		// update all blocks since last snapshot

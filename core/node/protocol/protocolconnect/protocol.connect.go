@@ -55,6 +55,9 @@ const (
 	// StreamServiceAddStreamToSyncProcedure is the fully-qualified name of the StreamService's
 	// AddStreamToSync RPC.
 	StreamServiceAddStreamToSyncProcedure = "/river.StreamService/AddStreamToSync"
+	// StreamServiceGetMlsSnapshotProcedure is the fully-qualified name of the StreamService's
+	// GetMlsSnapshot RPC.
+	StreamServiceGetMlsSnapshotProcedure = "/river.StreamService/GetMlsSnapshot"
 	// StreamServiceModifySyncProcedure is the fully-qualified name of the StreamService's ModifySync
 	// RPC.
 	StreamServiceModifySyncProcedure = "/river.StreamService/ModifySync"
@@ -81,6 +84,7 @@ var (
 	streamServiceAddEventMethodDescriptor             = streamServiceServiceDescriptor.Methods().ByName("AddEvent")
 	streamServiceSyncStreamsMethodDescriptor          = streamServiceServiceDescriptor.Methods().ByName("SyncStreams")
 	streamServiceAddStreamToSyncMethodDescriptor      = streamServiceServiceDescriptor.Methods().ByName("AddStreamToSync")
+	streamServiceGetMlsSnapshotMethodDescriptor       = streamServiceServiceDescriptor.Methods().ByName("GetMlsSnapshot")
 	streamServiceModifySyncMethodDescriptor           = streamServiceServiceDescriptor.Methods().ByName("ModifySync")
 	streamServiceCancelSyncMethodDescriptor           = streamServiceServiceDescriptor.Methods().ByName("CancelSync")
 	streamServiceRemoveStreamFromSyncMethodDescriptor = streamServiceServiceDescriptor.Methods().ByName("RemoveStreamFromSync")
@@ -98,6 +102,7 @@ type StreamServiceClient interface {
 	AddEvent(context.Context, *connect.Request[protocol.AddEventRequest]) (*connect.Response[protocol.AddEventResponse], error)
 	SyncStreams(context.Context, *connect.Request[protocol.SyncStreamsRequest]) (*connect.ServerStreamForClient[protocol.SyncStreamsResponse], error)
 	AddStreamToSync(context.Context, *connect.Request[protocol.AddStreamToSyncRequest]) (*connect.Response[protocol.AddStreamToSyncResponse], error)
+	GetMlsSnapshot(context.Context, *connect.Request[protocol.GetMlsSnapshotRequest]) (*connect.Response[protocol.GetMlsSnapshotResponse], error)
 	// ModifySync adds/removes streams to/from an in progress sync session.
 	// The client must check ModifySyncResponse to determine which streams failed to add/remove.
 	//
@@ -168,6 +173,12 @@ func NewStreamServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(streamServiceAddStreamToSyncMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getMlsSnapshot: connect.NewClient[protocol.GetMlsSnapshotRequest, protocol.GetMlsSnapshotResponse](
+			httpClient,
+			baseURL+StreamServiceGetMlsSnapshotProcedure,
+			connect.WithSchema(streamServiceGetMlsSnapshotMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		modifySync: connect.NewClient[protocol.ModifySyncRequest, protocol.ModifySyncResponse](
 			httpClient,
 			baseURL+StreamServiceModifySyncProcedure,
@@ -211,6 +222,7 @@ type streamServiceClient struct {
 	addEvent             *connect.Client[protocol.AddEventRequest, protocol.AddEventResponse]
 	syncStreams          *connect.Client[protocol.SyncStreamsRequest, protocol.SyncStreamsResponse]
 	addStreamToSync      *connect.Client[protocol.AddStreamToSyncRequest, protocol.AddStreamToSyncResponse]
+	getMlsSnapshot       *connect.Client[protocol.GetMlsSnapshotRequest, protocol.GetMlsSnapshotResponse]
 	modifySync           *connect.Client[protocol.ModifySyncRequest, protocol.ModifySyncResponse]
 	cancelSync           *connect.Client[protocol.CancelSyncRequest, protocol.CancelSyncResponse]
 	removeStreamFromSync *connect.Client[protocol.RemoveStreamFromSyncRequest, protocol.RemoveStreamFromSyncResponse]
@@ -258,6 +270,11 @@ func (c *streamServiceClient) AddStreamToSync(ctx context.Context, req *connect.
 	return c.addStreamToSync.CallUnary(ctx, req)
 }
 
+// GetMlsSnapshot calls river.StreamService.GetMlsSnapshot.
+func (c *streamServiceClient) GetMlsSnapshot(ctx context.Context, req *connect.Request[protocol.GetMlsSnapshotRequest]) (*connect.Response[protocol.GetMlsSnapshotResponse], error) {
+	return c.getMlsSnapshot.CallUnary(ctx, req)
+}
+
 // ModifySync calls river.StreamService.ModifySync.
 func (c *streamServiceClient) ModifySync(ctx context.Context, req *connect.Request[protocol.ModifySyncRequest]) (*connect.Response[protocol.ModifySyncResponse], error) {
 	return c.modifySync.CallUnary(ctx, req)
@@ -293,6 +310,7 @@ type StreamServiceHandler interface {
 	AddEvent(context.Context, *connect.Request[protocol.AddEventRequest]) (*connect.Response[protocol.AddEventResponse], error)
 	SyncStreams(context.Context, *connect.Request[protocol.SyncStreamsRequest], *connect.ServerStream[protocol.SyncStreamsResponse]) error
 	AddStreamToSync(context.Context, *connect.Request[protocol.AddStreamToSyncRequest]) (*connect.Response[protocol.AddStreamToSyncResponse], error)
+	GetMlsSnapshot(context.Context, *connect.Request[protocol.GetMlsSnapshotRequest]) (*connect.Response[protocol.GetMlsSnapshotResponse], error)
 	// ModifySync adds/removes streams to/from an in progress sync session.
 	// The client must check ModifySyncResponse to determine which streams failed to add/remove.
 	//
@@ -359,6 +377,12 @@ func NewStreamServiceHandler(svc StreamServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(streamServiceAddStreamToSyncMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	streamServiceGetMlsSnapshotHandler := connect.NewUnaryHandler(
+		StreamServiceGetMlsSnapshotProcedure,
+		svc.GetMlsSnapshot,
+		connect.WithSchema(streamServiceGetMlsSnapshotMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	streamServiceModifySyncHandler := connect.NewUnaryHandler(
 		StreamServiceModifySyncProcedure,
 		svc.ModifySync,
@@ -407,6 +431,8 @@ func NewStreamServiceHandler(svc StreamServiceHandler, opts ...connect.HandlerOp
 			streamServiceSyncStreamsHandler.ServeHTTP(w, r)
 		case StreamServiceAddStreamToSyncProcedure:
 			streamServiceAddStreamToSyncHandler.ServeHTTP(w, r)
+		case StreamServiceGetMlsSnapshotProcedure:
+			streamServiceGetMlsSnapshotHandler.ServeHTTP(w, r)
 		case StreamServiceModifySyncProcedure:
 			streamServiceModifySyncHandler.ServeHTTP(w, r)
 		case StreamServiceCancelSyncProcedure:
@@ -456,6 +482,10 @@ func (UnimplementedStreamServiceHandler) SyncStreams(context.Context, *connect.R
 
 func (UnimplementedStreamServiceHandler) AddStreamToSync(context.Context, *connect.Request[protocol.AddStreamToSyncRequest]) (*connect.Response[protocol.AddStreamToSyncResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.StreamService.AddStreamToSync is not implemented"))
+}
+
+func (UnimplementedStreamServiceHandler) GetMlsSnapshot(context.Context, *connect.Request[protocol.GetMlsSnapshotRequest]) (*connect.Response[protocol.GetMlsSnapshotResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.StreamService.GetMlsSnapshot is not implemented"))
 }
 
 func (UnimplementedStreamServiceHandler) ModifySync(context.Context, *connect.Request[protocol.ModifySyncRequest]) (*connect.Response[protocol.ModifySyncResponse], error) {

@@ -661,6 +661,7 @@ func update_Snapshot_Mls(
 			}
 		}
 		snapshot.Members[memberAddress].SignaturePublicKeys = append(snapshot.Members[memberAddress].SignaturePublicKeys, content.ExternalJoin.SignaturePublicKey)
+		snapshot.CommitsSinceLastSnapshot = append(snapshot.CommitsSinceLastSnapshot, content.ExternalJoin.Commit)
 		return nil
 	case *MemberPayload_Mls_EpochSecrets_:
 		for _, secret := range content.EpochSecrets.Secrets {
