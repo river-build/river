@@ -202,6 +202,9 @@ jobs:
               with:
                   access_token: ${{ github.token }}
 
+            - name: Install Binaries
+              run: sudo apt update && sudo apt-get install -y postgresql-client zstd make gcc netcat
+
             - name: Show PostgreSQL max_connections
               run: psql -h localhost -p 5433 -U postgres -c 'SHOW max_connections;'
               env:
@@ -239,9 +242,6 @@ jobs:
 
             - name: Install Protoc
               uses: arduino/setup-protoc@v3
-
-            - name: Install Binaries
-              run: sudo apt-get update && sudo apt-get -y install make zstd
 
             - uses: actions/setup-node@v4
               with:
@@ -349,6 +349,9 @@ jobs:
               with:
                   access_token: ${{ github.token }}
 
+            - name: Install Binaries
+              run: sudo apt update && sudo apt-get install -y postgresql-client zstd make gcc netcat
+
             - name: Show PostgreSQL max_connections
               run: psql -h localhost -p 5433 -U postgres -c 'SHOW max_connections;'
               env:
@@ -386,9 +389,6 @@ jobs:
 
             - name: Install Protoc
               uses: arduino/setup-protoc@v3
-
-            - name: Install Binaries
-              run: sudo apt-get update && sudo apt-get -y install make zstd
 
             - uses: actions/setup-node@v4
               with:
@@ -494,6 +494,9 @@ jobs:
               with:
                   access_token: ${{ github.token }}
 
+            - name: Install Binaries
+              run: sudo apt update && sudo apt-get install -y postgresql-client zstd make gcc netcat
+
             - name: Show PostgreSQL max_connections
               run: psql -h localhost -p 5433 -U postgres -c 'SHOW max_connections;'
               env:
@@ -531,9 +534,6 @@ jobs:
 
             - name: Install Protoc
               uses: arduino/setup-protoc@v3
-
-            - name: Install Binaries
-              run: sudo apt-get update && sudo apt-get -y install make zstd
 
             - uses: actions/setup-node@v4
               with:
@@ -631,6 +631,9 @@ jobs:
               with:
                   access_token: ${{ github.token }}
 
+            - name: Install Binaries
+              run: sudo apt update && sudo apt-get install -y postgresql-client zstd make gcc netcat
+
             - name: Show PostgreSQL max_connections
               run: psql -h localhost -p 5433 -U postgres -c 'SHOW max_connections;'
               env:
@@ -668,9 +671,6 @@ jobs:
               uses: foundry-rs/foundry-toolchain@v1
               with:
                   version: ${{ env.FOUNDRY_VERSION }}
-
-            - name: Install Binaries
-              run: sudo apt-get update && sudo apt-get -y install make zstd
 
             - name: Print versions
               run: ./scripts/print-versions.sh
@@ -716,6 +716,9 @@ jobs:
 
             - name: Checkout code
               uses: actions/checkout@v4
+
+            - name: Install Binaries
+              run: sudo apt update && sudo apt-get install -y zstd make netcat
 
             - name: Setup Go
               uses: actions/setup-go@v5
