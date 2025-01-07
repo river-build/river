@@ -20,6 +20,7 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
   using EnumerableSet for EnumerableSet.Bytes32Set;
   using EnumerableSet for EnumerableSet.AddressSet;
 
+  /// @inheritdoc IStreamRegistry
   function allocateStream(
     bytes32 streamId,
     address[] memory nodes,
@@ -59,15 +60,18 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
     );
   }
 
+  /// @inheritdoc IStreamRegistry
   function getStream(bytes32 streamId) external view returns (Stream memory) {
     if (!ds.streams.contains(streamId)) revert(RiverRegistryErrors.NOT_FOUND);
     return ds.streamById[streamId];
   }
 
+  /// @inheritdoc IStreamRegistry
   function isStream(bytes32 streamId) external view returns (bool) {
     return ds.streams.contains(streamId);
   }
 
+  /// @inheritdoc IStreamRegistry
   function setStreamLastMiniblockBatch(
     SetMiniblock[] calldata miniblocks
   ) external onlyNode(msg.sender) {
@@ -142,7 +146,7 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
     }
   }
 
-  /// @dev Deprecated
+  /// @inheritdoc IStreamRegistry
   function setStreamLastMiniblock(
     bytes32 streamId,
     bytes32, // prevMiniblockHash
@@ -187,8 +191,7 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
     );
   }
 
-  /// @return stream, genesisMiniblockHash, genesisMiniblock
-  /// @dev Deprecated
+  /// @inheritdoc IStreamRegistry
   function getStreamWithGenesis(
     bytes32 streamId
   ) external view returns (Stream memory, bytes32, bytes memory) {
@@ -201,10 +204,12 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
     );
   }
 
+  /// @inheritdoc IStreamRegistry
   function getStreamCount() external view returns (uint256) {
     return ds.streams.length();
   }
 
+  /// @inheritdoc IStreamRegistry
   function getStreamCountOnNode(
     address nodeAddress
   ) external view returns (uint256) {
@@ -224,6 +229,7 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
     return count;
   }
 
+  /// @inheritdoc IStreamRegistry
   function getPaginatedStreams(
     uint256 start,
     uint256 stop
@@ -244,6 +250,7 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
     return (streams, stop >= streamCount);
   }
 
+  /// @inheritdoc IStreamRegistry
   function placeStreamOnNode(
     bytes32 streamId,
     address nodeAddress
@@ -263,6 +270,7 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
     emit StreamPlacementUpdated(streamId, nodeAddress, true);
   }
 
+  /// @inheritdoc IStreamRegistry
   function removeStreamFromNode(
     bytes32 streamId,
     address nodeAddress
