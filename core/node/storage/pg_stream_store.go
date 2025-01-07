@@ -467,7 +467,12 @@ func (s *PostgresStreamStore) lockStream(
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, RiverError(Err_NOT_FOUND, "Stream not found", "streamId", streamId)
+			return 0, RiverError(
+				Err_NOT_FOUND,
+				"Stream not found",
+				"streamId",
+				streamId,
+			).Func("PostgresStreamStore.lockStream")
 		}
 		return 0, err
 	}
@@ -2026,18 +2031,18 @@ func (s *PostgresStreamStore) getLastMiniblockNumberTx(
 	err = tx.QueryRow(
 		ctx,
 		s.sqlForStream(
-			"SELECT MAX(seq_num) FROM {{miniblocks}} WHERE stream_id = $1",
+			"SELECT COALESCE(MAX(seq_num), -1) FROM {{miniblocks}} WHERE stream_id = $1",
 			streamID,
 		),
 		streamID,
 	).Scan(&maxSeqNum)
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return 0, RiverError(Err_INTERNAL, "Stream exists in es table, but no miniblocks in DB")
-		}
 		return 0, err
 	}
 
+	if maxSeqNum == -1 {
+		return 0, RiverError(Err_INTERNAL, "Stream exists in es table, but no miniblocks in DB")
+	}
 	return maxSeqNum, nil
 }
 

@@ -253,6 +253,7 @@ func NewArchiveStream(streamId StreamId, nn *[]common.Address, lastKnownMinibloc
 	}
 	stream.numBlocksInContract.Store(int64(lastKnownMiniblock + 1))
 	stream.numBlocksInDb.Store(-1)
+	stream.mostRecentScrubbedBlock.Store(-1)
 	// Set circular reference
 	stream.corrupt.parent = stream
 
@@ -648,6 +649,15 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) (er
 
 func (a *Archiver) Start(ctx context.Context, once bool, metrics infra.MetricsFactory, exitSignal chan<- error) {
 	defer a.startedWG.Done()
+
+	// We're not concerned about cancelling these contexts because they will automatically
+	// be cancelled when the parent is cancelled. We just want independent Done channels.
+	child, _ := context.WithCancel(ctx)
+	go a.processScrubReports(ctx)
+
+	child, _ = context.WithCancel(ctx)
+	go a.processMiniblockScrubs(child)
+
 	err := a.startImpl(ctx, once, metrics)
 	if err != nil {
 		exitSignal <- err
@@ -710,21 +720,33 @@ func (a *Archiver) processMiniblockScrubs(ctx context.Context) {
 				return true
 			}
 
-			mostRecentScrubbedBlock := as.mostRecentScrubbedBlock.Load()
+			firstUnscrubbedBlock := as.mostRecentScrubbedBlock.Load() + 1
+			numBlocksInDb := as.numBlocksInDb.Load()
 			// Don't bother scrubbing if we've run out of (non-corrupted) blocks to scrub
-			if (as.corrupt.IsCorrupt() && as.corrupt.GetFirstCorruptBlock() == mostRecentScrubbedBlock+1) ||
-				(mostRecentScrubbedBlock == as.numBlocksInDb.Load()) {
+			if (as.corrupt.IsCorrupt() && as.corrupt.GetFirstCorruptBlock() == firstUnscrubbedBlock) ||
+				(firstUnscrubbedBlock >= numBlocksInDb) {
 				as.scrubInProgress.Store(false)
 				return true
 			}
 
-			err := a.scrubber.ScheduleStreamMiniblocksScrub(ctx, as.streamId, as.mostRecentScrubbedBlock.Load())
+			dlog.FromCtx(ctx).
+				Info(
+					"Scheduling scrub for stream",
+					"firstUnscrubbedBlock",
+					firstUnscrubbedBlock,
+					"numBlocksInDb",
+					numBlocksInDb,
+					"streamId",
+					as.streamId,
+				)
+			err := a.scrubber.ScheduleStreamMiniblocksScrub(ctx, as.streamId, firstUnscrubbedBlock)
 			if err != nil {
 				as.scrubInProgress.Store(false)
 				dlog.FromCtx(ctx).
-					Error("Failed to schedule scrub", "error", err, "streamId", as.streamId.String())
+					Error("Failed to schedule scrub", "error", err, "streamId", as.streamId.String(), "firstUnscrubbedBlock", firstUnscrubbedBlock)
 				return true
 			} else {
+				dlog.FromCtx(ctx).Debug("Scheduled stream miniblock scrub", "streamId", as.streamId, "firstUnscrubbedBlock", firstUnscrubbedBlock)
 				a.scrubsInProgress.Add(1)
 			}
 
