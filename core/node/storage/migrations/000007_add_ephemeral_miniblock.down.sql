@@ -14,8 +14,8 @@ DO $$
         FOR i IN 0.. numPartitions LOOP
             suffix = LPAD(TO_HEX(i), 2, '0');
 
-            EXECUTE 'ALTER TABLE miniblocks_m' || suffix || ' DROP COLUMN ephemeral;';
-            EXECUTE 'ALTER TABLE miniblocks_r' || suffix || ' DROP COLUMN ephemeral;';
+            EXECUTE 'ALTER TABLE miniblocks_m' || suffix || ' DROP COLUMN COLUMN IF EXISTS ephemeral;';
+            EXECUTE 'ALTER TABLE miniblocks_r' || suffix || ' DROP COLUMN COLUMN IF EXISTS ephemeral;';
         END LOOP;
 
     END;

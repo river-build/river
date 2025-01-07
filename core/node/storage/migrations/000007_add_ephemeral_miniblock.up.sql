@@ -14,8 +14,8 @@ DO $$
         FOR i IN 0.. numPartitions LOOP
                 suffix = LPAD(TO_HEX(i), 2, '0');
 
-                EXECUTE 'ALTER TABLE miniblocks_m' || suffix || ' ADD ephemeral BOOLEAN DEFAULT NULL;';
-                EXECUTE 'ALTER TABLE miniblocks_r' || suffix || ' ADD ephemeral BOOLEAN DEFAULT NULL;';
+                EXECUTE 'ALTER TABLE miniblocks_m' || suffix || ' ADD COLUMN IF NOT EXISTS ephemeral BOOLEAN DEFAULT NULL;';
+                EXECUTE 'ALTER TABLE miniblocks_r' || suffix || ' ADD COLUMN IF NOT EXISTS ephemeral BOOLEAN DEFAULT NULL;';
         END LOOP;
 
     END;
