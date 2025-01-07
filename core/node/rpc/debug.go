@@ -10,6 +10,7 @@ import (
 	"runtime"
 	runtimePProf "runtime/pprof"
 	"slices"
+	"sort"
 	"strings"
 	"time"
 
@@ -20,12 +21,9 @@ import (
 	. "github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/rpc/render"
-<<<<<<< HEAD
+	"github.com/river-build/river/core/node/scrub"
 	"github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
-=======
-	"github.com/river-build/river/core/node/scrub"
->>>>>>> eb0616a2 (Partial work - expose corrupt streams on a debug endpoint.)
 )
 
 type debugHandler struct {
@@ -122,7 +120,23 @@ func (h *corruptStreamsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 		reply render.CorruptStreamData
 	)
 
-	reply.Streams = h.service.GetCorruptStreams(ctx)
+	corruptStreams := h.service.GetCorruptStreams(ctx)
+	reply.Streams = make([]render.DebugCorruptStreamRecord, len(corruptStreams))
+	for i, stream := range corruptStreams {
+		addressStrings := make([]string, len(stream.Nodes), 0)
+		for _, node := range stream.Nodes {
+			addressStrings = append(addressStrings, node.String())
+		}
+		sort.Strings(addressStrings)
+		reply.Streams[i] = render.DebugCorruptStreamRecord{
+			StreamId:             stream.StreamId.String(),
+			Nodes:                strings.Join(addressStrings, ","),
+			MostRecentBlock:      stream.MostRecentBlock,
+			MostRecentLocalBlock: stream.MostRecentLocalBlock,
+			FirstCorruptBlock:    stream.FirstCorruptBlock,
+			CorruptionReason:     stream.CorruptionReason,
+		}
+	}
 	output, err := render.Execute(&reply)
 	if err != nil {
 		dlog.FromCtx(ctx).Error("unable to render stack data", "err", err)

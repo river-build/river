@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -234,6 +235,9 @@ type ArchiveStream struct {
 	numBlocksInContract atomic.Int64
 	numBlocksInDb       atomic.Int64 // -1 means not loaded
 
+	scrubInProgress         atomic.Bool
+	mostRecentScrubbedBlock atomic.Int64
+
 	corrupt StreamCorruptionTracker
 
 	// Mutex is used so only one archive operation is performed at a time.
@@ -263,7 +267,7 @@ type Archiver struct {
 
 	// Miniblock scrubbing
 	scrubber scrub.MiniblockScrubber
-	reports  chan<- *scrub.MiniblockScrubReport
+	reports  <-chan *scrub.MiniblockScrubReport
 
 	// Task management
 	tasks     chan StreamId
@@ -287,6 +291,7 @@ type Archiver struct {
 	newStreamAllocated         atomic.Uint64
 	streamPlacementUpdated     atomic.Uint64
 	streamLastMiniblockUpdated atomic.Uint64
+	scrubsInProgress           atomic.Int64
 
 	// metrics
 	nodeAdvances *prometheus.CounterVec
@@ -387,6 +392,13 @@ func (a *Archiver) setupStatisticsMetrics(factory infra.MetricsFactory) {
 			Help: "Total miniblock update events",
 		},
 		func() float64 { return float64(a.streamLastMiniblockUpdated.Load()) },
+	)
+	factory.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "stats_scrubber_streams_in_progress",
+			Help: "Total number of stream miniblock scrubs in progress",
+		},
+		func() float64 { return float64(a.scrubsInProgress.Load()) },
 	)
 
 	a.nodeAdvances = factory.NewCounterVecEx(
@@ -639,6 +651,85 @@ func (a *Archiver) Start(ctx context.Context, once bool, metrics infra.MetricsFa
 	err := a.startImpl(ctx, once, metrics)
 	if err != nil {
 		exitSignal <- err
+	}
+}
+
+// processScrubReports continuously reads scrub reports and updates the archive stream's state until
+// the context expires or is cancelled.
+func (a *Archiver) processScrubReports(ctx context.Context) {
+	for {
+		select {
+		case report := <-a.reports:
+			a.scrubsInProgress.Add(-1)
+			value, ok := a.streams.Load(report.StreamId)
+			if !ok {
+				dlog.FromCtx(ctx).
+					Error("No stream found in cache for scrubbed stream report", "streamId", report.StreamId)
+				continue
+			}
+			as, ok := value.(*ArchiveStream)
+			if !ok {
+				dlog.FromCtx(ctx).
+					Error("Cached object for stream id is not an ArchiveStream", "streamId", report.StreamId)
+				continue
+			}
+
+			if report.ScrubError != nil && report.FirstCorruptBlock != -1 {
+				as.corrupt.MarkBlockCorrupt(report.FirstCorruptBlock, report.ScrubError)
+				as.mostRecentScrubbedBlock.Store(report.LatestBlockScrubbed)
+				as.scrubInProgress.Store(false)
+			}
+
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (a *Archiver) processMiniblockScrubs(ctx context.Context) {
+	for {
+		// Terminate the go process if the context has expired
+		if errors.Is(ctx.Err(), context.Canceled) || errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return
+		}
+
+		a.streams.Range(func(key, value interface{}) bool {
+			// Bail early if the context has expired
+			if errors.Is(ctx.Err(), context.Canceled) || errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				return false
+			}
+
+			as, ok := value.(*ArchiveStream)
+			if !ok {
+				dlog.FromCtx(ctx).Error("Expected archive stream in stream cache", "key", key)
+				return true
+			}
+
+			alreadyInProgress := as.scrubInProgress.Swap(true)
+			if alreadyInProgress {
+				return true
+			}
+
+			mostRecentScrubbedBlock := as.mostRecentScrubbedBlock.Load()
+			// Don't bother scrubbing if we've run out of (non-corrupted) blocks to scrub
+			if (as.corrupt.IsCorrupt() && as.corrupt.GetFirstCorruptBlock() == mostRecentScrubbedBlock+1) ||
+				(mostRecentScrubbedBlock == as.numBlocksInDb.Load()) {
+				as.scrubInProgress.Store(false)
+				return true
+			}
+
+			err := a.scrubber.ScheduleStreamMiniblocksScrub(ctx, as.streamId, as.mostRecentScrubbedBlock.Load())
+			if err != nil {
+				as.scrubInProgress.Store(false)
+				dlog.FromCtx(ctx).
+					Error("Failed to schedule scrub", "error", err, "streamId", as.streamId.String())
+				return true
+			} else {
+				a.scrubsInProgress.Add(1)
+			}
+
+			return true
+		})
 	}
 }
 
