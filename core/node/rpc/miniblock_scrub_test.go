@@ -16,7 +16,6 @@ import (
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/scrub"
-	"github.com/river-build/river/core/node/shared"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/node/testutils"
@@ -165,7 +164,7 @@ func createMultiblockChannelStream(
 	client protocolconnect.StreamServiceClient,
 	store storage.StreamStorage,
 ) (
-	streamId shared.StreamId,
+	streamId StreamId,
 	mb1 *events.MiniblockInfo,
 	blocks [][]byte,
 ) {
@@ -238,7 +237,7 @@ func writeStreamBackToStore(
 	require *require.Assertions,
 	client protocolconnect.StreamServiceClient,
 	store storage.StreamStorage,
-	streamId shared.StreamId,
+	streamId StreamId,
 	mb1 *events.MiniblockInfo,
 	blocks [][]byte,
 ) {
@@ -340,6 +339,7 @@ func invalidateBlockNumber(require *require.Assertions, wallet *crypto.Wallet, b
 	)
 	require.NoError(err)
 	modHeaderEvent, err := events.MakeEnvelopeWithEvent(wallet, modStreamEvent)
+	require.NoError(err)
 	pb.Header = modHeaderEvent
 
 	// Return updated bytes
@@ -385,6 +385,7 @@ func invalidatePrevMiniblockHash(require *require.Assertions, wallet *crypto.Wal
 	)
 	require.NoError(err)
 	modHeaderEvent, err := events.MakeEnvelopeWithEvent(wallet, modStreamEvent)
+	require.NoError(err)
 	pb.Header = modHeaderEvent
 
 	// Return updated bytes
@@ -417,6 +418,7 @@ func invalidateEventNumOffset(require *require.Assertions, wallet *crypto.Wallet
 	)
 	require.NoError(err)
 	modHeaderEvent, err := events.MakeEnvelopeWithEvent(wallet, modStreamEvent)
+	require.NoError(err)
 	pb.Header = modHeaderEvent
 
 	// Return updated bytes
@@ -453,6 +455,7 @@ func invalidateBlockTimestamp(require *require.Assertions, wallet *crypto.Wallet
 	)
 	require.NoError(err)
 	modHeaderEvent, err := events.MakeEnvelopeWithEvent(wallet, modStreamEvent)
+	require.NoError(err)
 	pb.Header = modHeaderEvent
 
 	// Return updated bytes
@@ -485,6 +488,7 @@ func invalidatePrevSnapshotBlockNum(require *require.Assertions, wallet *crypto.
 	)
 	require.NoError(err)
 	modHeaderEvent, err := events.MakeEnvelopeWithEvent(wallet, modStreamEvent)
+	require.NoError(err)
 	pb.Header = modHeaderEvent
 
 	// Return updated bytes
