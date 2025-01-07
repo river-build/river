@@ -65,10 +65,8 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 	remotes, _ := r.nodes.GetRemotesAndIsLocal()
 
 	// TODO: Implement the following in the block producer:
-	// 1. Get proposals from local and remote
-	// 2. Combine proposals
-	// 3. Create a miniblock
-	// 4. Same the given miniblock in ephemenral state
+	// 1. Build a miniblock from the current minipool events for the given stream
+	// 2. Save the given miniblock in ephemenral state
 
 	sender := NewQuorumPool("method", "replicatedStream.AddMediaEvent", "streamId", r.streamId)
 
