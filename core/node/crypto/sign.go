@@ -283,7 +283,11 @@ func (w *Wallet) SaveWallet(
 }
 
 func (w *Wallet) SignHash(hash []byte) ([]byte, error) {
-	return crypto.Sign(hash, w.PrivateKey)
+	privateKey, err := crypto.ToECDSA(w.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	return crypto.Sign(hash, privateKey)
 }
 
 func RecoverSignerPublicKey(hash []byte, signature []byte) ([]byte, error) {
