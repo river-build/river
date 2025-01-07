@@ -1,24 +1,29 @@
-// An implementation of group state storage from mls-rs-wasm
+/// An implementation of group state storage from mls-rs-wasm
 
 import { EpochRecord, IGroupStateStorage } from '@river-build/mls-rs-wasm'
 import Dexie from 'dexie'
 import { bin_toString } from '@river-build/dlog'
 
+/// GroupStateId is a branded string to avoid accidental use of an ordinary
+/// string as a group state id. Brand exists only during compile-time and
+// does not occur any run-time cost.
 type GroupStateId = string & { __brand: 'GroupStateId' }
 
-function uint8ArrayToSafeString(arr: Uint8Array): string {
-    // Convert Uint8Array to a binary string
+/// Convert uint8Array to Base64 string
+function uint8ArrayToBase64(arr: Uint8Array): string {
+    // Convert Uint8Array to a raw binary string
     const binaryString = Array.from(arr, (byte) => String.fromCharCode(byte)).join('')
     // Encode the binary string as Base64
     return btoa(binaryString)
 }
 
+/// Convert uint8Array to GroupStateId
 function groupStateId(groupId: Uint8Array): GroupStateId {
-    const base64GroupId = uint8ArrayToSafeString(groupId)
+    const base64GroupId = uint8ArrayToBase64(groupId)
     return base64GroupId as GroupStateId
 }
 
-// Basic in memory group state storage that does not implement any trimming
+/// Basic in-memory group state storage
 export class InMemoryGroupStateStorage implements IGroupStateStorage {
     groupStates: Map<GroupStateId, Uint8Array> = new Map()
     epochStorage: Map<GroupStateId, Map<bigint, Uint8Array>> = new Map()
@@ -97,7 +102,7 @@ export class InMemoryGroupStateStorage implements IGroupStateStorage {
     }
 }
 
-// Basic Dexie based storage that does not implement any trimming
+// Dexie-based GroupStateStorage
 export class DexieGroupStateStorage extends Dexie implements IGroupStateStorage {
     private groupStates!: Dexie.Table<{ groupId: string; data: Uint8Array; maxEpochId: string }>
     private epochs!: Dexie.Table<{ groupId: string; epochId: string; data: Uint8Array }>
