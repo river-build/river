@@ -1513,9 +1513,7 @@ func (ru *aeMlsCommitLeavesRules) validCommitLeaves() (bool, error) {
 	for _, userAddress := range ru.commitLeaves.UserAddresses {
 		memberAddress := common.BytesToAddress(userAddress).Hex()
 		if keys, ok := members[memberAddress]; ok {
-			for _, key := range keys.SignaturePublicKeys {
-				signaturePublicKeys = append(signaturePublicKeys, key)
-			}
+			signaturePublicKeys = append(signaturePublicKeys, keys.SignaturePublicKeys...)
 		}
 	}
 
