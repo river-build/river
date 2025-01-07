@@ -31,7 +31,7 @@ func GetDefaultConfig() *Config {
 			BlockTimeMs: 2000,
 			TransactionPool: TransactionPoolConfig{
 				TransactionTimeout:               6 * time.Second,
-				GasFeeCap:                        150_000_000_000, // 150 Gwei
+				GasFeeCap:                        1_000_000, // 0.001 Gwei
 				MinerTipFeeReplacementPercentage: 10,
 				GasFeeIncreasePercentage:         10,
 			},
@@ -64,6 +64,7 @@ func GetDefaultConfig() *Config {
 			PProf:                 false,
 			Stacks:                true,
 			StacksMaxSizeKb:       5 * 1024,
+			Stream:                true,
 			TxPool:                true,
 			EnableStorageEndpoint: true,
 		},
@@ -445,6 +446,7 @@ type DebugEndpointsConfig struct {
 	PProf           bool
 	Stacks          bool
 	StacksMaxSizeKb int
+	Stream          bool
 	TxPool          bool
 
 	// Make storage statistics available via debug endpoints. This may involve running queries

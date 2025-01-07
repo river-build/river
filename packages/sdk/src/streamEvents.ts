@@ -5,6 +5,7 @@ import {
     UserSettingsPayload_UserBlock,
     UserPayload_UserMembership,
     UserInboxPayload_Snapshot_DeviceSummary,
+    BlockchainTransaction_Tip,
 } from '@river-build/proto'
 
 import {
@@ -52,6 +53,21 @@ export type StreamEncryptionEvents = {
         }[],
     ) => void
     userDeviceKeyMessage: (streamId: string, userId: string, userDevice: UserDevice) => void
+    // MLS-specific encryption events
+    mlsNewEncryptedContent: (streamId: string, eventId: string, content: EncryptedContent) => void
+    mlsInitializeGroup: (
+        streamId: string,
+        groupInfoMessage: Uint8Array,
+        externalGroupSnapshot: Uint8Array,
+        signaturePublicKey: Uint8Array,
+    ) => void
+    mlsExternalJoin: (
+        streamId: string,
+        signaturePublicKey: Uint8Array,
+        commit: Uint8Array,
+        groupInfoMessage: Uint8Array,
+    ) => void
+    mlsEpochSecrets: (streamId: string, secrets: { epoch: bigint; secret: Uint8Array }[]) => void
 }
 
 export type SyncedStreamEvents = {
@@ -80,6 +96,13 @@ export type StreamStateEvents = {
         summary: UserInboxPayload_Snapshot_DeviceSummary,
     ) => void
     userDeviceKeysUpdated: (streamId: string, deviceKeys: UserDevice[]) => void
+    userTipSent: (streamId: string, currency: string, amount: bigint) => void
+    userTipReceived: (streamId: string, currency: string, amount: bigint) => void
+    streamTipped: (
+        streamId: string,
+        eventId: string,
+        transaction: BlockchainTransaction_Tip,
+    ) => void
     spaceChannelCreated: (spaceId: string, channelId: string) => void
     spaceChannelUpdated: (spaceId: string, channelId: string, updatedAtEventNum: bigint) => void
     spaceChannelAutojoinUpdated: (spaceId: string, channelId: string, autojoin: boolean) => void

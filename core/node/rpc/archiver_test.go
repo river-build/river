@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gammazero/workerpool"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/river-build/river/core/contracts/river"
@@ -44,7 +46,11 @@ func fillUserSettingsStreamWithData(
 					err,
 					Err_INTERNAL,
 				).Message("Failed to add event to stream").
-					Func("fillUserSettingsStreamWithData")
+					Func("fillUserSettingsStreamWithData").
+					Tag("streamId", streamId).
+					Tag("miniblockNum", i).
+					Tag("mbEventNum", j).
+					Tag("numMbs", numMBs)
 			}
 		}
 		prevMB, err = makeMiniblock(ctx, client, streamId, false, prevMB.Num)
@@ -53,7 +59,10 @@ func fillUserSettingsStreamWithData(
 				err,
 				Err_INTERNAL,
 			).Message("Failed to create miniblock").
-				Func("fillUserSettingsStreamWithData")
+				Func("fillUserSettingsStreamWithData").
+				Tag("streamId", streamId).
+				Tag("miniblockNum", i).
+				Tag("numMbs", numMBs)
 		}
 	}
 	return prevMB, nil
@@ -70,12 +79,10 @@ func createUserSettingsStreamsWithData(
 	streamIds := make([]StreamId, numStreams)
 	errChan := make(chan error, numStreams)
 
-	var wg sync.WaitGroup
-	wg.Add(numStreams)
+	wp := workerpool.New(10)
 
 	for i := 0; i < numStreams; i++ {
-		go func(i int) {
-			defer wg.Done()
+		wp.Submit(func() {
 			wallet, err := crypto.NewWallet(ctx)
 			if err != nil {
 				errChan <- err
@@ -90,20 +97,29 @@ func createUserSettingsStreamsWithData(
 				&StreamSettings{DisableMiniblockCreation: true},
 			)
 			if err != nil {
-				errChan <- AsRiverError(err, Err_INTERNAL).Message("Failed to create stream").Func("createUserSettingsStreamsWithData")
+				errChan <- AsRiverError(err, Err_INTERNAL).
+					Message("Failed to create stream").
+					Func("createUserSettingsStreamsWithData").
+					Tag("streamNum", i).
+					Tag("streamId", streamId)
 				return
 			}
 			streamIds[i] = streamId
 
 			_, err = fillUserSettingsStreamWithData(ctx, streamId, wallet, client, numMBs, numEventsPerMB, mbRef)
 			if err != nil {
-				errChan <- AsRiverError(err, Err_INTERNAL).Message("Failed to fill stream with data").Func("createUserSettingsStreamsWithData")
+				errChan <- AsRiverError(err, Err_INTERNAL).
+					Message("Failed to fill stream with data").
+					Func("createUserSettingsStreamsWithData").
+					Tag("streamNum", i).
+					Tag("streamId", streamId)
 				return
 			}
-		}(i)
+		})
 	}
 
-	wg.Wait()
+	wp.StopWait()
+
 	if len(errChan) > 0 {
 		return nil, nil, <-errChan
 	}
@@ -210,6 +226,68 @@ func compareStreamsMiniblocks(
 		return <-errs
 	}
 	return nil
+}
+
+func TestArchive100StreamsWithReplication(t *testing.T) {
+	tester := newServiceTester(t, serviceTesterOpts{numNodes: 5, replicationFactor: 3, start: true})
+	ctx := tester.ctx
+	require := tester.require
+
+	// Create stream
+	// Create 100 streams
+	streamIds := testCreate100Streams(
+		ctx,
+		require,
+		tester.testClient(0),
+		&StreamSettings{DisableMiniblockCreation: true},
+	)
+
+	// Kill 2/5 nodes. With a replication factor of 3, all streams are available on at least 1 node.
+	tester.nodes[1].Close(ctx, tester.dbUrl)
+	tester.nodes[3].Close(ctx, tester.dbUrl)
+
+	archiveCfg := tester.getConfig()
+	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
+
+	serverCtx, serverCancel := context.WithCancel(ctx)
+	defer serverCancel()
+
+	arch, err := StartServerInArchiveMode(
+		serverCtx,
+		archiveCfg,
+		makeTestServerOpts(tester),
+		false,
+	)
+	require.NoError(err)
+	tester.cleanup(arch.Close)
+
+	arch.Archiver.WaitForStart()
+	require.Len(arch.ExitSignal(), 0)
+
+	require.EventuallyWithT(
+		func(c *assert.CollectT) {
+			for _, streamId := range streamIds {
+				num, err := arch.Storage().GetMaxArchivedMiniblockNumber(ctx, streamId)
+				assert.NoError(c, err)
+				expectedMaxBlockNum := int64(0)
+				// The first stream id is a user stream with 2 miniblocks. The rest are
+				// space streams with a single block.
+				if streamId == streamIds[0] {
+					expectedMaxBlockNum = int64(1)
+				}
+				assert.Equal(
+					c,
+					expectedMaxBlockNum,
+					num,
+					fmt.Sprintf("Expected %d but saw %d miniblocks for stream %s", 0, num, streamId),
+				)
+			}
+		},
+		30*time.Second,
+		100*time.Millisecond,
+	)
+
+	require.NoError(compareStreamsMiniblocks(t, ctx, streamIds, arch.Storage(), tester.testClient(0)))
 }
 
 func TestArchiveOneStream(t *testing.T) {
