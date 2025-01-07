@@ -119,10 +119,10 @@
   },
   "sources": {
     "contracts/src/spaces/facets/tipping/ITipping.sol": {
-      "keccak256": "0x17626bc66cb1e815c6cbfc637cfac7c76b6de7dd57af29a0e6433b2591260ea2",
+      "keccak256": "0xaeb9f0538f72b7f6e9a004ca44fcd2890294a2e9ae640794d7f77ebb74088563",
       "urls": [
-        "bzz-raw://a12bd98f0636ccb28606103683938a5f300b7e02dbf0d87e2c51824b0e4e1606",
-        "dweb:/ipfs/QmPZkKxvrHB95To54hwsSQSCHHjkvsYCKP1dsvtzp92gvJ"
+        "bzz-raw://f8b42ef93b3bbe0ac237aaeef2e1fb624fb9d81aba75f91485a48ae484f3a8eb",
+        "dweb:/ipfs/QmWhZH6zUE7Tf8R9xu8JxTeWxHyV9yBgNAJFx2DoHBGuYn"
       ],
       "license": "MIT"
     }

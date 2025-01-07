@@ -17,6 +17,11 @@ const _abi = [
         internalType: "struct ITippingBase.TipRequest",
         components: [
           {
+            name: "receiver",
+            type: "address",
+            internalType: "address",
+          },
+          {
             name: "tokenId",
             type: "uint256",
             internalType: "uint256",
