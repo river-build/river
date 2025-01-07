@@ -740,9 +740,6 @@ jobs:
             - name: Start Local Basechain
               run: ./scripts/start-local-basechain.sh &
 
-            - name: Print Yarn package versions
-              run: yarn info --name-only --all
-
             - name: Run Integration Tests
               run: make integration_tests
               working-directory: core/xchain
