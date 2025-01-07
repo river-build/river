@@ -36,6 +36,7 @@ describe('mlsTests', () => {
     let charlieClient: Client
     let charlieMlsClient: MlsClient
 
+    let bobMlsGroup: MlsGroup
     // state variables
     let streamId: string
     let latestGroupInfoMessage: Uint8Array
@@ -66,6 +67,8 @@ describe('mlsTests', () => {
         await charlieClient.joinStream(spaceId)
         await charlieClient.joinStream(channelId)
         await charlieClient.waitForStream(channelId)
+
+        bobMlsGroup = await bobMlsClient.createGroup()
         streamId = channelId
     })
 
@@ -74,6 +77,17 @@ describe('mlsTests', () => {
             await client.stop()
         }
         clients = []
+    })
+
+    afterEach(async () => {
+        for (const commit of commits) {
+            try {
+                const mlsMessage = MlsMessage.fromBytes(commit)
+                await bobMlsGroup.processIncomingMessage(mlsMessage)
+            } catch {
+                // noop
+            }
+        }
     })
 
     function makeMlsPayloadInitializeGroup(
@@ -165,9 +179,8 @@ describe('mlsTests', () => {
     }
 
     test('invalid signature public key is not accepted', async () => {
-        const group = await bobMlsClient.createGroup()
         const { groupInfoMessage, externalGroupSnapshot } =
-            await createGroupInfoAndExternalSnapshot(group)
+            await createGroupInfoAndExternalSnapshot(bobMlsGroup)
 
         const mlsPayload = makeMlsPayloadInitializeGroup(
             (await bobMlsClient.signaturePublicKey()).slice(1), // slice 1 byte to make it invalid
@@ -458,6 +471,21 @@ describe('mlsTests', () => {
         const mls = streamAfterSnapshot.membershipContent.mls
         expect(bin_equal(mls.epochSecrets[1n.toString()], new Uint8Array([1, 2, 3, 4]))).toBe(true)
         expect(bin_equal(mls.epochSecrets[2n.toString()], new Uint8Array([3, 4, 5, 6]))).toBe(true)
+    })
+
+    test('removing stream members who are still members is not allowed', async () => {
+        const bobPayload: PlainMessage<MemberPayload_Mls> = {
+            content: {
+                case: 'commitLeaves',
+                value: {
+                    userAddresses: [hexToBytes(aliceClient.userId)],
+                    commit: new Uint8Array(randomBytes(32)),
+                },
+            },
+        }
+        await expect(bobClient._debugSendMls(streamId, bobPayload)).rejects.toThrow(
+            'user is a member',
+        )
     })
 
     test('removing stream members with invalid commits is not allowed', async () => {
