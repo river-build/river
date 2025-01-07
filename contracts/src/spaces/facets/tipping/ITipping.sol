@@ -13,6 +13,7 @@ interface ITippingBase {
   // =============================================================
 
   struct TipRequest {
+    address receiver;
     uint256 tokenId;
     address currency;
     uint256 amount;
