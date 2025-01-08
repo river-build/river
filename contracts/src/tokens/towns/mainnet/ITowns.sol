@@ -8,6 +8,9 @@ pragma solidity ^0.8.23;
 // contracts
 
 interface ITownsBase {
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           Structs                          */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
   struct InflationConfig {
     uint256 lastMintTime;
     uint256 initialInflationRate;
@@ -17,8 +20,12 @@ interface ITownsBase {
     address inflationReceiver;
   }
 
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           Errors                           */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
   error InvalidAddress();
   error InvalidInflationRate();
+  error MintingTooSoon();
 }
 
 interface ITowns is ITownsBase {

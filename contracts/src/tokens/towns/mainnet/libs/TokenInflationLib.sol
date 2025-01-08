@@ -20,8 +20,9 @@ library TokenInflationLib {
     uint256 overrideInflationRate;
   }
 
+  // keccak256(abi.encode(uint256(keccak256("tokens.towns.mainnet.lib.storage")) - 1)) & ~bytes32(uint256(0xff))
   function layout() internal pure returns (Layout storage l) {
-    bytes32 slot = keccak256("towns.token.inflation");
+    bytes32 slot = 0x366bbacac8c1291905a47c4b12670e7c8ce975e09c84414dddf77ba98c85af00;
     assembly {
       l.slot := slot
     }
@@ -45,6 +46,10 @@ library TokenInflationLib {
     return layout().inflationReceiver;
   }
 
+  function lastMintTime() internal view returns (uint256) {
+    return layout().lastMintTime;
+  }
+
   function setInflationReceiver(address receiver) internal {
     layout().inflationReceiver = receiver;
   }
@@ -55,10 +60,10 @@ library TokenInflationLib {
 
   function setOverrideInflation(
     bool overrideInflation,
-    uint256 overrideInflationRate
+    uint256 overrideInflationRateBps
   ) internal {
     layout().overrideInflation = overrideInflation;
-    layout().overrideInflationRate = overrideInflationRate;
+    layout().overrideInflationRate = overrideInflationRateBps;
   }
 
   /**

@@ -75,6 +75,10 @@ contract Towns is
     _mint(vault, INITIAL_SUPPLY);
   }
 
+  function lastMintTime() external view returns (uint256) {
+    return TokenInflationLib.lastMintTime();
+  }
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           Inflation                        */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -117,6 +121,14 @@ contract Towns is
 
   /// @inheritdoc ITowns
   function createInflation() external onlyRoles(ROLE_INFLATION_MANAGER) {
+    // verify that minting can only happen once per year
+    uint256 timeSinceLastMint = block.timestamp -
+      TokenInflationLib.lastMintTime();
+
+    if (timeSinceLastMint < 365 days) {
+      CustomRevert.revertWith(MintingTooSoon.selector);
+    }
+
     uint256 inflationRateBPS = TokenInflationLib.getCurrentInflationRateBPS();
     uint256 inflationAmount = BasisPoints.calculate(
       totalSupply(),
