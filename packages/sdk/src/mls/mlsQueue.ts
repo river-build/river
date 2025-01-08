@@ -22,8 +22,12 @@ import {
 import { IPersistenceStore } from '../persistenceStore'
 import TypedEmitter from 'typed-emitter'
 import { StreamEncryptionEvents, StreamMlsEvents } from '../streamEvents'
-import { InMemoryEpochSecretStore, IEpochSecretStore, EpochSecretService } from './epoch/epochSecretStore'
-import { EpochSecret } from './epoch/epochSecret'
+import {
+    InMemoryEpochSecretStore,
+    IEpochSecretStore,
+    EpochSecretService,
+    EpochSecret,
+} from './epoch'
 
 interface MlsQueueItem {
     respondAfter: Date
@@ -565,7 +569,10 @@ export class MlsQueue {
         }
 
         // Ensure epoch keys are derived
-        const epochKey = this.epochKeyService.getEpochSecret(streamId, group.state.group.currentEpoch)
+        const epochKey = this.epochKeyService.getEpochSecret(
+            streamId,
+            group.state.group.currentEpoch,
+        )
 
         if (epochKey === undefined) {
             throw new Error(

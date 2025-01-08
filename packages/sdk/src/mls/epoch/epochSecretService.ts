@@ -223,4 +223,3 @@ export class EpochSecretService {
         return await this.cipherSuite.open(ciphertext_, secretKey_, publicKey_)
     }
 }
-
