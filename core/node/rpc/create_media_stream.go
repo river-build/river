@@ -169,12 +169,14 @@ func (s *Service) createReplicatedMediaStream(
 	remotes, isLocal := nodes.GetRemotesAndIsLocal()
 	sender := NewQuorumPool("method", "createReplicatedStream", "streamId", streamId)
 
-	if isLocal {
-		sender.GoLocal(ctx, func(ctx context.Context) error {
-			// TODO: The genesis block must be in ephemeral state
-			return s.storage.CreateStreamStorage(ctx, streamId, mbBytes)
-		})
+	// Remove the last node from the list if the current node were not selected
+	if !isLocal && len(remotes) > 0 {
+		remotes = remotes[:len(remotes)-1]
 	}
+
+	sender.GoLocal(ctx, func(ctx context.Context) error {
+		return s.storage.CreateEphemeralStreamStorage(ctx, streamId, mbBytes)
+	})
 
 	sender.GoRemotes(ctx, remotes, func(ctx context.Context, node common.Address) error {
 		stub, err := s.nodeRegistry.GetNodeToNodeClientForAddress(node)
@@ -182,12 +184,13 @@ func (s *Service) createReplicatedMediaStream(
 			return err
 		}
 
-		_, err = stub.SaveEphemeralMiniblock(
+		_, err = stub.AllocateStream(
 			ctx,
-			connect.NewRequest[SaveEphemeralMiniblockRequest](
-				&SaveEphemeralMiniblockRequest{
-					StreamId:  streamId[:],
-					Miniblock: mb,
+			connect.NewRequest[AllocateStreamRequest](
+				&AllocateStreamRequest{
+					StreamId:    streamId[:],
+					Miniblock:   mb,
+					IsEphemeral: true,
 				},
 			),
 		)
@@ -209,8 +212,8 @@ func (s *Service) createReplicatedMediaStream(
 		NextCreationCookie: &CreationCookie{
 			StreamId:          streamId[:],
 			Nodes:             nodesListRaw,
-			MiniblockNum:      0,   // genesis miniblock, so 0
-			PrevMiniblockHash: nil, // genesis miniblock, so no prev miniblock
+			MiniblockNum:      0, // genesis miniblock, so 0
+			PrevMiniblockHash: mb.Header.Hash,
 		},
 		Miniblocks: []*Miniblock{mb},
 	}, nil
