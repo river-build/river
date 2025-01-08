@@ -300,7 +300,6 @@ func (s *streamImpl) applyMiniblockImplLocked(
 	miniblockBytes []byte,
 ) error {
 	// Check if the miniblock is already applied.
-	fmt.Println("WriteMiniblocks", miniblock.Ref.Num)
 	if miniblock.Ref.Num <= s.view().LastBlock().Ref.Num {
 		return nil
 	}

@@ -134,5 +134,9 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 		})
 	}
 
-	return ephemeralMb, sender.Wait()
+	if err = sender.Wait(); err != nil {
+		return nil, err
+	}
+
+	return ephemeralMb, nil
 }

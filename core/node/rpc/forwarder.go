@@ -377,7 +377,7 @@ func (s *Service) getMiniblocksImpl(
 		return nil, err
 	}
 
-	stream, err := s.cache.GetStreamNoWait(ctx, streamId)
+	stream, err := s.cache.GetEphemeralStream(ctx, streamId, nil) // TODO: Revert
 	if err != nil {
 		return nil, err
 	}

@@ -1809,6 +1809,7 @@ func TestCreateMediaStream(t *testing.T) {
 	}))
 	tt.require.NoError(err)
 
+	creationCookie := csResp.Msg.Stream.NextCreationCookie
 	mb := &MiniblockRef{
 		Hash: common.BytesToHash(csResp.Msg.Stream.NextCreationCookie.PrevMiniblockHash),
 		Num:  0,
@@ -1821,18 +1822,18 @@ func TestCreateMediaStream(t *testing.T) {
 		envelope, err := events.MakeEnvelopeWithPayload(alice.wallet, mp, mb)
 		tt.require.NoError(err)
 
-		fmt.Println(i)
-
 		// Add media chunk event
 		aeResp, err := alice.client.AddMediaEvent(alice.ctx, connect.NewRequest(&protocol.AddMediaEventRequest{
-			StreamId: mediaStreamId[:],
-			Event:    envelope,
+			StreamId:       mediaStreamId[:],
+			Event:          envelope,
+			CreationCookie: creationCookie,
 		}))
 		tt.require.NoError(err)
 		tt.require.Nil(aeResp.Msg.Error)
 
 		mb.Hash = common.BytesToHash(aeResp.Msg.CreationCookie.PrevMiniblockHash)
 		mb.Num++
+		creationCookie = aeResp.Msg.CreationCookie
 	}
 
 	// Get Miniblocks for the given media stream

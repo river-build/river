@@ -38,29 +38,31 @@ func (s *Service) localAddMediaEvent(
 	log.Debug("localAddMediaEvent", "parsedEvent", parsedEvent, "creationCookie", creationCookie)
 
 	mb, err := s.addParsedMediaEvent(ctx, streamId, parsedEvent, localStream, streamView, creationCookie)
-	if err != nil && req.Msg.Optional {
-		// aellis 5/2024 - we only want to wrap errors from canAddEvent,
-		// currently this is catching all errors, which is not ideal
-		riverError := AsRiverError(err).Func("localAddMediaEvent")
-		return connect.NewResponse(&AddMediaEventResponse{
-			Error: &AddMediaEventResponse_Error{
-				Code:  riverError.Code,
-				Msg:   riverError.Error(),
-				Funcs: riverError.Funcs,
-			},
-		}), nil
-	} else if err != nil {
+	if err != nil {
+		if req.Msg.Optional {
+			// aellis 5/2024 - we only want to wrap errors from canAddEvent,
+			// currently this is catching all errors, which is not ideal
+			riverError := AsRiverError(err).Func("localAddMediaEvent")
+			return connect.NewResponse(&AddMediaEventResponse{
+				Error: &AddMediaEventResponse_Error{
+					Code:  riverError.Code,
+					Msg:   riverError.Error(),
+					Funcs: riverError.Funcs,
+				},
+			}), nil
+		}
+
 		return nil, AsRiverError(err).Func("localAddMediaEvent")
-	} else {
-		return connect.NewResponse(&AddMediaEventResponse{
-			CreationCookie: &CreationCookie{
-				StreamId:          streamId[:],
-				Nodes:             creationCookie.Nodes,
-				MiniblockNum:      creationCookie.MiniblockNum + 1,
-				PrevMiniblockHash: mb.Header.Hash,
-			},
-		}), nil
 	}
+
+	return connect.NewResponse(&AddMediaEventResponse{
+		CreationCookie: &CreationCookie{
+			StreamId:          streamId[:],
+			Nodes:             creationCookie.Nodes,
+			MiniblockNum:      creationCookie.MiniblockNum + 1,
+			PrevMiniblockHash: mb.Header.Hash,
+		},
+	}), nil
 }
 
 func (s *Service) addParsedMediaEvent(
