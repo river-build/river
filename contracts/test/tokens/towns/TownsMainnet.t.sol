@@ -48,7 +48,7 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
 
   modifier givenCallerHasTokens(address caller, uint256 amount) {
     vm.assume(caller != address(0));
-    vm.assume(amount > 0 && amount <= INITIAL_SUPPLY);
+    amount = bound(amount, 1, INITIAL_SUPPLY);
     vm.prank(vault);
     towns.transfer(caller, amount);
     _;
@@ -70,7 +70,7 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function test_createInflation() external {
-    vm.warp(towns.lastMintTime() + 365 days + 1);
+    vm.warp(towns.lastMintTime() + 365 days);
 
     uint256 inflationRateBPS = towns.currentInflationRate();
     uint256 inflationAmount = BasisPoints.calculate(
@@ -89,5 +89,25 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
     vm.prank(vault);
     vm.expectRevert(MintingTooSoon.selector);
     towns.createInflation();
+  }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           Delegators                        */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  function test_getDelegators(
+    address alice,
+    address bob,
+    uint256 tokens
+  )
+    external
+    givenCallerHasTokens(alice, tokens)
+    givenCallerHasDelegated(alice, bob)
+  {
+    address[] memory delegators = towns.getDelegators();
+    assertEq(delegators.length, 1);
+    assertEq(delegators[0], alice);
+
+    assertEq(towns.delegates(alice), bob);
   }
 }
