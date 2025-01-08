@@ -435,7 +435,24 @@ func (s *PostgresStreamStore) CreateStreamStorage(
 		"CreateStreamStorage",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
-			return s.createStreamStorageTx(ctx, tx, streamId, genesisMiniblock)
+			return s.createStreamStorageTx(ctx, tx, streamId, genesisMiniblock, false)
+		},
+		nil,
+		"streamId", streamId,
+	)
+}
+
+func (s *PostgresStreamStore) CreateEphemeralStreamStorage(
+	ctx context.Context,
+	streamId StreamId,
+	genesisMiniblock []byte,
+) error {
+	return s.txRunner(
+		ctx,
+		"CreateEphemeralStreamStorage",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			return s.createStreamStorageTx(ctx, tx, streamId, genesisMiniblock, true)
 		},
 		nil,
 		"streamId", streamId,
@@ -480,15 +497,16 @@ func (s *PostgresStreamStore) createStreamStorageTx(
 	tx pgx.Tx,
 	streamId StreamId,
 	genesisMiniblock []byte,
+	isEphemeral bool,
 ) error {
 	sql := s.sqlForStream(
 		`
-			INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated) VALUES ($1, 0, true);
+			INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated, ephemeral) VALUES ($1, 0, true, $3);
 			INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
 			INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
 		streamId,
 	)
-	_, err := tx.Exec(ctx, sql, streamId, genesisMiniblock)
+	_, err := tx.Exec(ctx, sql, streamId, genesisMiniblock, isEphemeral)
 	if err != nil {
 		if pgerr, ok := err.(*pgconn.PgError); ok && pgerr.Code == pgerrcode.UniqueViolation {
 			return WrapRiverError(Err_ALREADY_EXISTS, err).Message("stream already exists")
@@ -1406,7 +1424,7 @@ func (s *PostgresStreamStore) writeMiniblocksTx(
 	_, err = tx.CopyFrom(
 		ctx,
 		pgx.Identifier{s.sqlForStream("{{miniblocks}}", streamId)},
-		[]string{"stream_id", "seq_num", "blockdata", "ephemeral"},
+		[]string{"stream_id", "seq_num", "blockdata"},
 		pgx.CopyFromSlice(
 			len(miniblocks),
 			func(i int) ([]any, error) {
@@ -1414,12 +1432,7 @@ func (s *PostgresStreamStore) writeMiniblocksTx(
 					newLastSnapshotMiniblock = miniblocks[i].Number
 				}
 
-				var ephemeral *bool
-				if miniblocks[i].Ephemeral {
-					ephemeral = &miniblocks[i].Ephemeral
-				}
-
-				return []any{streamId, miniblocks[i].Number, miniblocks[i].Data, ephemeral}, nil
+				return []any{streamId, miniblocks[i].Number, miniblocks[i].Data}, nil
 			},
 		),
 	)

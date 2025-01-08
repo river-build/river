@@ -4,14 +4,14 @@ import (
 	"context"
 	"time"
 
-	"github.com/river-build/river/core/node/utils"
-
 	"connectrpc.com/connect"
+	"google.golang.org/protobuf/proto"
 
 	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
+	"github.com/river-build/river/core/node/utils"
 )
 
 func (s *Service) AllocateStream(
@@ -43,9 +43,28 @@ func (s *Service) allocateStream(ctx context.Context, req *AllocateStreamRequest
 
 	// TODO: check request is signed by correct node
 	// TODO: all checks that should be done on create?
-	stream, err := s.cache.GetStreamWaitForLocal(ctx, streamId)
-	if err != nil {
-		return nil, err
+	var stream SyncStream
+	if req.GetIsEphemeral() {
+		// TODO: Move this part to a separate endpoint
+		mbBytes, err := proto.Marshal(req.Miniblock)
+		if err != nil {
+			return nil, err
+		}
+
+		err = s.storage.CreateEphemeralStreamStorage(ctx, streamId, mbBytes)
+		if err != nil {
+			return nil, err
+		}
+
+		stream, err = s.cache.GetEphemeralStream(ctx, streamId)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		stream, err = s.cache.GetStreamWaitForLocal(ctx, streamId)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	view, err := stream.GetView(ctx)
@@ -239,12 +258,19 @@ func (s *Service) saveEphemeralMiniblock(
 		return nil, err
 	}
 
-	stream, err := s.cache.GetStreamWaitForLocal(ctx, streamId)
+	stream, err := s.cache.GetEphemeralStream(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}
 
-	err = stream.SaveEphemeralMiniblock(ctx, req.Miniblock)
+	mbInfo, err := NewMiniblockInfoFromProto(
+		req.Miniblock,
+		NewMiniblockInfoFromProtoOpts{
+			ExpectedBlockNumber: -1,
+		},
+	)
+
+	err = stream.ApplyMiniblock(ctx, mbInfo)
 	if err != nil {
 		return nil, err
 	}
