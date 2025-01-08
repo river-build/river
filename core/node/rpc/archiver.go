@@ -657,7 +657,7 @@ func (a *Archiver) Start(ctx context.Context, once bool, metrics infra.MetricsFa
 	defer a.startedWG.Done()
 
 	// We're not concerned about cancelling these contexts because they will automatically
-	// be cancelled when the parent is cancelled. We just want inardependent Done channels.
+	// be cancelled when the parent is cancelled. We just want interdependent Done channels.
 	child, _ := context.WithCancel(ctx)
 	go a.processScrubReports(ctx)
 
