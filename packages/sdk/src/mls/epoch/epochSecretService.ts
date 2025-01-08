@@ -141,7 +141,7 @@ export class EpochSecretService {
 
     public async openSealedEpochSecret(
         epochSecret: EpochSecret,
-        { derivedKeys: nextEpochKeys }: { derivedKeys: DerivedKeys },
+        nextEpochKeys: DerivedKeys,
     ): Promise<void> {
         this.log('openSealedEpochSecret', {
             streamId: epochSecret.streamId,
