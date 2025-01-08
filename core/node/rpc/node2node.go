@@ -269,6 +269,9 @@ func (s *Service) saveEphemeralMiniblock(
 			ExpectedBlockNumber: -1,
 		},
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	err = stream.ApplyMiniblock(ctx, mbInfo)
 	if err != nil {
