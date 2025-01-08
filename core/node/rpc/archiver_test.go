@@ -229,6 +229,29 @@ func compareStreamsMiniblocks(
 	return nil
 }
 
+// requireNoCorruptStreams confirms that the scrubber detected no corrupt streams.
+// Call after the archiver has downloaded all of the latest miniblocks.
+func requireNoCorruptStreams(
+	name string,
+	t *testing.T,
+	ctx context.Context,
+	require *require.Assertions,
+	archiver *Archiver,
+) {
+	// Validate no corrupt streams were found
+	require.Eventually(
+		func() bool {
+			unscrubbed := archiver.debugGetUnscrubbedMiniblocksCount()
+			return unscrubbed == 0
+		},
+		20*time.Second,
+		time.Second,
+		"Scrubber failed to catch up: %d unscrubbed miniblocks",
+		archiver.debugGetUnscrubbedMiniblocksCount(),
+	)
+	require.Len(archiver.GetCorruptStreams(ctx), 0)
+}
+
 func TestArchive100StreamsWithReplication(t *testing.T) {
 	tester := newServiceTester(t, serviceTesterOpts{numNodes: 5, replicationFactor: 3, start: true})
 	ctx := tester.ctx
@@ -289,6 +312,7 @@ func TestArchive100StreamsWithReplication(t *testing.T) {
 	)
 
 	require.NoError(compareStreamsMiniblocks(t, ctx, streamIds, arch.Storage(), tester.testClient(0)))
+	requireNoCorruptStreams("TestArchive100StreamsWithReplication", t, ctx, require, arch.Archiver)
 }
 
 func TestArchiveOneStream(t *testing.T) {
@@ -456,6 +480,7 @@ func TestArchive100Streams(t *testing.T) {
 	arch.Archiver.WaitForTasks()
 
 	require.NoError(compareStreamsMiniblocks(t, ctx, streamIds, arch.Storage(), tester.testClient(3)))
+	requireNoCorruptStreams("TestArchive100Streams", t, ctx, require, arch.Archiver)
 
 	serverCancel()
 	arch.Archiver.WaitForWorkers()
@@ -489,6 +514,7 @@ func TestArchive100StreamsWithData(t *testing.T) {
 	arch.Archiver.WaitForTasks()
 
 	require.NoError(compareStreamsMiniblocks(t, ctx, streamIds, arch.Storage(), tester.testClient(5)))
+	requireNoCorruptStreams("TestArchive100StreamsWithData", t, ctx, require, arch.Archiver)
 
 	serverCancel()
 	arch.Archiver.WaitForWorkers()
@@ -576,6 +602,7 @@ func TestArchiveContinuous(t *testing.T) {
 	)
 
 	require.NoError(compareStreamsMiniblocks(t, ctx, []StreamId{streamId, streamId2}, arch.Storage(), client))
+	requireNoCorruptStreams("TestArchiveContinuous", t, ctx, require, arch.Archiver)
 
 	serverCancel()
 	arch.Archiver.WaitForWorkers()

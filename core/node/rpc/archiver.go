@@ -26,6 +26,10 @@ import (
 	"github.com/river-build/river/core/node/storage"
 )
 
+type Closer interface {
+	onClose(f any)
+}
+
 // maxFailedConsecutiveUpdates is the maximum number of consecutive update failures allowed
 // before a stream is considered corrupt.
 var maxFailedConsecutiveUpdates = uint32(50)
@@ -184,35 +188,35 @@ func (ct *StreamCorruptionTracker) ReportScrubSuccess(ctx context.Context, block
 
 func (ct *StreamCorruptionTracker) GetLatestScrubbedBlock() int64 {
 	ct.mu.RLock()
-	defer ct.mu.Unlock()
+	defer ct.mu.RUnlock()
 
 	return ct.latestScrubbedBlock
 }
 
 func (ct *StreamCorruptionTracker) GetCorruptionReason() CorruptionReason {
 	ct.mu.RLock()
-	defer ct.mu.Unlock()
+	defer ct.mu.RUnlock()
 
 	return ct.corruptionReason
 }
 
 func (ct *StreamCorruptionTracker) GetScrubError() error {
 	ct.mu.RLock()
-	defer ct.mu.Unlock()
+	defer ct.mu.RUnlock()
 
 	return ct.corruptionError
 }
 
 func (ct *StreamCorruptionTracker) GetFirstCorruptBlock() int64 {
 	ct.mu.RLock()
-	defer ct.mu.Unlock()
+	defer ct.mu.RUnlock()
 
 	return ct.firstCorruptBlock
 }
 
 func (ct *StreamCorruptionTracker) GetConsecutiveFailedUpdates() uint32 {
 	ct.mu.RLock()
-	defer ct.mu.Unlock()
+	defer ct.mu.RUnlock()
 
 	return ct.consecutiveUpdateFailures
 }
@@ -268,7 +272,7 @@ type Archiver struct {
 
 	// Miniblock scrubbing
 	scrubber scrub.MiniblockScrubber
-	reports  <-chan *scrub.MiniblockScrubReport
+	reports  chan *scrub.MiniblockScrubReport
 
 	// Task management
 	tasks     chan StreamId
@@ -308,6 +312,7 @@ type ArchiverStats struct {
 	NewStreamAllocated         uint64
 	StreamPlacementUpdated     uint64
 	StreamLastMiniblockUpdated uint64
+	StreamScrubsInProgress     int64
 }
 
 func NewArchiver(
@@ -324,7 +329,6 @@ func NewArchiver(
 		storage:      storage,
 		tasks:        make(chan StreamId, config.GetTaskQueueSize()),
 		reports:      reports,
-		scrubber:     scrub.NewMiniblockScrubber(storage, 0, reports),
 	}
 	a.startedWG.Add(1)
 	return a
@@ -648,15 +652,20 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) (er
 }
 
 func (a *Archiver) Start(ctx context.Context, once bool, metrics infra.MetricsFactory, exitSignal chan<- error) {
+	a.scrubber = scrub.NewMiniblockScrubber(a.storage, 0, a.reports, metrics)
+
 	defer a.startedWG.Done()
 
 	// We're not concerned about cancelling these contexts because they will automatically
-	// be cancelled when the parent is cancelled. We just want independent Done channels.
+	// be cancelled when the parent is cancelled. We just want inardependent Done channels.
 	child, _ := context.WithCancel(ctx)
 	go a.processScrubReports(ctx)
 
 	child, _ = context.WithCancel(ctx)
 	go a.processMiniblockScrubs(child)
+
+	child, _ = context.WithCancel(ctx)
+	go a.debugPrintStats(ctx)
 
 	err := a.startImpl(ctx, once, metrics)
 	if err != nil {
@@ -664,36 +673,78 @@ func (a *Archiver) Start(ctx context.Context, once bool, metrics infra.MetricsFa
 	}
 }
 
+func (a *Archiver) Close() {
+	if a.scrubber != nil {
+		a.scrubber.Close()
+	}
+}
+
 // processScrubReports continuously reads scrub reports and updates the archive stream's state until
 // the context expires or is cancelled.
 func (a *Archiver) processScrubReports(ctx context.Context) {
+	log := dlog.FromCtx(ctx).With("func", "processScrubReports")
 	for {
 		select {
 		case report := <-a.reports:
 			a.scrubsInProgress.Add(-1)
 			value, ok := a.streams.Load(report.StreamId)
 			if !ok {
-				dlog.FromCtx(ctx).
-					Error("No stream found in cache for scrubbed stream report", "streamId", report.StreamId)
+				log.Error("No stream found in cache for scrubbed stream report", "streamId", report.StreamId)
 				continue
 			}
 			as, ok := value.(*ArchiveStream)
 			if !ok {
-				dlog.FromCtx(ctx).
-					Error("Cached object for stream id is not an ArchiveStream", "streamId", report.StreamId)
+				log.Error("Cached object for stream id is not an ArchiveStream", "streamId", report.StreamId)
 				continue
 			}
 
+			// Corrupt block detected
 			if report.ScrubError != nil && report.FirstCorruptBlock != -1 {
 				as.corrupt.MarkBlockCorrupt(report.FirstCorruptBlock, report.ScrubError)
 				as.mostRecentScrubbedBlock.Store(report.LatestBlockScrubbed)
 				as.scrubInProgress.Store(false)
+
+				log.Error("Corrupt stream detected",
+					"streamId", as.streamId,
+					"corruptBlock", report.FirstCorruptBlock,
+					"error", report.ScrubError,
+					"lastBlockScrubbed", report.LatestBlockScrubbed,
+				)
+				continue
 			}
+
+			// Scrub encountered error, but block was not deemed corrupt.
+			if report.ScrubError != nil {
+				log.Error("Error encountered during miniblock scrub",
+					"streamId", as.streamId,
+					"error", report.ScrubError,
+					"lastBlockScrubbed", report.LatestBlockScrubbed,
+				)
+			}
+
+			as.mostRecentScrubbedBlock.Store(report.LatestBlockScrubbed)
+			as.scrubInProgress.Store(false)
 
 		case <-ctx.Done():
 			return
 		}
 	}
+}
+
+// debugGetUnscrubbedStreamCount is used for tests. It is useful to call after all streams have already
+// finished updating and, once this is the case, should be safe to use as an indicator that the
+// scrubber has caught up to the current stream state in storage.
+func (a *Archiver) debugGetUnscrubbedMiniblocksCount() uint64 {
+	count := uint64(0)
+	a.streams.Range(func(key, value any) bool {
+		as := value.(*ArchiveStream)
+		count += uint64(as.numBlocksInDb.Load()) - uint64(as.mostRecentScrubbedBlock.Load()+1)
+		if as.mostRecentScrubbedBlock.Load()+1 < as.numBlocksInDb.Load() {
+			count++
+		}
+		return true
+	})
+	return count
 }
 
 func (a *Archiver) processMiniblockScrubs(ctx context.Context) {
@@ -730,15 +781,7 @@ func (a *Archiver) processMiniblockScrubs(ctx context.Context) {
 			}
 
 			dlog.FromCtx(ctx).
-				Info(
-					"Scheduling scrub for stream",
-					"firstUnscrubbedBlock",
-					firstUnscrubbedBlock,
-					"numBlocksInDb",
-					numBlocksInDb,
-					"streamId",
-					as.streamId,
-				)
+				Error("Scheduling scrub for stream", "streamId", as.streamId, "firstUnscrubbedBlock", firstUnscrubbedBlock, "numBlocksInDb", numBlocksInDb)
 			err := a.scrubber.ScheduleStreamMiniblocksScrub(ctx, as.streamId, firstUnscrubbedBlock)
 			if err != nil {
 				as.scrubInProgress.Store(false)
@@ -746,7 +789,6 @@ func (a *Archiver) processMiniblockScrubs(ctx context.Context) {
 					Error("Failed to schedule scrub", "error", err, "streamId", as.streamId.String(), "firstUnscrubbedBlock", firstUnscrubbedBlock)
 				return true
 			} else {
-				dlog.FromCtx(ctx).Debug("Scheduled stream miniblock scrub", "streamId", as.streamId, "firstUnscrubbedBlock", firstUnscrubbedBlock)
 				a.scrubsInProgress.Add(1)
 			}
 
@@ -875,6 +917,33 @@ func (a *Archiver) WaitForStart() {
 	a.startedWG.Wait()
 }
 
+func (a *Archiver) debugPrintStats(ctx context.Context) {
+	ticker := time.NewTicker(10 * time.Second)
+	log := dlog.FromCtx(ctx)
+	for {
+		select {
+		case <-ctx.Done():
+			ticker.Stop()
+			return
+		case <-ticker.C:
+			stats := a.GetStats()
+			log.Info(
+				"Archiver stats",
+				"failedOpsCount", stats.FailedOpsCount,
+				"miniblocksProcessed", stats.MiniblocksProcessed,
+				"newStreamAllocated", stats.NewStreamAllocated,
+				"streamLastMiniblockUpdated", stats.StreamLastMiniblockUpdated,
+				"streamPlacementUpdated", stats.StreamPlacementUpdated,
+				"streamScrubsInProgress", stats.StreamScrubsInProgress,
+				"streamsCreated", stats.StreamsCreated,
+				"streamsExamined", stats.StreamsExamined,
+				"streamsUpToDate", stats.StreamsUpToDate,
+				"successOpCount", stats.SuccessOpsCount,
+			)
+		}
+	}
+}
+
 func (a *Archiver) GetStats() *ArchiverStats {
 	return &ArchiverStats{
 		StreamsExamined:            a.streamsExamined.Load(),
@@ -886,6 +955,7 @@ func (a *Archiver) GetStats() *ArchiverStats {
 		NewStreamAllocated:         a.newStreamAllocated.Load(),
 		StreamPlacementUpdated:     a.streamPlacementUpdated.Load(),
 		StreamLastMiniblockUpdated: a.streamLastMiniblockUpdated.Load(),
+		StreamScrubsInProgress:     a.scrubsInProgress.Load(),
 	}
 }
 

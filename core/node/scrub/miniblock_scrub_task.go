@@ -9,6 +9,7 @@ import (
 
 	"github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
@@ -81,6 +82,7 @@ func NewMiniblockScrubber(
 	store storage.StreamStorage,
 	numWorkers int,
 	reports chan *MiniblockScrubReport,
+	metrics infra.MetricsFactory,
 ) MiniblockScrubber {
 	if numWorkers <= 0 {
 		numWorkers = 100
@@ -137,7 +139,7 @@ func (m *miniblockScrubTaskProcessorImpl) scrubMiniblocks(
 	fromBlockNumInclusive int64,
 ) *MiniblockScrubReport {
 	blockNum := fromBlockNumInclusive
-	latest, err := m.store.GetLastMiniblockNumber(ctx, streamId)
+	latest, err := m.store.GetMaxArchivedMiniblockNumber(ctx, streamId)
 	if err != nil {
 		return newErrorReport(
 			streamId,
