@@ -139,7 +139,7 @@ export class EpochSecretService {
 
     public async openSealedEpochSecret(
         epochSecret: EpochSecret,
-        { derivedKeys: nextEpochKeys }: { derivedKeys: DerivedKeys },
+        nextEpochKeys: DerivedKeys,
     ): Promise<void> {
         this.log('openSealedEpochSecret', {
             streamId: epochSecret.streamId,
@@ -157,7 +157,7 @@ export class EpochSecretService {
         }
 
         const sealedEpochSecret_ = HpkeCiphertext.fromBytes(epochSecret.sealedEpochSecret)
-        const secretKey_ = MlsSecret.fromBytes(nextEpochKeys.secretKey)
+        const secretKey_ = HpkeSecretKey.fromBytes(nextEpochKeys.secretKey)
         const publicKey_ = HpkePublicKey.fromBytes(nextEpochKeys.publicKey)
         const unsealedBytes = await this.cipherSuite.open(
             sealedEpochSecret_,
