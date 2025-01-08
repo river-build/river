@@ -185,4 +185,21 @@ describe('mlsEpochTests', () => {
             await expect(epochService.decryptMessage(epochSecret, message)).rejects.toThrow()
         })
     })
+
+    describe('epochSecretStorage', () => {
+        beforeEach(async () => {
+            await epochService.addOpenEpochSecret(streamId, epoch, secret)
+            epochService = new EpochSecretService(cipherSuite, epochStore, log.extend('service2'))
+        })
+
+        it('shouldLoadEpochSecretFromStorage', async () => {
+            let epochSecret = epochService.getEpochSecret(streamId, epoch)!
+            expect(epochSecret).toBeUndefined()
+
+            epochSecret = (await epochService.loadEpochSecret(streamId, epoch))!
+            expect(epochSecret).toBeDefined()
+
+            expect(epochSecret.openEpochSecret).toStrictEqual(secret)
+        })
+    })
 })
