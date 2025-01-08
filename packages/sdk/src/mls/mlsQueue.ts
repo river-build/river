@@ -22,8 +22,8 @@ import {
 import { IPersistenceStore } from '../persistenceStore'
 import TypedEmitter from 'typed-emitter'
 import { StreamEncryptionEvents, StreamMlsEvents } from '../streamEvents'
-import { EpochKeyStore, IEpochKeyStore, EpochKeyService } from './epochKeyStore'
-import { EpochKey } from './epochKey'
+import { EpochSecretStore, IEpochSecretStore, EpochSecretService } from './epochSecretStore'
+import { EpochSecret } from './epochSecret'
 
 interface MlsQueueItem {
     respondAfter: Date
@@ -116,8 +116,8 @@ export class MlsQueue {
     }
 
     // Services
-    private epochKeyStore: IEpochKeyStore
-    private epochKeyService: EpochKeyService
+    private epochKeyStore: IEpochSecretStore
+    private epochKeyService: EpochSecretService
 
     constructor(
         private readonly client: Client,
@@ -142,8 +142,8 @@ export class MlsQueue {
             }
         }
 
-        this.epochKeyStore = new EpochKeyStore(this.log.debug)
-        this.epochKeyService = new EpochKeyService(
+        this.epochKeyStore = new EpochSecretStore(this.log.debug)
+        this.epochKeyService = new EpochSecretService(
             this.mlsCrypto.cipherSuite,
             this.epochKeyStore,
             this.log.debug,
@@ -424,14 +424,14 @@ export class MlsQueue {
         await new Promise((resolve) => setTimeout(resolve, delay))
 
         const previousEpoch = currentEpoch - 1n
-        const previousEpochKey = this.epochKeyService.getEpochKey(streamId, previousEpoch)
+        const previousEpochKey = this.epochKeyService.getEpochSecret(streamId, previousEpoch)
 
         if (previousEpochKey?.announced) {
             this.log.debug(`announceKeys: ${previousEpoch} key announcement already received`)
             return
         }
 
-        const currentEpochKey = this.epochKeyService.getEpochKey(streamId, currentEpoch)
+        const currentEpochKey = this.epochKeyService.getEpochSecret(streamId, currentEpoch)
 
         // Check if current epoch has derived keys
         if (currentEpochKey?.derivedKeys === undefined) {
@@ -565,7 +565,7 @@ export class MlsQueue {
         }
 
         // Ensure epoch keys are derived
-        const epochKey = this.epochKeyService.getEpochKey(streamId, group.state.group.currentEpoch)
+        const epochKey = this.epochKeyService.getEpochSecret(streamId, group.state.group.currentEpoch)
 
         if (epochKey === undefined) {
             throw new Error(
@@ -587,7 +587,7 @@ export class MlsQueue {
     private async processEncryptedItem(item: MlsEncryptedContentItem) {
         this.log.debug('processEncryptedItem', item)
         // check if the epoch key is open
-        const epochKey = this.epochKeyService.getEpochKey(
+        const epochKey = this.epochKeyService.getEpochSecret(
             item.streamId,
             item.encryptedData.mlsEpoch ?? -1n,
         )
@@ -611,7 +611,7 @@ export class MlsQueue {
      * Decrypts and updates events
      */
     private async decryptGroupEvent(
-        epochKey: EpochKey,
+        epochKey: EpochSecret,
         streamId: string,
         eventId: string,
         kind: string, // kind of data
@@ -658,7 +658,7 @@ export class MlsQueue {
 
         for (const [streamId, perStream] of this.decryptionFailures) {
             for (const [epoch, perEpoch] of perStream) {
-                const epochKey = this.epochKeyService.getEpochKey(streamId, epoch)
+                const epochKey = this.epochKeyService.getEpochSecret(streamId, epoch)
                 if (perEpoch.length > 0 && epochKey?.derivedKeys !== undefined) {
                     result = perEpoch.shift()
 

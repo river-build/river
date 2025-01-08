@@ -1,13 +1,13 @@
 import { bin_toString, DLogger } from '@river-build/dlog'
 import Dexie, { Table } from 'dexie'
-import { IEpochKeyStore } from './epochKeyStore'
-import { EpochKey } from './epochKey'
+import { IEpochSecretStore } from './epochSecretStore'
+import { EpochSecret } from './epochSecret'
 
-// EpochKeyDTO replaces epoch: bigint with epoch: string
-type EpochKeyDTO = Omit<EpochKey, 'epoch'> & { epoch: string }
+// EpochSecretDTO replaces epoch: bigint with epoch: string
+type EpochSecretDTO = Omit<EpochSecret, 'epoch'> & { epoch: string }
 
-export class MlsStore extends Dexie implements IEpochKeyStore {
-    epochKeys!: Table<EpochKeyDTO>
+export class MlsStore extends Dexie implements IEpochSecretStore {
+    epochKeys!: Table<EpochSecretDTO>
     log: DLogger
 
     constructor(deviceKey: Uint8Array, log: DLogger) {
@@ -21,7 +21,7 @@ export class MlsStore extends Dexie implements IEpochKeyStore {
         })
     }
 
-    async getEpochKey(streamId: string, epoch: bigint): Promise<EpochKey | undefined> {
+    async getEpochSecret(streamId: string, epoch: bigint): Promise<EpochSecret | undefined> {
         const epochKeyDTO = await this.epochKeys.get([streamId, epoch.toString()])
         if (epochKeyDTO === undefined) {
             return undefined
@@ -29,7 +29,7 @@ export class MlsStore extends Dexie implements IEpochKeyStore {
 
         return { ...epochKeyDTO, epoch }
     }
-    async setEpochKeyState(epochKey: EpochKey): Promise<void> {
+    async setEpochSecret(epochKey: EpochSecret): Promise<void> {
         const epoch = epochKey.epoch.toString()
         await this.epochKeys.put({ ...epochKey, epoch })
     }

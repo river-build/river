@@ -3,7 +3,7 @@ export type DerivedKeys = {
     publicKey: Uint8Array
 }
 
-export class EpochKey {
+export class EpochSecret {
     private constructor(
         public readonly streamId: string,
         public readonly epoch: bigint,
@@ -17,8 +17,8 @@ export class EpochKey {
         streamId: string,
         epoch: bigint,
         sealedEpochSecret: Uint8Array,
-    ): EpochKey {
-        return new EpochKey(streamId, epoch, undefined, sealedEpochSecret, undefined, true)
+    ): EpochSecret {
+        return new EpochSecret(streamId, epoch, undefined, sealedEpochSecret, undefined, true)
     }
 
     public static fromOpenEpochSecret(
@@ -26,7 +26,7 @@ export class EpochKey {
         epoch: bigint,
         openEpochSecret: Uint8Array,
         derivedKeys: DerivedKeys,
-    ): EpochKey {
-        return new EpochKey(streamId, epoch, openEpochSecret, undefined, derivedKeys, false)
+    ): EpochSecret {
+        return new EpochSecret(streamId, epoch, openEpochSecret, undefined, derivedKeys, false)
     }
 }

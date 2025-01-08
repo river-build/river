@@ -3,7 +3,6 @@ import {
     MlsMessage,
     CipherSuite as MlsCipherSuite,
 } from '@river-build/mls-rs-wasm'
-import { EpochKeyService, EpochKeyStore, IEpochKeyStore } from './epochKeyStore'
 import { GroupStore, IGroupStore } from './groupStore'
 import { dlog, DLogger, bin_toHexString, shortenHexString } from '@river-build/dlog'
 import { Group } from './group'
@@ -273,7 +272,6 @@ export class MlsCrypto {
                     groupInfo: shortenHexString(bin_toHexString(groupInfoWithExternalKey)),
                     commit: shortenHexString(bin_toHexString(commit)),
                 })
-                // add a key to the epoch store
                 this.log('resolve')
                 this.awaitingGroupActive.get(streamId)?.resolve()
                 return group
