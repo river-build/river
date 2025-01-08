@@ -1,2 +1,2 @@
--- Add ephemeral miniblock state as a new column to the miniblocks table
-ALTER TABLE miniblocks ADD ephemeral BOOLEAN DEFAULT NULL;
+-- Add ephemeral stream state
+ALTER TABLE es ADD COLUMN IF NOT EXISTS ephemeral BOOLEAN NOT NULL DEFAULT FALSE;

@@ -491,7 +491,6 @@ func Make_UserPayload_Membership(
 }
 
 func Make_UserPayload_ReceivedBlockchainTransaction(
-	kind ReceivedBlockchainTransactionKind,
 	fromUserAddress []byte,
 	transaction *BlockchainTransaction,
 ) *StreamEvent_UserPayload {
@@ -499,7 +498,6 @@ func Make_UserPayload_ReceivedBlockchainTransaction(
 		UserPayload: &UserPayload{
 			Content: &UserPayload_ReceivedBlockchainTransaction_{
 				ReceivedBlockchainTransaction: &UserPayload_ReceivedBlockchainTransaction{
-					Kind:            kind,
 					Transaction:     transaction,
 					FromUserAddress: fromUserAddress,
 				},
@@ -538,6 +536,29 @@ func Make_UserSettingsPayload_FullyReadMarkers(
 		UserSettingsPayload: &UserSettingsPayload{
 			Content: &UserSettingsPayload_FullyReadMarkers_{
 				FullyReadMarkers: fullyReadMarkers,
+			},
+		},
+	}
+}
+
+func Make_MediaPayload_Inception(inception *MediaPayload_Inception) *StreamEvent_MediaPayload {
+	return &StreamEvent_MediaPayload{
+		MediaPayload: &MediaPayload{
+			Content: &MediaPayload_Inception_{
+				Inception: inception,
+			},
+		},
+	}
+}
+
+func Make_MediaPayload_Chunk(data []byte, chunkIndex int32) *StreamEvent_MediaPayload {
+	return &StreamEvent_MediaPayload{
+		MediaPayload: &MediaPayload{
+			Content: &MediaPayload_Chunk_{
+				Chunk: &MediaPayload_Chunk{
+					Data:       data,
+					ChunkIndex: chunkIndex,
+				},
 			},
 		},
 	}

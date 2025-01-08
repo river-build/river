@@ -20,7 +20,7 @@ import { RiverTimelineEvent } from '@river-build/sdk'
 const { data: events } = useTimeline(streamId)
 
 // You can filter the events by their kind
-const messages = events.filter((event) => event.content?.kind === RiverTimelineEvent.RoomMessage)
+const messages = events.filter((event) => event.content?.kind === RiverTimelineEvent.ChannelMessage)
 ```
 
 ## Definition
