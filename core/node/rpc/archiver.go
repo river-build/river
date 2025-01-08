@@ -381,13 +381,11 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 		var serialized [][]byte
 		for i, mb := range msg.Miniblocks {
 			// Parse header
-			expected := int64(i) + mbsInDb
 			info, err := events.NewMiniblockInfoFromProto(
 				mb,
-				events.NewMiniblockInfoFromProtoOpts{
-					ExpectedBlockNumber: &expected,
-					DontParseEvents:     true,
-				},
+				events.NewParsedMiniblockInfoOpts().
+					WithExpectedBlockNumber(int64(i)+mbsInDb).
+					WithDoNotParseEvents(true),
 			)
 			if err != nil {
 				return err

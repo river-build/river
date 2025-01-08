@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gammazero/workerpool"
 
 	"github.com/river-build/river/core/node/base"
@@ -103,21 +104,18 @@ func (m *miniblockScrubTaskProcessorImpl) Close() {
 
 var maxBlocksPerScan = 100
 
-func optsFromPrevMiniblock(prevMb *events.MiniblockInfo) events.NewMiniblockInfoFromProtoOpts {
+func optsFromPrevMiniblock(prevMb *events.MiniblockInfo) *events.ParsedMiniblockInfoOpts {
 	expectedPrevSnapshotNum := prevMb.Header().PrevSnapshotMiniblockNum
 	if prevMb.Header().Snapshot != nil {
 		expectedPrevSnapshotNum = prevMb.Header().MiniblockNum
 	}
-	expectedBlockNum := prevMb.Header().MiniblockNum + 1
-	expectedEventNumOffset := prevMb.Header().EventNumOffset + int64(len(prevMb.Events())+1)
-	expectedMinTimestamp := prevMb.Header().Timestamp.AsTime()
-	return events.NewMiniblockInfoFromProtoOpts{
-		ExpectedBlockNumber:               &expectedBlockNum,
-		ExpectedLastMiniblockHash:         &prevMb.Ref.Hash,
-		ExpectedEventNumOffset:            &expectedEventNumOffset,
-		ExpectedMinimumTimestampExclusive: &expectedMinTimestamp,
-		ExpectedPrevSnapshotMiniblockNum:  &expectedPrevSnapshotNum,
-	}
+
+	return events.NewParsedMiniblockInfoOpts().
+		WithExpectedBlockNumber(prevMb.Header().MiniblockNum + 1).
+		WithExpectedPrevMiniblockHash(prevMb.Ref.Hash).
+		WithExpectedEventNumOffset(prevMb.Header().EventNumOffset + int64(len(prevMb.Events())+1)).
+		WithExpectedMinimumTimestampExclusive(prevMb.Header().Timestamp.AsTime()).
+		WithExpectedPrevSnapshotMiniblockNum(expectedPrevSnapshotNum)
 }
 
 func (m *miniblockScrubTaskProcessorImpl) scrubMiniblocks(
@@ -140,7 +138,7 @@ func (m *miniblockScrubTaskProcessorImpl) scrubMiniblocks(
 
 	// Initialize miniblock options based on previous miniblock state
 	// If the miniblock is block 0, an empty options is fine.
-	opts := events.NewMiniblockInfoFromProtoOpts{}
+	opts := events.NewParsedMiniblockInfoOpts()
 	if blockNum > 0 {
 		prevBlock, err := m.store.ReadMiniblocks(ctx, streamId, blockNum-1, blockNum)
 		if err != nil || len(prevBlock) < 1 {
@@ -175,6 +173,12 @@ func (m *miniblockScrubTaskProcessorImpl) scrubMiniblocks(
 		}
 
 		opts = optsFromPrevMiniblock(prevMb)
+	} else {
+		opts = opts.
+			WithExpectedBlockNumber(0).
+			WithExpectedEventNumOffset(0).
+			WithExpectedPrevMiniblockHash(common.Hash{}).
+			WithExpectedPrevSnapshotMiniblockNum(0)
 	}
 
 	for blockNum <= latest {

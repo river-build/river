@@ -874,9 +874,10 @@ func (tc *testClient) getMiniblocks(streamId StreamId, fromInclusive, toExclusiv
 		ToExclusive:   toExclusive,
 	}))
 	tc.require.NoError(err)
-	mbs, err := NewMiniblocksInfoFromProtos(resp.Msg.Miniblocks, NewMiniblockInfoFromProtoOpts{
-		ExpectedBlockNumber: &fromInclusive,
-	})
+	mbs, err := NewMiniblocksInfoFromProtos(
+		resp.Msg.Miniblocks,
+		NewParsedMiniblockInfoOpts().WithExpectedBlockNumber(fromInclusive),
+	)
 	tc.require.NoError(err)
 	return mbs
 }
