@@ -22,8 +22,8 @@ import {
 import { IPersistenceStore } from '../persistenceStore'
 import TypedEmitter from 'typed-emitter'
 import { StreamEncryptionEvents, StreamMlsEvents } from '../streamEvents'
-import { EpochSecretStore, IEpochSecretStore, EpochSecretService } from './epochSecretStore'
-import { EpochSecret } from './epochSecret'
+import { InMemoryEpochSecretStore, IEpochSecretStore, EpochSecretService } from './epoch/epochSecretStore'
+import { EpochSecret } from './epoch/epochSecret'
 
 interface MlsQueueItem {
     respondAfter: Date
@@ -142,7 +142,7 @@ export class MlsQueue {
             }
         }
 
-        this.epochKeyStore = new EpochSecretStore(this.log.debug)
+        this.epochKeyStore = new InMemoryEpochSecretStore(this.log.debug)
         this.epochKeyService = new EpochSecretService(
             this.mlsCrypto.cipherSuite,
             this.epochKeyStore,

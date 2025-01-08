@@ -1,7 +1,7 @@
 import { bin_toString, DLogger } from '@river-build/dlog'
 import Dexie, { Table } from 'dexie'
-import { IEpochSecretStore } from './epochSecretStore'
-import { EpochSecret } from './epochSecret'
+import { IEpochSecretStore } from './epoch/epochSecretStore'
+import { EpochSecret } from './epoch/epochSecret'
 
 // EpochSecretDTO replaces epoch: bigint with epoch: string
 type EpochSecretDTO = Omit<EpochSecret, 'epoch'> & { epoch: string }

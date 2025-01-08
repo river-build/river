@@ -30,3 +30,9 @@ export class EpochSecret {
         return new EpochSecret(streamId, epoch, openEpochSecret, undefined, derivedKeys, false)
     }
 }
+
+export type EpochSecretId = string & { __brand: 'EpochKeyId' }
+
+export function epochSecretId(streamId: string, epoch: bigint): EpochSecretId {
+    return `${streamId}/${epoch}` as EpochSecretId
+}

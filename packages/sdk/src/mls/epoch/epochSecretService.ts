@@ -6,8 +6,9 @@ import {
     Secret as MlsSecret,
 } from '@river-build/mls-rs-wasm'
 import { bin_toHexString, DLogger, shortenHexString } from '@river-build/dlog'
-import { DerivedKeys, EpochSecret } from './epochSecret'
+import { DerivedKeys, EpochSecret, EpochSecretId, epochSecretId } from './epochSecret'
 import { EncryptedData } from '@river-build/proto'
+import { IEpochSecretStore } from './epochSecretStore'
 
 export class EpochSecretService {
     private epochSecretStore: IEpochSecretStore
@@ -223,32 +224,3 @@ export class EpochSecretService {
     }
 }
 
-type EpochSecretId = string & { __brand: 'EpochKeyId' }
-
-function epochSecretId(streamId: string, epoch: bigint): EpochSecretId {
-    return `${streamId}/${epoch}` as EpochSecretId
-}
-
-export interface IEpochSecretStore {
-    getEpochSecret(streamId: string, epoch: bigint): Promise<EpochSecret | undefined>
-    setEpochSecret(epochSecret: EpochSecret): Promise<void>
-}
-
-export class EpochSecretStore implements IEpochSecretStore {
-    private epochKeySates: Map<EpochSecretId, EpochSecret> = new Map()
-    log: DLogger
-
-    constructor(log: DLogger) {
-        this.log = log
-    }
-
-    public async getEpochSecret(streamId: string, epoch: bigint): Promise<EpochSecret | undefined> {
-        const epochId: EpochSecretId = epochSecretId(streamId, epoch)
-        return this.epochKeySates.get(epochId)
-    }
-
-    public async setEpochSecret(epochSecret: EpochSecret): Promise<void> {
-        const epochId = epochSecretId(epochSecret.streamId, epochSecret.epoch)
-        this.epochKeySates.set(epochId, epochSecret)
-    }
-}
