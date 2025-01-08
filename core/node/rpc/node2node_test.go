@@ -38,18 +38,25 @@ func TestSaveEphemeralMiniblock(t *testing.T) {
 	)
 	tt.require.NoError(err)
 
+	parsedEvents, err := events.ParseEvents([]*Envelope{inception})
+	tt.require.NoError(err)
+
+	genesisMb, err := events.MakeGenesisMiniblock(alice.wallet, parsedEvents)
+	tt.require.NoError(err)
+
 	// Create ephemeral media stream
-	asResp, err := alice.client.CreateMediaStream(alice.ctx, connect.NewRequest(&CreateMediaStreamRequest{
-		Events:   []*Envelope{inception},
-		StreamId: mediaStreamId[:],
+	asResp, err := alice.node2nodeClient.AllocateStream(alice.ctx, connect.NewRequest(&AllocateStreamRequest{
+		Miniblock:   genesisMb,
+		StreamId:    mediaStreamId[:],
+		IsEphemeral: true,
 	}))
 	tt.require.NoError(err)
 
 	mb := &MiniblockRef{
-		Hash: common.BytesToHash(asResp.Msg.Stream.NextCreationCookie.PrevMiniblockHash),
+		Hash: common.BytesToHash(asResp.Msg.SyncCookie.PrevMiniblockHash),
 		Num:  0,
 	}
-	prevHash := mb.Hash[:]
+	prevHash := genesisMb.Header.Hash
 	mediaChunks := make([][]byte, chunks)
 	for i := 0; i < chunks; i++ {
 		// Create media chunk event

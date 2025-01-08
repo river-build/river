@@ -37,7 +37,7 @@ func (s *Service) localAddMediaEvent(
 
 	log.Debug("localAddMediaEvent", "parsedEvent", parsedEvent, "creationCookie", creationCookie)
 
-	err = s.addParsedMediaEvent(ctx, streamId, parsedEvent, localStream, streamView, creationCookie)
+	mb, err := s.addParsedMediaEvent(ctx, streamId, parsedEvent, localStream, streamView, creationCookie)
 	if err != nil && req.Msg.Optional {
 		// aellis 5/2024 - we only want to wrap errors from canAddEvent,
 		// currently this is catching all errors, which is not ideal
@@ -52,7 +52,14 @@ func (s *Service) localAddMediaEvent(
 	} else if err != nil {
 		return nil, AsRiverError(err).Func("localAddMediaEvent")
 	} else {
-		return connect.NewResponse(&AddMediaEventResponse{}), nil
+		return connect.NewResponse(&AddMediaEventResponse{
+			CreationCookie: &CreationCookie{
+				StreamId:          streamId[:],
+				Nodes:             creationCookie.Nodes,
+				MiniblockNum:      creationCookie.MiniblockNum + 1,
+				PrevMiniblockHash: mb.Header.Hash,
+			},
+		}), nil
 	}
 }
 
@@ -63,7 +70,7 @@ func (s *Service) addParsedMediaEvent(
 	localStream SyncStream,
 	streamView StreamView,
 	creationCookie *CreationCookie,
-) error {
+) (*Miniblock, error) {
 	// TODO: here it should loop and re-check the rules if view was updated in the meantime.
 
 	canAddEvent, verifications, sideEffects, err := rules.CanAddEvent(
@@ -76,7 +83,7 @@ func (s *Service) addParsedMediaEvent(
 	)
 
 	if !canAddEvent || err != nil {
-		return err
+		return nil, err
 	}
 
 	if len(verifications.OneOfChainAuths) > 0 {
@@ -86,7 +93,7 @@ func (s *Service) addParsedMediaEvent(
 		for _, chainAuthArgs := range verifications.OneOfChainAuths {
 			isEntitled, err = s.chainAuth.IsEntitled(ctx, s.config, chainAuthArgs)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if isEntitled {
 				break
@@ -101,10 +108,10 @@ func (s *Service) addParsedMediaEvent(
 					sideEffects.OnChainAuthFailure.Payload,
 				)
 				if err != nil {
-					return err
+					return nil, err
 				}
 			}
-			return RiverError(
+			return nil, RiverError(
 				Err_PERMISSION_DENIED,
 				"IsEntitled failed",
 				"chainAuthArgsList",
@@ -116,10 +123,10 @@ func (s *Service) addParsedMediaEvent(
 	if verifications.Receipt != nil {
 		isVerified, err := s.chainAuth.VerifyReceipt(ctx, s.config, verifications.Receipt)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !isVerified {
-			return RiverError(
+			return nil, RiverError(
 				Err_PERMISSION_DENIED,
 				"VerifyReceipt failed",
 				"receipt",
@@ -132,7 +139,7 @@ func (s *Service) addParsedMediaEvent(
 		// TODO: Should we use AddMediaEvent here?
 		err := s.AddMediaEventPayload(ctx, sideEffects.RequiredParentEvent.StreamId, sideEffects.RequiredParentEvent.Payload)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -143,12 +150,7 @@ func (s *Service) addParsedMediaEvent(
 		service:     s,
 	}
 
-	err = stream.AddMediaEvent(ctx, parsedEvent, streamView)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return stream.AddMediaEvent(ctx, parsedEvent, streamView)
 }
 
 func (s *Service) AddMediaEventPayload(ctx context.Context, streamId StreamId, payload IsStreamEvent_Payload) error {

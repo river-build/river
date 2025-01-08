@@ -56,7 +56,7 @@ func (s *Service) allocateStream(ctx context.Context, req *AllocateStreamRequest
 			return nil, err
 		}
 
-		stream, err = s.cache.GetEphemeralStream(ctx, streamId)
+		stream, err = s.cache.GetEphemeralStream(ctx, streamId, nil) // no needed nodes here
 		if err != nil {
 			return nil, err
 		}
@@ -258,7 +258,7 @@ func (s *Service) saveEphemeralMiniblock(
 		return nil, err
 	}
 
-	stream, err := s.cache.GetEphemeralStream(ctx, streamId)
+	stream, err := s.cache.GetEphemeralStream(ctx, streamId, nil) // no needed nodes here
 	if err != nil {
 		return nil, err
 	}

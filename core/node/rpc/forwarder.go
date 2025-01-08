@@ -533,7 +533,7 @@ func (s *Service) addMediaEventImpl(
 		nodes[i] = common.BytesToAddress(node)
 	}
 
-	stream, err := s.cache.GetEphemeralStream(ctx, streamId, nodes, common.BytesToHash(cc.GetPrevMiniblockHash()))
+	stream, err := s.cache.GetEphemeralStream(ctx, streamId, nodes)
 	if err != nil {
 		return nil, err
 	}
