@@ -11,8 +11,8 @@ import {
 import { isDefined, logNever } from '../check'
 import { make_MemberPayload_Mls } from '../types'
 import { MlsCrypto } from './index'
-import { EncryptedData, MembershipOp, StreamEvent } from '@river-build/proto'
-import { Message, PlainMessage } from '@bufbuild/protobuf'
+import { EncryptedData } from '@river-build/proto'
+import { Message } from '@bufbuild/protobuf'
 import { addressFromUserId } from '../id'
 import {
     EncryptedContent,
@@ -22,7 +22,8 @@ import {
 import { IPersistenceStore } from '../persistenceStore'
 import TypedEmitter from 'typed-emitter'
 import { StreamEncryptionEvents, StreamMlsEvents } from '../streamEvents'
-import {short} from "@ethereumjs/util";
+import { EpochKeyStore, IEpochKeyStore, EpochKeyService } from './epochKeyStore'
+import { EpochKey } from './epochKey'
 
 interface MlsQueueItem {
     respondAfter: Date
@@ -84,6 +85,17 @@ type MlsCommand = {
     streamId: string
 }
 
+const textEncoder = new TextEncoder()
+const textDecoder = new TextDecoder()
+
+function encode(value: string): Uint8Array {
+    return textEncoder.encode(value)
+}
+
+function decode(value: Uint8Array): string {
+    return textDecoder.decode(value)
+}
+
 /// MlsQueue mimics how DecryptionExtensions handles encrypted content
 export class MlsQueue {
     private started: boolean = false
@@ -103,10 +115,15 @@ export class MlsQueue {
         error: DLogger
     }
 
+    // Services
+    private epochKeyStore: IEpochKeyStore
+    private epochKeyService: EpochKeyService
+
     constructor(
         private readonly client: Client,
         private readonly mlsEventEmitter: TypedEmitter<StreamMlsEvents>,
         private readonly encryptionEmitter: TypedEmitter<StreamEncryptionEvents>,
+        // TODO: Technically we own MlsCrypto
         public readonly mlsCrypto: MlsCrypto,
         private readonly persistenceStore: IPersistenceStore,
         _delegate: EntitlementsDelegate,
@@ -124,6 +141,13 @@ export class MlsQueue {
                 error: dlogError('csb:mls:error'),
             }
         }
+
+        this.epochKeyStore = new EpochKeyStore(this.log.debug)
+        this.epochKeyService = new EpochKeyService(
+            this.mlsCrypto.cipherSuite,
+            this.epochKeyStore,
+            this.log.debug,
+        )
     }
 
     /// Enqueue Mls Events
@@ -374,7 +398,11 @@ export class MlsQueue {
             epoch: keyAnnouncement.key.epoch,
             key: shortenHexString(bin_toHexString(keyAnnouncement.key.key)),
         })
-        await this.mlsCrypto.handleKeyAnnouncement(keyAnnouncement.streamId, keyAnnouncement.key)
+        await this.epochKeyService.addAnnouncedSealedEpochSecret(
+            keyAnnouncement.streamId,
+            keyAnnouncement.key.epoch,
+            keyAnnouncement.key.key,
+        )
         // Eagerly try to decrypt messages
         // TODO: Try decrypting messages
         await this.retryMls(keyAnnouncement.streamId)
@@ -385,82 +413,61 @@ export class MlsQueue {
         this.log.error('retryMls not implemented')
     }
 
+    /// Check if key was announced and then send a message to announce it
     private async announceKeys(
         streamId: string,
         currentEpoch: bigint,
         maxDelayMS: number = 3000,
     ): Promise<void> {
-        if (!this.mlsCrypto) {
-            throw new Error('mls backend not initialized')
-        }
-
         // Wait random delay to give others a chance to share the key
         const delay = Math.random() * maxDelayMS
         await new Promise((resolve) => setTimeout(resolve, delay))
 
         const previousEpoch = currentEpoch - 1n
-        let previousEpochKey = await this.mlsCrypto.epochKeyService.getEpochKey(
-            streamId,
-            previousEpoch,
-        )
+        const previousEpochKey = this.epochKeyService.getEpochKey(streamId, previousEpoch)
 
-        if (previousEpochKey?.state.announced) {
-            this.mlsCrypto.log(`Epoch ${previousEpoch} key announcement already received`)
+        if (previousEpochKey?.announced) {
+            this.log.debug(`announceKeys: ${previousEpoch} key announcement already received`)
             return
         }
 
-        const currentEpochKey = await this.mlsCrypto.epochKeyService.getEpochKey(
-            streamId,
-            currentEpoch,
-        )
+        const currentEpochKey = this.epochKeyService.getEpochKey(streamId, currentEpoch)
 
-        if (
-            currentEpochKey?.state.status === 'EPOCH_KEY_OPEN' &&
-            previousEpochKey?.state.status === 'EPOCH_KEY_OPEN'
-        ) {
-            if (!previousEpochKey.state.sealedEpochSecret) {
-                this.mlsCrypto.log('sealing previous epoch', {
-                    epoch: currentEpoch,
-                })
-                await this.mlsCrypto.epochKeyService.sealEpochSecret(
-                    streamId,
-                    previousEpoch,
-                    currentEpochKey.state,
-                )
-                previousEpochKey = await this.mlsCrypto.epochKeyService.getEpochKey(
-                    streamId,
-                    previousEpoch,
-                )
-            }
+        // Check if current epoch has derived keys
+        if (currentEpochKey?.derivedKeys === undefined) {
+            this.log.debug(`announceKeys: ${currentEpoch} key not derived`)
+            return
+        }
 
-            if (
-                previousEpochKey?.state.status !== 'EPOCH_KEY_OPEN' ||
-                previousEpochKey?.state.sealedEpochSecret === undefined
-            ) {
-                throw new Error('Previous key not sealed (programmer error)')
-            }
-            // Announcing previous epoch secret
-            try {
-                const sealedEpochSecret = previousEpochKey.state.sealedEpochSecret.toBytes()
-                this.mlsCrypto.log('announcing key', {
-                    epoch: previousEpoch,
-                    key: shortenHexString(bin_toHexString(sealedEpochSecret)),
-                })
-                await this.client.makeEventAndAddToStream(
-                    streamId,
-                    make_MemberPayload_Mls({
-                        content: {
-                            case: 'keyAnnouncement',
-                            value: {
-                                key: sealedEpochSecret,
-                                epoch: previousEpoch,
-                            },
-                        },
-                    }),
-                )
-            } catch (error) {
-                this.mlsCrypto.log('error announcing key', error)
-            }
+        // Check if previous epoch is open
+        if (previousEpochKey?.openEpochSecret === undefined) {
+            this.log.debug(`announceKeys: ${previousEpoch} key not open`)
+            return
+        }
+
+        // Check if previous key is sealed?
+        if (previousEpochKey?.sealedEpochSecret === undefined) {
+            this.log.debug(`announceKeys: ${previousEpoch} key not sealed`)
+            return
+        }
+
+        // Create a message to announce the keys
+        this.log.debug(`announceKeys: ${currentEpoch} announcing keys`)
+
+        const announceKeyMessage = make_MemberPayload_Mls({
+            content: {
+                case: 'keyAnnouncement',
+                value: {
+                    key: previousEpochKey.sealedEpochSecret,
+                    epoch: previousEpochKey.epoch,
+                },
+            },
+        })
+
+        try {
+            await this.client.makeEventAndAddToStream(streamId, announceKeyMessage)
+        } catch (error) {
+            this.log.error(`announceKeys: ${currentEpoch} error announcing keys`, error)
         }
     }
 
@@ -533,6 +540,7 @@ export class MlsQueue {
     // }
 
     // Encrypt event using MLS.
+    // TODO: Check that our epoch matches the current epoch
     public async encryptGroupEventMls(event: Message, streamId: string): Promise<EncryptedData> {
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
@@ -557,23 +565,53 @@ export class MlsQueue {
         }
 
         // Ensure epoch keys are derived
-        const epochKey = await this.mlsCrypto.epochKeyService.getEpochKey(
-            streamId,
-            group.state.group.currentEpoch,
-        )
-        if (epochKey?.state.status !== 'EPOCH_KEY_OPEN') {
-            throw new Error('epoch keys not derived')
+        const epochKey = this.epochKeyService.getEpochKey(streamId, group.state.group.currentEpoch)
+
+        if (epochKey === undefined) {
+            throw new Error(
+                `Programmer error: missing epoch key for ${group.state.group.currentEpoch} ${streamId}`,
+            )
+        }
+
+        if (epochKey?.derivedKeys === undefined) {
+            throw new Error(
+                `Programmer error: epoch keys not derived after becoming active for streamId ${streamId}`,
+            )
         }
 
         const plaintext = event.toJsonString()
-        const binary = new TextEncoder().encode(plaintext)
-        return this.mlsCrypto.encrypt(streamId, binary)
+        const binary = encode(plaintext)
+        return this.epochKeyService.encryptMessage(epochKey, binary)
+    }
+
+    private async processEncryptedItem(item: MlsEncryptedContentItem) {
+        this.log.debug('processEncryptedItem', item)
+        // check if the epoch key is open
+        const epochKey = this.epochKeyService.getEpochKey(
+            item.streamId,
+            item.encryptedData.mlsEpoch ?? -1n,
+        )
+
+        if (epochKey?.derivedKeys !== undefined) {
+            // Decrypt ze message
+            return this.decryptGroupEvent(
+                epochKey,
+                item.streamId,
+                item.eventId,
+                item.kind,
+                item.encryptedData,
+            )
+        }
+
+        // Enqueue it for decryption later
+        this.enqueueDecryptionFailure(item)
     }
 
     /**
      * Decrypts and updates events
      */
-    public async decryptGroupEvent(
+    private async decryptGroupEvent(
+        epochKey: EpochKey,
         streamId: string,
         eventId: string,
         kind: string, // kind of data
@@ -584,49 +622,16 @@ export class MlsQueue {
         const stream = this.client.stream(streamId)
         check(isDefined(stream), 'stream not found')
         check(isEncryptedContentKind(kind), `invalid kind ${kind}`)
-        const cleartext = await this.cleartextForGroupEvent(streamId, eventId, encryptedData)
+
+        // check cache
+        let cleartext = await this.persistenceStore.getCleartext(eventId)
+        if (cleartext === undefined) {
+            const cleartext_ = await this.epochKeyService.decryptMessage(epochKey, encryptedData)
+            cleartext = decode(cleartext_)
+        }
         const decryptedContent = toDecryptedContent(kind, cleartext)
+
         stream.updateDecryptedContent(eventId, decryptedContent)
-    }
-
-    private async cleartextForGroupEvent(
-        streamId: string,
-        eventId: string,
-        encryptedData: EncryptedData,
-    ): Promise<string> {
-        const cached = await this.persistenceStore.getCleartext(eventId)
-        if (cached) {
-            // this.logDebug('Cache hit for cleartext', eventId)
-            return cached
-        }
-        // this.logDebug('Cache miss for cleartext', eventId)
-
-        const cleartext = await this.mlsCrypto.decrypt(streamId, encryptedData)
-        const string = new TextDecoder().decode(cleartext)
-        this.mlsCrypto.log('decrypted', string)
-        return string
-    }
-
-    private async processEncryptedItem(item: MlsEncryptedContentItem) {
-        this.log.debug('processEncryptedItem', item)
-        // check if the epoch key is open
-        const epochKey = await this.mlsCrypto.epochKeyService.getEpochKey(
-            item.streamId,
-            item.encryptedData.mlsEpoch ?? -1n,
-        )
-
-        if (epochKey?.state.status === 'EPOCH_KEY_OPEN') {
-            // Decrypt ze message
-            return this.decryptGroupEvent(
-                item.streamId,
-                item.eventId,
-                item.kind,
-                item.encryptedData,
-            )
-        }
-
-        // Enqueue it for decryption later
-        this.enqueueDecryptionFailure(item)
     }
 
     private enqueueDecryptionFailure(item: MlsEncryptedContentItem) {
@@ -646,70 +651,34 @@ export class MlsQueue {
         perEpoch.push(item)
     }
 
+    // TODO: Consider returning MlsEncryptedContentItem together with EpochKey
     private async dequeueDecryptionFailure(): Promise<MlsEncryptedContentItem | undefined> {
-        // Create a Promise that will resolve as soon as first query to the
-        // storage finds a key that is suitable to decrypt content
-
-        // Construct promises that are making a query to the storage,
-        // successful promise returns stream and epoch, unsuccessful,
-        // returns undefined
-
-        const promises: Array<Promise<{ streamId: string; epoch: bigint }>> = []
-        let shortCircuit = false
-
-        // This function returns Promise that resolves for first open key
-        // and rejects otherwise.  The errors will be ignored, so we are
-        // throwing undefined
-        const tryGetEpochKey = async (streamId: string, epoch: bigint) => {
-            if (shortCircuit) {
-                throw undefined
-            }
-
-            const result = await this.mlsCrypto.epochKeyService.getEpochKey(streamId, epoch)
-
-            if (result === undefined) {
-                throw undefined
-            }
-
-            if (result.state.status !== 'EPOCH_KEY_OPEN') {
-                throw undefined
-            }
-
-            shortCircuit = true
-            return { streamId: streamId, epoch: epoch }
-        }
-
-        this.decryptionFailures.forEach((perStream, streamId) => {
-            perStream.forEach((perEpoch, epoch) => {
-                if (perEpoch.length > 0) {
-                    promises.push(tryGetEpochKey(streamId, epoch))
-                }
-            })
-        })
-
-        // Get first successful promise, and ignore all the errors
-        const firstSuccessful = await Promise.any(promises).catch(() => undefined)
+        /// Find a first decryptionFailure that has an open epoch key
         let result: MlsEncryptedContentItem | undefined = undefined
-        if (firstSuccessful) {
-            // check if there is a map
-            const perStream = this.decryptionFailures.get(firstSuccessful.streamId)
-            if (perStream !== undefined) {
-                const perEpoch = perStream.get(firstSuccessful.epoch)
-                if (perEpoch !== undefined) {
+
+        for (const [streamId, perStream] of this.decryptionFailures) {
+            for (const [epoch, perEpoch] of perStream) {
+                const epochKey = this.epochKeyService.getEpochKey(streamId, epoch)
+                if (perEpoch.length > 0 && epochKey?.derivedKeys !== undefined) {
                     result = perEpoch.shift()
 
-                    // Cleaning up perEpoch
+                    // Cleanup
                     if (perEpoch.length === 0) {
-                        perStream.delete(firstSuccessful.epoch)
+                        perStream.delete(epoch)
                     }
-                }
-
-                // Cleaning up perStream
-                if (perStream.size === 0) {
-                    this.decryptionFailures.delete(firstSuccessful.streamId)
+                    break
                 }
             }
+
+            if (result !== undefined) {
+                // Cleanup
+                if (perStream.size === 0) {
+                    this.decryptionFailures.delete(streamId)
+                }
+                break
+            }
         }
+
         return result
     }
 

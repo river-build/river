@@ -2,9 +2,7 @@ import {
     Client as MlsClient,
     MlsMessage,
     CipherSuite as MlsCipherSuite,
-    HpkeCiphertext,
 } from '@river-build/mls-rs-wasm'
-import { EncryptedData } from '@river-build/proto'
 import { EpochKeyService, EpochKeyStore, IEpochKeyStore } from './epochKeyStore'
 import { GroupStore, IGroupStore } from './groupStore'
 import { dlog, DLogger, bin_toHexString, shortenHexString } from '@river-build/dlog'
@@ -59,14 +57,12 @@ export class MlsCrypto {
     private client!: MlsClient
     private userAddress: Uint8Array
     public deviceKey: Uint8Array
-    private epochKeyStore: IEpochKeyStore
     private nickname: string
     readonly log: DLogger
     public awaitTimeoutMS: number = 15_000
 
     awaitingGroupActive: Map<string, Awaiter> = new Map()
     cipherSuite: MlsCipherSuite = new MlsCipherSuite()
-    epochKeyService: EpochKeyService
     groupStore: IGroupStore
 
     constructor(userAddress: Uint8Array, deviceKey: Uint8Array, nickname?: string) {
@@ -79,8 +75,6 @@ export class MlsCrypto {
         }
         this.log = log.extend(this.nickname)
         this.groupStore = new GroupStore(this.log)
-        this.epochKeyStore = new EpochKeyStore(this.log)
-        this.epochKeyService = new EpochKeyService(this.cipherSuite, this.epochKeyStore, this.log)
     }
 
     public async initialize() {
@@ -97,68 +91,6 @@ export class MlsCrypto {
         ).toBytes()
         await this.groupStore.addGroup(Group.createGroup(streamId, group, groupInfoWithExternalKey))
         return groupInfoWithExternalKey
-    }
-
-    public async encrypt(streamId: string, message: Uint8Array): Promise<EncryptedData> {
-        log(`encrypt ${this.nickname} ${streamId}`)
-        this.log('encrypt', { message: shortenHexString(bin_toHexString(message)) })
-        const groupState = await this.groupStore.getGroup(streamId)
-        if (!groupState) {
-            throw new Error('MLS group not found')
-        }
-
-        if (groupState.state.status !== 'GROUP_ACTIVE') {
-            throw new Error('MLS group not in active state')
-        }
-
-        const group = groupState.state.group
-        const epoch = group.currentEpoch
-
-        // Check if we have derived keys, if not try deriving them
-        const epochKey = await this.epochKeyService.getEpochKey(streamId, epoch)
-        if (epochKey?.state.status !== 'EPOCH_KEY_OPEN') {
-            throw new Error('Epoch keys not open')
-        }
-
-        const ciphertext = await this.cipherSuite.seal(epochKey.state.publicKey, message)
-        return new EncryptedData({
-            algorithm: 'mls',
-            mlsCiphertext: ciphertext.toBytes(),
-            mlsEpoch: epoch,
-        })
-    }
-
-    public async decrypt(streamId: string, encryptedData: EncryptedData): Promise<Uint8Array> {
-        log(`decrypt ${this.nickname} ${streamId}`)
-        const groupState = await this.groupStore.getGroup(streamId)
-        if (!groupState) {
-            throw new Error('MLS group not found')
-        }
-
-        if (groupState.state.status !== 'GROUP_ACTIVE') {
-            throw new Error('MLS group not in active state')
-        }
-
-        if (!encryptedData.mlsCiphertext) {
-            throw new Error('Not an MLS payload')
-        }
-
-        const epoch = encryptedData.mlsEpoch
-        if (epoch === undefined) {
-            throw new Error('No epoch specified')
-        }
-        const epochKey = await this.epochKeyService.getEpochKey(streamId, epoch)
-
-        if (epochKey?.state.status !== 'EPOCH_KEY_OPEN') {
-            throw new Error('Epoch keys not derived')
-        }
-
-        const ciphertext = HpkeCiphertext.fromBytes(encryptedData.mlsCiphertext)
-        return await this.cipherSuite.open(
-            ciphertext,
-            epochKey.state.secretKey,
-            epochKey.state.publicKey,
-        )
     }
 
     public async externalJoin(
@@ -195,10 +127,8 @@ export class MlsCrypto {
         }
         const mlsGroup = group.state.group
         await mlsGroup.processIncomingMessage(MlsMessage.fromBytes(commit))
-        const secret = await mlsGroup.currentEpochSecret()
         const epoch = mlsGroup.currentEpoch
         this.log('handleCommit', { epoch, commit: shortenHexString(bin_toHexString(commit)) })
-        await this.epochKeyService.addOpenEpochSecret(streamId, epoch, secret.toBytes())
     }
 
     public async hasGroup(streamId: string): Promise<boolean> {
@@ -260,10 +190,6 @@ export class MlsCrypto {
         if (ourOwnInitializeGroup) {
             group.markActive()
             await this.groupStore.updateGroup(group)
-            // add a key to the epoch store
-            const epoch = group.state.group.currentEpoch
-            const epochSecret = await group.state.group.currentEpochSecret()
-            await this.epochKeyService.addOpenEpochSecret(streamId, epoch, epochSecret.toBytes())
             // check if anyone is waiting for it
             this.log('resolve')
             this.awaitingGroupActive.get(streamId)?.resolve()
@@ -348,12 +274,6 @@ export class MlsCrypto {
                     commit: shortenHexString(bin_toHexString(commit)),
                 })
                 // add a key to the epoch store
-                const epochSecret = await group.state.group.currentEpochSecret()
-                await this.epochKeyService.addOpenEpochSecret(
-                    streamId,
-                    joinedEpoch,
-                    epochSecret.toBytes(),
-                )
                 this.log('resolve')
                 this.awaitingGroupActive.get(streamId)?.resolve()
                 return group
@@ -362,13 +282,6 @@ export class MlsCrypto {
                 await this.handleCommit(streamId, commit)
                 return group
         }
-    }
-
-    public async handleKeyAnnouncement(
-        streamId: string,
-        key: { epoch: bigint; key: Uint8Array },
-    ): Promise<void> {
-        await this.epochKeyService.addAnnouncedSealedEpochSecret(streamId, key.epoch, key.key)
     }
 
     public async epochFor(streamId: string): Promise<bigint> {

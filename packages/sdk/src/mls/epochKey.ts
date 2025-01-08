@@ -1,80 +1,32 @@
-import {
-    HpkeCiphertext,
-    HpkePublicKey,
-    HpkeSecretKey,
-    Secret as MlsSecret,
-} from '@river-build/mls-rs-wasm'
-
-export type EpochKeyState =
-    | { status: 'EPOCH_KEY_SEALED'; sealedEpochSecret: HpkeCiphertext; announced: boolean }
-    | {
-          status: 'EPOCH_KEY_OPEN'
-          openEpochSecret: MlsSecret
-          secretKey: HpkeSecretKey
-          publicKey: HpkePublicKey
-          sealedEpochSecret?: HpkeCiphertext
-          announced: boolean
-      }
-
 export type DerivedKeys = {
-    secretKey: HpkeSecretKey
-    publicKey: HpkePublicKey
+    secretKey: Uint8Array
+    publicKey: Uint8Array
 }
 
 export class EpochKey {
-    public readonly streamId: string
-    public readonly epoch: bigint
-    public state: EpochKeyState
-
-    constructor(streamId: string, epoch: bigint, state: EpochKeyState) {
-        this.streamId = streamId
-        this.epoch = epoch
-        this.state = state
-    }
+    private constructor(
+        public readonly streamId: string,
+        public readonly epoch: bigint,
+        public readonly openEpochSecret?: Uint8Array,
+        public readonly sealedEpochSecret?: Uint8Array,
+        public readonly derivedKeys?: DerivedKeys,
+        public readonly announced?: boolean,
+    ) {}
 
     public static fromSealedEpochSecret(
         streamId: string,
         epoch: bigint,
-        sealedEpochSecret: HpkeCiphertext,
+        sealedEpochSecret: Uint8Array,
     ): EpochKey {
-        return new EpochKey(streamId, epoch, {
-            status: 'EPOCH_KEY_SEALED',
-            sealedEpochSecret,
-            announced: true,
-        })
+        return new EpochKey(streamId, epoch, undefined, sealedEpochSecret, undefined, true)
     }
 
     public static fromOpenEpochSecret(
         streamId: string,
         epoch: bigint,
-        openEpochSecret: MlsSecret,
+        openEpochSecret: Uint8Array,
         derivedKeys: DerivedKeys,
     ): EpochKey {
-        return new EpochKey(streamId, epoch, {
-            status: 'EPOCH_KEY_OPEN',
-            openEpochSecret,
-            secretKey: derivedKeys.secretKey,
-            publicKey: derivedKeys.publicKey,
-            announced: false,
-        })
-    }
-
-    public addSealedEpochSecret(sealedEpochSecret: HpkeCiphertext) {
-        this.state.sealedEpochSecret = sealedEpochSecret
-    }
-
-    public addOpenEpochSecretAndKeys(openEpochSecret: MlsSecret, keys: DerivedKeys) {
-        this.state = {
-            status: 'EPOCH_KEY_OPEN',
-            openEpochSecret,
-            secretKey: keys.secretKey,
-            publicKey: keys.publicKey,
-            sealedEpochSecret: this.state.sealedEpochSecret,
-            announced: this.state.announced,
-        }
-    }
-
-    public markAnnounced() {
-        this.state.announced = true
+        return new EpochKey(streamId, epoch, openEpochSecret, undefined, derivedKeys, false)
     }
 }
