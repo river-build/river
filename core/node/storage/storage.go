@@ -26,6 +26,9 @@ type StreamStorage interface {
 	// Minipool is set to generation number 1 (i.e. number of miniblock that is going to be produced next) and is empty.
 	CreateStreamStorage(ctx context.Context, streamId StreamId, genesisMiniblock []byte) error
 
+	// CreateEphemeralStreamStorage same as CreateStreamStorage but marks the stream as ephemeral.
+	CreateEphemeralStreamStorage(ctx context.Context, streamId StreamId, genesisMiniblock []byte) error
+
 	// ReadStreamFromLastSnapshot reads last stream miniblocks and guarantees that last snapshot miniblock is included.
 	// It attempts to read at least numToRead miniblocks, but may return less if there are not enough miniblocks in storage,
 	// or more, if there are more miniblocks since the last snapshot.
@@ -118,6 +121,11 @@ type StreamStorage interface {
 		streamId StreamId,
 	) (*DebugReadStreamDataResult, error)
 
+	DebugReadStreamStatistics(
+		ctx context.Context,
+		streamId StreamId,
+	) (*DebugReadStreamStatisticsResult, error)
+
 	// GetLastMiniblockNumber returns the last miniblock number for the given stream from storage.
 	GetLastMiniblockNumber(ctx context.Context, streamID StreamId) (int64, error)
 
@@ -125,11 +133,10 @@ type StreamStorage interface {
 }
 
 type WriteMiniblockData struct {
-	Number    int64
-	Hash      common.Hash
-	Snapshot  bool
-	Data      []byte
-	Ephemeral bool
+	Number   int64
+	Hash     common.Hash
+	Snapshot bool
+	Data     []byte
 }
 
 type MiniblockData struct {
@@ -156,4 +163,17 @@ type DebugReadStreamDataResult struct {
 	Miniblocks                 []MiniblockDescriptor
 	Events                     []EventDescriptor
 	MbCandidates               []MiniblockDescriptor
+}
+
+type MiniblockCandidateStatisticsResult struct {
+	Hash     string
+	BlockNum int64
+}
+
+type DebugReadStreamStatisticsResult struct {
+	StreamId                   string
+	LatestMiniblockNum         int64
+	CurrentMiniblockCandidates []MiniblockCandidateStatisticsResult
+	NumMinipoolEvents          int64
+	LatestSnapshotMiniblockNum int64
 }

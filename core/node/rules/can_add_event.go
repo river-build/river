@@ -11,6 +11,8 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/river-build/river/core/node/crypto"
+	"github.com/river-build/river/core/node/mls_service"
+	"github.com/river-build/river/core/node/mls_service/mls_tools"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -80,6 +82,21 @@ type aePinRules struct {
 type aeUnpinRules struct {
 	params *aeParams
 	unpin  *MemberPayload_Unpin
+}
+
+type aeMlsInitializeGroupRules struct {
+	params          *aeParams
+	initializeGroup *MemberPayload_Mls_InitializeGroup
+}
+
+type aeMlsExternalJoinRules struct {
+	params          *aeParams
+	externalJoin *MemberPayload_Mls_ExternalJoin
+}
+
+type aeMlsEpochSecrets struct {
+	params *aeParams
+	secrets *MemberPayload_Mls_EpochSecrets
 }
 
 type aeMediaPayloadChunkRules struct {
@@ -356,6 +373,7 @@ func (params *aeParams) canAddUserPayload(payload *StreamEvent_UserPayload) rule
 		return aeBuilder().
 			check(ru.params.creatorIsValidNode).
 			check(ru.validReceivedBlockchainTransaction_IsUnique).
+			requireChainAuth(ru.receivedBlockchainTransaction_ChainAuth).
 			requireParentEvent(ru.parentEventForReceivedBlockchainTransaction)
 	default:
 		return aeBuilder().
@@ -566,8 +584,8 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 			check(ru.validMemberBlockchainTransaction_IsUnique).
 			check(ru.validMemberBlockchainTransaction_ReceiptMetadata)
 	case *MemberPayload_Mls_:
-		return aeBuilder().
-			check(params.creatorIsMember)
+		return params.canAddMlsPayload(content.Mls)
+
 	case *MemberPayload_EncryptionAlgorithm_:
 		return aeBuilder().
 			check(params.creatorIsMember)
@@ -575,6 +593,41 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 		return aeBuilder().
 			fail(unknownContentType(content))
 	}
+}
+
+func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilderAE {
+	switch content := payload.Content.(type) {
+	case *MemberPayload_Mls_InitializeGroup_:
+		ru := &aeMlsInitializeGroupRules{
+			params:          params,
+			initializeGroup: content.InitializeGroup,
+		}
+		return aeBuilder().
+			check(params.creatorIsMember).
+			check(ru.validMlsInitializeGroup)
+	case *MemberPayload_Mls_ExternalJoin_:
+		ru := &aeMlsExternalJoinRules{
+			params: 	  params,
+			externalJoin: content.ExternalJoin,
+		}
+		return aeBuilder().
+			check(params.creatorIsMember).
+			check(params.mlsInitialized).
+			check(ru.validMlsExternalJoin)
+	case *MemberPayload_Mls_EpochSecrets_:
+		ru := &aeMlsEpochSecrets{
+			params: params,
+			secrets: content.EpochSecrets,
+		}
+		return aeBuilder().
+			check(params.creatorIsMember).
+			check(params.mlsInitialized).
+			check(ru.validMlsEpochSecrets)
+	default:
+		return aeBuilder().
+			fail(unknownContentType(content))
+	}
+
 }
 
 func (params *aeParams) pass() (bool, error) {
@@ -609,6 +662,14 @@ func (params *aeParams) creatorIsMember() (bool, error) {
 	return true, nil
 }
 
+func (params *aeParams) mlsInitialized() (bool, error) {
+	mlsInitialized, err := params.streamView.(events.MlsStreamView).IsMlsInitialized()
+	if err != nil {
+		return false, err
+	}
+	return mlsInitialized, nil
+}
+
 func (ru *aeMemberBlockchainTransactionRules) validMemberBlockchainTransaction_ReceiptMetadata() (bool, error) {
 	// check creator
 	switch content := ru.memberTransaction.Transaction.Content.(type) {
@@ -621,12 +682,12 @@ func (ru *aeMemberBlockchainTransactionRules) validMemberBlockchainTransaction_R
 		if err != nil {
 			return false, err
 		}
-		err = checkIsMember(ru.params, content.Tip.GetReceiver())
+		err = checkIsMember(ru.params, content.Tip.GetToUserAddress())
 		if err != nil {
 			return false, err
 		}
 		// we need a ref event id
-		if content.Tip.GetMessageId() == nil {
+		if content.Tip.GetEvent().GetMessageId() == nil {
 			return false, RiverError(Err_INVALID_ARGUMENT, "tip transaction message id is nil")
 		}
 		return true, nil
@@ -726,25 +787,25 @@ func (ru *aeBlockchainTransactionRules) validBlockchainTransaction_CheckReceiptM
 			if err != nil {
 				continue // not a tip
 			}
-			if tipEvent.TokenId.Cmp(big.NewInt(int64(content.Tip.GetTokenId()))) != 0 {
+			if tipEvent.TokenId.Cmp(big.NewInt(int64(content.Tip.GetEvent().GetTokenId()))) != 0 {
 				continue
 			}
-			if !bytes.Equal(tipEvent.Currency[:], content.Tip.GetCurrency()) {
+			if !bytes.Equal(tipEvent.Currency[:], content.Tip.GetEvent().GetCurrency()) {
 				continue
 			}
-			if !bytes.Equal(tipEvent.Sender[:], content.Tip.GetSender()) {
+			if !bytes.Equal(tipEvent.Sender[:], content.Tip.GetEvent().GetSender()) {
 				continue
 			}
-			if !bytes.Equal(tipEvent.Receiver[:], content.Tip.GetReceiver()) {
+			if !bytes.Equal(tipEvent.Receiver[:], content.Tip.GetEvent().GetReceiver()) {
 				continue
 			}
-			if tipEvent.Amount.Cmp(big.NewInt(int64(content.Tip.GetAmount()))) != 0 {
+			if tipEvent.Amount.Cmp(big.NewInt(int64(content.Tip.GetEvent().GetAmount()))) != 0 {
 				continue
 			}
-			if !bytes.Equal(tipEvent.MessageId[:], content.Tip.GetMessageId()) {
+			if !bytes.Equal(tipEvent.MessageId[:], content.Tip.GetEvent().GetMessageId()) {
 				continue
 			}
-			if !bytes.Equal(tipEvent.ChannelId[:], content.Tip.GetChannelId()) {
+			if !bytes.Equal(tipEvent.ChannelId[:], content.Tip.GetEvent().GetChannelId()) {
 				continue
 			}
 			// match found
@@ -764,27 +825,48 @@ func (ru *aeBlockchainTransactionRules) validBlockchainTransaction_CheckReceiptM
 	}
 }
 
+func (ru *aeReceivedBlockchainTransactionRules) receivedBlockchainTransaction_ChainAuth() (*auth.ChainAuthArgs, error) {
+	transaction := ru.receivedTransaction.Transaction
+	if transaction == nil {
+		return nil, RiverError(Err_INVALID_ARGUMENT, "transaction is nil")
+	}
+
+	switch content := transaction.Content.(type) {
+	case nil:
+		return nil, nil
+	case *BlockchainTransaction_Tip_:
+		userAddress, err := shared.GetUserAddressFromStreamId(*ru.params.streamView.StreamId())
+		if err != nil {
+			return nil, err
+		}
+		if !bytes.Equal(content.Tip.GetToUserAddress(), userAddress.Bytes()) {
+			return nil, RiverError(Err_INVALID_ARGUMENT, "to user address is not the user", "toUser", content.Tip.GetToUserAddress(), "user", userAddress.Bytes())
+		}
+		// make sure that the receiver (in the event emitted from the tipping facet) is one of our wallets
+		return auth.NewChainAuthArgsForIsWalletLinked(
+			userAddress.Bytes(),
+			content.Tip.GetEvent().GetReceiver(),
+		), nil
+	default:
+		return nil, RiverError(Err_INVALID_ARGUMENT, "unknown received transaction kind for chain auth", "kind", content)
+	}
+}
+
 func (ru *aeReceivedBlockchainTransactionRules) parentEventForReceivedBlockchainTransaction() (*DerivedEvent, error) {
 	transaction := ru.receivedTransaction.Transaction
 	if transaction == nil {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "transaction is nil")
 	}
 
-	switch ru.receivedTransaction.Kind {
-	case ReceivedBlockchainTransactionKind_RECEIVED_BLOCKCHAIN_TRANSACTION_KIND_UNSPECIFIED:
-		return nil, RiverError(Err_INVALID_ARGUMENT, "transaction kind is unspecified")
-	case ReceivedBlockchainTransactionKind_RECEIVED_BLOCKCHAIN_TRANSACTION_KIND_TIP:
-		// received tips wrap the original tip transaction, grab the stream id
-		// cast content to tip and check error
-		content, ok := transaction.Content.(*BlockchainTransaction_Tip_)
-		if !ok {
-			return nil, RiverError(Err_INVALID_ARGUMENT, "content is not a tip")
-		}
-		if content.Tip.GetChannelId() == nil {
+	switch content := transaction.Content.(type) {
+	case nil:
+		return nil, RiverError(Err_INVALID_ARGUMENT, "transaction content is unspecified")
+	case *BlockchainTransaction_Tip_:
+		if content.Tip.GetEvent().GetChannelId() == nil {
 			return nil, RiverError(Err_INVALID_ARGUMENT, "transaction channel id is nil")
 		}
 		// convert to stream id
-		streamId, err := shared.StreamIdFromBytes(content.Tip.GetChannelId())
+		streamId, err := shared.StreamIdFromBytes(content.Tip.GetEvent().GetChannelId())
 		if err != nil {
 			return nil, err
 		}
@@ -797,7 +879,7 @@ func (ru *aeReceivedBlockchainTransactionRules) parentEventForReceivedBlockchain
 			StreamId: streamId,
 		}, nil
 	default:
-		return nil, RiverError(Err_INVALID_ARGUMENT, "unknown transaction kind", "kind", ru.receivedTransaction.Kind)
+		return nil, RiverError(Err_INVALID_ARGUMENT, "unknown transaction content", "content", content)
 	}
 }
 
@@ -808,11 +890,11 @@ func (ru *aeBlockchainTransactionRules) parentEventForBlockchainTransaction() (*
 		return nil, nil
 	case *BlockchainTransaction_Tip_:
 		// forward a "tip received" event to the user stream of the toUserAddress
-		userStreamId, err := shared.UserStreamIdFromBytes(content.Tip.GetReceiver())
+		userStreamId, err := shared.UserStreamIdFromBytes(content.Tip.GetToUserAddress())
 		if err != nil {
 			return nil, err
 		}
-		toStreamId, err := shared.StreamIdFromBytes(content.Tip.GetChannelId())
+		toStreamId, err := shared.StreamIdFromBytes(content.Tip.GetEvent().GetChannelId())
 		if err != nil {
 			return nil, err
 		}
@@ -821,7 +903,6 @@ func (ru *aeBlockchainTransactionRules) parentEventForBlockchainTransaction() (*
 			shared.ValidGDMChannelStreamId(&toStreamId) {
 			return &DerivedEvent{
 				Payload: events.Make_UserPayload_ReceivedBlockchainTransaction(
-					ReceivedBlockchainTransactionKind_RECEIVED_BLOCKCHAIN_TRANSACTION_KIND_TIP,
 					ru.params.parsedEvent.Event.CreatorAddress,
 					ru.transaction,
 				),
@@ -866,7 +947,7 @@ func (ru *aeBlockchainTransactionRules) blockchainTransaction_ChainAuth() (*auth
 		// as specified in the tip content and verified against the logs in blockchainTransaction_CheckReceiptMetadata
 		return auth.NewChainAuthArgsForIsWalletLinked(
 			ru.params.parsedEvent.Event.CreatorAddress,
-			content.Tip.GetSender(),
+			content.Tip.GetEvent().GetSender(),
 		), nil
 	default:
 		return nil, RiverError(
@@ -1330,6 +1411,65 @@ func (ru *aeMembershipRules) channelMembershipEntitlements() (*auth.ChainAuthArg
 	)
 
 	return chainAuthArgs, nil
+}
+
+func (ru *aeMlsInitializeGroupRules) validMlsInitializeGroup() (bool, error) {
+	mlsInitialized, err := ru.params.streamView.(events.MlsStreamView).IsMlsInitialized()
+	if err != nil {
+		return false, err
+	}
+	if mlsInitialized {
+		return false, RiverError(Err_INVALID_ARGUMENT, "group already initialized")
+	}
+	request := mls_tools.InitialGroupInfoRequest{
+		SignaturePublicKey:    ru.initializeGroup.SignaturePublicKey,
+		GroupInfoMessage:      ru.initializeGroup.GroupInfoMessage,
+		ExternalGroupSnapshot: ru.initializeGroup.ExternalGroupSnapshot,
+	}
+	resp, err := mls_service.InitialGroupInfoRequest(&request)
+	if err != nil {
+		return false, err
+	}
+	if resp.GetResult() != mls_tools.ValidationResult_VALID {
+		return false, RiverError(Err_INVALID_ARGUMENT, "invalid group init", "result", resp.GetResult())
+	}
+	return true, nil
+}
+
+func (ru *aeMlsExternalJoinRules) validMlsExternalJoin() (bool, error) {
+	view := ru.params.streamView.(events.MlsStreamView)
+	externalJoinRequest, err := view.GetMlsExternalJoinRequest()
+	if err != nil {
+		return false, err
+	}
+	externalJoinRequest.ProposedExternalJoinCommit = ru.externalJoin.Commit
+	externalJoinRequest.ProposedExternalJoinInfoMessage = ru.externalJoin.GroupInfoMessage
+	externalJoinRequest.SignaturePublicKey = ru.externalJoin.SignaturePublicKey
+	resp, err := mls_service.ExternalJoinRequest(externalJoinRequest)
+	if err != nil {
+		return false, err
+	}
+	if resp.GetResult() != mls_tools.ValidationResult_VALID {
+		return false, RiverError(Err_INVALID_ARGUMENT, "invalid external join", "result", resp.GetResult())
+	}
+	return true, nil
+}
+
+func (ru *aeMlsEpochSecrets) validMlsEpochSecrets() (bool, error) {
+	if len(ru.secrets.Secrets) == 0 {
+		return false, RiverError(Err_INVALID_ARGUMENT, "no secrets provided")
+	}
+	view := ru.params.streamView.(events.MlsStreamView)
+	epochSecrets, err := view.GetMlsEpochSecrets()
+	if err != nil {
+		return false, err
+	}
+	for _, secret := range ru.secrets.Secrets {
+		if _, ok := epochSecrets[secret.Epoch]; ok {
+			return false, RiverError(Err_INVALID_ARGUMENT, "epoch already exists", "epoch", secret.Epoch)
+		}
+	}
+	return true, nil
 }
 
 // return function that can be used to check if a user has a permission for a space

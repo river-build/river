@@ -28,6 +28,7 @@ import {
     UserBio,
     Tags,
     BlockchainTransaction,
+    MemberPayload_Mls,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -134,6 +135,7 @@ import {
     make_UserPayload_BlockchainTransaction,
     ContractReceipt,
     make_MemberPayload_EncryptionAlgorithm,
+    make_MemberPayload_Mls,
 } from './types'
 
 import debug from 'debug'
@@ -1934,17 +1936,21 @@ export class Client
         chainId: number,
         receipt: ContractReceipt,
         event: TipEventObject,
+        toUserId: string,
     ): Promise<{ eventId: string }> {
         return this.addTransaction(chainId, receipt, {
             case: 'tip',
             value: {
-                tokenId: event.tokenId.toBigInt(),
-                currency: bin_fromHexString(event.currency),
-                sender: addressFromUserId(event.sender),
-                receiver: addressFromUserId(event.receiver),
-                amount: event.amount.toBigInt(),
-                messageId: bin_fromHexString(event.messageId),
-                channelId: streamIdAsBytes(event.channelId),
+                event: {
+                    tokenId: event.tokenId.toBigInt(),
+                    currency: bin_fromHexString(event.currency),
+                    sender: addressFromUserId(event.sender),
+                    receiver: addressFromUserId(event.receiver),
+                    amount: event.amount.toBigInt(),
+                    messageId: bin_fromHexString(event.messageId),
+                    channelId: streamIdAsBytes(event.channelId),
+                },
+                toUserAddress: addressFromUserId(toUserId),
             },
         })
     }
@@ -2492,5 +2498,14 @@ export class Client
 
     public async debugDropStream(syncId: string, streamId: string): Promise<void> {
         await this.rpcClient.info({ debug: ['drop_stream', syncId, streamId] })
+    }
+
+    public async _debugSendMls(
+        streamId: string | Uint8Array,
+        payload: PlainMessage<MemberPayload_Mls>,
+    ) {
+        return this.makeEventAndAddToStream(streamId, make_MemberPayload_Mls(payload), {
+            method: 'mls',
+        })
     }
 }

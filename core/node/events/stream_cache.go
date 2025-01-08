@@ -6,8 +6,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/gammazero/workerpool"
 	"github.com/prometheus/client_golang/prometheus"
@@ -52,7 +50,7 @@ type StreamCache interface {
 	GetStreamWaitForLocal(ctx context.Context, streamId StreamId) (SyncStream, error)
 	// GetStreamNoWait is a transitional method to support existing GetStream API before block number are wired through APIs.
 	GetStreamNoWait(ctx context.Context, streamId StreamId) (SyncStream, error)
-	GetEphemeralStream(ctx context.Context, streamId StreamId, nodes []common.Address, lastMbHash common.Hash) (SyncStream, error)
+	GetEphemeralStream(ctx context.Context, streamId StreamId) (SyncStream, error)
 	ForceFlushAll(ctx context.Context)
 	GetLoadedViews(ctx context.Context) []StreamView
 	GetMbCandidateStreams(ctx context.Context) []*streamImpl
@@ -318,7 +316,7 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 		for {
 			select {
 			case <-ctx.Done():
-				return nil, ctx.Err()
+				return nil, AsRiverError(ctx.Err(), Err_INTERNAL).Message("Timeout waiting for cache record to be created")
 			case <-time.After(delay):
 				stream, _ := s.cache.Load(streamId)
 				if stream != nil {
@@ -367,15 +365,13 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 func (s *streamCacheImpl) tryGetEphemeralStream(
 	ctx context.Context,
 	streamId StreamId,
-	nodes []common.Address,
-	lastMiniblockHash common.Hash,
 ) (*streamImpl, error) {
 	stream := &streamImpl{
 		params:           s.params,
 		streamId:         streamId,
 		lastAccessedTime: time.Now(),
+		local:            &localStreamState{},
 	}
-	stream.nodesLocked.Reset(nodes, s.params.Wallet.Address)
 
 	if !stream.nodesLocked.IsLocal() {
 		stream, _ = s.cache.LoadOrStore(streamId, stream)
@@ -384,19 +380,11 @@ func (s *streamCacheImpl) tryGetEphemeralStream(
 
 	stream.local = &localStreamState{}
 
-	if lastMiniblockHash.Cmp(common.Hash{}) != 0 {
-		// TODO: reconcile from other nodes.
-		return nil, RiverError(
-			Err_INTERNAL,
-			"tryGetEphemeralStream: Stream is past genesis",
-			"streamId",
-			streamId,
-		)
-	}
+	//stream, _, err := s.createStreamStorage(ctx, stream, nil, true)
+	//if err != nil {
+	//	return nil, err
+	//}
 
-	//TODO: Should it be enabled?
-	//var err error
-	//stream, _, err = s.createStreamStorage(ctx, stream, mb)
 	return stream, nil
 }
 
@@ -480,21 +468,17 @@ func (s *streamCacheImpl) getStreamImpl(
 func (s *streamCacheImpl) GetEphemeralStream(
 	ctx context.Context,
 	streamId StreamId,
-	nodes []common.Address,
-	lastMiniblockHash common.Hash,
 ) (SyncStream, error) {
-	return s.getEphemeralStreamImpl(ctx, streamId, nodes, lastMiniblockHash)
+	return s.getEphemeralStreamImpl(ctx, streamId)
 }
 
 func (s *streamCacheImpl) getEphemeralStreamImpl(
 	ctx context.Context,
 	streamId StreamId,
-	nodes []common.Address,
-	lastMiniblockHash common.Hash,
 ) (*streamImpl, error) {
 	stream, _ := s.cache.Load(streamId)
 	if stream == nil {
-		return s.tryGetEphemeralStream(ctx, streamId, nodes, lastMiniblockHash)
+		return s.tryGetEphemeralStream(ctx, streamId)
 	}
 	return stream, nil
 }

@@ -14,6 +14,7 @@ message MiniblockProposal {
 message AllocateStreamRequest {
     Miniblock miniblock = 1;
     bytes stream_id = 2; // stream_id should match the stream_id in the inception payload of the first event
+    bool is_ephemeral = 3;
 }
 
 message AllocateStreamResponse {

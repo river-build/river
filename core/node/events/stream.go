@@ -3,7 +3,9 @@ package events
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -62,12 +64,6 @@ type SyncStream interface {
 	// Once blockchain event making candidate canonical is observed,
 	// candidate is read and applied.
 	SaveMiniblockCandidate(
-		ctx context.Context,
-		mb *Miniblock,
-	) error
-
-	// SaveEphemeralMiniblock saves the given miniblock as ephemeral.
-	SaveEphemeralMiniblock(
 		ctx context.Context,
 		mb *Miniblock,
 	) error
@@ -740,7 +736,22 @@ func (s *streamImpl) addEventLocked(ctx context.Context, event *ParsedEvent) err
 	// TODO: for some classes of errors, it's not clear if event was added or not
 	// for those, perhaps entire Stream structure should be scrapped and reloaded
 	if err != nil {
-		return err
+		// Populate error message with as many details as possible since a possible race
+		// condition that appears here has been notoriously difficult to debug.
+		eventsStr := fmt.Sprintf("[...%d events]", len(s.view().minipool.events.Map))
+		if len(s.view().minipool.events.Map) <= 16 {
+			var sb strings.Builder
+			sb.WriteString("[\n")
+			for hash, event := range s.view().minipool.events.Map {
+				sb.WriteString(fmt.Sprintf("  %s %s,\n", hash, event.ShortDebugStr()))
+			}
+			sb.WriteString("]")
+			eventsStr = sb.String()
+		}
+
+		return AsRiverError(err, Err_DB_OPERATION_FAILURE).
+			Tag("inMemoryBlocks", len(s.view().blocks)).
+			Tag("inMemoryEvents", eventsStr)
 	}
 
 	s.setView(newSV)
@@ -961,29 +972,6 @@ func (s *streamImpl) SaveMiniblockCandidate(ctx context.Context, mb *Miniblock) 
 		mbInfo.Ref.Num,
 		serialized,
 	)
-}
-
-// SaveEphemeralMiniblock saves the ephemeral miniblock candidate for the stream.
-func (s *streamImpl) SaveEphemeralMiniblock(ctx context.Context, mb *Miniblock) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if err := s.loadInternal(ctx); err != nil {
-		return err
-	}
-
-	mbInfo, err := NewMiniblockInfoFromProto(
-		mb,
-		NewMiniblockInfoFromProtoOpts{
-			ExpectedBlockNumber: -1,
-			Ephemeral:           true,
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	return s.applyMiniblockImplLocked(ctx, mbInfo, nil)
 }
 
 // tryApplyCandidate tries to apply the miniblock candidate to the stream. It will apply iff

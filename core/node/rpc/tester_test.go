@@ -79,6 +79,7 @@ type serviceTesterOpts struct {
 	replicationFactor int
 	start             bool
 	btcParams         *crypto.TestParams
+	printTestLogs     bool
 }
 
 func makeTestListenerNoCleanup(t *testing.T) (net.Listener, string) {
@@ -105,7 +106,13 @@ func newServiceTester(t *testing.T, opts serviceTesterOpts) *serviceTester {
 		opts.replicationFactor = 1
 	}
 
-	ctx, ctxCancel := test.NewTestContext()
+	var ctx context.Context
+	var ctxCancel func()
+	if opts.printTestLogs {
+		ctx, ctxCancel = test.NewTestContextWithLogging("info")
+	} else {
+		ctx, ctxCancel = test.NewTestContext()
+	}
 	require := require.New(t)
 
 	st := &serviceTester{
@@ -340,9 +347,10 @@ func (st *serviceTester) startSingle(i int, opts ...startOpts) error {
 
 	logger := dlog.FromCtx(st.ctx).With("nodeNum", i, "test", st.t.Name())
 	ctx := dlog.CtxWithLog(st.ctx, logger)
+	ctx, ctxCancel := context.WithCancel(ctx)
 
 	bc := st.btc.GetBlockchain(ctx, i)
-	service, err := StartServer(ctx, cfg, &ServerStartOpts{
+	service, err := StartServer(ctx, ctxCancel, cfg, &ServerStartOpts{
 		RiverChain:      bc,
 		Listener:        listener,
 		HttpClientMaker: testcert.GetHttp2LocalhostTLSClient,
@@ -367,9 +375,18 @@ func (st *serviceTester) testClient(i int) protocolconnect.StreamServiceClient {
 	return st.testClientForUrl(st.nodes[i].url)
 }
 
+func (st *serviceTester) testNode2NodeClient(i int) protocolconnect.NodeToNodeClient {
+	return st.testNode2NodeClientForUrl(st.nodes[i].url)
+}
+
 func (st *serviceTester) testClientForUrl(url string) protocolconnect.StreamServiceClient {
 	httpClient, _ := testcert.GetHttp2LocalhostTLSClient(st.ctx, st.getConfig())
 	return protocolconnect.NewStreamServiceClient(httpClient, url, connect.WithGRPCWeb())
+}
+
+func (st *serviceTester) testNode2NodeClientForUrl(url string) protocolconnect.NodeToNodeClient {
+	httpClient, _ := testcert.GetHttp2LocalhostTLSClient(st.ctx, st.getConfig())
+	return protocolconnect.NewNodeToNodeClient(httpClient, url, connect.WithGRPCWeb())
 }
 
 func (st *serviceTester) httpClient() *http.Client {
@@ -506,30 +523,32 @@ func (st *serviceTester) httpGet(url string) string {
 }
 
 type testClient struct {
-	t            *testing.T
-	ctx          context.Context
-	assert       *assert.Assertions
-	require      *require.Assertions
-	client       protocolconnect.StreamServiceClient
-	wallet       *crypto.Wallet
-	userId       common.Address
-	userStreamId StreamId
-	name         string
+	t               *testing.T
+	ctx             context.Context
+	assert          *assert.Assertions
+	require         *require.Assertions
+	client          protocolconnect.StreamServiceClient
+	node2nodeClient protocolconnect.NodeToNodeClient
+	wallet          *crypto.Wallet
+	userId          common.Address
+	userStreamId    StreamId
+	name            string
 }
 
 func (st *serviceTester) newTestClient(i int) *testClient {
 	wallet, err := crypto.NewWallet(st.ctx)
 	st.require.NoError(err)
 	return &testClient{
-		t:            st.t,
-		ctx:          st.ctx,
-		assert:       assert.New(st.t),
-		require:      st.require,
-		client:       st.testClient(i),
-		wallet:       wallet,
-		userId:       wallet.Address,
-		userStreamId: UserStreamIdFromAddr(wallet.Address),
-		name:         fmt.Sprintf("%d-%s", i, wallet.Address.Hex()[2:8]),
+		t:               st.t,
+		ctx:             st.ctx,
+		assert:          assert.New(st.t),
+		require:         st.require,
+		client:          st.testClient(i),
+		node2nodeClient: st.testNode2NodeClient(i),
+		wallet:          wallet,
+		userId:          wallet.Address,
+		userStreamId:    UserStreamIdFromAddr(wallet.Address),
+		name:            fmt.Sprintf("%d-%s", i, wallet.Address.Hex()[2:8]),
 	}
 }
 

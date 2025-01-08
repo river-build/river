@@ -6549,10 +6549,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@river-build/mls-rs-wasm@npm:^0.0.9":
-  version: 0.0.9
-  resolution: "@river-build/mls-rs-wasm@npm:0.0.9"
-  checksum: c0221954de5c0b981f656b497e9b72ac3a3c82cb7810c389f4cb25a84ffb1727718342eafc186edeb1b3d14580ff7a1dfb2fbac576cf792ac1054f04b4659cbb
+"@river-build/mls-rs-wasm@npm:^0.0.11":
+  version: 0.0.11
+  resolution: "@river-build/mls-rs-wasm@npm:0.0.11"
+  checksum: 57abfaf019575ef6e5f20bd934170c83360439c55f38f711857eabc74e0e63ba2820b6b8f020c9ff865096fc697b67434dd0349ee6895ddbe67ff32f81297296
   languageName: node
   linkType: hard
 
@@ -6693,7 +6693,7 @@ __metadata:
     "@river-build/dlog": "workspace:^"
     "@river-build/encryption": "workspace:^"
     "@river-build/generated": "workspace:^"
-    "@river-build/mls-rs-wasm": ^0.0.9
+    "@river-build/mls-rs-wasm": ^0.0.11
     "@river-build/proto": "workspace:^"
     "@river-build/web3": "workspace:^"
     "@testing-library/react": ^14.2.1
@@ -20694,6 +20694,7 @@ __metadata:
   resolution: "merkle-worker@workspace:packages/workers/merkle-worker"
   dependencies:
     "@cloudflare/workers-types": ^4.20241022.0
+    "@ethersproject/keccak256": ^5.7.0
     "@openzeppelin/merkle-tree": ^1.0.7
     "@types/jest": ^29.5.3
     eslint: ^8.53.0

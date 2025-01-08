@@ -156,10 +156,16 @@ message MiniblockHeader {
 */
 message MemberPayload {
     message Snapshot {
-
         // contains the current MLS group state
         message Mls {
-            
+            message Member {
+                repeated bytes signature_public_keys = 1;
+            }
+            bytes external_group_snapshot = 1;
+            bytes group_info_message = 2;
+            // user_address -> Member
+            map<string, Member> members = 3;
+            map<uint64, bytes> epoch_secrets = 4;
         }
 
         message Member {
@@ -177,6 +183,8 @@ message MemberPayload {
         repeated SnappedPin pins = 2;
         Mls mls = 3;
         EncryptionAlgorithm encryption_algorithm = 4;
+        // tips sent in this stream: map<currency, amount>
+        map<string, uint64> tips = 5;
     }
 
     message Membership {
@@ -220,7 +228,31 @@ message MemberPayload {
     }
 
     message Mls {
+        message InitializeGroup {
+            bytes group_info_message = 1;
+            bytes external_group_snapshot = 2;
+            bytes signature_public_key = 3;
+        }
 
+        message ExternalJoin {
+            bytes signature_public_key = 1;
+            bytes commit = 2;
+            bytes group_info_message = 3;
+        }
+
+        message EpochSecrets {
+            message EpochSecret {
+                bytes secret = 1;
+                uint64 epoch = 2;
+            }
+            repeated EpochSecret secrets = 1;
+        }
+
+        oneof content {
+            InitializeGroup initialize_group = 1;
+            ExternalJoin external_join = 2;
+            EpochSecrets epoch_secrets = 3;
+        }
     }
 
     message EncryptionAlgorithm {
@@ -391,6 +423,10 @@ message UserPayload {
         Inception inception = 1;
         // memberships, sorted by stream_id
         repeated UserMembership memberships = 2;
+        // tips sent by this user: map<currency, amount>
+        map<string, uint64> tips_sent = 3;
+        // tips received by this user: map<currency, amount>
+        map<string, uint64> tips_received = 4;
     }
 
     message Inception {
@@ -416,9 +452,8 @@ message UserPayload {
 
     // derived event, only send from nodes
     message ReceivedBlockchainTransaction {
-        ReceivedBlockchainTransactionKind kind = 1;
-        BlockchainTransaction transaction = 2;
-        bytes from_user_address = 3;
+        BlockchainTransaction transaction = 1;
+        bytes from_user_address = 2;
     }
 
     oneof content {
@@ -611,19 +646,22 @@ message Snapshot {
 }
 
 message BlockchainTransaction {
+    // metadata for tip transactions
     message Tip {
-        uint64 token_id = 1;
-        bytes currency = 2;
-        bytes sender = 3;
-        bytes receiver = 4;
-        uint64 amount = 5;
-        bytes message_id = 6;
-        bytes channel_id = 7;
+        message Event {
+            uint64 token_id = 1;
+            bytes currency = 2;
+            bytes sender = 3; // wallet that sent funds
+            bytes receiver = 4; // wallet that received funds
+            uint64 amount = 5;
+            bytes message_id = 6;
+            bytes channel_id = 7;
+        }
+        Event event = 1; // event emitted by the tipping facet
+        bytes toUserAddress = 2; // user that received funds
     }
-    
     // required fields
     BlockchainTransactionReceipt receipt = 1;
-    
     // optional metadata to be verified by the node
     oneof content {
         Tip tip = 101;
@@ -1008,11 +1046,6 @@ enum MessageInteractionType {
 enum GroupMentionType {
     GROUP_MENTION_TYPE_UNSPECIFIED = 0;
     GROUP_MENTION_TYPE_AT_CHANNEL = 1;
-}
-
-enum ReceivedBlockchainTransactionKind {
-    RECEIVED_BLOCKCHAIN_TRANSACTION_KIND_UNSPECIFIED = 0;
-    RECEIVED_BLOCKCHAIN_TRANSACTION_KIND_TIP = 1;
 }
 
 // Codes from 1 to 16 match gRPC/Connect codes.
