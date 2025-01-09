@@ -104,6 +104,11 @@ type aeMlsKeyPackageRules struct {
 	keyPackage *MemberPayload_KeyPackage
 }
 
+type aeMlsWelcomeMessageRules struct {
+	params         *aeParams
+	welcomeMessage *MemberPayload_Mls_WelcomeMessage
+}
+
 type aeMediaPayloadChunkRules struct {
 	params *aeParams
 	chunk  *MediaPayload_Chunk
@@ -638,6 +643,16 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 			check(params.creatorIsMember).
 			check(params.mlsInitialized).
 			check(ru.validMlsKeyPackage)
+
+	case *MemberPayload_Mls_WelcomeMessage_:
+		ru := &aeMlsWelcomeMessageRules{
+			params:         params,
+			welcomeMessage: content.WelcomeMessage,
+		}
+		return aeBuilder().
+			check(params.creatorIsMember).
+			check(params.mlsInitialized).
+			check(ru.validMlsWelcomeMessage)
 	default:
 		return aeBuilder().
 			fail(unknownContentType(content))
@@ -1520,6 +1535,32 @@ func (ru *aeMlsKeyPackageRules) validMlsKeyPackage() (bool, error) {
 
 	if resp.GetResult() != mls_tools.ValidationResult_VALID {
 		return false, RiverError(Err_INVALID_ARGUMENT, "invalid key package", "result", resp.GetResult())
+	}
+
+	return true, nil
+}
+
+func (ru *aeMlsWelcomeMessageRules) validMlsWelcomeMessage() (bool, error) {
+	view := ru.params.streamView.(events.MlsStreamView)
+	mlsGroupState, err := view.GetMlsGroupState()
+	if err != nil {
+		return false, err
+	}
+
+	welcomeMessageRequest := &mls_tools.WelcomeMessageRequest{
+		GroupState: mlsGroupState,
+		SignaturePublicKeys: ru.welcomeMessage.SignaturePublicKeys,
+		WelcomeMessages: ru.welcomeMessage.WelcomeMessages,
+		WelcomeMessageCommit: ru.welcomeMessage.Commit,
+	}
+	
+	resp, err := mls_service.WelcomeMessageRequest(welcomeMessageRequest)
+	if err != nil {
+		return false, err
+	}
+
+	if resp.GetResult() != mls_tools.ValidationResult_VALID {
+		return false, RiverError(Err_INVALID_ARGUMENT, "invalid welcome message", "result", resp.GetResult())
 	}
 
 	return true, nil
