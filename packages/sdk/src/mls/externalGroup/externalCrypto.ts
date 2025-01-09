@@ -19,4 +19,8 @@ export class ExternalCrypto {
         const externalGroup = await externalClient.loadGroup(externalSnapshot)
         return new ExternalGroup(streamId, externalGroup)
     }
+
+    public exportTree(group: ExternalGroup): Uint8Array {
+        return group.externalGroup.exportTree()
+    }
 }
