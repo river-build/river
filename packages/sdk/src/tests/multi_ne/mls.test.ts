@@ -491,8 +491,6 @@ describe('mlsTests', () => {
         const keyPackage = Object.values(mls.pendingKeyPackages)[0]
         const kp = MlsMessage.fromBytes(keyPackage.keyPackage)
         const commitOutput = await bobMlsGroup.addMember(kp)
-        // TODO:: we don't yet have support for clearing pending commits in mls-rs-wasm. apply unconfirmed for now
-        // in a real scenario the client would immediately clear the pending commit and apply it once confirmed
         await bobMlsGroup.applyPendingCommit()
 
         const commit = commitOutput.commitMessage.toBytes()
