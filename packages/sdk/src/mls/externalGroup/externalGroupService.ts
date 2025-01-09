@@ -22,8 +22,18 @@ export class ExternalGroupService {
         return this.externalGroupCache.get(streamId)
     }
 
-    public handleInitializeGroup(_streamId: string, _message: InitializeGroupMessage) {
-        throw new Error('Not implemented')
+    public async handleInitializeGroup(streamId: string, message: InitializeGroupMessage) {
+        if (this.externalGroupCache.has(streamId)) {
+            const message = `group already present: ${streamId}`
+            throw new Error(message)
+        }
+
+        const group = await this.crypto.loadExternalGroupFromSnapshot(
+            streamId,
+            message.externalGroupSnapshot,
+        )
+
+        this.externalGroupCache.set(streamId, group)
     }
 
     public handleExternalJoin(_streamId: string, _message: ExternalJoinMessage) {
