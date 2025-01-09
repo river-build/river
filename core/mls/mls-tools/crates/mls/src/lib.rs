@@ -253,7 +253,14 @@ pub fn validate_key_package_request(request: KeyPackageRequest) -> KeyPackageRes
         };
     }
 
-    let proposed_key_package_message = match MlsMessage::from_bytes(&request.key_package) {
+    let proposed_key_package = match request.key_package {
+        Some(key_package) => key_package,
+        None => return KeyPackageResponse {
+            result: ValidationResult::InvalidKeyPackage.into(),
+        }
+    };
+
+    let proposed_key_package_message = match MlsMessage::from_bytes(&proposed_key_package.key_package) {
         Ok(key_package_message) => key_package_message,
         Err(_) => return KeyPackageResponse {
             result: ValidationResult::InvalidKeyPackage.into(),
@@ -267,7 +274,7 @@ pub fn validate_key_package_request(request: KeyPackageRequest) -> KeyPackageRes
         }
     };
 
-    if key_package.signing_identity().signature_key.to_vec() != request.signature_public_key.to_vec() {
+    if key_package.signing_identity().signature_key.to_vec() != proposed_key_package.signature_public_key.to_vec() {
         return KeyPackageResponse {
             result: ValidationResult::InvalidPublicSignatureKey.into(),
         };
@@ -345,7 +352,7 @@ mod tests {
     };
     const CIPHERSUITE: CipherSuite = CipherSuite::P256_AES128;
     use mls_rs::mls_rules::{CommitOptions, DefaultMlsRules};
-    use river_mls_protocol::MlsGroupState;
+    use river_mls_protocol::{KeyPackage, MlsGroupState};
     type ClientConfig = WithIdentityProvider<BasicIdentityProvider, WithCryptoProvider<RustCryptoProvider, BaseConfig>>;
     type ProviderCipherSuite = <RustCryptoProvider as CryptoProvider>::CipherSuiteProvider;
     
@@ -541,8 +548,10 @@ mod tests {
                 commits: commits.iter().map(|commit| commit.to_bytes().unwrap()).collect(),
                 pending_key_packages: Vec::new(),
             }),
-            key_package: key_package.to_bytes().unwrap(),
-            signature_public_key: alice.signing_identity().unwrap().0.signature_key.to_vec(),
+            key_package: Some(KeyPackage {
+                key_package: key_package.to_bytes().unwrap(),
+                signature_public_key: alice.signing_identity().unwrap().0.signature_key.to_vec(),
+            }),
         };
 
         let result = validate_key_package_request(request);

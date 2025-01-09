@@ -99,7 +99,7 @@ type aeMlsEpochSecrets struct {
 	secrets *MemberPayload_Mls_EpochSecrets
 }
 
-type aeMlsKeyPackage struct {
+type aeMlsKeyPackageRules struct {
 	params     *aeParams
 	keyPackage *MemberPayload_KeyPackage
 }
