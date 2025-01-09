@@ -472,15 +472,15 @@ describe('mlsTests', () => {
     })
 
     // TODO: Add more tests once we have support for clearing commits in mls-rs-wasm
-    test('invalid welcome messages are not accepted', async () => {
+    test('invalid group infos are not accepted', async () => {
         const payload = makeMlsPayloadWelcomeMessage(
             new Uint8Array(),
             [new Uint8Array([1, 2, 3])],
-            latestGroupInfoMessage, // bogus
+            latestGroupInfoMessage, // bogus, no longer valid
             [new Uint8Array([4, 5, 6])],
         )
         await expect(aliceClient._debugSendMls(streamId, payload)).rejects.to.toThrow(
-            'INVALID_COMMIT', // TODO: this should be INVALID_WELCOME_MESSAGE
+            'INVALID_GROUP_INFO',
         )
     })
 

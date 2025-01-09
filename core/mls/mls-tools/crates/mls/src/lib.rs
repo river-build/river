@@ -312,6 +312,15 @@ pub fn validate_welcome_message_request(request: WelcomeMessageRequest) -> Welco
         };
     }
 
+    match validate_group_info_message(request.group_info_message, 
+        external_group.group_context().epoch() + 1, 
+        external_group.group_context().group_id()) {
+        ValidationResult::Valid => {},
+        result => return WelcomeMessageResponse {
+            result: result.into(),
+        }
+    }
+
     let proposed_commit = match MlsMessage::from_bytes(&request.welcome_message_commit) {
         Ok(welcome_message) => welcome_message,
         Err(_) => return WelcomeMessageResponse {
