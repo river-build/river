@@ -66,7 +66,6 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
                 break
             case 'keyPackage':
                 this.pendingKeyPackages.push(mlsEvent.content.value)
-                console.log('GOT KEY PACK!!!')
                 break
             case undefined:
                 break
