@@ -16,6 +16,7 @@ import {
 } from '@river-build/mls-rs-wasm'
 import { randomBytes } from 'crypto'
 import { bin_equal } from '@river-build/dlog'
+import { addressFromUserId } from '../../id'
 
 describe('mlsTests', () => {
     let clients: Client[] = []
@@ -107,6 +108,7 @@ describe('mlsTests', () => {
     }
 
     function makeMlsPayloadKeyPackage(
+        userAddress: Uint8Array,
         signaturePublicKey: Uint8Array,
         keyPackage: Uint8Array,
     ): PlainMessage<MemberPayload_Mls> {
@@ -114,8 +116,9 @@ describe('mlsTests', () => {
             content: {
                 case: 'keyPackage',
                 value: {
-                    signaturePublicKey: signaturePublicKey,
-                    keyPackage: keyPackage,
+                    userAddress,
+                    signaturePublicKey,
+                    keyPackage,
                 },
             },
         }
@@ -389,6 +392,7 @@ describe('mlsTests', () => {
     test('clients can publish key packages', async () => {
         const keyPackage = await aliceMlsClient2.generateKeyPackageMessage()
         const alicePayload = makeMlsPayloadKeyPackage(
+            addressFromUserId(aliceClient.userId),
             await aliceMlsClient2.signaturePublicKey(),
             keyPackage.toBytes(),
         )
@@ -397,4 +401,15 @@ describe('mlsTests', () => {
         latestAliceMlsKeyPackage = keyPackage.toBytes()
     })
 
+    test('clients cannot publish key packages twice', async () => {
+        const alicePayload = makeMlsPayloadKeyPackage(
+            addressFromUserId(aliceClient.userId),
+            await aliceMlsClient2.signaturePublicKey(),
+            latestAliceMlsKeyPackage,
+        )
+
+        await expect(aliceClient._debugSendMls(streamId, alicePayload)).rejects.toThrow(
+            'key package already exists',
+        )
+    })
 })
