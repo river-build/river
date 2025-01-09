@@ -630,7 +630,7 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 			check(ru.validMlsEpochSecrets)
 
 	case *MemberPayload_Mls_KeyPackage:
-		ru := &aeMlsKeyPackage{
+		ru := &aeMlsKeyPackageRules{
 			params:     params,
 			keyPackage: content.KeyPackage,
 		}
@@ -1492,7 +1492,7 @@ func (ru *aeMlsEpochSecrets) validMlsEpochSecrets() (bool, error) {
 	return true, nil
 }
 
-func (ru *aeMlsKeyPackage) validMlsKeyPackage() (bool, error) {
+func (ru *aeMlsKeyPackageRules) validMlsKeyPackage() (bool, error) {
 	view := ru.params.streamView.(events.MlsStreamView)
 	mlsGroupState, err := view.GetMlsGroupState()
 	if err != nil {
