@@ -1499,12 +1499,6 @@ func (ru *aeMlsKeyPackageRules) validMlsKeyPackage() (bool, error) {
 		return false, err
 	}
 
-	for _, kp := range mlsGroupState.PendingKeyPackages {
-		if bytes.Equal(ru.keyPackage.SignaturePublicKey, kp.SignaturePublicKey) {
-			return false, RiverError(Err_INVALID_ARGUMENT, "key package for signature public key already exists")
-		}
-	}
-
 	keyPackageRequest := &mls_tools.KeyPackageRequest {
 		GroupState: mlsGroupState,
 		KeyPackage: &mls_tools.KeyPackage{
