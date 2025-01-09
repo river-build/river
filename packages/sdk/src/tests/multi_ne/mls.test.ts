@@ -137,6 +137,25 @@ describe('mlsTests', () => {
         }
     }
 
+    function makeMlsPayloadWelcomeMessage(
+        commit: Uint8Array,
+        signaturePublicKeys: Uint8Array[],
+        groupInfoMessage: Uint8Array,
+        welcomeMessages: Uint8Array[],
+    ): PlainMessage<MemberPayload_Mls> {
+        return {
+            content: {
+                case: 'welcomeMessage',
+                value: {
+                    commit,
+                    signaturePublicKeys,
+                    groupInfoMessage,
+                    welcomeMessages,
+                },
+            },
+        }
+    }
+
     // helper function to create a group + external snapshot
     async function createGroupInfoAndExternalSnapshot(group: MlsGroup): Promise<{
         groupInfoMessage: Uint8Array
@@ -193,14 +212,14 @@ describe('mlsTests', () => {
         )
     })
 
-    test('invalid MLS group is not accepted', async () => {
+    test('invalid external MLS group is not accepted', async () => {
         const mlsPayload = makeMlsPayloadInitializeGroup(
             await bobMlsClient.signaturePublicKey(),
             new Uint8Array([]),
             new Uint8Array([]),
         )
         await expect(bobClient._debugSendMls(streamId, mlsPayload)).rejects.to.toThrow(
-            'INVALID_GROUP_INFO',
+            'INVALID_EXTERNAL_GROUP',
         )
     })
 
@@ -451,5 +470,28 @@ describe('mlsTests', () => {
         const mls = streamAfterSnapshot.membershipContent.mls
         expect(mls.pendingKeyPackages.length).toBe(1)
         expect(bin_equal(mls.pendingKeyPackages[0].keyPackage, latestAliceMlsKeyPackage)).toBe(true)
+    })
+
+    test('clients can add other members from key packages', async () => {
+        const keyPackage =
+            bobClient.streams.get(streamId)!.view.membershipContent.mls.pendingKeyPackages[0]
+        const kp = MlsMessage.fromBytes(keyPackage.keyPackage)
+        const commitOutput = await bobMlsGroup.addMember(kp)
+        // TODO:: we don't yet have support for clearing pending commits in mls-rs-wasm. apply unconfirmed for now
+        // in a real scenario the client would immediately clear the pending commit and apply it once confirmed
+        await bobMlsGroup.applyPendingCommit()
+
+        const commit = commitOutput.commitMessage.toBytes()
+        const welcomeMessages = commitOutput.welcomeMessages.map((wm) => wm.toBytes())
+        const groupInfoMessage = await bobMlsGroup.groupInfoMessageAllowingExtCommit(false)
+        const payload = makeMlsPayloadWelcomeMessage(
+            commit,
+            [keyPackage.signaturePublicKey],
+            groupInfoMessage.toBytes(),
+            welcomeMessages,
+        )
+        await expect(aliceClient._debugSendMls(streamId, payload)).rejects.toThrow(
+            'key package for signature public key already exists',
+        )
     })
 })
