@@ -8,56 +8,58 @@ import {ICrossChainEntitlement} from "contracts/src/spaces/entitlements/ICrossCh
 
 // contracts
 import {Ownable} from "solady/auth/Ownable.sol";
-import {ERC721} from "solady/tokens/ERC721.sol";
+import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 
-contract BotRegistry is ERC721, Ownable, ICrossChainEntitlement {
+contract BotRegistry is ERC1155, Ownable, ICrossChainEntitlement {
   using EnumerableSetLib for EnumerableSetLib.AddressSet;
 
   event BotRegistered(address space, address bot, uint256 expiration);
   event RegistrationRenewed(address space, address bot, uint256 expiration);
 
   struct Registration {
+    uint256 id;
     uint256 expiration;
     bool isRegistered;
     string metadata; // metadata could be a json object with username, slash command, etc.
+    string[] permissions;
+    address owner;
+    uint256 fee;
   }
 
-  uint256 public fee;
-  address public treasury;
-  uint256 public tokenId;
-  mapping(address => mapping(address => Registration)) public registrations;
+  struct Instance {
+    uint256 expiration;
+  }
+
+  uint256 public botId;
+
+  uint256 public registrationFee;
+  mapping(address => Registration) public registrations;
   mapping(uint256 => string) public uris;
+
   mapping(address => EnumerableSetLib.AddressSet) public botsBySpace;
+  mapping(address => mapping(uint256 => Instance)) public instances;
 
-  constructor(address owner, uint256 fee_, address treasury_) {
+  constructor(address owner, uint256 fee_) {
     _initializeOwner(owner);
-    fee = fee_;
-    treasury = treasury_;
+    registrationFee = fee_;
   }
 
-  function name() public pure override returns (string memory) {
-    return "BotRegistry";
-  }
-
-  function tokenURI(uint256 id) public view override returns (string memory) {
+  function uri(uint256 id) public view override returns (string memory) {
     return uris[id];
   }
 
-  function symbol() public pure override returns (string memory) {
-    return "BOT";
-  }
-
-  // only owner
+  // developer can register a bot
   function registerBot(
-    address space,
     address bot,
+    uint256 fee,
+    string[] memory permissions,
     string memory metadata
   ) external payable {
-    require(msg.value == fee, "Incorrect fee amount");
-    require(space != address(0) && bot != address(0), "Invalid addresses");
+    require(msg.value == registrationFee, "Incorrect fee amount");
+    require(bot != address(0), "Invalid addresses");
 
-    Registration storage reg = registrations[space][bot];
+    Registration storage reg = registrations[bot];
 
     require(
       reg.expiration < block.timestamp,
@@ -65,54 +67,77 @@ contract BotRegistry is ERC721, Ownable, ICrossChainEntitlement {
     );
 
     // Update registration details
+    reg.id = botId;
     reg.expiration = block.timestamp + 365 days;
     reg.isRegistered = true;
     reg.metadata = metadata;
+    reg.permissions = permissions;
+    reg.owner = msg.sender;
+    reg.fee = fee;
+    uris[botId] = metadata;
+
+    botId++;
+
+    emit BotRegistered(msg.sender, bot, reg.expiration);
+  }
+
+  // space owner adds a bot to their space
+  function addBot(address space, address bot) external payable onlyOwner {
+    Registration storage reg = registrations[bot];
+
+    // is bot registered?
+    require(reg.isRegistered, "Bot is not registered");
+
+    if (msg.value != reg.fee) revert("Incorrect fee amount");
+
+    // mint 1155 collection of the bot to the space
+    _mint(space, reg.id, 1, "");
+    instances[space][reg.id] = Instance({
+      expiration: block.timestamp + 365 days
+    });
 
     botsBySpace[space].add(bot);
 
-    // Send fee to the treasury
-    payable(treasury).transfer(msg.value);
-
-    // could mint a token to the space so we can track the bots in the space
-    _mint(space, tokenId);
-    tokenId++;
-
-    emit BotRegistered(space, bot, reg.expiration);
+    // Send fee to the bot owner
+    (bool success, ) = reg.owner.call{value: msg.value}("");
+    require(success, "Fee transfer failed");
   }
 
-  function renewRegistration(address space, address bot) external payable {
-    require(msg.value == fee, "Incorrect fee amount");
-    require(space != address(0) && bot != address(0), "Invalid addresses");
+  function renewBot(address space, address bot) external payable {
+    require(msg.value == registrationFee, "Incorrect fee amount");
+    require(bot != address(0), "Invalid addresses");
 
-    Registration storage reg = registrations[space][bot];
-    require(reg.isRegistered, "Bot is not registered");
+    uint256 id = registrations[bot].id;
 
-    // Extend expiration
-    reg.expiration += 365 days;
+    Instance storage instance = instances[space][id];
+    require(instance.expiration > block.timestamp, "Bot is not active");
 
-    // Send fee to the treasury
-    payable(treasury).transfer(msg.value);
+    instance.expiration = block.timestamp + 365 days;
 
-    emit RegistrationRenewed(space, bot, reg.expiration);
+    emit RegistrationRenewed(space, bot, instance.expiration);
   }
 
   function isEntitled(
-    address[] calldata bots,
+    address[] calldata users,
     bytes calldata data
   ) external view returns (bool) {
-    address space = abi.decode(data, (address));
-
-    for (uint256 i = 0; i < bots.length; i++) {
-      address bot = bots[i];
-
-      Registration memory reg = registrations[space][bot];
-      if (reg.isRegistered && reg.expiration > block.timestamp) {
-        return true;
-      }
-    }
-
-    return false;
+    return true;
+    // (address space, string[] memory permissions) = abi.decode(
+    //   data,
+    //   (address, string[])
+    // );
+    // for (uint256 i = 0; i < bots.length; i++) {
+    //   address bot = bots[i];
+    //   Registration memory reg = registrations[bot];
+    //   if (
+    //     reg.isRegistered &&
+    //     reg.expiration > block.timestamp &&
+    //     botsBySpace[space].contains(bot)
+    //   ) {
+    //     return true;
+    //   }
+    // }
+    // return false;
   }
 
   function parameters() external pure returns (Parameter[] memory) {
@@ -132,14 +157,6 @@ contract BotRegistry is ERC721, Ownable, ICrossChainEntitlement {
   }
 
   function setFee(uint256 fee_) external onlyOwner {
-    fee = fee_;
-  }
-
-  function setTreasury(address treasury_) external onlyOwner {
-    treasury = treasury_;
-  }
-
-  function withdraw(uint256 amount) external onlyOwner {
-    payable(owner()).transfer(amount);
+    registrationFee = fee_;
   }
 }
