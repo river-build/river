@@ -13,12 +13,26 @@ interface IMainnetDelegationBase {
 
   /// @notice Delegation struct
   /// @param operator The operator address
-  /// @param quantity The quantity delegated
+  /// @param quantity The quantity to delegate
+  /// @param delegator The delegator address
+  /// @param delegationTime The delegation time
   struct Delegation {
     address operator;
     uint256 quantity;
     address delegator;
     uint256 delegationTime;
+  }
+
+  /// @notice Delegation message from L1
+  /// @param delegator The delegator address
+  /// @param delegatee The delegatee address
+  /// @param quantity The quantity to delegate
+  /// @param claimer The claimer address
+  struct DelegationMsg {
+    address delegator;
+    address delegatee;
+    uint256 quantity;
+    address claimer;
   }
 
   // =============================================================
@@ -35,6 +49,8 @@ interface IMainnetDelegationBase {
 
   event ClaimerSet(address indexed delegator, address indexed claimer);
 
+  event DelegationDigestSet(bytes32 digest);
+
   // =============================================================
   //                           Errors
   // =============================================================
@@ -49,39 +65,15 @@ interface IMainnetDelegationBase {
 }
 
 interface IMainnetDelegation is IMainnetDelegationBase {
-  /// @notice Set batch cross-chain delegation
-  /// @param delegators The delegator address
-  /// @param delegates The address the delegator is delegating to
-  /// @param claimers The address the delegator is allowing to claim
-  /// @param quantities The quantity to delegate
-  function setBatchDelegation(
-    address[] calldata delegators,
-    address[] calldata delegates,
-    address[] calldata claimers,
-    uint256[] calldata quantities
-  ) external;
+  /// @notice Set delegation digest from L1
+  /// @dev Only the L2 messenger can call this function
+  /// @param digest The delegation digest
+  function setDelegationDigest(bytes32 digest) external;
 
-  /// @notice Set batch authorized claimers
-  /// @param delegators The delegator address
-  /// @param claimers The address the delegator is allowing to claim
-  function setBatchAuthorizedClaimers(
-    address[] calldata delegators,
-    address[] calldata claimers
-  ) external;
-
-  /// @notice Set delegation of a delegator to a operator
-  /// @param delegator The delegator address
-  /// @param operator The operator address to delegate to
-  /// @param quantity The quantity to delegate
-  function setDelegation(
-    address delegator,
-    address operator,
-    uint256 quantity
-  ) external;
-
-  /// @notice Remove delegation of a delegator
-  /// @param delegators The delegator address
-  function removeDelegations(address[] memory delegators) external;
+  /// @notice Relay cross-chain delegations
+  /// @dev Only the owner can call this function
+  /// @param encodedMsgs The encoded delegation messages
+  function relayDelegations(bytes calldata encodedMsgs) external;
 
   /// @notice Get delegation of a delegator
   /// @param delegator The delegator address
@@ -103,11 +95,6 @@ interface IMainnetDelegation is IMainnetDelegationBase {
   function getDelegatedStakeByOperator(
     address operator
   ) external view returns (uint256);
-
-  /// @notice Set authorized claimer
-  /// @param owner The owner address
-  /// @param claimer The claimer address
-  function setAuthorizedClaimer(address owner, address claimer) external;
 
   /// @notice Get authorized claimer
   /// @param owner The owner address

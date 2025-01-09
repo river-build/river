@@ -13,17 +13,14 @@ import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/Main
 contract DeployMainnetDelegation is FacetHelper, Deployer {
   constructor() {
     addSelector(MainnetDelegation.setProxyDelegation.selector);
-    addSelector(MainnetDelegation.setDelegation.selector);
+    addSelector(MainnetDelegation.setDelegationDigest.selector);
+    addSelector(MainnetDelegation.relayDelegations.selector);
     addSelector(MainnetDelegation.getDelegationByDelegator.selector);
     addSelector(MainnetDelegation.getMainnetDelegationsByOperator.selector);
     addSelector(MainnetDelegation.getDelegatedStakeByOperator.selector);
-    addSelector(MainnetDelegation.setAuthorizedClaimer.selector);
     addSelector(MainnetDelegation.getAuthorizedClaimer.selector);
-    addSelector(MainnetDelegation.setBatchDelegation.selector);
-    addSelector(MainnetDelegation.setBatchAuthorizedClaimers.selector);
     addSelector(MainnetDelegation.getProxyDelegation.selector);
     addSelector(MainnetDelegation.getMessenger.selector);
-    addSelector(MainnetDelegation.removeDelegations.selector);
     addSelector(MainnetDelegation.getDepositIdByDelegator.selector);
   }
 
