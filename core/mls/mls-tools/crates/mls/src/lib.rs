@@ -330,12 +330,9 @@ pub fn snapshot_external_group_request(request: SnapshotExternalGroupRequest) ->
 #[cfg(test)]
 mod tests {
 
-    use std::collections::{HashMap, HashSet};
-
     use super::*;
-    use mls_rs::external_client;
-    use mls_rs::group::proposal::Proposal;
-    use mls_rs::group::{ExportedTree, ReceivedMessage};
+    
+    use mls_rs::group::ExportedTree;
 
     use mls_rs::{
         crypto::SignatureSecretKey,
@@ -510,6 +507,44 @@ mod tests {
         assert_eq!(result.result, ValidationResult::Valid.into());
     }
 
+    #[test]
+    fn test_validate_key_package() {
+        let bob_client = create_client("bob".to_string());
+        let bob_group = bob_client.create_group(Default::default(), Default::default()).unwrap();
+        let bob_group_info_message = bob_group.group_info_message_allowing_ext_commit(false).unwrap();
+
+        let external_client = create_external_client();
+        let tree_bytes = bob_group.export_tree().to_bytes().unwrap();
+        let tree = ExportedTree::from_bytes(&tree_bytes).unwrap();
+
+        let external_group = external_client.observe_group(bob_group_info_message.clone(), Some(tree)).unwrap();
+        let external_group_snapshot = external_group.snapshot();
+        let mut latest_group_info_message_without_tree = bob_group_info_message.clone();
+        let mut commits: Vec<MlsMessage> = Vec::new();
+
+        // apply some external joins
+        for i in 0..10 {
+            let name = format!("client {}", i);
+            let client = create_client(name);
+            let (client_group_info_message, commit) = perform_external_join(external_group_snapshot.clone(), commits.clone(), latest_group_info_message_without_tree, client);
+            commits.push(commit);
+            latest_group_info_message_without_tree = client_group_info_message;
+        }
+
+        let alice = create_client("alice".to_string());
+        let key_package = alice.generate_key_package_message(Default::default(), Default::default()).unwrap();
+
+        let request = KeyPackageRequest {
+            group_state: Some(MlsGroupState {
+                external_group_snapshot: external_group_snapshot.to_bytes().unwrap(),
+                commits: commits.iter().map(|commit| commit.to_bytes().unwrap()).collect(),
+            }),
+            key_package: key_package.to_bytes().unwrap(),
+            signature_public_key: alice.signing_identity().unwrap().0.signature_key.to_vec(),
+        };
+
+        let result = validate_key_package_request(request);
+        assert_eq!(result.result, ValidationResult::Valid.into());
+    }
+
 }
-
-
