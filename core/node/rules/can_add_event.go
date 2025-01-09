@@ -101,7 +101,7 @@ type aeMlsEpochSecrets struct {
 
 type aeMlsKeyPackage struct {
 	params     *aeParams
-	keyPackage *MemberPayload_Mls_KeyPackage
+	keyPackage *MemberPayload_KeyPackage
 }
 
 type aeMediaPayloadChunkRules struct {
@@ -629,7 +629,7 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 			check(params.mlsInitialized).
 			check(ru.validMlsEpochSecrets)
 
-	case *MemberPayload_Mls_KeyPackage_:
+	case *MemberPayload_Mls_KeyPackage:
 		ru := &aeMlsKeyPackage{
 			params:     params,
 			keyPackage: content.KeyPackage,
@@ -1498,6 +1498,13 @@ func (ru *aeMlsKeyPackage) validMlsKeyPackage() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
+	for _, kp := range mlsGroupState.PendingKeyPackages {
+		if bytes.Equal(ru.keyPackage.KeyPackage, kp) {
+			return false, RiverError(Err_INVALID_ARGUMENT, "key package already exists")
+		}
+	}
+
 	keyPackageRequest := &mls_tools.KeyPackageRequest {
 		GroupState: mlsGroupState,
 		KeyPackage: ru.keyPackage.KeyPackage,

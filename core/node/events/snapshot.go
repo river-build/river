@@ -669,6 +669,9 @@ func update_Snapshot_Mls(
 			}
 		}
 		return nil
+	case *MemberPayload_Mls_KeyPackage:
+		snapshot.PendingKeyPackages = append(snapshot.PendingKeyPackages, content.KeyPackage)
+		return nil
 	default:
 		return RiverError(Err_INVALID_ARGUMENT, fmt.Sprintf("unknown MLS payload type %T", mlsPayload.Content))
 	}

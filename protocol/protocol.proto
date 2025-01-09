@@ -166,6 +166,7 @@ message MemberPayload {
             // user_address -> Member
             map<string, Member> members = 3;
             map<uint64, bytes> epoch_secrets = 4;
+            repeated KeyPackage pending_key_packages = 5;
         }
 
         message Member {
@@ -185,6 +186,12 @@ message MemberPayload {
         EncryptionAlgorithm encryption_algorithm = 4;
         // tips sent in this stream: map<currency, amount>
         map<string, uint64> tips = 5;
+    }
+
+    message KeyPackage {
+        bytes user_address = 1;
+        bytes signature_public_key = 2;
+        bytes key_package = 3;
     }
 
     message Membership {
@@ -238,11 +245,6 @@ message MemberPayload {
             bytes signature_public_key = 1;
             bytes commit = 2;
             bytes group_info_message = 3;
-        }
-
-        message KeyPackage {
-            bytes signature_public_key = 1;
-            bytes key_package = 2;
         }
 
         message EpochSecrets {
