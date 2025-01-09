@@ -29,6 +29,7 @@ describe('mlsTests', () => {
     }
 
     let bobClient: Client
+    let bobMlsGroup: MlsGroup
     let aliceClient: Client
     let bobMlsClient: MlsClient
     let aliceMlsClient: MlsClient
@@ -39,6 +40,7 @@ describe('mlsTests', () => {
     let latestGroupInfoMessage: Uint8Array
     let latestExternalGroupSnapshot: Uint8Array
     let latestAliceMlsKeyPackage: Uint8Array
+    const commits: Uint8Array[] = []
 
     beforeAll(async () => {
         bobClient = await makeInitAndStartClient()
@@ -46,7 +48,7 @@ describe('mlsTests', () => {
         bobMlsClient = await MlsClient.create(new Uint8Array(randomBytes(32)))
         aliceMlsClient = await MlsClient.create(new Uint8Array(randomBytes(32)))
         aliceMlsClient2 = await MlsClient.create(new Uint8Array(randomBytes(32)))
-
+        bobMlsGroup = await bobMlsClient.createGroup()
         const { streamId: dmStreamId } = await bobClient.createDMChannel(aliceClient.userId)
         await bobClient.waitForStream(dmStreamId)
         await aliceClient.waitForStream(dmStreamId)
@@ -58,6 +60,17 @@ describe('mlsTests', () => {
             await client.stop()
         }
         clients = []
+    })
+
+    afterEach(async () => {
+        for (const commit of commits) {
+            try {
+                const mlsMessage = MlsMessage.fromBytes(commit)
+                await bobMlsGroup.processIncomingMessage(mlsMessage)
+            } catch {
+                // noop
+            }
+        }
     })
 
     function makeMlsPayloadInitializeGroup(
@@ -303,6 +316,7 @@ describe('mlsTests', () => {
         )
         await expect(aliceClient._debugSendMls(streamId, aliceMlsPayload)).resolves.not.toThrow()
         latestGroupInfoMessage = aliceGroupInfoMessage
+        commits.push(aliceCommit)
     })
 
     test('MLS group is snapshotted after external commit', async () => {
@@ -422,7 +436,7 @@ describe('mlsTests', () => {
         )
 
         await expect(aliceClient._debugSendMls(streamId, alicePayload)).rejects.toThrow(
-            'key package already exists',
+            'key package for signature public key already exists',
         )
     })
 
