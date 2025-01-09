@@ -22,6 +22,12 @@ export class ExternalGroupService {
         return this.externalGroupCache.get(streamId)
     }
 
+    public deleteExternalGroup(streamId: string) {
+        this.log.debug('deleteExternalGroup', { streamId })
+
+        this.externalGroupCache.delete(streamId)
+    }
+
     public async handleInitializeGroup(streamId: string, message: InitializeGroupMessage) {
         if (this.externalGroupCache.has(streamId)) {
             const message = `group already present: ${streamId}`
