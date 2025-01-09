@@ -54,10 +54,9 @@ fn validate_group_info_message(group_info_message_bytes: Vec<u8>, expected_epoch
         return ValidationResult::InvalidGroupInfoEpoch;
     }
 
-    if group_info.group_context().group_id() != expected_group_id {
+    if group_info.group_context().group_id().to_vec() != expected_group_id.to_vec() {
         return ValidationResult::InvalidGroupInfoGroupIdMismatch;
     }
-
 
     match group_info.extensions().get_as::<ExternalPubExt>() {
         Ok(extensions) => {

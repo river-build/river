@@ -261,9 +261,8 @@ describe('mlsTests', () => {
     })
 
     test('clients can create MLS Groups in channels', async () => {
-        const bobGroup = await bobMlsClient.createGroup()
         const { groupInfoMessage, externalGroupSnapshot } =
-            await createGroupInfoAndExternalSnapshot(bobGroup)
+            await createGroupInfoAndExternalSnapshot(bobMlsGroup)
         const mlsPayload = makeMlsPayloadInitializeGroup(
             await bobMlsClient.signaturePublicKey(),
             externalGroupSnapshot,
@@ -472,6 +471,19 @@ describe('mlsTests', () => {
         expect(bin_equal(mls.pendingKeyPackages[0].keyPackage, latestAliceMlsKeyPackage)).toBe(true)
     })
 
+    // TODO: Add more tests once we have support for clearing commits in mls-rs-wasm
+    test('invalid welcome messages are not accepted', async () => {
+        const payload = makeMlsPayloadWelcomeMessage(
+            new Uint8Array(),
+            [new Uint8Array([1, 2, 3])],
+            latestGroupInfoMessage, // bogus
+            [new Uint8Array([4, 5, 6])],
+        )
+        await expect(aliceClient._debugSendMls(streamId, payload)).rejects.to.toThrow(
+            'INVALID_COMMIT', // TODO: this should be INVALID_WELCOME_MESSAGE
+        )
+    })
+
     test('clients can add other members from key packages', async () => {
         const keyPackage =
             bobClient.streams.get(streamId)!.view.membershipContent.mls.pendingKeyPackages[0]
@@ -490,8 +502,6 @@ describe('mlsTests', () => {
             groupInfoMessage.toBytes(),
             welcomeMessages,
         )
-        await expect(aliceClient._debugSendMls(streamId, payload)).rejects.toThrow(
-            'key package for signature public key already exists',
-        )
+        await expect(aliceClient._debugSendMls(streamId, payload)).resolves.not.toThrow()
     })
 })
