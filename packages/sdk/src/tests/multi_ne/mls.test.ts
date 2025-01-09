@@ -31,15 +31,20 @@ describe('mlsTests', () => {
     let aliceClient: Client
     let bobMlsClient: MlsClient
     let aliceMlsClient: MlsClient
+    let aliceMlsClient2: MlsClient
+
+    // state data to retain between tests
     let streamId: string
     let latestGroupInfoMessage: Uint8Array
     let latestExternalGroupSnapshot: Uint8Array
+    let latestAliceMlsKeyPackage: Uint8Array
 
     beforeAll(async () => {
         bobClient = await makeInitAndStartClient()
         aliceClient = await makeInitAndStartClient()
         bobMlsClient = await MlsClient.create(new Uint8Array(randomBytes(32)))
         aliceMlsClient = await MlsClient.create(new Uint8Array(randomBytes(32)))
+        aliceMlsClient2 = await MlsClient.create(new Uint8Array(randomBytes(32)))
 
         const { streamId: dmStreamId } = await bobClient.createDMChannel(aliceClient.userId)
         await bobClient.waitForStream(dmStreamId)
@@ -96,6 +101,21 @@ describe('mlsTests', () => {
                 case: 'epochSecrets',
                 value: {
                     secrets: secrets,
+                },
+            },
+        }
+    }
+
+    function makeMlsPayloadKeyPackage(
+        signaturePublicKey: Uint8Array,
+        keyPackage: Uint8Array,
+    ): PlainMessage<MemberPayload_Mls> {
+        return {
+            content: {
+                case: 'keyPackage',
+                value: {
+                    signaturePublicKey: signaturePublicKey,
+                    keyPackage: keyPackage,
                 },
             },
         }
@@ -365,4 +385,16 @@ describe('mlsTests', () => {
         expect(bin_equal(mls.epochSecrets[1n.toString()], new Uint8Array([1, 2, 3, 4]))).toBe(true)
         expect(bin_equal(mls.epochSecrets[2n.toString()], new Uint8Array([3, 4, 5, 6]))).toBe(true)
     })
+
+    test('clients can publish key packages', async () => {
+        const keyPackage = await aliceMlsClient2.generateKeyPackageMessage()
+        const alicePayload = makeMlsPayloadKeyPackage(
+            await aliceMlsClient2.signaturePublicKey(),
+            keyPackage.toBytes(),
+        )
+
+        await expect(aliceClient._debugSendMls(streamId, alicePayload)).resolves.not.toThrow()
+        latestAliceMlsKeyPackage = keyPackage.toBytes()
+    })
+
 })
