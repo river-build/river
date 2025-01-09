@@ -67,6 +67,14 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
             case 'keyPackage':
                 this.pendingKeyPackages.push(mlsEvent.content.value)
                 break
+            case 'welcomeMessage':
+                {
+                    const signaturePublicKeys = new Set(mlsEvent.content.value.signaturePublicKeys)
+                    this.pendingKeyPackages = this.pendingKeyPackages.filter((keyPackage) => {
+                        !signaturePublicKeys.has(keyPackage.signaturePublicKey)
+                    })
+                }
+                break
             case undefined:
                 break
             default:
