@@ -479,8 +479,8 @@ describe('mlsTests', () => {
             latestGroupInfoMessage, // bogus, no longer valid
             [new Uint8Array([4, 5, 6])],
         )
-        await expect(aliceClient._debugSendMls(streamId, payload)).rejects.to.toThrow(
-            'INVALID_GROUP_INFO',
+        await expect(bobClient._debugSendMls(streamId, payload)).rejects.to.toThrow(
+            'INVALID_GROUP_INFO_EPOCH',
         )
     })
 

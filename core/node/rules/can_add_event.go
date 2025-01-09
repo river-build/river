@@ -1550,6 +1550,7 @@ func (ru *aeMlsWelcomeMessageRules) validMlsWelcomeMessage() (bool, error) {
 	welcomeMessageRequest := &mls_tools.WelcomeMessageRequest{
 		GroupState: mlsGroupState,
 		SignaturePublicKeys: ru.welcomeMessage.SignaturePublicKeys,
+		GroupInfoMessage: ru.welcomeMessage.GroupInfoMessage,
 		WelcomeMessages: ru.welcomeMessage.WelcomeMessages,
 		WelcomeMessageCommit: ru.welcomeMessage.Commit,
 	}
