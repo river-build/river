@@ -15,7 +15,7 @@ import {
     ExportedTree,
 } from '@river-build/mls-rs-wasm'
 import { randomBytes } from 'crypto'
-import { bin_equal } from '@river-build/dlog'
+import { bin_equal, check } from '@river-build/dlog'
 import { addressFromUserId } from '../../id'
 
 describe('mlsTests', () => {
@@ -401,6 +401,19 @@ describe('mlsTests', () => {
         latestAliceMlsKeyPackage = keyPackage.toBytes()
     })
 
+    test('key packages are broadcasted to all members', async () => {
+        await waitFor(() => {
+            const stream = bobClient.streams.get(streamId)
+            check(stream!.view.membershipContent.mls.pendingKeyPackages.length > 0)
+            check(
+                bin_equal(
+                    stream!.view.membershipContent.mls.pendingKeyPackages[0].keyPackage,
+                    latestAliceMlsKeyPackage,
+                ),
+            )
+        })
+    })
+
     test('clients cannot publish key packages twice', async () => {
         const alicePayload = makeMlsPayloadKeyPackage(
             addressFromUserId(aliceClient.userId),
@@ -411,5 +424,18 @@ describe('mlsTests', () => {
         await expect(aliceClient._debugSendMls(streamId, alicePayload)).rejects.toThrow(
             'key package already exists',
         )
+    })
+
+    test('key packages are snapshotted', async () => {
+        // force snapshot
+        await expect(
+            bobClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true }),
+        ).resolves.not.toThrow()
+
+        // verify that the key package is picked up in the snapshot
+        const streamAfterSnapshot = await bobClient.getStream(streamId)
+        const mls = streamAfterSnapshot.membershipContent.mls
+        expect(mls.pendingKeyPackages.length).toBe(1)
+        expect(bin_equal(mls.pendingKeyPackages[0].keyPackage, latestAliceMlsKeyPackage)).toBe(true)
     })
 })

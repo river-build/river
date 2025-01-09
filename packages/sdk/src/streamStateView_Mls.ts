@@ -2,7 +2,11 @@ import { StreamStateView_AbstractContent } from './streamStateView_AbstractConte
 import TypedEmitter from 'typed-emitter'
 import { ConfirmedTimelineEvent, RemoteTimelineEvent } from './types'
 import { StreamEncryptionEvents, StreamStateEvents } from './streamEvents'
-import { MemberPayload_Snapshot_Mls, MemberPayload_Snapshot_Mls_Member } from '@river-build/proto'
+import {
+    MemberPayload_KeyPackage,
+    MemberPayload_Snapshot_Mls,
+    MemberPayload_Snapshot_Mls_Member,
+} from '@river-build/proto'
 import { check } from '@river-build/dlog'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { logNever } from './check'
@@ -13,7 +17,7 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
     groupInfoMessage?: Uint8Array
     members: { [key: string]: PlainMessage<MemberPayload_Snapshot_Mls_Member> } = {}
     epochSecrets: { [key: string]: Uint8Array } = {}
-
+    pendingKeyPackages: MemberPayload_KeyPackage[] = []
     constructor(streamId: string) {
         super()
         this.streamId = streamId
@@ -24,6 +28,7 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
         this.groupInfoMessage = content.groupInfoMessage
         this.members = content.members
         this.epochSecrets = content.epochSecrets
+        this.pendingKeyPackages = content.pendingKeyPackages
     }
 
     appendEvent(
@@ -60,6 +65,8 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
                 }
                 break
             case 'keyPackage':
+                this.pendingKeyPackages.push(mlsEvent.content.value)
+                console.log('GOT KEY PACK!!!')
                 break
             case undefined:
                 break
