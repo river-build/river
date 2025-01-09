@@ -18,6 +18,7 @@ import { randomBytes } from 'crypto'
 import { bin_equal, check } from '@river-build/dlog'
 import { addressFromUserId } from '../../id'
 import { bytesToHex } from 'ethereum-cryptography/utils'
+import { isDefined } from '../../check'
 
 describe('mlsTests', () => {
     let clients: Client[] = []
@@ -486,8 +487,8 @@ describe('mlsTests', () => {
     })
 
     test('clients can add other members from key packages', async () => {
-        const keyPackage =
-            bobClient.streams.get(streamId)!.view.membershipContent.mls.pendingKeyPackages[0]
+        const mls = bobClient.streams.get(streamId)!.view.membershipContent.mls
+        const keyPackage = Object.values(mls.pendingKeyPackages)[0]
         const kp = MlsMessage.fromBytes(keyPackage.keyPackage)
         const commitOutput = await bobMlsGroup.addMember(kp)
         // TODO:: we don't yet have support for clearing pending commits in mls-rs-wasm. apply unconfirmed for now
@@ -504,5 +505,16 @@ describe('mlsTests', () => {
             welcomeMessages,
         )
         await expect(aliceClient._debugSendMls(streamId, payload)).resolves.not.toThrow()
+    })
+
+    test('key packages are cleared after being applied', async () => {
+        const aliceMlsClient2SignaturePublicKey = await aliceMlsClient2.signaturePublicKey()
+        await waitFor(() => {
+            const stream = bobClient.streams.get(streamId)
+            check(Object.values(stream!.view.membershipContent.mls.pendingKeyPackages).length === 0)
+            const key = bytesToHex(aliceMlsClient2SignaturePublicKey)
+            const kp = stream!.view.membershipContent.mls.pendingKeyPackages[key]
+            check(!isDefined(kp))
+        })
     })
 })

@@ -677,6 +677,14 @@ func update_Snapshot_Mls(
 		signatureKey := common.Bytes2Hex(content.KeyPackage.SignaturePublicKey)
 		snapshot.PendingKeyPackages[signatureKey] = content.KeyPackage
 		return nil
+	case *MemberPayload_Mls_WelcomeMessage_:
+		for _, key := range content.WelcomeMessage.SignaturePublicKeys {
+			signatureKey := common.Bytes2Hex(key)
+			if _, ok := snapshot.PendingKeyPackages[signatureKey]; ok {
+				delete(snapshot.PendingKeyPackages, signatureKey)
+			}
+		}
+		return nil
 	default:
 		return RiverError(Err_INVALID_ARGUMENT, fmt.Sprintf("unknown MLS payload type %T", mlsPayload.Content))
 	}
