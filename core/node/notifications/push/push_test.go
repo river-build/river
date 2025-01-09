@@ -62,7 +62,7 @@ func TestAPNSPushNotification(t *testing.T) {
 		Environment: protocol.APNEnvironment_APN_ENVIRONMENT_SANDBOX,
 	}
 
-	expired, err := notifier.SendApplePushNotification(
+	expired, _, err := notifier.SendApplePushNotification(
 		ctx, &sub, common.Hash{1}, payload)
 	req.False(expired, "subscription should not be expired")
 	req.NoError(err, "send APN notification")
