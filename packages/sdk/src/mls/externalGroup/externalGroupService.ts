@@ -1,11 +1,11 @@
 import { IExternalGroupStore } from './externalGroupStore'
 import { ExternalGroup } from './externalGroup'
-import { MlsCrypto } from '../mlsCrypto'
 import { PlainMessage } from '@bufbuild/protobuf'
 import {
     MemberPayload_Mls_ExternalJoin,
     MemberPayload_Mls_InitializeGroup,
 } from '@river-build/proto'
+import { ExternalCrypto } from './externalCrypto'
 
 type InitializeGroupMessage = PlainMessage<MemberPayload_Mls_InitializeGroup>
 type ExternalJoinMessage = PlainMessage<MemberPayload_Mls_ExternalJoin>
@@ -14,11 +14,11 @@ export class ExternalGroupService {
     private externalGroupStore: IExternalGroupStore
     private externalGroupCache: Map<string, ExternalGroup> = new Map()
 
-    private mlsCrypto: MlsCrypto
+    private crypto: ExternalCrypto
 
-    constructor(externalGroupStore: IExternalGroupStore, mlsCrypto: MlsCrypto) {
+    constructor(externalGroupStore: IExternalGroupStore, crypto: ExternalCrypto) {
         this.externalGroupStore = externalGroupStore
-        this.mlsCrypto = mlsCrypto
+        this.crypto = crypto
     }
 
     public getExternalGroup(streamId: string): ExternalGroup | undefined {
@@ -32,13 +32,10 @@ export class ExternalGroupService {
             throw new Error(`External group not found for ${streamId}`)
         }
 
-        const { snapshot, ...fields } = dto
-
-        const mlsExternalGroup = await this.mlsCrypto.loadExternalGroupFromSnapshot(snapshot)
-        const externalGroup = {
-            ...fields,
-            externalGroup: mlsExternalGroup,
-        }
+        const externalGroup = await this.crypto.loadExternalGroupFromSnapshot(
+            streamId,
+            dto.snapshot,
+        )
 
         this.externalGroupCache.set(streamId, externalGroup)
     }
@@ -63,7 +60,7 @@ export class ExternalGroupService {
 
     // Handle confirmed commit message and write to storage
     private async handleCommit(group: ExternalGroup, commit: Uint8Array) {
-        await this.mlsCrypto.externalGroupProcessCommit(group.externalGroup, commit)
+        await this.crypto.processCommit(group, commit)
         await this.saveExternalGroup(group)
     }
 }
