@@ -780,8 +780,6 @@ func (a *Archiver) processMiniblockScrubs(ctx context.Context) {
 				return true
 			}
 
-			dlog.FromCtx(ctx).
-				Error("Scheduling scrub for stream", "streamId", as.streamId, "firstUnscrubbedBlock", firstUnscrubbedBlock, "numBlocksInDb", numBlocksInDb)
 			err := a.scrubber.ScheduleStreamMiniblocksScrub(ctx, as.streamId, firstUnscrubbedBlock)
 			if err != nil {
 				as.scrubInProgress.Store(false)

@@ -123,9 +123,9 @@ func (h *corruptStreamsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	corruptStreams := h.service.GetCorruptStreams(ctx)
 	reply.Streams = make([]render.DebugCorruptStreamRecord, len(corruptStreams))
 	for i, stream := range corruptStreams {
-		addressStrings := make([]string, len(stream.Nodes), 0)
-		for _, node := range stream.Nodes {
-			addressStrings = append(addressStrings, node.String())
+		addressStrings := make([]string, len(stream.Nodes))
+		for i, node := range stream.Nodes {
+			addressStrings[i] = node.String()
 		}
 		sort.Strings(addressStrings)
 		reply.Streams[i] = render.DebugCorruptStreamRecord{

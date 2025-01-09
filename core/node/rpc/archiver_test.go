@@ -23,6 +23,7 @@ import (
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/registries"
+	"github.com/river-build/river/core/node/shared"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/node/testutils"
@@ -523,6 +524,60 @@ func TestArchive100StreamsWithData(t *testing.T) {
 	require.Equal(uint64(100), stats.StreamsExamined)
 	require.GreaterOrEqual(stats.SuccessOpsCount, uint64(100))
 	require.Zero(stats.FailedOpsCount)
+}
+
+func createCorruptStreams(
+	ctx context.Context,
+	require *require.Assertions,
+	wallet *crypto.Wallet,
+	client protocolconnect.StreamServiceClient,
+	store storage.StreamStorage,
+) []shared.StreamId {
+	corruptionFuncs := []corruptMiniblockBytesFunc{
+		invalidateBlockHeaderEventLength,
+		invalidateEventHash,
+		invalidateBlockHeaderType,
+		invalidateMiniblockUnparsable,
+		invalidateBlockNumber,
+		mismatchEventHash,
+		invalidatePrevMiniblockHash,
+		invalidateEventNumOffset,
+		invalidateBlockTimestamp,
+		invalidatePrevSnapshotBlockNum,
+	}
+
+	streamIds := make([]shared.StreamId, len(corruptionFuncs))
+	for i, corruptMb := range corruptionFuncs {
+		streamId, mb1, blocks := createMultiblockChannelStream(ctx, require, client, store)
+		blocks[1] = corruptMb(require, wallet, blocks[1])
+		writeStreamBackToStore(ctx, require, client, store, streamId, mb1, blocks)
+		streamIds[i] = streamId
+	}
+
+	return streamIds
+}
+
+func TestArchive100StreamsWithCorruption(t *testing.T) {
+	tester := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
+	ctx := tester.ctx
+	require := tester.require
+
+	_, userStreamIds, err := createUserSettingsStreamsWithData(ctx, tester.testClient(0), 90, 10, 5)
+	require.NoError(err)
+
+	archiveCfg := tester.getConfig()
+	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
+	archiveCfg.Archive.ReadMiniblocksSize = 3
+
+	serverCtx, serverCancel := context.WithCancel(ctx)
+	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, makeTestServerOpts(tester), true)
+	require.NoError(err)
+	tester.cleanup(arch.Close)
+
+	arch.Archiver.WaitForStart()
+	require.Len(arch.ExitSignal(), 0)
+
+	arch.Archiver.WaitForTasks()
 }
 
 func TestArchiveContinuous(t *testing.T) {
