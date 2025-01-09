@@ -2,4 +2,3 @@
 export * from './externalCrypto'
 export * from './externalGroup'
 export * from './externalGroupService'
-export * from './externalGroupStore'
