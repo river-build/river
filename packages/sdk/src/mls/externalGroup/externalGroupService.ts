@@ -52,8 +52,9 @@ export class ExternalGroupService {
         await this.crypto.processCommit(group, message.commit)
     }
 
-    // Handle confirmed commit message and write to storage
-    private async handleCommit(group: ExternalGroup, commit: Uint8Array) {
-        await this.crypto.processCommit(group, commit)
+    public exportTree(group: ExternalGroup): Uint8Array {
+        this.log.debug('exportTree', { streamId: group.streamId })
+
+        return this.crypto.exportTree(group)
     }
 }
