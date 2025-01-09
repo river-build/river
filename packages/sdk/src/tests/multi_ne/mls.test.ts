@@ -243,6 +243,8 @@ describe('mlsTests', () => {
         const mls = streamAfterSnapshot.membershipContent.mls
         expect(mls.externalGroupSnapshot).toBeDefined()
         expect(mls.groupInfoMessage).toBeDefined()
+        expect(mls.externalGroupSnapshot!.length).toBeGreaterThan(0)
+        expect(mls.groupInfoMessage!.length).toBeGreaterThan(0)
         expect(bin_equal(mls.externalGroupSnapshot, latestExternalGroupSnapshot)).toBe(true)
         expect(bin_equal(mls.groupInfoMessage, latestGroupInfoMessage)).toBe(true)
     })
@@ -295,6 +297,8 @@ describe('mlsTests', () => {
         const mls = streamAfterSnapshot.membershipContent.mls
         expect(mls.externalGroupSnapshot).toBeDefined()
         expect(mls.groupInfoMessage).toBeDefined()
+        expect(mls.externalGroupSnapshot!.length).toBeGreaterThan(0)
+        expect(mls.groupInfoMessage!.length).toBeGreaterThan(0)
         expect(bin_equal(mls.groupInfoMessage, latestGroupInfoMessage)).toBe(true)
     })
 

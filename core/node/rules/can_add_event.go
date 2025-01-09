@@ -10,6 +10,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/mls_service"
 	"github.com/river-build/river/core/node/mls_service/mls_tools"
@@ -30,7 +31,8 @@ import (
 
 type aeParams struct {
 	ctx                   context.Context
-	cfg                   crypto.OnChainConfiguration
+	config                config.Config
+	chainConfig           crypto.OnChainConfiguration
 	mediaMaxChunkSize     int
 	streamMembershipLimit int
 	validNodeAddresses    []common.Address
@@ -158,6 +160,7 @@ type aeHideUserJoinLeaveEventsWrapperRules struct {
 */
 func CanAddEvent(
 	ctx context.Context,
+	config config.Config,
 	chainConfig crypto.OnChainConfiguration,
 	validNodeAddresses []common.Address,
 	currentTime time.Time,
@@ -195,7 +198,8 @@ func CanAddEvent(
 
 	ru := &aeParams{
 		ctx:                   ctx,
-		cfg:                   chainConfig,
+		config:                config,
+		chainConfig:           chainConfig,
 		mediaMaxChunkSize:     int(settings.MediaMaxChunkSize),
 		streamMembershipLimit: int(settings.MembershipLimits.ForType(streamView.StreamId().Type())),
 		validNodeAddresses:    validNodeAddresses,
@@ -603,6 +607,7 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 			initializeGroup: content.InitializeGroup,
 		}
 		return aeBuilder().
+			check(params.mlsEnabled).
 			check(params.creatorIsMember).
 			check(ru.validMlsInitializeGroup)
 	case *MemberPayload_Mls_ExternalJoin_:
@@ -611,6 +616,7 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 			externalJoin: content.ExternalJoin,
 		}
 		return aeBuilder().
+			check(params.mlsEnabled).
 			check(params.creatorIsMember).
 			check(params.mlsInitialized).
 			check(ru.validMlsExternalJoin)
@@ -620,6 +626,7 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 			secrets: content.EpochSecrets,
 		}
 		return aeBuilder().
+			check(params.mlsEnabled).
 			check(params.creatorIsMember).
 			check(params.mlsInitialized).
 			check(ru.validMlsEpochSecrets)
@@ -1567,6 +1574,13 @@ func (params *aeParams) creatorIsValidNode() (bool, error) {
 		).Func("CheckNodeIsValid")
 	}
 	return true, nil
+}
+
+func (params *aeParams) mlsEnabled() (bool, error) {
+	if params.config.EnableMls {
+		return true, nil
+	}
+	return false, RiverError(Err_PERMISSION_DENIED, "MLS is not enabled")
 }
 
 func (ru *aeMembershipRules) getPermissionForMembershipOp() (auth.Permission, string, error) {
