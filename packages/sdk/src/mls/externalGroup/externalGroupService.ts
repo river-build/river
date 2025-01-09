@@ -36,8 +36,14 @@ export class ExternalGroupService {
         this.externalGroupCache.set(streamId, group)
     }
 
-    public handleExternalJoin(_streamId: string, _message: ExternalJoinMessage) {
-        throw new Error('Not implemented')
+    public async handleExternalJoin(streamId: string, message: ExternalJoinMessage) {
+        const group = this.externalGroupCache.get(streamId)
+        if (!group) {
+            const message = `group not found: ${streamId}`
+            throw new Error(message)
+        }
+
+        await this.crypto.processCommit(group, message.commit)
     }
 
     // Handle confirmed commit message and write to storage
