@@ -515,4 +515,23 @@ describe('mlsTests', () => {
             check(!isDefined(kp))
         })
     })
+
+    test('devices added from key packages are added to the members', async () => {
+        await waitFor(() => {
+            const mls = bobClient.streams.get(streamId)!.view.membershipContent.mls
+            expect(mls.members[aliceClient.userId].signaturePublicKeys.length).toBe(2)
+        })
+    })
+
+    test('devices added from key packages are snapshotted', async () => {
+        // force snapshot
+        await expect(
+            bobClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true }),
+        ).resolves.not.toThrow()
+
+        // verify that the key package is picked up in the snapshot
+        const streamAfterSnapshot = await bobClient.getStream(streamId)
+        const mls = streamAfterSnapshot.membershipContent.mls
+        expect(mls.members[aliceClient.userId].signaturePublicKeys.length).toBe(2)
+    })
 })

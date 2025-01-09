@@ -11,6 +11,7 @@ import { check } from '@river-build/dlog'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { logNever } from './check'
 import { bytesToHex } from 'ethereum-cryptography/utils'
+import { userIdFromAddress } from './id'
 
 export class StreamStateView_Mls extends StreamStateView_AbstractContent {
     readonly streamId: string
@@ -49,12 +50,8 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
                 }
                 break
             case 'externalJoin':
-                if (!this.members[event.creatorUserId]) {
-                    this.members[event.creatorUserId] = {
-                        signaturePublicKeys: [],
-                    }
-                }
-                this.members[event.creatorUserId].signaturePublicKeys.push(
+                this.addSignaturePublicKey(
+                    event.creatorUserId,
                     mlsEvent.content.value.signaturePublicKey,
                 )
                 break
@@ -72,6 +69,13 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
                 break
             case 'welcomeMessage':
                 for (const signatureKey of mlsEvent.content.value.signaturePublicKeys) {
+                    const keyPackage = this.pendingKeyPackages[bytesToHex(signatureKey)]
+                    if (keyPackage) {
+                        this.addSignaturePublicKey(
+                            userIdFromAddress(keyPackage.userAddress),
+                            keyPackage.signaturePublicKey,
+                        )
+                    }
                     delete this.pendingKeyPackages[bytesToHex(signatureKey)]
                 }
                 break
@@ -97,5 +101,14 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
         encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
     ): void {
         super.onConfirmedEvent(event, stateEmitter, encryptionEmitter)
+    }
+
+    addSignaturePublicKey(userId: string, signaturePublicKey: Uint8Array): void {
+        if (!this.members[userId]) {
+            this.members[userId] = {
+                signaturePublicKeys: [],
+            }
+        }
+        this.members[userId].signaturePublicKeys.push(signaturePublicKey)
     }
 }

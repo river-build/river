@@ -645,6 +645,16 @@ func update_Snapshot_Mls(
 		snapshot.PendingKeyPackages = make(map[string]*MemberPayload_KeyPackage)
 	}
 
+	addSignaturePublicKey := func(userAddress []byte, signaturePublicKey []byte) {
+		memberAddress := common.BytesToAddress(userAddress).Hex()
+		if _, ok := snapshot.Members[memberAddress]; !ok {
+			snapshot.Members[memberAddress] = &MemberPayload_Snapshot_Mls_Member{
+				SignaturePublicKeys: make([][]byte, 0),
+			}
+		}
+		snapshot.Members[memberAddress].SignaturePublicKeys = append(snapshot.Members[memberAddress].SignaturePublicKeys, signaturePublicKey)
+	}
+
 	switch content := mlsPayload.Content.(type) {
 	case *MemberPayload_Mls_InitializeGroup_:
 		if len(snapshot.ExternalGroupSnapshot) > 0 || len(snapshot.GroupInfoMessage) > 0 {
@@ -658,13 +668,7 @@ func update_Snapshot_Mls(
 		}
 		return nil
 	case *MemberPayload_Mls_ExternalJoin_:
-		memberAddress := common.BytesToAddress(creatorAddress).Hex()
-		if _, ok := snapshot.Members[memberAddress]; !ok {
-			snapshot.Members[memberAddress] = &MemberPayload_Snapshot_Mls_Member{
-				SignaturePublicKeys: make([][]byte, 0),
-			}
-		}
-		snapshot.Members[memberAddress].SignaturePublicKeys = append(snapshot.Members[memberAddress].SignaturePublicKeys, content.ExternalJoin.SignaturePublicKey)
+		addSignaturePublicKey(creatorAddress, content.ExternalJoin.SignaturePublicKey)
 		return nil
 	case *MemberPayload_Mls_EpochSecrets_:
 		for _, secret := range content.EpochSecrets.Secrets {
@@ -680,9 +684,10 @@ func update_Snapshot_Mls(
 	case *MemberPayload_Mls_WelcomeMessage_:
 		for _, key := range content.WelcomeMessage.SignaturePublicKeys {
 			signatureKey := common.Bytes2Hex(key)
-			if _, ok := snapshot.PendingKeyPackages[signatureKey]; ok {
-				delete(snapshot.PendingKeyPackages, signatureKey)
+			if keyPackage, ok := snapshot.PendingKeyPackages[signatureKey]; ok {
+				addSignaturePublicKey(keyPackage.UserAddress, keyPackage.SignaturePublicKey)
 			}
+			delete(snapshot.PendingKeyPackages, signatureKey)
 		}
 		return nil
 	default:
