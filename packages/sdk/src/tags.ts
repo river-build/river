@@ -1,15 +1,8 @@
 import { PlainMessage } from '@bufbuild/protobuf'
-import {
-    BlockchainTransaction,
-    ChannelMessage,
-    GroupMentionType,
-    MessageInteractionType,
-    Tags,
-} from '@river-build/proto'
+import { ChannelMessage, GroupMentionType, MessageInteractionType, Tags } from '@river-build/proto'
 import { IStreamStateView } from './streamStateView'
 import { addressFromUserId } from './id'
-import { bin_fromHexString, bin_toHexString } from '@river-build/dlog'
-import { checkNever } from './check'
+import { bin_fromHexString } from '@river-build/dlog'
 import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
 
 export function makeTags(
