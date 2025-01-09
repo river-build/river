@@ -8,6 +8,8 @@ use mls_rs::external_client::ExternalClient;
 use mls_rs::identity::basic::BasicIdentityProvider;
 use mls_rs_crypto_rustcrypto::RustCryptoProvider;
 
+use river_mls_protocol::KeyPackageRequest;
+use river_mls_protocol::KeyPackageResponse;
 use river_mls_protocol::SnapshotExternalGroupRequest;
 use river_mls_protocol::SnapshotExternalGroupResponse;
 use river_mls_protocol::{InitialGroupInfoRequest, 
@@ -123,9 +125,16 @@ pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> 
 
 pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJoinResponse {
 
+    let group_state = match request.group_state {
+        Some(group_state) => group_state,
+        None => return ExternalJoinResponse {
+            result: ValidationResult::InvalidExternalGroup.into(),
+        }
+    };
+
     let external_client = create_external_client();
 
-    let external_group_snapshot = match ExternalSnapshot::from_bytes(&request.external_group_snapshot) {
+    let external_group_snapshot = match ExternalSnapshot::from_bytes(&group_state.external_group_snapshot) {
         Ok(external_group_snapshot) => external_group_snapshot,
         Err(_) => return ExternalJoinResponse {
             result: ValidationResult::InvalidExternalGroup.into(),
@@ -140,7 +149,7 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJ
     };
 
     // in the off-chance that an invalid commit slips through, we don't want to stop processing, just keep going.
-    for commit_bytes in request.commits {
+    for commit_bytes in group_state.commits {
         let _ = match MlsMessage::from_bytes(&commit_bytes) {
             Ok(commit) => external_group.process_incoming_message(commit),
             Err(_) => break
@@ -212,6 +221,63 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJ
     };
 }
 
+pub fn validate_key_package_request(request: KeyPackageRequest) -> KeyPackageResponse {
+    let group_state = match request.group_state {
+        Some(group_state) => group_state,
+        None => return KeyPackageResponse {
+            result: ValidationResult::InvalidExternalGroup.into(),
+        }
+    };
+
+    let external_client = create_external_client();
+
+    let external_group_snapshot = match ExternalSnapshot::from_bytes(&group_state.external_group_snapshot) {
+        Ok(external_group_snapshot) => external_group_snapshot,
+        Err(_) => return KeyPackageResponse {
+            result: ValidationResult::InvalidExternalGroup.into(),
+        }
+    };
+
+    let mut external_group = match external_client.load_group(external_group_snapshot) {
+        Ok(group) => group,
+        Err(_) => return KeyPackageResponse {
+            result: ValidationResult::InvalidExternalGroup.into(),
+        }
+    };
+
+    // in the off-chance that an invalid commit slips through, we don't want to stop processing, just keep going.
+    for commit_bytes in group_state.commits {
+        let _ = match MlsMessage::from_bytes(&commit_bytes) {
+            Ok(commit) => external_group.process_incoming_message(commit),
+            Err(_) => break
+        };
+    }
+
+    let proposed_key_package_message = match MlsMessage::from_bytes(&request.key_package) {
+        Ok(key_package_message) => key_package_message,
+        Err(_) => return KeyPackageResponse {
+            result: ValidationResult::InvalidKeyPackage.into(),
+        }
+    };
+
+    let key_package = match proposed_key_package_message.into_key_package() {
+        Some(key_package) => key_package,
+        None => return KeyPackageResponse {
+            result: ValidationResult::InvalidKeyPackage.into(),
+        }
+    };
+
+    if key_package.signing_identity().signature_key.to_vec() != request.signature_public_key.to_vec() {
+        return KeyPackageResponse {
+            result: ValidationResult::InvalidPublicSignatureKey.into(),
+        };
+    }
+    
+    return KeyPackageResponse {
+        result: ValidationResult::Valid.into(),
+    };
+}
+
 pub fn snapshot_external_group_request(request: SnapshotExternalGroupRequest) -> SnapshotExternalGroupResponse {
     let external_client = create_external_client();
     let external_group_snapshot = match ExternalSnapshot::from_bytes(&request.external_group_snapshot) {
@@ -263,10 +329,14 @@ pub fn snapshot_external_group_request(request: SnapshotExternalGroupRequest) ->
 
 #[cfg(test)]
 mod tests {
-    use std::vec;
+
+    use std::collections::{HashMap, HashSet};
 
     use super::*;
-    use mls_rs::group::ExportedTree;
+    use mls_rs::external_client;
+    use mls_rs::group::proposal::Proposal;
+    use mls_rs::group::{ExportedTree, ReceivedMessage};
+
     use mls_rs::{
         crypto::SignatureSecretKey,
         client_builder::{BaseConfig, WithCryptoProvider, WithIdentityProvider},
@@ -278,6 +348,7 @@ mod tests {
     };
     const CIPHERSUITE: CipherSuite = CipherSuite::P256_AES128;
     use mls_rs::mls_rules::{CommitOptions, DefaultMlsRules};
+    use river_mls_protocol::MlsGroupState;
     type ClientConfig = WithIdentityProvider<BasicIdentityProvider, WithCryptoProvider<RustCryptoProvider, BaseConfig>>;
     type ProviderCipherSuite = <RustCryptoProvider as CryptoProvider>::CipherSuiteProvider;
     
@@ -427,9 +498,11 @@ mod tests {
         let signature_public_key = alice.signing_identity().unwrap().0.signature_key.to_vec();
         let (alice_group_info_message, alice_commit) = perform_external_join(external_group_snapshot.clone(), commits.clone(), latest_group_info_message_without_tree, alice);
         let request = ExternalJoinRequest {
+            group_state: Some(MlsGroupState {
+                external_group_snapshot: external_group_snapshot.to_bytes().unwrap(),
+                commits: commits.iter().map(|commit| commit.to_bytes().unwrap()).collect(),
+            }),
             signature_public_key: signature_public_key,
-            external_group_snapshot: external_group_snapshot.to_bytes().unwrap(),
-            commits: commits.iter().map(|commit| commit.to_bytes().unwrap()).collect(),
             proposed_external_join_info_message: alice_group_info_message.to_bytes().unwrap(),
             proposed_external_join_commit: alice_commit.to_bytes().unwrap(),
         };

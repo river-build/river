@@ -15,6 +15,7 @@ enum ValidationResult {
     INVALID_GROUP_INFO_GROUP_ID_MISMATCH = 9;
     INVALID_EXTERNAL_GROUP_TOO_MANY_MEMBERS = 10;
     INVALID_PUBLIC_SIGNATURE_KEY = 11;
+    INVALID_KEY_PACKAGE = 12;
 }
 
 message MlsRequest {
@@ -22,7 +23,13 @@ message MlsRequest {
         InitialGroupInfoRequest initial_group_info = 1;
         ExternalJoinRequest external_join = 2;
         SnapshotExternalGroupRequest snapshot_external_group = 3;
+        KeyPackageRequest key_package = 4;
     }
+}
+
+message MlsGroupState {
+    bytes external_group_snapshot = 1;
+    repeated bytes commits = 2;
 }
 
 message InitialGroupInfoRequest {
@@ -36,14 +43,23 @@ message InitialGroupInfoResponse {
 }
 
 message ExternalJoinRequest {
-    bytes external_group_snapshot = 1;
-    repeated bytes commits = 2;
-    bytes proposed_external_join_info_message = 3;
-    bytes proposed_external_join_commit = 4;
-    bytes signature_public_key = 5;
+    MlsGroupState group_state = 1;
+    bytes proposed_external_join_info_message = 2;
+    bytes proposed_external_join_commit = 3;
+    bytes signature_public_key = 4;
 }
 
 message ExternalJoinResponse {
+    ValidationResult result = 1;
+}
+
+message KeyPackageRequest {
+    MlsGroupState group_state = 1;
+    bytes key_package = 2;
+    bytes signature_public_key = 3;
+}
+
+message KeyPackageResponse {
     ValidationResult result = 1;
 }
 

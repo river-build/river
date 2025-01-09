@@ -35,6 +35,9 @@ pub extern "C" fn process_mls_request(input_ptr: *const u8, input_len: usize, ou
         mls_request::Content::SnapshotExternalGroup(snapshot_external_group) => {
             river_mls::snapshot_external_group_request(snapshot_external_group).encode_to_vec()
         }
+        mls_request::Content::KeyPackage(key_package) => {
+            river_mls::validate_key_package_request(key_package).encode_to_vec()
+        }
     };
     
     // Allocate memory for the output
