@@ -1438,13 +1438,18 @@ func (ru *aeMlsInitializeGroupRules) validMlsInitializeGroup() (bool, error) {
 
 func (ru *aeMlsExternalJoinRules) validMlsExternalJoin() (bool, error) {
 	view := ru.params.streamView.(events.MlsStreamView)
-	externalJoinRequest, err := view.GetMlsExternalJoinRequest()
+	mlsGroupState, err := view.GetMlsGroupState()
 	if err != nil {
 		return false, err
 	}
-	externalJoinRequest.ProposedExternalJoinCommit = ru.externalJoin.Commit
-	externalJoinRequest.ProposedExternalJoinInfoMessage = ru.externalJoin.GroupInfoMessage
-	externalJoinRequest.SignaturePublicKey = ru.externalJoin.SignaturePublicKey
+
+	externalJoinRequest := &mls_tools.ExternalJoinRequest{
+		GroupState: mlsGroupState,
+		ProposedExternalJoinCommit: ru.externalJoin.Commit,
+		ProposedExternalJoinInfoMessage: ru.externalJoin.GroupInfoMessage,
+		SignaturePublicKey: ru.externalJoin.SignaturePublicKey,
+	}
+	
 	resp, err := mls_service.ExternalJoinRequest(externalJoinRequest)
 	if err != nil {
 		return false, err

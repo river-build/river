@@ -59,6 +59,8 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
                     }
                 }
                 break
+            case 'keyPackage':
+                break
             case undefined:
                 break
             default:

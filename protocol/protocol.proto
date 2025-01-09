@@ -240,6 +240,10 @@ message MemberPayload {
             bytes group_info_message = 3;
         }
 
+        message KeyPackage {
+
+        }
+
         message EpochSecrets {
             message EpochSecret {
                 bytes secret = 1;
@@ -252,6 +256,7 @@ message MemberPayload {
             InitializeGroup initialize_group = 1;
             ExternalJoin external_join = 2;
             EpochSecrets epoch_secrets = 3;
+            KeyPackage key_package = 4;
         }
     }
 
