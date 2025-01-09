@@ -1,8 +1,4 @@
-import {
-    Client as MlsClient,
-    Group as MlsGroup,
-    MlsMessage,
-} from '@river-build/mls-rs-wasm'
+import { Client as MlsClient, Group as MlsGroup, MlsMessage } from '@river-build/mls-rs-wasm'
 import { dlog, DLogger } from '@river-build/dlog'
 
 const log = dlog('csb:mls:crypto')
