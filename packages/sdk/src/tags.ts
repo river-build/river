@@ -1,8 +1,15 @@
 import { PlainMessage } from '@bufbuild/protobuf'
-import { ChannelMessage, GroupMentionType, MessageInteractionType, Tags } from '@river-build/proto'
+import {
+    BlockchainTransaction,
+    ChannelMessage,
+    GroupMentionType,
+    MessageInteractionType,
+    Tags,
+} from '@river-build/proto'
 import { IStreamStateView } from './streamStateView'
 import { addressFromUserId } from './id'
 import { bin_fromHexString } from '@river-build/dlog'
+import { checkNever } from './check'
 
 export function makeTags(
     message: PlainMessage<ChannelMessage>,
@@ -15,6 +22,25 @@ export function makeTags(
         participatingUserAddresses: getParticipatingUserAddresses(message, streamView),
         threadId: getThreadId(message, streamView),
     } satisfies PlainMessage<Tags>
+}
+
+export function makeBlockchainTransactionTags(
+    transaction: PlainMessage<BlockchainTransaction>,
+): PlainMessage<Tags> | undefined {
+    switch (transaction.content.case) {
+        case undefined:
+            return undefined
+        case 'tip':
+            return {
+                messageInteractionType: MessageInteractionType.TIP,
+                groupMentionTypes: [],
+                mentionedUserAddresses: [],
+                participatingUserAddresses: [transaction.content.value.toUserAddress],
+                threadId: transaction.content.value.event?.messageId,
+            } satisfies PlainMessage<Tags>
+        default:
+            checkNever(transaction.content)
+    }
 }
 
 function getThreadId(

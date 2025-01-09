@@ -150,7 +150,7 @@ import { SyncedStream } from './syncedStream'
 import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
 import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from './crypto_utils'
-import { makeTags } from './tags'
+import { makeBlockchainTransactionTags, makeTags } from './tags'
 import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
@@ -158,6 +158,10 @@ export type ClientEvents = StreamEvents & DecryptionEvents
 type SendChannelMessageOptions = {
     beforeSendEventHook?: Promise<void>
     onLocalEventAppended?: (localId: string) => void
+    disableTags?: boolean // if true, tags will not be added to the message
+}
+
+type SendBlockchainTransactionOptions = {
     disableTags?: boolean // if true, tags will not be added to the message
 }
 
@@ -1909,6 +1913,7 @@ export class Client
         chainId: number,
         receipt: ContractReceipt,
         content?: PlainMessage<BlockchainTransaction>['content'],
+        opts?: SendBlockchainTransactionOptions,
     ): Promise<{ eventId: string }> {
         check(isDefined(this.userStreamId))
         const transaction = {
@@ -1927,8 +1932,10 @@ export class Client
             content: content ?? { case: undefined },
         } satisfies PlainMessage<BlockchainTransaction>
         const event = make_UserPayload_BlockchainTransaction(transaction)
+        const tags = opts?.disableTags ? undefined : makeBlockchainTransactionTags(transaction)
         return this.makeEventAndAddToStream(this.userStreamId, event, {
             method: 'addTransaction',
+            tags,
         })
     }
 
@@ -1937,22 +1944,28 @@ export class Client
         receipt: ContractReceipt,
         event: TipEventObject,
         toUserId: string,
+        opts?: SendBlockchainTransactionOptions,
     ): Promise<{ eventId: string }> {
-        return this.addTransaction(chainId, receipt, {
-            case: 'tip',
-            value: {
-                event: {
-                    tokenId: event.tokenId.toBigInt(),
-                    currency: bin_fromHexString(event.currency),
-                    sender: addressFromUserId(event.sender),
-                    receiver: addressFromUserId(event.receiver),
-                    amount: event.amount.toBigInt(),
-                    messageId: bin_fromHexString(event.messageId),
-                    channelId: streamIdAsBytes(event.channelId),
+        return this.addTransaction(
+            chainId,
+            receipt,
+            {
+                case: 'tip',
+                value: {
+                    event: {
+                        tokenId: event.tokenId.toBigInt(),
+                        currency: bin_fromHexString(event.currency),
+                        sender: addressFromUserId(event.sender),
+                        receiver: addressFromUserId(event.receiver),
+                        amount: event.amount.toBigInt(),
+                        messageId: bin_fromHexString(event.messageId),
+                        channelId: streamIdAsBytes(event.channelId),
+                    },
+                    toUserAddress: addressFromUserId(toUserId),
                 },
-                toUserAddress: addressFromUserId(toUserId),
             },
-        })
+            opts,
+        )
     }
 
     async getMiniblocks(
