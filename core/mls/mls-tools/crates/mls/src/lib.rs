@@ -591,7 +591,6 @@ mod tests {
             group_state: Some(MlsGroupState {
                 external_group_snapshot: external_group_snapshot.to_bytes().unwrap(),
                 commits: commits.iter().map(|commit| commit.to_bytes().unwrap()).collect(),
-                pending_key_packages: Vec::new(),
             }),
             signature_public_key: signature_public_key,
             proposed_external_join_info_message: alice_group_info_message.to_bytes().unwrap(),
@@ -632,7 +631,6 @@ mod tests {
             group_state: Some(MlsGroupState {
                 external_group_snapshot: external_group_snapshot.to_bytes().unwrap(),
                 commits: commits.iter().map(|commit| commit.to_bytes().unwrap()).collect(),
-                pending_key_packages: Vec::new(),
             }),
             key_package: Some(KeyPackage {
                 key_package: key_package.to_bytes().unwrap(),

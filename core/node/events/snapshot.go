@@ -641,6 +641,10 @@ func update_Snapshot_Mls(
 		snapshot.EpochSecrets = make(map[uint64][]byte)
 	}
 
+	if snapshot.PendingKeyPackages == nil {
+		snapshot.PendingKeyPackages = make(map[string]*MemberPayload_KeyPackage)
+	}
+
 	switch content := mlsPayload.Content.(type) {
 	case *MemberPayload_Mls_InitializeGroup_:
 		if len(snapshot.ExternalGroupSnapshot) > 0 || len(snapshot.GroupInfoMessage) > 0 {
@@ -670,7 +674,8 @@ func update_Snapshot_Mls(
 		}
 		return nil
 	case *MemberPayload_Mls_KeyPackage:
-		snapshot.PendingKeyPackages = append(snapshot.PendingKeyPackages, content.KeyPackage)
+		signatureKey := common.Bytes2Hex(content.KeyPackage.SignaturePublicKey)
+		snapshot.PendingKeyPackages[signatureKey] = content.KeyPackage
 		return nil
 	default:
 		return RiverError(Err_INVALID_ARGUMENT, fmt.Sprintf("unknown MLS payload type %T", mlsPayload.Content))

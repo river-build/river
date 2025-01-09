@@ -17,6 +17,7 @@ import {
 import { randomBytes } from 'crypto'
 import { bin_equal, check } from '@river-build/dlog'
 import { addressFromUserId } from '../../id'
+import { bytesToHex } from 'ethereum-cryptography/utils'
 
 describe('mlsTests', () => {
     let clients: Client[] = []
@@ -434,28 +435,25 @@ describe('mlsTests', () => {
     })
 
     test('key packages are broadcasted to all members', async () => {
+        const aliceMlsClient2SignaturePublicKey = await aliceMlsClient2.signaturePublicKey()
         await waitFor(() => {
             const stream = bobClient.streams.get(streamId)
-            check(stream!.view.membershipContent.mls.pendingKeyPackages.length > 0)
-            check(
-                bin_equal(
-                    stream!.view.membershipContent.mls.pendingKeyPackages[0].keyPackage,
-                    latestAliceMlsKeyPackage,
-                ),
-            )
+            check(Object.values(stream!.view.membershipContent.mls.pendingKeyPackages).length > 0)
+            const kp =
+                stream!.view.membershipContent.mls.pendingKeyPackages[
+                    bytesToHex(aliceMlsClient2SignaturePublicKey)
+                ].keyPackage
+            check(bin_equal(kp, latestAliceMlsKeyPackage))
         })
     })
 
-    test('clients cannot publish key packages twice', async () => {
+    test("clients can publish key packages twice (but it isn't encouraged)", async () => {
         const alicePayload = makeMlsPayloadKeyPackage(
             addressFromUserId(aliceClient.userId),
             await aliceMlsClient2.signaturePublicKey(),
             latestAliceMlsKeyPackage,
         )
-
-        await expect(aliceClient._debugSendMls(streamId, alicePayload)).rejects.toThrow(
-            'key package for signature public key already exists',
-        )
+        await expect(aliceClient._debugSendMls(streamId, alicePayload)).resolves.not.toThrow()
     })
 
     test('key packages are snapshotted', async () => {
@@ -467,8 +465,11 @@ describe('mlsTests', () => {
         // verify that the key package is picked up in the snapshot
         const streamAfterSnapshot = await bobClient.getStream(streamId)
         const mls = streamAfterSnapshot.membershipContent.mls
-        expect(mls.pendingKeyPackages.length).toBe(1)
-        expect(bin_equal(mls.pendingKeyPackages[0].keyPackage, latestAliceMlsKeyPackage)).toBe(true)
+        expect(Object.values(mls.pendingKeyPackages).length).toBe(1)
+        const key = bytesToHex(await aliceMlsClient2.signaturePublicKey())
+        expect(bin_equal(mls.pendingKeyPackages[key].keyPackage, latestAliceMlsKeyPackage)).toBe(
+            true,
+        )
     })
 
     // TODO: Add more tests once we have support for clearing commits in mls-rs-wasm

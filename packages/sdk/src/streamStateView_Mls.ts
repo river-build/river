@@ -10,6 +10,7 @@ import {
 import { check } from '@river-build/dlog'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { logNever } from './check'
+import { bytesToHex } from 'ethereum-cryptography/utils'
 
 export class StreamStateView_Mls extends StreamStateView_AbstractContent {
     readonly streamId: string
@@ -17,7 +18,7 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
     groupInfoMessage?: Uint8Array
     members: { [key: string]: PlainMessage<MemberPayload_Snapshot_Mls_Member> } = {}
     epochSecrets: { [key: string]: Uint8Array } = {}
-    pendingKeyPackages: MemberPayload_KeyPackage[] = []
+    pendingKeyPackages: { [key: string]: MemberPayload_KeyPackage } = {}
     constructor(streamId: string) {
         super()
         this.streamId = streamId
@@ -65,7 +66,9 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
                 }
                 break
             case 'keyPackage':
-                this.pendingKeyPackages.push(mlsEvent.content.value)
+                this.pendingKeyPackages[bytesToHex(mlsEvent.content.value.signaturePublicKey)] =
+                    mlsEvent.content.value
+
                 break
             case 'welcomeMessage':
                 {

@@ -166,7 +166,7 @@ message MemberPayload {
             // user_address -> Member
             map<string, Member> members = 3;
             map<uint64, bytes> epoch_secrets = 4;
-            repeated KeyPackage pending_key_packages = 5;
+            map<string, KeyPackage> pending_key_packages = 5;
         }
 
         message Member {

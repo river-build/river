@@ -36,7 +36,6 @@ message KeyPackage {
 message MlsGroupState {
     bytes external_group_snapshot = 1;
     repeated bytes commits = 2;
-    repeated KeyPackage pending_key_packages = 3;
 }
 
 message InitialGroupInfoRequest {
