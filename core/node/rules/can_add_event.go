@@ -99,6 +99,11 @@ type aeMlsEpochSecrets struct {
 	secrets *MemberPayload_Mls_EpochSecrets
 }
 
+type aeMlsKeyPackage struct {
+	params     *aeParams
+	keyPackage *MemberPayload_Mls_KeyPackage
+}
+
 type aeMediaPayloadChunkRules struct {
 	params *aeParams
 	chunk  *MediaPayload_Chunk
@@ -623,6 +628,16 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 			check(params.creatorIsMember).
 			check(params.mlsInitialized).
 			check(ru.validMlsEpochSecrets)
+
+	case *MemberPayload_Mls_KeyPackage_:
+		ru := &aeMlsKeyPackage{
+			params:     params,
+			keyPackage: content.KeyPackage,
+		}
+		return aeBuilder().
+			check(params.creatorIsMember).
+			check(params.mlsInitialized).
+			check(ru.validMlsKeyPackage)
 	default:
 		return aeBuilder().
 			fail(unknownContentType(content))
@@ -1474,6 +1489,30 @@ func (ru *aeMlsEpochSecrets) validMlsEpochSecrets() (bool, error) {
 			return false, RiverError(Err_INVALID_ARGUMENT, "epoch already exists", "epoch", secret.Epoch)
 		}
 	}
+	return true, nil
+}
+
+func (ru *aeMlsKeyPackage) validMlsKeyPackage() (bool, error) {
+	view := ru.params.streamView.(events.MlsStreamView)
+	mlsGroupState, err := view.GetMlsGroupState()
+	if err != nil {
+		return false, err
+	}
+	keyPackageRequest := &mls_tools.KeyPackageRequest {
+		GroupState: mlsGroupState,
+		KeyPackage: ru.keyPackage.KeyPackage,
+		SignaturePublicKey: ru.keyPackage.SignaturePublicKey,
+	}
+
+	resp, err := mls_service.KeyPackageRequest(keyPackageRequest)
+	if err != nil {
+		return false, err
+	}
+
+	if resp.GetResult() != mls_tools.ValidationResult_VALID {
+		return false, RiverError(Err_INVALID_ARGUMENT, "invalid key package", "result", resp.GetResult())
+	}
+
 	return true, nil
 }
 

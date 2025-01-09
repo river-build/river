@@ -241,7 +241,8 @@ message MemberPayload {
         }
 
         message KeyPackage {
-
+            bytes signature_public_key = 1;
+            bytes key_package = 2;
         }
 
         message EpochSecrets {
