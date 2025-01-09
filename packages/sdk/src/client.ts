@@ -150,7 +150,7 @@ import { SyncedStream } from './syncedStream'
 import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
 import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from './crypto_utils'
-import { makeBlockchainTransactionTags, makeTags } from './tags'
+import { makeTags, makeTipTags } from './tags'
 import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
@@ -1913,7 +1913,7 @@ export class Client
         chainId: number,
         receipt: ContractReceipt,
         content?: PlainMessage<BlockchainTransaction>['content'],
-        opts?: SendBlockchainTransactionOptions,
+        tags?: PlainMessage<Tags>,
     ): Promise<{ eventId: string }> {
         check(isDefined(this.userStreamId))
         const transaction = {
@@ -1932,7 +1932,6 @@ export class Client
             content: content ?? { case: undefined },
         } satisfies PlainMessage<BlockchainTransaction>
         const event = make_UserPayload_BlockchainTransaction(transaction)
-        const tags = opts?.disableTags ? undefined : makeBlockchainTransactionTags(transaction)
         return this.makeEventAndAddToStream(this.userStreamId, event, {
             method: 'addTransaction',
             tags,
@@ -1946,6 +1945,9 @@ export class Client
         toUserId: string,
         opts?: SendBlockchainTransactionOptions,
     ): Promise<{ eventId: string }> {
+        const stream = this.stream(event.channelId)
+        check(isDefined(stream), 'stream not found')
+        const tags = opts?.disableTags ? undefined : makeTipTags(event, toUserId, stream.view)
         return this.addTransaction(
             chainId,
             receipt,
@@ -1964,7 +1966,7 @@ export class Client
                     toUserAddress: addressFromUserId(toUserId),
                 },
             },
-            opts,
+            tags,
         )
     }
 

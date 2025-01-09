@@ -8,8 +8,9 @@ import {
 } from '@river-build/proto'
 import { IStreamStateView } from './streamStateView'
 import { addressFromUserId } from './id'
-import { bin_fromHexString } from '@river-build/dlog'
+import { bin_fromHexString, bin_toHexString } from '@river-build/dlog'
 import { checkNever } from './check'
+import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
 
 export function makeTags(
     message: PlainMessage<ChannelMessage>,
@@ -24,23 +25,18 @@ export function makeTags(
     } satisfies PlainMessage<Tags>
 }
 
-export function makeBlockchainTransactionTags(
-    transaction: PlainMessage<BlockchainTransaction>,
+export function makeTipTags(
+    event: TipEventObject,
+    toUserId: string,
+    streamView: IStreamStateView,
 ): PlainMessage<Tags> | undefined {
-    switch (transaction.content.case) {
-        case undefined:
-            return undefined
-        case 'tip':
-            return {
-                messageInteractionType: MessageInteractionType.TIP,
-                groupMentionTypes: [],
-                mentionedUserAddresses: [],
-                participatingUserAddresses: [transaction.content.value.toUserAddress],
-                threadId: transaction.content.value.event?.messageId,
-            } satisfies PlainMessage<Tags>
-        default:
-            checkNever(transaction.content)
-    }
+    return {
+        messageInteractionType: MessageInteractionType.TIP,
+        groupMentionTypes: [],
+        mentionedUserAddresses: [],
+        participatingUserAddresses: [addressFromUserId(toUserId)],
+        threadId: getParentThreadId(event.messageId, streamView),
+    } satisfies PlainMessage<Tags>
 }
 
 function getThreadId(
