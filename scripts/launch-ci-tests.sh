@@ -1,3 +1,8 @@
+# !/bin/bash
+
+# Launch a suite of CI tests in order to validate a PR that has issues
+# that are sporadic and/or hard to reproduce locally.
+
 # Check if at least two arguments are provided
 if [ "$#" -lt 2 ]; then
     echo "Usage: $0 <git_branch> <number_of_times>"
