@@ -205,7 +205,7 @@ deploy-ledger-base-sepolia :;
 	@$(MAKE) resume-any-ledger rpc=base_sepolia hd_path=${HD_PATH} sender=${SENDER_ADDRESS} verifier=${BASESCAN_SEPOLIA_URL} etherscan=${BASESCAN_API_KEY}
 
 deploy-base-sepolia :;
-	@$(MAKE) deploy-any-blockscout rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY} verifier=${BLOCKSCOUT_SEPOLIA_URL}
+	@$(MAKE) deploy-any-blockscout rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY} verifier=${BLOCKSCOUT_SEPOLIA_URL} etherscan=${BLOCKSCOUT_SEPOLIA_API_KEY}
 	@$(MAKE) resume-any rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY} verifier=${BASESCAN_SEPOLIA_URL} etherscan=${BASESCAN_API_KEY}
 
 interact-base-sepolia :;
@@ -293,7 +293,7 @@ deploy-alpha-sepolia :;
 	@$(MAKE) deploy-any context=alpha rpc=sepolia private_key=${TESTNET_PRIVATE_KEY}
 
 deploy-alpha-base-sepolia :;
-	@$(MAKE) deploy-any-blockscout context=alpha rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY} verifier=${BLOCKSCOUT_SEPOLIA_URL}
+	@$(MAKE) deploy-any-blockscout context=alpha rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY} verifier=${BLOCKSCOUT_SEPOLIA_URL} etherscan=${BLOCKSCOUT_SEPOLIA_API_KEY}
 	@$(MAKE) resume-any rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY} verifier=${BASESCAN_SEPOLIA_URL} etherscan=${BASESCAN_API_KEY}
 
 interact-alpha-base-sepolia :;
