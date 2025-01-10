@@ -167,6 +167,7 @@ message MemberPayload {
             map<string, Member> members = 3;
             map<uint64, bytes> epoch_secrets = 4;
             map<string, KeyPackage> pending_key_packages = 5;
+            map<string, int64> welcome_messages_miniblock_num = 6;
         }
 
         message Member {
