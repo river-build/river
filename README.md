@@ -67,36 +67,6 @@ If you want to restart everything, `CMD+P` + `task KillAllLocalDev` will search 
 
 If you want to restart just the server, `CMD+P` + `task RestartCasablanca` will relaunch the servers. Same for `CMD+P` + `task RestartWatches`
 
-
-### Running the archiver service against different environments
-
-To run a local archiver service that downloads from various public networks, use the run command
-for that network and pass in specific configuration to store the data in the local database, which
-is written in `archiver-local.yaml`.
-
-Example: Running against omega nodes
-
-```
-# Make sure postgres container is running
-./core/scripts/launch_storage.sh
-
-# Make sure to use an absolute path to refer to the archiver-local.yaml file
-# populate RIVER_REPO_PATH with the absolute path to the root of the river repository
-./core/env/omega/run.sh archive -c $RIVER_REPO_PATH/core/env/archiver-local.yaml
-```
-
-Example: Running against gamma nodes
-
-```
-./core/scripts/launch_storage.sh
-
-./core/env/gamma/run.sh archive -c $RIVER_REPO_PATH/core/env/archiver-local.yaml
-```
-
-Note: some networks, such as omega, may have hundreds of gigabytes of stream data available.
-Be sure to increase the maximum storage, CPU and/or memory of your postgres container appropriately
-so it can handle the load.
-
 ## Tests
 
 - Run all unit tests via: `yarn test:unit`
