@@ -14,7 +14,7 @@ import {
     check,
     bin_toHexString,
 } from '@river-build/dlog'
-import { GROUP_ENCRYPTION_ALGORITHM, GroupEncryptionSession, UserDevice } from './olmLib'
+import { GroupEncryptionAlgorithmId, GroupEncryptionSession, UserDevice } from './olmLib'
 import { GroupEncryptionCrypto } from './groupEncryptionCrypto'
 
 export interface EntitlementsDelegate {
@@ -549,7 +549,7 @@ export abstract class BaseDecryptionExtensions {
                     streamId: streamId,
                     sessionId: session.sessionIds[i],
                     sessionKey: sessionKeys.keys[i],
-                    algorithm: GROUP_ENCRYPTION_ALGORITHM,
+                    algorithm: GroupEncryptionAlgorithmId.GroupEncryption,
                 } satisfies GroupEncryptionSession),
         )
         // import the sessions

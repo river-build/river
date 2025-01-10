@@ -7,20 +7,14 @@ globalThis.OLM_OPTIONS = {}
  */
 
 // Supported algorithms
-enum Algorithm {
+export enum EncryptionAlgorithmId {
     Olm = 'r.olm.v1.curve25519-aes-sha2',
-    GroupEncryption = 'r.group-encryption.v1.aes-sha2',
 }
 
-/**
- * river algorithm tag for olm
- */
-export const OLM_ALGORITHM = Algorithm.Olm
-
-/**
- * river algorithm tag for group encryption
- */
-export const GROUP_ENCRYPTION_ALGORITHM = Algorithm.GroupEncryption
+export enum GroupEncryptionAlgorithmId {
+    // group olm encryption based on signal protocol with ratcheting
+    GroupEncryption = 'r.group-encryption.v1.aes-sha2',
+}
 
 export interface UserDevice {
     deviceKey: string

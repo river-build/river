@@ -47,6 +47,7 @@ import {
     DecryptionEvents,
     EncryptionDevice,
     EntitlementsDelegate,
+    GroupEncryptionAlgorithmId,
     GroupEncryptionCrypto,
     GroupEncryptionSession,
     IGroupEncryptionClient,
@@ -875,7 +876,11 @@ export class Client
         check(isDefined(this.cryptoBackend))
 
         const channelProps = make_ChannelProperties(channelName, channelTopic).toJsonString()
-        const encryptedData = await this.cryptoBackend.encryptGroupEvent(streamId, channelProps)
+        const encryptedData = await this.cryptoBackend.encryptGroupEvent(
+            streamId,
+            channelProps,
+            GroupEncryptionAlgorithmId.GroupEncryption,
+        )
 
         const event = make_GDMChannelPayload_ChannelProperties(encryptedData)
         return this.makeEventAndAddToStream(streamId, event, {
@@ -1053,7 +1058,11 @@ export class Client
 
     async setDisplayName(streamId: string, displayName: string) {
         check(isDefined(this.cryptoBackend))
-        const encryptedData = await this.cryptoBackend.encryptGroupEvent(streamId, displayName)
+        const encryptedData = await this.cryptoBackend.encryptGroupEvent(
+            streamId,
+            displayName,
+            GroupEncryptionAlgorithmId.GroupEncryption,
+        )
         await this.makeEventAndAddToStream(
             streamId,
             make_MemberPayload_DisplayName(encryptedData),
@@ -1066,7 +1075,11 @@ export class Client
         const stream = this.stream(streamId)
         check(isDefined(stream), 'stream not found')
         stream.view.getMemberMetadata().usernames.setLocalUsername(this.userId, username)
-        const encryptedData = await this.cryptoBackend.encryptGroupEvent(streamId, username)
+        const encryptedData = await this.cryptoBackend.encryptGroupEvent(
+            streamId,
+            username,
+            GroupEncryptionAlgorithmId.GroupEncryption,
+        )
         encryptedData.checksum = usernameChecksum(username, streamId)
         try {
             await this.makeEventAndAddToStream(
@@ -1522,7 +1535,8 @@ export class Client
 
         const tags = opts?.disableTags === true ? undefined : makeTags(payload, stream.view)
         const cleartext = payload.toJsonString()
-        const message = await this.encryptGroupEvent(payload, streamId)
+        const algorithm = GroupEncryptionAlgorithmId.GroupEncryption
+        const message = await this.encryptGroupEvent(payload, streamId, algorithm)
         message.refEventId = getRefEventIdFromChannelMessage(payload)
 
         if (!message) {
@@ -2470,12 +2484,16 @@ export class Client
     }
 
     // Encrypt event using GroupEncryption.
-    public encryptGroupEvent(event: Message, streamId: string): Promise<EncryptedData> {
+    public encryptGroupEvent(
+        event: Message,
+        streamId: string,
+        algorithm: GroupEncryptionAlgorithmId,
+    ): Promise<EncryptedData> {
         if (!this.cryptoBackend) {
             throw new Error('crypto backend not initialized')
         }
         const cleartext = event.toJsonString()
-        return this.cryptoBackend.encryptGroupEvent(streamId, cleartext)
+        return this.cryptoBackend.encryptGroupEvent(streamId, cleartext, algorithm)
     }
 
     async encryptWithDeviceKeys(

@@ -7,6 +7,7 @@ import { Client } from '../../client'
 
 import { genShortId, makeUniqueChannelStreamId } from '../../id'
 import { ChannelMessage } from '@river-build/proto'
+import { GroupEncryptionAlgorithmId } from '@river-build/encryption'
 
 describe('outboundSessionTests', () => {
     let bobsDeviceId: string
@@ -54,8 +55,10 @@ describe('outboundSessionTests', () => {
         await expect(bobsOtherClient.initializeUser()).resolves.not.toThrow()
         bobsOtherClient.startSync()
 
-        const encrypted1 = await bobsClient.encryptGroupEvent(message, channelId)
-        const encrypted2 = await bobsOtherClient.encryptGroupEvent(message, channelId)
+        const algorithm = GroupEncryptionAlgorithmId.GroupEncryption
+
+        const encrypted1 = await bobsClient.encryptGroupEvent(message, channelId, algorithm)
+        const encrypted2 = await bobsOtherClient.encryptGroupEvent(message, channelId, algorithm)
 
         expect(encrypted1?.sessionId).toBeDefined()
         expect(encrypted1.sessionId).toEqual(encrypted2.sessionId)
@@ -91,9 +94,23 @@ describe('outboundSessionTests', () => {
             },
         })
 
-        const encryptedChannel1_1 = await bobsClient.encryptGroupEvent(message, channelId1)
-        const encryptedChannel1_2 = await bobsClient.encryptGroupEvent(message, channelId1)
-        const encryptedChannel2_1 = await bobsClient.encryptGroupEvent(message, channelId2)
+        const algorithm = GroupEncryptionAlgorithmId.GroupEncryption
+
+        const encryptedChannel1_1 = await bobsClient.encryptGroupEvent(
+            message,
+            channelId1,
+            algorithm,
+        )
+        const encryptedChannel1_2 = await bobsClient.encryptGroupEvent(
+            message,
+            channelId1,
+            algorithm,
+        )
+        const encryptedChannel2_1 = await bobsClient.encryptGroupEvent(
+            message,
+            channelId2,
+            algorithm,
+        )
 
         expect(encryptedChannel1_1?.sessionId).toBeDefined()
         expect(encryptedChannel1_2?.sessionId).toBeDefined()

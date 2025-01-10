@@ -1,13 +1,13 @@
 import { EncryptedData } from '@river-build/proto'
-import {
-    GROUP_ENCRYPTION_ALGORITHM,
-    GroupEncryptionSession,
-    OLM_ALGORITHM,
-    UserDevice,
-} from './olmLib'
+import { GroupEncryptionAlgorithmId, GroupEncryptionSession, UserDevice } from './olmLib'
 
 import { CryptoStore } from './cryptoStore'
-import { IGroupEncryptionClient } from './base'
+import {
+    DecryptionAlgorithm,
+    DecryptionError,
+    EncryptionAlgorithm,
+    IGroupEncryptionClient,
+} from './base'
 import { GroupDecryption } from './groupDecryption'
 import { GroupEncryption } from './groupEncryption'
 import { EncryptionDevice, type EncryptionDeviceInitOpts } from './encryptionDevice'
@@ -37,10 +37,9 @@ export interface ImportRoomKeyProgressData {
 export class GroupEncryptionCrypto {
     private delegate: EncryptionDelegate | undefined
 
-    public readonly supportedAlgorithms: string[]
     public readonly encryptionDevice: EncryptionDevice
-    public readonly groupEncryption: GroupEncryption
-    public readonly groupDecryption: GroupDecryption
+    public readonly groupEncryption: Record<GroupEncryptionAlgorithmId, EncryptionAlgorithm>
+    public readonly groupDecryption: Record<GroupEncryptionAlgorithmId, DecryptionAlgorithm>
     public readonly cryptoStore: CryptoStore
     public globalBlacklistUnverifiedDevices = false
     public globalErrorOnUnknownDevices = true
@@ -55,15 +54,18 @@ export class GroupEncryptionCrypto {
             throw e
         })
         this.encryptionDevice = new EncryptionDevice(this.delegate, cryptoStore)
-        this.supportedAlgorithms = [OLM_ALGORITHM, GROUP_ENCRYPTION_ALGORITHM]
 
-        this.groupEncryption = new GroupEncryption({
-            device: this.encryptionDevice,
-            client,
-        })
-        this.groupDecryption = new GroupDecryption({
-            device: this.encryptionDevice,
-        })
+        this.groupEncryption = {
+            [GroupEncryptionAlgorithmId.GroupEncryption]: new GroupEncryption({
+                device: this.encryptionDevice,
+                client,
+            }),
+        }
+        this.groupDecryption = {
+            [GroupEncryptionAlgorithmId.GroupEncryption]: new GroupDecryption({
+                device: this.encryptionDevice,
+            }),
+        }
     }
 
     /** Iniitalize crypto module prior to usage
@@ -131,9 +133,10 @@ export class GroupEncryptionCrypto {
      */
     public async ensureOutboundSession(
         streamId: string,
+        algorithm: GroupEncryptionAlgorithmId,
         opts?: { awaitInitialShareSession: boolean },
     ): Promise<void> {
-        return this.groupEncryption.ensureOutboundSession(streamId, opts)
+        return this.groupEncryption[algorithm].ensureOutboundSession(streamId, opts)
     }
 
     /**
@@ -142,8 +145,12 @@ export class GroupEncryptionCrypto {
      * @returns Promise which resolves when the event has been
      *     encrypted, or null if nothing was needed
      */
-    public async encryptGroupEvent(streamId: string, payload: string): Promise<EncryptedData> {
-        return this.groupEncryption.encrypt(streamId, payload)
+    public async encryptGroupEvent(
+        streamId: string,
+        payload: string,
+        algorithm: GroupEncryptionAlgorithmId,
+    ): Promise<EncryptedData> {
+        return this.groupEncryption[algorithm].encrypt(streamId, payload)
     }
     /**
      * Decrypt a received event using group encryption algorithm
@@ -152,7 +159,11 @@ export class GroupEncryptionCrypto {
      * Rejects with an error if there is a problem decrypting the event.
      */
     public async decryptGroupEvent(streamId: string, content: EncryptedData) {
-        return this.groupDecryption.decrypt(streamId, content)
+        if (!(content.algorithm && content.algorithm in this.groupDecryption)) {
+            throw new DecryptionError('GROUP_DECRYPTION_UNKNOWN_ALGORITHM', content.algorithm)
+        }
+        const algorithm = content.algorithm as GroupEncryptionAlgorithmId
+        return this.groupDecryption[algorithm].decrypt(streamId, content)
     }
 
     /**
@@ -169,10 +180,17 @@ export class GroupEncryptionCrypto {
         await this.cryptoStore.withGroupSessions(async () =>
             Promise.all(
                 keys.map(async (key) => {
-                    try {
-                        await this.groupDecryption.importStreamKey(streamId, key)
-                    } catch {
-                        log(`failed to import key`)
+                    const algorithm = key.algorithm
+                    if (algorithm in this.groupDecryption) {
+                        try {
+                            await this.groupDecryption[
+                                algorithm as GroupEncryptionAlgorithmId
+                            ].importStreamKey(streamId, key)
+                        } catch (error) {
+                            log(`failed to import key`, error)
+                        }
+                    } else {
+                        log(`unknown algorithm ${algorithm}`)
                     }
                 }),
             ),
@@ -213,20 +231,26 @@ export class GroupEncryptionCrypto {
                     return
                 }
 
-                try {
-                    await this.groupDecryption.importStreamKey(key.streamId, key)
-                    successes++
-                    if (opts.progressCallback) {
-                        updateProgress()
+                const algorithm = key.algorithm
+                if (algorithm in this.groupDecryption) {
+                    try {
+                        await this.groupDecryption[
+                            algorithm as GroupEncryptionAlgorithmId
+                        ].importStreamKey(key.streamId, key)
+                        successes++
+                        if (opts.progressCallback) {
+                            updateProgress()
+                        }
+                    } catch (error) {
+                        log('failed to import key', error)
+                        failures++
+                        if (opts.progressCallback) {
+                            updateProgress()
+                        }
                     }
-                } catch (error) {
-                    log('failed to import key', error)
-                    failures++
-                    if (opts.progressCallback) {
-                        updateProgress()
-                    }
+                } else {
+                    log(`unknown algorithm ${algorithm}`)
                 }
-                return
             }),
         ).then()
     }

@@ -16,7 +16,12 @@ import {
     EncryptedData,
     UserInboxPayload_GroupEncryptionSessions,
 } from '@river-build/proto'
-import { GroupEncryptionSession, UserDevice, UserDeviceCollection } from '../olmLib'
+import {
+    GroupEncryptionAlgorithmId,
+    GroupEncryptionSession,
+    UserDevice,
+    UserDeviceCollection,
+} from '../olmLib'
 import { bin_fromHexString, bin_toHexString, dlog } from '@river-build/dlog'
 
 import { CryptoStore } from '../cryptoStore'
@@ -52,7 +57,11 @@ describe.concurrent('TestDecryptionExtensions', () => {
         // bob starts the decryption extension
         bobDex.start()
         // bob encrypts a message
-        const encryptedData = await bobCrypto.encryptGroupEvent(streamId, bobsPlaintext)
+        const encryptedData = await bobCrypto.encryptGroupEvent(
+            streamId,
+            bobsPlaintext,
+            GroupEncryptionAlgorithmId.GroupEncryption,
+        )
         const sessionId = encryptedData.sessionId
         // alice doesn't have the session key
         // alice sends a key solicitation request
@@ -108,7 +117,11 @@ describe.concurrent('TestDecryptionExtensions', () => {
         // bob starts the decryption extension
         bobDex.start()
         // bob encrypts a message
-        const encryptedData = await bobCrypto.encryptGroupEvent(streamId, bobsPlaintext)
+        const encryptedData = await bobCrypto.encryptGroupEvent(
+            streamId,
+            bobsPlaintext,
+            GroupEncryptionAlgorithmId.GroupEncryption,
+        )
         // alice doesn't have the session key
         // alice imports the keys exported by bob
         const roomKeys = await bobDex.crypto.encryptionDevice.exportRoomKeys()

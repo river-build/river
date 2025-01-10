@@ -1,6 +1,7 @@
 import { GroupEncryptionSession, UserDeviceCollection } from './olmLib'
 
 import { EncryptionDevice } from './encryptionDevice'
+import { EncryptedData } from '@river-build/proto'
 
 export interface IGroupEncryptionClient {
     downloadUserDeviceInfo(userIds: string[], forceDownload: boolean): Promise<UserDeviceCollection>
@@ -37,6 +38,13 @@ export abstract class EncryptionAlgorithm implements IEncryptionParams {
         this.device = params.device
         this.client = params.client
     }
+
+    abstract ensureOutboundSession(
+        streamId: string,
+        opts?: { awaitInitialShareSession: boolean },
+    ): Promise<void>
+
+    abstract encrypt(streamId: string, payload: string): Promise<EncryptedData>
 }
 
 /**
@@ -48,6 +56,10 @@ export abstract class DecryptionAlgorithm implements IDecryptionParams {
     public constructor(params: IDecryptionParams) {
         this.device = params.device
     }
+
+    abstract decrypt(streamId: string, content: EncryptedData): Promise<string>
+
+    abstract importStreamKey(streamId: string, session: GroupEncryptionSession): Promise<void>
 }
 
 /**
