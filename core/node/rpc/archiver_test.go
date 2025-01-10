@@ -23,7 +23,6 @@ import (
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/registries"
-	"github.com/river-build/river/core/node/shared"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/node/testutils"
@@ -532,7 +531,7 @@ func createCorruptStreams(
 	wallet *crypto.Wallet,
 	client protocolconnect.StreamServiceClient,
 	store storage.StreamStorage,
-) []shared.StreamId {
+) []StreamId {
 	corruptionFuncs := []corruptMiniblockBytesFunc{
 		invalidatePrevMiniblockHash,
 		invalidateEventNumOffset,
@@ -540,7 +539,7 @@ func createCorruptStreams(
 		invalidatePrevSnapshotBlockNum,
 	}
 
-	streamIds := make([]shared.StreamId, len(corruptionFuncs))
+	streamIds := make([]StreamId, len(corruptionFuncs))
 	for i, corruptMb := range corruptionFuncs {
 		streamId, mb1, blocks := createMultiblockChannelStream(ctx, require, client, store)
 		blocks[1] = corruptMb(require, wallet, blocks[1])
@@ -599,7 +598,7 @@ func TestArchive20StreamsWithCorruption(t *testing.T) {
 		func(c *assert.CollectT) {
 			corruptStreams := arch.Archiver.GetCorruptStreams(ctx)
 			assert.Len(c, corruptStreams, 4)
-			corruptStreamsSet := map[shared.StreamId]struct{}{}
+			corruptStreamsSet := map[StreamId]struct{}{}
 			for _, record := range corruptStreams {
 				corruptStreamsSet[record.StreamId] = struct{}{}
 			}
