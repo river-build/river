@@ -68,7 +68,7 @@ func TestCreateEphemeralStream(t *testing.T) {
 			MiniblockNum:             int64(i + 1),
 			PrevMiniblockHash:        mb.Hash[:],
 			Timestamp:                nil,
-			EventHashes:              nil,
+			EventHashes:              [][]byte{envelope.Hash},
 			Snapshot:                 nil,
 			EventNumOffset:           0,
 			PrevSnapshotMiniblockNum: 0,
@@ -91,5 +91,6 @@ func TestCreateEphemeralStream(t *testing.T) {
 
 	// No events in storage since the stream still ephemeral.
 	// The first miniblock is the stream creation miniblock, the rest 10 are media chunks.
+	// TODO: Make sure AddEvent does not work for ephemeral streams.
 	tt.compareStreamDataInStorage(t, mediaStreamId, 11, 0)
 }

@@ -86,12 +86,7 @@ func (s *Service) saveEphemeralMiniblock(
 		return nil, err
 	}
 
-	mbInfo, err := NewMiniblockInfoFromProto(
-		req.Miniblock,
-		NewMiniblockInfoFromProtoOpts{
-			ExpectedBlockNumber: -1,
-		},
-	)
+	mbInfo, err := NewMiniblockInfoFromProto(req.Miniblock, NewParsedMiniblockInfoOpts())
 	if err != nil {
 		return nil, err
 	}
