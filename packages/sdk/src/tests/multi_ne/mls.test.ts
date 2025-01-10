@@ -613,7 +613,7 @@ describe('mlsTests', () => {
 
         const streamAfterSnapshot = await aliceClient.getStream(streamId)
         const mls = streamAfterSnapshot.membershipContent.mls
-        const signature = await aliceMlsClient2.signaturePublicKey()
+        const signature = aliceMlsClient2.signaturePublicKey()
         const miniblockNum = mls.welcomeMessagesMiniblockNum[bytesToHex(signature)]
         expect(miniblockNum).toBeGreaterThan(0n)
 
