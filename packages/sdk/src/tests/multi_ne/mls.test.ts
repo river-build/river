@@ -434,7 +434,7 @@ describe('mlsTests', () => {
         const keyPackage = await aliceMlsClient2.generateKeyPackageMessage()
         const alicePayload = makeMlsPayloadKeyPackage(
             addressFromUserId(aliceClient.userId),
-            await aliceMlsClient2.signaturePublicKey(),
+            aliceMlsClient2.signaturePublicKey(),
             keyPackage.toBytes(),
         )
 
@@ -443,7 +443,7 @@ describe('mlsTests', () => {
     })
 
     test('key packages are broadcasted to all members', async () => {
-        const aliceMlsClient2SignaturePublicKey = await aliceMlsClient2.signaturePublicKey()
+        const aliceMlsClient2SignaturePublicKey = aliceMlsClient2.signaturePublicKey()
         await waitFor(() => {
             const stream = bobClient.streams.get(streamId)
             check(Object.values(stream!.view.membershipContent.mls.pendingKeyPackages).length > 0)
@@ -458,7 +458,7 @@ describe('mlsTests', () => {
     test("clients can publish key packages twice (but it isn't encouraged)", async () => {
         const alicePayload = makeMlsPayloadKeyPackage(
             addressFromUserId(aliceClient.userId),
-            await aliceMlsClient2.signaturePublicKey(),
+            aliceMlsClient2.signaturePublicKey(),
             latestAliceMlsKeyPackage,
         )
         await expect(aliceClient._debugSendMls(streamId, alicePayload)).resolves.not.toThrow()
@@ -474,7 +474,7 @@ describe('mlsTests', () => {
         const streamAfterSnapshot = await bobClient.getStream(streamId)
         const mls = streamAfterSnapshot.membershipContent.mls
         expect(Object.values(mls.pendingKeyPackages).length).toBe(1)
-        const key = bytesToHex(await aliceMlsClient2.signaturePublicKey())
+        const key = bytesToHex(aliceMlsClient2.signaturePublicKey())
         expect(bin_equal(mls.pendingKeyPackages[key].keyPackage, latestAliceMlsKeyPackage)).toBe(
             true,
         )
@@ -568,7 +568,7 @@ describe('mlsTests', () => {
     })
 
     test('key packages are cleared after being applied', async () => {
-        const aliceMlsClient2SignaturePublicKey = await aliceMlsClient2.signaturePublicKey()
+        const aliceMlsClient2SignaturePublicKey = aliceMlsClient2.signaturePublicKey()
         await waitFor(() => {
             const stream = bobClient.streams.get(streamId)
             check(Object.values(stream!.view.membershipContent.mls.pendingKeyPackages).length === 0)
