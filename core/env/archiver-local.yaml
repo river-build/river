@@ -1,25 +1,25 @@
 archive:
-  archiveId: "arch"
+    archiveId: 'arch'
 
 database:
-  host: "localhost"
-  port: 5433
-  user: "postgres"
-  password: "postgres"
-  database: "river"
-  extra: "?sslmode=disable&pool_max_conns=1000"
-  startupDelay: 2000
+    host: 'localhost'
+    port: 5433
+    user: 'postgres'
+    password: 'postgres'
+    database: 'river'
+    extra: '?sslmode=disable&pool_max_conns=1000'
+    startupDelay: 2000
 
 log:
-  level: "info"
+    level: 'info'
 
 enableDebugEndpoints: true
 debugEndpoints:
-  enableStorageEndpoints: true
+    enableStorageEndpoints: true
 
 metrics:
-  port: 4141
+    port: 4141
 
 riverRegistry:
-  progressReportInterval: 30s
-  pageSize: 1000
+    progressReportInterval: 30s
+    pageSize: 1000

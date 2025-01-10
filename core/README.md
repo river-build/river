@@ -68,8 +68,6 @@ is written in `archiver-local.yaml`.
 
 **Note:** some networks, such as omega, may have hundreds of gigabytes of stream data available. Be sure to increase the maximum storage, CPU and/or memory of your docker service / postgres container appropriately so it can handle the load.
 
-
-
 # Installing just
 
     brew install just
