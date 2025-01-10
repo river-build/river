@@ -521,11 +521,16 @@ message UserInboxPayload {
         int64 miniblock_num = 2;
     }
 
+    message MlsWelcomeMessage {
+        bytes stream_id = 1;
+        MemberPayload.Mls.WelcomeMessage welcome_message = 2;
+    }
+
     oneof content {
         Inception inception = 1;
         Ack ack = 2;
         GroupEncryptionSessions group_encryption_sessions = 3;
-        
+        MlsWelcomeMessage mls_welcome_message = 4;
     }
 }
 

@@ -652,7 +652,9 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 		return aeBuilder().
 			check(params.creatorIsMember).
 			check(params.mlsInitialized).
-			check(ru.validMlsWelcomeMessage)
+			check(ru.validMlsWelcomeMessage).
+			requireParentEvents(ru.parentEventsForMlsWelcomeMessage)
+
 	default:
 		return aeBuilder().
 			fail(unknownContentType(content))
@@ -1349,6 +1351,29 @@ func (ru *aeUserMembershipRules) parentEventForUserMembership() (*DerivedEvent, 
 		),
 		StreamId: toStreamId,
 	}, nil
+}
+
+func (ru *aeMlsWelcomeMessageRules) parentEventsForMlsWelcomeMessage() ([]*DerivedEvent, error) {
+
+	pendingKeyPackages, err := ru.params.streamView.(events.MlsStreamView).GetMlsPendingKeyPackages()
+	if err != nil {
+		return nil, err
+	}
+	streamId := ru.params.streamView.StreamId()
+	
+	derivedEvents := make([]*DerivedEvent, 0)
+	for _, signaturePublicKey := range ru.welcomeMessage.SignaturePublicKeys {
+		if keyPackage, ok := pendingKeyPackages[common.Bytes2Hex(signaturePublicKey)]; ok {
+			userStreamId := shared.UserInboxStreamIdFromAddr(common.Address(keyPackage.UserAddress))
+			derivedEvent := &DerivedEvent{
+				Payload: events.Make_UserInboxPayload_MlsWelcomeMessage(*streamId, ru.welcomeMessage),
+				StreamId: userStreamId,
+			}
+			derivedEvents = append(derivedEvents, derivedEvent)
+		}
+	}
+
+	return derivedEvents, nil
 }
 
 // / user actions perform user membership events on other user's streams

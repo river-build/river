@@ -66,6 +66,8 @@ export class StreamStateView_UserInbox extends StreamStateView_AbstractContent {
                 break
             case 'ack':
                 break
+            case 'mlsWelcomeMessage':
+                break
             case undefined:
                 break
             default:
@@ -92,6 +94,8 @@ export class StreamStateView_UserInbox extends StreamStateView_AbstractContent {
                 break
             case 'ack':
                 this.updateDeviceSummary(event.remoteEvent, payload.content.value, stateEmitter)
+                break
+            case 'mlsWelcomeMessage':
                 break
             case undefined:
                 break

@@ -3,6 +3,7 @@ package events
 import (
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/node/mls_service/mls_tools"
 	"github.com/river-build/river/core/node/protocol"
 )
@@ -12,6 +13,7 @@ type MlsStreamView interface {
 	IsMlsInitialized() (bool, error)
 	GetMlsGroupState() (*mls_tools.MlsGroupState, error)
 	GetMlsEpochSecrets() (map[uint64][]byte, error)
+	GetMlsPendingKeyPackages() (map[string]*protocol.MemberPayload_KeyPackage, error)
 }
 
 var _ MlsStreamView = (*streamViewImpl)(nil)
@@ -129,4 +131,38 @@ func (r *streamViewImpl) GetMlsEpochSecrets() (map[uint64][]byte, error) {
 		return nil, err
 	}
 	return epochSecrets, nil
+}
+
+func (r *streamViewImpl) GetMlsPendingKeyPackages() (map[string]*protocol.MemberPayload_KeyPackage, error) {
+	s := r.snapshot
+	if s.Members.GetMls() == nil {
+		return nil, fmt.Errorf("MLS not initialized")
+	}
+	if s.Members.Mls.GetPendingKeyPackages() == nil {
+		return nil, fmt.Errorf("PendingKeyPackages not initialized")		
+	}
+	keyPackages := s.Members.Mls.GetPendingKeyPackages()
+	updateFn := func(e *ParsedEvent, miniblockNum int64, eventNum int64) (bool, error) {
+		switch payload := e.Event.Payload.(type) {
+		case *protocol.StreamEvent_MemberPayload:
+			switch content := payload.MemberPayload.Content.(type) {
+			case *protocol.MemberPayload_Mls_:
+				switch mls := content.Mls.Content.(type) {
+				case *protocol.MemberPayload_Mls_KeyPackage:
+					signatureKey := common.Bytes2Hex(mls.KeyPackage.SignaturePublicKey)
+					keyPackages[signatureKey] = mls.KeyPackage
+				default:
+					break
+				}
+			}
+		default:
+			break
+		}
+		return true, nil
+	}
+	err := r.forEachEvent(r.snapshotIndex+1, updateFn)
+	if err != nil {
+		return nil, err
+	}
+	return keyPackages, nil
 }

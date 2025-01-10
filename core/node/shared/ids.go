@@ -116,6 +116,13 @@ func UserStreamIdFromAddr(addr common.Address) StreamId {
 	return b
 }
 
+func UserInboxStreamIdFromAddr(addr common.Address) StreamId {
+	var b StreamId
+	b[0] = STREAM_USER_INBOX_BIN
+	copy(b[1:], addr.Bytes())
+	return b
+}
+
 func UserSettingStreamIdFromAddr(addr common.Address) StreamId {
 	var b StreamId
 	b[0] = STREAM_USER_SETTINGS_BIN

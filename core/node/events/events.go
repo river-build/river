@@ -432,6 +432,19 @@ func Make_SpacePayload_ChannelUpdate(
 	}
 }
 
+func Make_UserInboxPayload_MlsWelcomeMessage(streamId StreamId, welcomeMessage *MemberPayload_Mls_WelcomeMessage) *StreamEvent_UserInboxPayload {
+	return &StreamEvent_UserInboxPayload{
+		UserInboxPayload: &UserInboxPayload{
+			Content: &UserInboxPayload_MlsWelcomeMessage_ {
+				MlsWelcomeMessage: &UserInboxPayload_MlsWelcomeMessage{
+					StreamId: streamId[:],
+					WelcomeMessage: welcomeMessage,
+				},
+			},
+		},
+	}
+}
+
 func Make_UserPayload_Inception(streamId StreamId, settings *StreamSettings) *StreamEvent_UserPayload {
 	return &StreamEvent_UserPayload{
 		UserPayload: &UserPayload{
