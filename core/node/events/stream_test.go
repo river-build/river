@@ -32,14 +32,9 @@ func MakeGenesisMiniblockForSpaceStream(
 	mb, err := MakeGenesisMiniblock(nodeWallet, []*ParsedEvent{inception})
 	require.NoError(t, err)
 
-	expected := int64(0)
 	mbInfo, err := NewMiniblockInfoFromProto(
 		mb,
-<<<<<<< HEAD
 		NewParsedMiniblockInfoOpts().WithExpectedBlockNumber(0).WithDoNotParseEvents(true),
-=======
-		NewMiniblockInfoFromProtoOpts{ExpectedBlockNumber: &expected, DontParseEvents: true},
->>>>>>> 8fd07bd1 (Parsing unit tests. Need to update a repl test case.)
 	)
 	require.NoError(t, err)
 	return mbInfo
