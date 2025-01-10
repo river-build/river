@@ -6,6 +6,7 @@ import {
 } from '@river-build/proto'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { Crypto } from './crypto'
+import { DLogger, dlog } from '@river-build/dlog'
 
 type InitializeGroupMessage = Omit<
     PlainMessage<MemberPayload_Mls_InitializeGroup>,
@@ -20,25 +21,45 @@ export interface IGroupServiceCoordinator {
     newEpochSecret(streamId: string, epoch: bigint): void
 }
 
+const defaultLogger = dlog('csb:mls:groupService')
+
 /// Service handling group operations both for Group and External Group
 export class GroupService {
     private groupCache: Map<string, Group> = new Map()
     private groupStore: IGroupStore
+    private log: {
+        debug: DLogger
+        error: DLogger
+    }
 
     private crypto: Crypto
     private coordinator: IGroupServiceCoordinator | undefined
 
-    constructor(groupStore: IGroupStore, crypto: Crypto, coordinator?: IGroupServiceCoordinator) {
+    constructor(
+        groupStore: IGroupStore,
+        crypto: Crypto,
+        coordinator?: IGroupServiceCoordinator,
+        opts?: { log: DLogger },
+    ) {
         this.groupStore = groupStore
         this.crypto = crypto
         this.coordinator = coordinator
+
+        const logger = opts?.log ?? defaultLogger
+
+        this.log = {
+            debug: logger.extend('debug'),
+            error: logger.extend('error'),
+        }
     }
 
     public getGroup(streamId: string): Group | undefined {
+        this.log.debug('getGroup', { streamId })
         return this.groupCache.get(streamId)
     }
 
     public async loadGroup(streamId: string): Promise<void> {
+        this.log.debug('loadGroup', { streamId })
         const dto = await this.groupStore.getGroup(streamId)
 
         // TODO: Should this throw an Error?
@@ -60,6 +81,8 @@ export class GroupService {
 
     // TODO: Add recovery in case any of those failing
     public async saveGroup(group: Group): Promise<void> {
+        this.log.debug('saveGroup', { streamId: group.streamId })
+
         this.groupCache.set(group.streamId, group)
 
         const { group: mlsGroup, ...fields } = group
@@ -72,6 +95,8 @@ export class GroupService {
 
     // TODO: Should this be private or public?
     public async clearGroup(streamId: string): Promise<void> {
+        this.log.debug('clearGroup', { streamId })
+
         this.groupCache.delete(streamId)
         await this.groupStore.clearGroup(streamId)
         // TODO: Clear group in GroupStateStore
@@ -79,8 +104,13 @@ export class GroupService {
 
     // TODO: Should this throw an Error?
     public async handleInitializeGroup(group: Group, _message: InitializeGroupMessage) {
+        this.log.debug('handleInitializeGroup', { streamId: group.streamId })
+
         const isGroupActive = group.status === 'GROUP_ACTIVE'
         if (isGroupActive) {
+            this.log.error('handleInitializeGroup: Group is already active', {
+                streamId: group.streamId,
+            })
             // Report programmer error
             throw new Error('Programmer error: Group is already active')
         }
@@ -106,6 +136,8 @@ export class GroupService {
     }
 
     public async handleExternalJoin(group: Group, message: ExternalJoinMessage) {
+        this.log.debug('handleExternalJoin', { streamId: group.streamId })
+
         const isGroupActive = group.status === 'GROUP_ACTIVE'
         if (isGroupActive) {
             await this.crypto.processCommit(group, message.commit)
@@ -138,7 +170,10 @@ export class GroupService {
     }
 
     public async initializeGroupMessage(streamId: string): Promise<InitializeGroupMessage> {
+        this.log.debug('initializeGroupMessage', { streamId })
+
         if (this.groupCache.has(streamId)) {
+            this.log.error(`initializeGroupMessage: Group already exists for ${streamId}`)
             throw new Error(`Group already exists for ${streamId}`)
         }
 
@@ -158,7 +193,10 @@ export class GroupService {
         latestGroupInfo: Uint8Array,
         exportedTree: Uint8Array,
     ): Promise<ExternalJoinMessage> {
+        this.log.debug('externalJoinMessage', { streamId })
+
         if (this.groupCache.has(streamId)) {
+            this.log.error(`externalJoinMessage: Group already exists for ${streamId}`)
             throw new Error(`Group already exists for ${streamId}`)
         }
 
