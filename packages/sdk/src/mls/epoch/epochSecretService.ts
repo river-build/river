@@ -7,10 +7,13 @@ import {
 } from '@river-build/mls-rs-wasm'
 import { bin_toHexString, DLogger, shortenHexString } from '@river-build/dlog'
 import { DerivedKeys, EpochSecret, EpochSecretId, epochSecretId } from './epochSecret'
-import { EncryptedData } from '@river-build/proto'
+import { EncryptedData, MemberPayload_Mls_EpochSecrets } from '@river-build/proto'
 import { IEpochSecretStore } from './epochSecretStore'
+import { PlainMessage } from '@bufbuild/protobuf'
 
 const MLS_ALGORITHM = 'mls_0.0.1'
+
+type EpochSecretsMessage = PlainMessage<MemberPayload_Mls_EpochSecrets>
 
 export class EpochSecretService {
     private epochSecretStore: IEpochSecretStore
@@ -225,5 +228,13 @@ export class EpochSecretService {
         const secretKey_ = HpkeSecretKey.fromBytes(epochSecret.derivedKeys.secretKey)
         const ciphertext_ = HpkeCiphertext.fromBytes(ciphertext)
         return await this.cipherSuite.open(ciphertext_, secretKey_, publicKey_)
+    }
+
+    public async handleEpochSecrets(_streamId: string, _message: EpochSecretsMessage) {
+        throw new Error('Not implemented')
+    }
+
+    public epochSecretMessage(streamId: string): EpochSecretsMessage {
+        throw new Error('Not implemented')
     }
 }

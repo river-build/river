@@ -100,6 +100,10 @@ export class Crypto {
         return group.group.currentEpoch
     }
 
+    public exportTree(group: Group): Uint8Array {
+        return group.group.exportTree().toBytes()
+    }
+
     public signaturePublicKey(): Uint8Array {
         if (!this.client) {
             this.log.error('signaturePublicKey: Client not initialized')

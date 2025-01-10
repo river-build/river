@@ -212,6 +212,10 @@ export class GroupService {
         }
     }
 
+    public exportTree(group: Group): Uint8Array {
+        return this.crypto.exportTree(group)
+    }
+
     private getSignaturePublicKey(): Uint8Array {
         return this.crypto.signaturePublicKey()
     }

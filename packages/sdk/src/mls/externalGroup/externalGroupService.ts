@@ -42,6 +42,7 @@ export class ExternalGroupService {
         this.externalGroupCache.delete(streamId)
     }
 
+    // change it so it accepts maybe undefined exernal group
     public async handleInitializeGroup(streamId: string, message: InitializeGroupMessage) {
         this.log.debug('handleInitializeGroup', { streamId })
 
@@ -59,6 +60,7 @@ export class ExternalGroupService {
         this.externalGroupCache.set(streamId, group)
     }
 
+    // TODO: change it so it accepts maybe undefined external group
     public async handleExternalJoin(streamId: string, message: ExternalJoinMessage) {
         this.log.debug('handleExternalJoin', { streamId })
 
@@ -76,5 +78,19 @@ export class ExternalGroupService {
         this.log.debug('exportTree', { streamId: group.streamId })
 
         return this.crypto.exportTree(group)
+    }
+
+    public externalGroupSnapshot(
+        streamId: string,
+        groupInfoMessage: Uint8Array,
+        exportedTree: Uint8Array,
+    ): Promise<Uint8Array> {
+        this.log.debug('externalGroupSnapshot', { streamId })
+
+        return this.crypto.externalGroupSnapshot(groupInfoMessage, exportedTree)
+    }
+
+    public latestGroupInfo(externalGroup: ExternalGroup): Uint8Array {
+        throw new Error('Not implemented')
     }
 }
