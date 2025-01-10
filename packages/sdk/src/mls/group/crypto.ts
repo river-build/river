@@ -95,4 +95,8 @@ export class Crypto {
     public async writeGroupToStorage(group: MlsGroup): Promise<void> {
         await group.writeToStorage()
     }
+
+    public currentEpoch(group: Group): bigint {
+        return group.group.currentEpoch
+    }
 }

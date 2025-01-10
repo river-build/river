@@ -13,16 +13,29 @@ type InitializeGroupMessage = Omit<
 >
 type ExternalJoinMessage = PlainMessage<MemberPayload_Mls_ExternalJoin>
 
+// Placeholder for a coordinator
+export interface IGroupServiceCoordinator {
+    joinOrCreateGroup(streamId: string): void
+    groupActive(streamId: string): void
+    newEpochSecret(streamId: string, epoch: bigint): void
+}
+
 /// Service handling group operations both for Group and External Group
 export class GroupService {
     private groupCache: Map<string, Group> = new Map()
     private groupStore: IGroupStore
 
     private crypto: Crypto
+    private coordinator: IGroupServiceCoordinator | undefined
 
-    constructor(groupStore: IGroupStore, mlsCrypto: Crypto) {
+    constructor(
+        groupStore: IGroupStore,
+        mlsCrypto: Crypto,
+        coordinator?: IGroupServiceCoordinator,
+    ) {
         this.groupStore = groupStore
         this.crypto = mlsCrypto
+        this.coordinator = coordinator
     }
 
     public getGroup(streamId: string): Group | undefined {
@@ -68,26 +81,32 @@ export class GroupService {
         // TODO: Clear group in GroupStateStore
     }
 
+    // TODO: Should this throw an Error?
     public async handleInitializeGroup(group: Group, _message: InitializeGroupMessage) {
         const isGroupActive = group.status === 'GROUP_ACTIVE'
         if (isGroupActive) {
             // Report programmer error
-            throw new Error('Group is already active')
+            throw new Error('Programmer error: Group is already active')
         }
 
-        const wasInitializeGroupOurOwn = false
+        const wasInitializeGroupOurOwn =
+            group.status === 'GROUP_PENDING_CREATE' &&
+            group.groupInfoWithExternalKey !== undefined &&
+            uint8ArrayEqual(_message.groupInfoMessage, group.groupInfoWithExternalKey) &&
+            uint8ArrayEqual(_message.signaturePublicKey, this.getSignaturePublicKey())
+
         if (!wasInitializeGroupOurOwn) {
             await this.clearGroup(group.streamId)
-            // TODO: Signal to the coordinator that we need to rejoin the group
+            this.coordinator?.joinOrCreateGroup(group.streamId)
+            return
         }
 
         const activeGroup = Group.activeGroup(group.streamId, group.group)
         await this.saveGroup(activeGroup)
 
-        // TODO: Signal to coordinator that the group is now active
-        // TODO: Signal to the coordinator that there is a new epoch secret
-
-        throw new Error('Not finished')
+        this.coordinator?.groupActive(group.streamId)
+        const epoch = this.crypto.currentEpoch(group)
+        this.coordinator?.newEpochSecret(group.streamId, epoch)
     }
 
     public async handleExternalJoin(group: Group, message: ExternalJoinMessage) {
@@ -95,26 +114,31 @@ export class GroupService {
         if (isGroupActive) {
             await this.crypto.processCommit(group, message.commit)
             await this.saveGroup(group)
-            // TODO: Signal to the coordinator that there is new epoch secret
+            const epoch = this.crypto.currentEpoch(group)
+            this.coordinator?.newEpochSecret(group.streamId, epoch)
             return
         }
 
-        // TODO: How do I test this?
-        // Check if group is in pending join
-        // Check if keys match
-        const wasExternalJoinOurOwn = false
+        const wasExternalJoinOurOwn =
+            group.status === 'GROUP_PENDING_JOIN' &&
+            group.groupInfoWithExternalKey !== undefined &&
+            uint8ArrayEqual(message.groupInfoMessage, group.groupInfoWithExternalKey) &&
+            group.commit !== undefined &&
+            uint8ArrayEqual(message.commit, group.commit) &&
+            uint8ArrayEqual(message.signaturePublicKey, this.getSignaturePublicKey())
+
         if (!wasExternalJoinOurOwn) {
             await this.clearGroup(group.streamId)
-            // TODO: Signal to the coordinator that we need to rejoin the group
+            this.coordinator?.joinOrCreateGroup(group.streamId)
+            return
         }
 
         const activeGroup = Group.activeGroup(group.streamId, group.group)
         await this.saveGroup(activeGroup)
 
-        // TODO: Signal to the coordinator that the group is now active
-        // TODO: Signal to the coordinator that there is a new epoch secret
-
-        throw new Error('Not finished')
+        this.coordinator?.groupActive(group.streamId)
+        const epoch = this.crypto.currentEpoch(group)
+        this.coordinator?.newEpochSecret(group.streamId, epoch)
     }
 
     public async initializeGroupMessage(streamId: string): Promise<InitializeGroupMessage> {
@@ -124,9 +148,9 @@ export class GroupService {
 
         const group = await this.crypto.createGroup(streamId)
         await this.saveGroup(group)
+
         const signaturePublicKey = this.getSignaturePublicKey()
 
-        // TODO: Add check for groupInfoWithExternalKey not being null
         return {
             groupInfoMessage: group.groupInfoWithExternalKey!,
             signaturePublicKey,
@@ -141,10 +165,12 @@ export class GroupService {
         if (this.groupCache.has(streamId)) {
             throw new Error(`Group already exists for ${streamId}`)
         }
+
         const group = await this.crypto.externalJoin(streamId, latestGroupInfo, exportedTree)
         await this.saveGroup(group)
+
         const signaturePublicKey = this.getSignaturePublicKey()
-        // TODO: Add checks for commit and groupinfoexternalkey not being null
+
         return {
             commit: group.commit!,
             groupInfoMessage: group.groupInfoWithExternalKey!,
@@ -155,4 +181,19 @@ export class GroupService {
     private getSignaturePublicKey(): Uint8Array {
         throw new Error('Not implemented')
     }
+}
+
+function uint8ArrayEqual(a: Uint8Array, b: Uint8Array): boolean {
+    if (a === b) {
+        return true
+    }
+    if (a.length !== b.length) {
+        return false
+    }
+    for (const [i, byte] of a.entries()) {
+        if (byte !== b[i]) {
+            return false
+        }
+    }
+    return true
 }
