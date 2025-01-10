@@ -6452,7 +6452,7 @@ __metadata:
   dependencies:
     "@openzeppelin/contracts": ^5.1.0
     solady: ^0.0.281
-  checksum: 2666668787f50af79a76004ccea89798fb362f07eea88557cdcf13a70d1164b2ad58c9278fd19ff5b304d9fc1439d097d57e03676b6c1dfeeb98535dd5059b50
+  checksum: 3884bdab0e68b6f64293404a8e3670280d5ad6255f905c189121e2c34d210ec7fa3d9ffda67447a08d060c02564591d0ee0923ae9f13a3d71c0ddfd46e898ff7
   languageName: node
   linkType: hard
 
