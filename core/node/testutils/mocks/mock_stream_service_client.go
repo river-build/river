@@ -287,6 +287,36 @@ func (_m *MockStreamServiceClient) Info(_a0 context.Context, _a1 *connect.Reques
 	return r0, r1
 }
 
+// ModifySync provides a mock function with given fields: _a0, _a1
+func (_m *MockStreamServiceClient) ModifySync(_a0 context.Context, _a1 *connect.Request[protocol.ModifySyncRequest]) (*connect.Response[protocol.ModifySyncResponse], error) {
+	ret := _m.Called(_a0, _a1)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ModifySync")
+	}
+
+	var r0 *connect.Response[protocol.ModifySyncResponse]
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *connect.Request[protocol.ModifySyncRequest]) (*connect.Response[protocol.ModifySyncResponse], error)); ok {
+		return rf(_a0, _a1)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *connect.Request[protocol.ModifySyncRequest]) *connect.Response[protocol.ModifySyncResponse]); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*connect.Response[protocol.ModifySyncResponse])
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *connect.Request[protocol.ModifySyncRequest]) error); ok {
+		r1 = rf(_a0, _a1)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // PingSync provides a mock function with given fields: _a0, _a1
 func (_m *MockStreamServiceClient) PingSync(_a0 context.Context, _a1 *connect.Request[protocol.PingSyncRequest]) (*connect.Response[protocol.PingSyncResponse], error) {
 	ret := _m.Called(_a0, _a1)

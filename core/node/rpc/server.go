@@ -659,7 +659,7 @@ func (s *Service) initCacheAndSync(opts *ServerStartOpts) error {
 		RemoteMiniblockProvider: s,
 	}
 
-	s.cache = events.NewStreamCache(s.serverCtx, cacheParams)
+	s.cache = events.NewStreamCache(cacheParams)
 
 	// There is circular dependency between cache and scrubber, so scurbber
 	// needs to be patched into cache params after cache is created.
