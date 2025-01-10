@@ -6542,10 +6542,10 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@river-build/mls-rs-wasm-node@npm:^0.0.7":
-  version: 0.0.7
-  resolution: "@river-build/mls-rs-wasm-node@npm:0.0.7"
-  checksum: 8450e798b0bb2e8e826f16a63a0bd2f12b678eb0dd419d741b0cf8ad5a290419a95c4c492c0f1cb1fad3b5583a16f8d1cd86b4c8478e4a3cf3fe933b7ff13d0d
+"@river-build/mls-rs-wasm-node@npm:^0.0.14":
+  version: 0.0.14
+  resolution: "@river-build/mls-rs-wasm-node@npm:0.0.14"
+  checksum: 6d342a672cccbcc52744d23ad68ac1e35c4e2705012a07376f87c313608f23ab8a72fed227cb7600b89dbac0bac69fe7bc9237448df25d5c259e68e9b389a7b9
   languageName: node
   linkType: hard
 
@@ -6778,7 +6778,7 @@ __metadata:
     "@bufbuild/protobuf": ^1.9.0
     "@river-build/dlog": "workspace:^"
     "@river-build/encryption": "workspace:^"
-    "@river-build/mls-rs-wasm-node": ^0.0.7
+    "@river-build/mls-rs-wasm-node": ^0.0.14
     "@river-build/proto": "workspace:^"
     "@river-build/sdk": "workspace:^"
     "@river-build/web3": "workspace:^"
