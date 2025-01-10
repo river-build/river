@@ -627,7 +627,7 @@ describe('mlsTests', () => {
         const welcomeMessage = getWelcomeMessage(miniblocks[0])
         expect(bin_equal(welcomeMessage.commit, commits[commits.length - 1])).toBe(true)
         expect(
-            welcomeMessage.signaturePublicKeys.findIndex((val) => bin_equal(val, signature)),
-        ).toBeGreaterThan(-1)
+            welcomeMessage.signaturePublicKeys.find((val) => bin_equal(val, signature)),
+        ).toBeDefined()
     })
 })
