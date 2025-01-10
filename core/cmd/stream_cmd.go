@@ -316,12 +316,9 @@ func runStreamDumpCmd(cmd *cobra.Command, args []string) error {
 
 	for n, miniblock := range miniblocks.Msg.GetMiniblocks() {
 		// Parse header
-		expectedBlockNum := from + int64(n)
 		info, err := events.NewMiniblockInfoFromProto(
 			miniblock,
-			events.NewMiniblockInfoFromProtoOpts{
-				ExpectedBlockNumber: &expectedBlockNum,
-			},
+			events.NewParsedMiniblockInfoOpts().WithExpectedBlockNumber(from+int64(n)),
 		)
 		if err != nil {
 			return err
