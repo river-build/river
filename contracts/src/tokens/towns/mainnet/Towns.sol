@@ -62,13 +62,13 @@ contract Towns is
     _grantRoles(manager, ROLE_INFLATION_RATE_MANAGER);
 
     _addInterface(type(ITowns).interfaceId);
+    _addInterface(type(IERC20).interfaceId);
+    _addInterface(type(IERC20Metadata).interfaceId);
+    _addInterface(type(IERC20Permit).interfaceId);
     _addInterface(type(IVotesEnumerable).interfaceId);
     _addInterface(type(IERC165).interfaceId);
     _addInterface(type(IVotes).interfaceId);
     _addInterface(type(IERC6372).interfaceId);
-    _addInterface(type(IERC20).interfaceId);
-    _addInterface(type(IERC20Metadata).interfaceId);
-    _addInterface(type(IERC20Permit).interfaceId);
 
     TokenInflationLib.initialize(config);
 
@@ -191,6 +191,25 @@ contract Towns is
   /// @notice Machine-readable description of the clock as specified in EIP-6372.
   function CLOCK_MODE() public pure override returns (string memory) {
     return "mode=timestamp";
+  }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                     Internal Overrides                     */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  /// @dev Override the name hash to be a constant value for performance in EIP-712
+  function _constantNameHash() internal pure override returns (bytes32) {
+    return keccak256(bytes(name()));
+  }
+
+  /// @dev This allows Permit2 to be used for single transaction ERC20 `transferFrom`
+  function _givePermit2InfiniteAllowance()
+    internal
+    pure
+    override
+    returns (bool)
+  {
+    return true;
   }
 
   /// @dev Override the delegate function to update the delegators and delegation time

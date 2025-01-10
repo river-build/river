@@ -10,7 +10,6 @@ import {IERC20Metadata} from "@openzeppelin/contracts/interfaces/IERC20Metadata.
 import {ITownsBase} from "contracts/src/tokens/towns/mainnet/ITowns.sol";
 
 //libraries
-import {EIP712Utils} from "contracts/test/utils/EIP712Utils.sol";
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 
 //contracts
@@ -94,7 +93,6 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           Delegators                        */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
-
   function test_getDelegators(
     address alice,
     address bob,
@@ -109,5 +107,38 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
     assertEq(delegators[0], alice);
 
     assertEq(towns.delegates(alice), bob);
+  }
+
+  function test_getDelegators_whenZeroDelegatorsAfterDelegating(
+    address alice,
+    address bob,
+    uint256 tokens
+  )
+    external
+    givenCallerHasTokens(alice, tokens)
+    givenCallerHasDelegated(alice, bob)
+  {
+    vm.prank(alice);
+    towns.delegate(address(0));
+
+    address[] memory delegators = towns.getDelegators();
+    assertEq(delegators.length, 0);
+  }
+
+  function test_getDelegatorsByDelegatee(
+    address alice,
+    address bob,
+    address charlie
+  )
+    external
+    givenCallerHasTokens(alice, 1000)
+    givenCallerHasTokens(bob, 1000)
+    givenCallerHasDelegated(alice, charlie)
+    givenCallerHasDelegated(bob, charlie)
+  {
+    address[] memory delegators = towns.getDelegatorsByDelegatee(charlie);
+    assertEq(delegators.length, 2);
+    assertEq(delegators[0], alice);
+    assertEq(delegators[1], bob);
   }
 }
