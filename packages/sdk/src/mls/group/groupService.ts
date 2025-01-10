@@ -62,13 +62,13 @@ export class GroupService {
         this.log.debug('loadGroup', { streamId })
         const dto = await this.groupStore.getGroup(streamId)
 
-        // TODO: Should this throw an Error?
         if (dto === undefined) {
-            throw new Error(`Group not found for ${streamId}`)
+            return
         }
 
         const { groupId, ...fields } = dto
 
+        // TODO: Add error handling
         const mlsGroup = await this.crypto.loadGroup(groupId)
 
         const group = {
