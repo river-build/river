@@ -71,7 +71,6 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
     return ds.streams.contains(streamId);
   }
 
-  /// @inheritdoc IStreamRegistry
   function setStreamLastMiniblockBatch(
     SetMiniblock[] calldata miniblocks
   ) external onlyNode(msg.sender) {

@@ -1199,6 +1199,7 @@
       "kind": "dev",
       "methods": {
         "allocateStream(bytes32,address[],bytes32,bytes)": {
+          "details": "Only callable by registered nodes",
           "params": {
             "genesisMiniblock": "The genesis miniblock data",
             "genesisMiniblockHash": "The hash of the genesis miniblock",
@@ -1347,8 +1348,9 @@
           }
         },
         "setStreamLastMiniblockBatch((bytes32,bytes32,bytes32,uint64,bool)[])": {
+          "details": "Only callable by registered nodesThis function allows updating multiple streams' last miniblock data in a single transaction",
           "params": {
-            "miniblocks": "Array of miniblock updates to process"
+            "miniblocks": "Array of SetMiniblock structs containing stream IDs and their last miniblock information"
           }
         }
       },
@@ -1421,7 +1423,7 @@
           "notice": "Update the last miniblock information for a stream"
         },
         "setStreamLastMiniblockBatch((bytes32,bytes32,bytes32,uint64,bool)[])": {
-          "notice": "Update the last miniblock for multiple streams in batch"
+          "notice": "Set the last miniblock for multiple streams in a batch operation"
         }
       },
       "version": 1
@@ -1430,7 +1432,6 @@
   "settings": {
     "remappings": [
       "@openzeppelin/=node_modules/@openzeppelin/",
-      "@prb/=node_modules/@prb/",
       "@prb/math/=node_modules/@prb/math/src/",
       "@prb/test/=node_modules/@prb/test/src/",
       "@river-build/diamond/=node_modules/@river-build/diamond/",
@@ -1504,18 +1505,18 @@
       "license": "MIT"
     },
     "contracts/src/river/registry/facets/stream/IStreamRegistry.sol": {
-      "keccak256": "0xc2975d3100ffe92452acf1b2901661bdab0f03a87f3c7ef0e6d98000b0b76c35",
+      "keccak256": "0x5e8bd4aa3130035d463d4fbc0214aaeb7c23a7042d29a10c593b422d6d2a47b4",
       "urls": [
-        "bzz-raw://e0ebbd71aa8baa74693dda66f56c3d5b31b72b100fabd706e763e42691343128",
-        "dweb:/ipfs/QmUjW8poa3aDtCB1gYThrsigazdKUyjTxUrWwDmVbBox5Z"
+        "bzz-raw://928c460af3995f8df31e48557a6d9eb16a6d89307f268709570bdfc932dc3a58",
+        "dweb:/ipfs/QmTpiActnDg7Kvzezvvj9JCQWM2EsRmrZbXhXnzjhpCzCT"
       ],
       "license": "MIT"
     },
     "contracts/src/river/registry/facets/stream/StreamRegistry.sol": {
-      "keccak256": "0x0e865565e23b69055c723bb574b6c7639fb05b127627b04f381f68ed7bdd9a32",
+      "keccak256": "0x31d16e776e27f5643ad19a2dc2c12524dedd50d674b96e142e381287a0c3e235",
       "urls": [
-        "bzz-raw://2c52ec3e287521630bb4089cc92bc507c7d12e971f945c2c208f70c175e26376",
-        "dweb:/ipfs/QmRZCrhrrnX9mBWG7w7BqqZskiXvdVbKfSVVxApK7AyQKG"
+        "bzz-raw://11baf58c6569cdd9444367586114223dfc9b7f07d7e56bba8a62e00daf9842bf",
+        "dweb:/ipfs/QmRp1sHsnu75ar6X8U6qVUCnCaQQTYEJWhv5pFAvFuriYP"
       ],
       "license": "MIT"
     },

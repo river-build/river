@@ -57,6 +57,7 @@ interface IStreamRegistry is IStreamRegistryBase {
    * @param nodes The list of nodes to place the stream on
    * @param genesisMiniblockHash The hash of the genesis miniblock
    * @param genesisMiniblock The genesis miniblock data
+   * @dev Only callable by registered nodes
    */
   function allocateStream(
     bytes32 streamId,
@@ -73,8 +74,10 @@ interface IStreamRegistry is IStreamRegistryBase {
   function getStream(bytes32 streamId) external view returns (Stream memory);
 
   /**
-   * @notice Update the last miniblock for multiple streams in batch
-   * @param miniblocks Array of miniblock updates to process
+   * @notice Set the last miniblock for multiple streams in a batch operation
+   * @param miniblocks Array of SetMiniblock structs containing stream IDs and their last miniblock information
+   * @dev Only callable by registered nodes
+   * @dev This function allows updating multiple streams' last miniblock data in a single transaction
    */
   function setStreamLastMiniblockBatch(
     SetMiniblock[] calldata miniblocks
