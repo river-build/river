@@ -480,12 +480,91 @@
     "devdoc": {
       "kind": "dev",
       "methods": {
+        "allocateStream(bytes32,address[],bytes32,bytes)": {
+          "details": "Only callable by registered nodes",
+          "params": {
+            "genesisMiniblock": "The genesis miniblock data",
+            "genesisMiniblockHash": "The hash of the genesis miniblock",
+            "nodes": "The list of nodes to place the stream on",
+            "streamId": "The ID of the stream to allocate"
+          }
+        },
         "getPaginatedStreams(uint256,uint256)": {
-          "details": "Recommended range is 5000 streams, returns true if on the last page."
+          "details": "Recommended range is 5000 streams to avoid gas limits",
+          "params": {
+            "start": "The starting index for pagination",
+            "stop": "The ending index for pagination"
+          },
+          "returns": {
+            "_0": "StreamWithId[] Array of streams with their IDs in the requested range",
+            "_1": "bool True if this is the last page of results"
+          }
+        },
+        "getStream(bytes32)": {
+          "params": {
+            "streamId": "The ID of the stream to get"
+          },
+          "returns": {
+            "_0": "Stream The stream data"
+          }
+        },
+        "getStreamCount()": {
+          "returns": {
+            "_0": "uint256 The total number of streams"
+          }
+        },
+        "getStreamCountOnNode(address)": {
+          "params": {
+            "nodeAddress": "The address of the node to check"
+          },
+          "returns": {
+            "_0": "uint256 The number of streams on the node"
+          }
         },
         "getStreamWithGenesis(bytes32)": {
+          "params": {
+            "streamId": "The ID of the stream to get"
+          },
           "returns": {
-            "_0": "stream, genesisMiniblockHash, genesisMiniblock"
+            "_0": "Stream The stream data",
+            "_1": "bytes32 The genesis miniblock hash",
+            "_2": "bytes The genesis miniblock data"
+          }
+        },
+        "isStream(bytes32)": {
+          "params": {
+            "streamId": "The ID of the stream to check"
+          },
+          "returns": {
+            "_0": "bool True if the stream exists, false otherwise"
+          }
+        },
+        "placeStreamOnNode(bytes32,address)": {
+          "params": {
+            "nodeAddress": "The address of the node to place the stream on",
+            "streamId": "The ID of the stream to place"
+          }
+        },
+        "removeStreamFromNode(bytes32,address)": {
+          "params": {
+            "nodeAddress": "The address of the node to remove the stream from",
+            "streamId": "The ID of the stream to remove"
+          }
+        },
+        "setStreamLastMiniblock(bytes32,bytes32,bytes32,uint64,bool)": {
+          "details": "Only callable by registered nodes",
+          "params": {
+            "isSealed": "Whether to mark the stream as sealed",
+            "lastMiniblockHash": "The hash of the new last miniblock",
+            "lastMiniblockNum": "The number of the new last miniblock",
+            "prevMiniblockHash": "The hash of the previous miniblock (currently unused)",
+            "streamId": "The ID of the stream to update"
+          }
+        },
+        "setStreamLastMiniblockBatch((bytes32,bytes32,bytes32,uint64,bool)[])": {
+          "details": "Only callable by registered nodesThis function allows updating multiple streams' last miniblock data in a single transaction",
+          "params": {
+            "miniblocks": "Array of SetMiniblock structs containing stream IDs and their last miniblock information"
           }
         }
       },
@@ -493,7 +572,41 @@
     },
     "userdoc": {
       "kind": "user",
-      "methods": {},
+      "methods": {
+        "allocateStream(bytes32,address[],bytes32,bytes)": {
+          "notice": "Allocate a new stream in the registry"
+        },
+        "getPaginatedStreams(uint256,uint256)": {
+          "notice": "Get a paginated list of streams from the registry"
+        },
+        "getStream(bytes32)": {
+          "notice": "Get a stream from the registry"
+        },
+        "getStreamCount()": {
+          "notice": "Get the total number of streams in the registry"
+        },
+        "getStreamCountOnNode(address)": {
+          "notice": "Get the number of streams placed on a specific node"
+        },
+        "getStreamWithGenesis(bytes32)": {
+          "notice": "Get a stream and its genesis information from the registry"
+        },
+        "isStream(bytes32)": {
+          "notice": "Check if a stream exists in the registry"
+        },
+        "placeStreamOnNode(bytes32,address)": {
+          "notice": "Place a stream on a specific node"
+        },
+        "removeStreamFromNode(bytes32,address)": {
+          "notice": "Remove a stream from a specific node"
+        },
+        "setStreamLastMiniblock(bytes32,bytes32,bytes32,uint64,bool)": {
+          "notice": "Update the last miniblock information for a stream"
+        },
+        "setStreamLastMiniblockBatch((bytes32,bytes32,bytes32,uint64,bool)[])": {
+          "notice": "Set the last miniblock for multiple streams in a batch operation"
+        }
+      },
       "version": 1
     }
   },
@@ -525,18 +638,18 @@
   },
   "sources": {
     "contracts/src/river/registry/facets/stream/IStreamRegistry.sol": {
-      "keccak256": "0x6300eec53f69b04c0230bff8180c590a9c9986b5816ca77836e0436a2f0178f7",
+      "keccak256": "0x5e8bd4aa3130035d463d4fbc0214aaeb7c23a7042d29a10c593b422d6d2a47b4",
       "urls": [
-        "bzz-raw://f7a0f8969b4ec51de95181a7c0da27bd648bc8deeff2572e4b2dafb93549dc39",
-        "dweb:/ipfs/QmYhcZh533cyb6cj5r8D9TRyHwVSwYtYyg4BVyVdoyoKt7"
+        "bzz-raw://928c460af3995f8df31e48557a6d9eb16a6d89307f268709570bdfc932dc3a58",
+        "dweb:/ipfs/QmTpiActnDg7Kvzezvvj9JCQWM2EsRmrZbXhXnzjhpCzCT"
       ],
       "license": "MIT"
     },
     "contracts/src/river/registry/facets/stream/StreamRegistry.sol": {
-      "keccak256": "0x882a24cd682d1138f7ab4fd864c970140022556afb83aba7c60db2d0d98ce1a2",
+      "keccak256": "0x31d16e776e27f5643ad19a2dc2c12524dedd50d674b96e142e381287a0c3e235",
       "urls": [
-        "bzz-raw://560a79691495a940bb29eea020e61297293214c708a4a79b14ca2492e1bb3c4a",
-        "dweb:/ipfs/QmR1ZDxvPFRV4fTgapUNArqeyHGuuW18rvW1CNJ4gFv1Es"
+        "bzz-raw://11baf58c6569cdd9444367586114223dfc9b7f07d7e56bba8a62e00daf9842bf",
+        "dweb:/ipfs/QmRp1sHsnu75ar6X8U6qVUCnCaQQTYEJWhv5pFAvFuriYP"
       ],
       "license": "MIT"
     },
