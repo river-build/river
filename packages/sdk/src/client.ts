@@ -29,6 +29,7 @@ import {
     Tags,
     BlockchainTransaction,
     MemberPayload_Mls,
+    MiniblockHeader,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -2021,6 +2022,15 @@ export class Client
             terminus: terminus,
             miniblocks: [...miniblocks, ...cachedMiniblocks],
         }
+    }
+
+    async getMiniblockHeader(streamId: string, miniblockNum: bigint): Promise<MiniblockHeader> {
+        const response = await this.rpcClient.getMiniblockHeader({
+            streamId: streamIdAsBytes(streamId),
+            miniblockNum: miniblockNum,
+        })
+        check(isDefined(response.header), `header not found: ${streamId}`)
+        return response.header
     }
 
     async scrollback(
