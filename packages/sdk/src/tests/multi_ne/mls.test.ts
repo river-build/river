@@ -491,6 +491,54 @@ describe('mlsTests', () => {
         )
     })
 
+    test('signature key count need to match the number of added proposals', async () => {
+        const mls = bobClient.streams.get(streamId)!.view.membershipContent.mls
+        const keyPackage = Object.values(mls.pendingKeyPackages)[0]
+        const kp = MlsMessage.fromBytes(keyPackage.keyPackage)
+        const commitOutput = await bobMlsGroup.addMember(kp)
+
+        // at this point, the commit is still pending
+        await bobMlsGroup.clearPendingCommit()
+
+        const groupInfoMessage = commitOutput.externalCommitGroupInfo
+        const commit = commitOutput.commitMessage.toBytes()
+        const welcomeMessages = commitOutput.welcomeMessages.map((wm) => wm.toBytes())
+
+        const payload = makeMlsPayloadWelcomeMessage(
+            commit,
+            [keyPackage.signaturePublicKey, new Uint8Array([1, 2, 3])], // add additional bogus signature key
+            groupInfoMessage!.toBytes(),
+            welcomeMessages,
+        )
+        await expect(aliceClient._debugSendMls(streamId, payload)).rejects.to.toThrow(
+            'INVALID_PUBLIC_SIGNATURE_KEY',
+        )
+    })
+
+    test('signature keys need to match the keys inside the added proposals', async () => {
+        const mls = bobClient.streams.get(streamId)!.view.membershipContent.mls
+        const keyPackage = Object.values(mls.pendingKeyPackages)[0]
+        const kp = MlsMessage.fromBytes(keyPackage.keyPackage)
+        const commitOutput = await bobMlsGroup.addMember(kp)
+
+        // at this point, the commit is still pending
+        await bobMlsGroup.clearPendingCommit()
+
+        const groupInfoMessage = commitOutput.externalCommitGroupInfo
+        const commit = commitOutput.commitMessage.toBytes()
+        const welcomeMessages = commitOutput.welcomeMessages.map((wm) => wm.toBytes())
+
+        const payload = makeMlsPayloadWelcomeMessage(
+            commit,
+            [new Uint8Array([1, 2, 3])], // add bogus signature key
+            groupInfoMessage!.toBytes(),
+            welcomeMessages,
+        )
+        await expect(aliceClient._debugSendMls(streamId, payload)).rejects.to.toThrow(
+            'INVALID_PUBLIC_SIGNATURE_KEY',
+        )
+    })
+
     test('clients can add other members from key packages', async () => {
         const mls = bobClient.streams.get(streamId)!.view.membershipContent.mls
         const keyPackage = Object.values(mls.pendingKeyPackages)[0]
@@ -501,9 +549,6 @@ describe('mlsTests', () => {
         await bobMlsGroup.clearPendingCommit()
 
         const groupInfoMessage = commitOutput.externalCommitGroupInfo
-        expect(groupInfoMessage).toBeDefined()
-        expect(commitOutput.externalCommitGroupInfo).toBeDefined()
-
         const commit = commitOutput.commitMessage.toBytes()
         const welcomeMessages = commitOutput.welcomeMessages.map((wm) => wm.toBytes())
 

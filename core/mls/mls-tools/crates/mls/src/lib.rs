@@ -351,7 +351,7 @@ pub fn validate_welcome_message_request(request: WelcomeMessageRequest) -> Welco
         }
     };
 
-    let expected_public_signatures: HashSet<Vec<u8>> = HashSet::from_iter(request.signature_public_keys);
+    let expected_public_signatures: HashSet<Vec<u8>> = HashSet::from_iter(request.signature_public_keys.clone());
     for proposal in applied_proposals.iter() {
         match &proposal.proposal {
             Proposal::Add(proposal) => {
@@ -362,8 +362,18 @@ pub fn validate_welcome_message_request(request: WelcomeMessageRequest) -> Welco
                     };
                 }
             }
-            _ => {}
+            _ => {
+                return  WelcomeMessageResponse {
+                    result: ValidationResult::InvalidProposal.into(),
+                };
+            }
         }
+    }
+
+    if applied_proposals.len() != request.signature_public_keys.len() {
+        return WelcomeMessageResponse {
+            result: ValidationResult::InvalidPublicSignatureKey.into(),
+        };
     }
 
     return WelcomeMessageResponse { 

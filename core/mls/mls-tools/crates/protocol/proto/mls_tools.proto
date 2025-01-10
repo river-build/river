@@ -16,6 +16,7 @@ enum ValidationResult {
     INVALID_EXTERNAL_GROUP_TOO_MANY_MEMBERS = 10;
     INVALID_PUBLIC_SIGNATURE_KEY = 11;
     INVALID_KEY_PACKAGE = 12;
+    INVALID_PROPOSAL = 13;
 }
 
 message MlsRequest {
