@@ -1,4 +1,4 @@
-# !/bin/bash
+#!/bin/bash
 
 # Launch a suite of CI tests in order to validate a PR that has issues
 # that are sporadic and/or hard to reproduce locally.
