@@ -2,7 +2,7 @@
  * @group main
  */
 
-import { Awaiter, MlsCrypto } from '../../mls'
+import { Awaiter, MlsCrypto } from '../../mls/group'
 
 async function initializeCrypto(
     userAddress: Uint8Array,

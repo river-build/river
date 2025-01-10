@@ -149,7 +149,7 @@ import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
 import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from './crypto_utils'
 import { makeTags } from './tags'
-import { MlsCrypto } from './mls'
+import { MlsCrypto } from './mls/group'
 import { MlsQueue } from './mls/mlsQueue'
 
 export type ClientEvents = StreamEvents & DecryptionEvents

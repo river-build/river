@@ -10,7 +10,7 @@ import {
 } from '@river-build/dlog'
 import { isDefined, logNever } from '../check'
 import { make_MemberPayload_Mls } from '../types'
-import { MlsCrypto } from './index'
+import { MlsCrypto } from './group'
 import { EncryptedData } from '@river-build/proto'
 import { Message } from '@bufbuild/protobuf'
 import { addressFromUserId } from '../id'
