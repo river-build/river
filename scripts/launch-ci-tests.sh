@@ -11,10 +11,19 @@ shift
 count=$1
 shift
 
+# Validate branch exists locally
 if git rev-parse --verify "$branch" >/dev/null 2>&1; then
   :
 else
-  echo "Git branch '$branch' does not exist."
+  echo "Error: git branch '$branch' does not exist."
+  exit 1
+fi
+
+# Validate branch exists on remote
+if git ls-remote --exit-code --heads origin refs/heads/$branch >/dev/null 2>&1; then
+  :
+else
+  echo "Error: git branch '$branch' is not pushed to remote."
   exit 1
 fi
 
