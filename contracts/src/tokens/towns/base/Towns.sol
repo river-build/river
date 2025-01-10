@@ -57,6 +57,8 @@ contract Towns is
 
     // set the remote token
     REMOTE_TOKEN = _remoteToken;
+
+    _disableInitializers();
   }
 
   function initialize(address _owner) external initializer {
