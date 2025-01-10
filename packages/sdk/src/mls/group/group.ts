@@ -41,4 +41,8 @@ export class Group {
     ): Group {
         return new Group(streamId, group, 'GROUP_PENDING_JOIN', groupInfoWithExternalKey, commit)
     }
+
+    public static activeGroup(streamId: string, group: MlsGroup): Group {
+        return new Group(streamId, group, 'GROUP_ACTIVE')
+    }
 }

@@ -1,4 +1,9 @@
-import { Client as MlsClient, Group as MlsGroup, MlsMessage } from '@river-build/mls-rs-wasm'
+import {
+    Client as MlsClient,
+    ExportedTree as MlsExportedTree,
+    Group as MlsGroup,
+    MlsMessage,
+} from '@river-build/mls-rs-wasm'
 import { dlog, DLogger } from '@river-build/dlog'
 import { Group } from './group'
 
@@ -39,6 +44,7 @@ export class Crypto {
         }
 
         // TODO: Create group with a particular group id
+        // TODO: Does the Rust API permit returning groupInfo in a single call?
         const mlsGroup = await this.client.createGroup()
         const groupInfoWithExternalKey = (
             await mlsGroup.groupInfoMessageAllowingExtCommit(true)
@@ -47,14 +53,20 @@ export class Crypto {
         return Group.createGroup(streamId, mlsGroup, groupInfoWithExternalKey)
     }
 
-    public async externalJoin(streamId: string, groupInfo: Uint8Array): Promise<Group> {
+    public async externalJoin(
+        streamId: string,
+        groupInfo: Uint8Array,
+        exportedTree: Uint8Array,
+    ): Promise<Group> {
         if (!this.client) {
             this.log.error('externalJoin: Client not initialized')
             throw new Error('Client not initialized')
         }
 
+        // TODO: Does the Rust API permit returning groupInfo in a single call?
         const { group: mlsGroup, commit } = await this.client.commitExternal(
             MlsMessage.fromBytes(groupInfo),
+            MlsExportedTree.fromBytes(exportedTree),
         )
         const groupInfoWithExternalKey = (
             await mlsGroup.groupInfoMessageAllowingExtCommit(true)
@@ -65,9 +77,9 @@ export class Crypto {
     }
 
     /// Process current group commit and return epoch
-    public async processCommit(group: MlsGroup, commit: Uint8Array): Promise<bigint> {
-        await group.processIncomingMessage(MlsMessage.fromBytes(commit))
-        return group.currentEpoch
+    public async processCommit(group: Group, commit: Uint8Array): Promise<bigint> {
+        await group.group.processIncomingMessage(MlsMessage.fromBytes(commit))
+        return group.group.currentEpoch
     }
 
     // TODO: Make this return undefined in case of an error?

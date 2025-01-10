@@ -18,11 +18,11 @@ export class GroupService {
     private groupCache: Map<string, Group> = new Map()
     private groupStore: IGroupStore
 
-    private mlsCrypto: Crypto
+    private crypto: Crypto
 
     constructor(groupStore: IGroupStore, mlsCrypto: Crypto) {
         this.groupStore = groupStore
-        this.mlsCrypto = mlsCrypto
+        this.crypto = mlsCrypto
     }
 
     public getGroup(streamId: string): Group | undefined {
@@ -32,13 +32,14 @@ export class GroupService {
     public async loadGroup(streamId: string): Promise<void> {
         const dto = await this.groupStore.getGroup(streamId)
 
+        // TODO: Should this throw an Error?
         if (dto === undefined) {
             throw new Error(`Group not found for ${streamId}`)
         }
 
         const { groupId, ...fields } = dto
 
-        const mlsGroup = await this.mlsCrypto.loadGroup(groupId)
+        const mlsGroup = await this.crypto.loadGroup(groupId)
 
         const group = {
             ...fields,
@@ -57,21 +58,63 @@ export class GroupService {
         const dto = { ...fields, groupId }
 
         await this.groupStore.setGroup(dto)
-        await this.mlsCrypto.writeGroupToStorage(group.group)
+        await this.crypto.writeGroupToStorage(group.group)
     }
 
-    public handleInitializeGroup(_message: InitializeGroupMessage) {
-        throw new Error('Not implemented')
+    // TODO: Should this be private or public?
+    public async clearGroup(streamId: string): Promise<void> {
+        this.groupCache.delete(streamId)
+        await this.groupStore.clearGroup(streamId)
+        // TODO: Clear group in GroupStateStore
     }
 
-    public handleExternalJoin(_message: ExternalJoinMessage) {
-        throw new Error('Not implemented')
+    public async handleInitializeGroup(group: Group, _message: InitializeGroupMessage) {
+        const isGroupActive = group.status === 'GROUP_ACTIVE'
+        if (isGroupActive) {
+            // Report programmer error
+            throw new Error('Group is already active')
+        }
+
+        const wasInitializeGroupOurOwn = false
+        if (!wasInitializeGroupOurOwn) {
+            await this.clearGroup(group.streamId)
+            // TODO: Signal to the coordinator that we need to rejoin the group
+        }
+
+        const activeGroup = Group.activeGroup(group.streamId, group.group)
+        await this.saveGroup(activeGroup)
+
+        // TODO: Signal to coordinator that the group is now active
+        // TODO: Signal to the coordinator that there is a new epoch secret
+
+        throw new Error('Not finished')
     }
 
-    // Handle confirmed commit message and write to storage
-    private async handleCommit(group: Group, commit: Uint8Array) {
-        await this.mlsCrypto.processCommit(group.group, commit)
-        await this.saveGroup(group)
+    public async handleExternalJoin(group: Group, message: ExternalJoinMessage) {
+        const isGroupActive = group.status === 'GROUP_ACTIVE'
+        if (isGroupActive) {
+            await this.crypto.processCommit(group, message.commit)
+            await this.saveGroup(group)
+            // TODO: Signal to the coordinator that there is new epoch secret
+            return
+        }
+
+        // TODO: How do I test this?
+        // Check if group is in pending join
+        // Check if keys match
+        const wasExternalJoinOurOwn = false
+        if (!wasExternalJoinOurOwn) {
+            await this.clearGroup(group.streamId)
+            // TODO: Signal to the coordinator that we need to rejoin the group
+        }
+
+        const activeGroup = Group.activeGroup(group.streamId, group.group)
+        await this.saveGroup(activeGroup)
+
+        // TODO: Signal to the coordinator that the group is now active
+        // TODO: Signal to the coordinator that there is a new epoch secret
+
+        throw new Error('Not finished')
     }
 
     public async initializeGroupMessage(streamId: string): Promise<InitializeGroupMessage> {
@@ -79,7 +122,7 @@ export class GroupService {
             throw new Error(`Group already exists for ${streamId}`)
         }
 
-        const group = await this.mlsCrypto.createGroup(streamId)
+        const group = await this.crypto.createGroup(streamId)
         await this.saveGroup(group)
         const signaturePublicKey = this.getSignaturePublicKey()
 
@@ -93,11 +136,12 @@ export class GroupService {
     public async externalJoinMessage(
         streamId: string,
         latestGroupInfo: Uint8Array,
+        exportedTree: Uint8Array,
     ): Promise<ExternalJoinMessage> {
         if (this.groupCache.has(streamId)) {
             throw new Error(`Group already exists for ${streamId}`)
         }
-        const group = await this.mlsCrypto.externalJoin(streamId, latestGroupInfo)
+        const group = await this.crypto.externalJoin(streamId, latestGroupInfo, exportedTree)
         await this.saveGroup(group)
         const signaturePublicKey = this.getSignaturePublicKey()
         // TODO: Add checks for commit and groupinfoexternalkey not being null
