@@ -79,17 +79,13 @@ export class GroupService {
             throw new Error(`Group already exists for ${streamId}`)
         }
 
-        // TODO: Check if we have external group, meaning that someone else
-        //  already created it
-
-        const { mlsGroup, groupInfoWithExternalKey } = await this.mlsCrypto.createGroup()
-        const group = Group.createGroup(streamId, mlsGroup, groupInfoWithExternalKey)
+        const group = await this.mlsCrypto.createGroup(streamId)
         await this.saveGroup(group)
         const signaturePublicKey = this.getSignaturePublicKey()
-        // TODO: Finish here
-        // throw new Error('unfinished')
+
+        // TODO: Add check for groupInfoWithExternalKey not being null
         return {
-            groupInfoMessage: groupInfoWithExternalKey,
+            groupInfoMessage: group.groupInfoWithExternalKey!,
             signaturePublicKey,
         }
     }
@@ -99,15 +95,13 @@ export class GroupService {
         latestGroupInfo: Uint8Array,
     ): Promise<ExternalJoinMessage> {
         // TODO: Check if we have external group, so we can get the public tree
-        const { mlsGroup, commit, groupInfoWithExternalKey } = await this.mlsCrypto.externalJoin(
-            latestGroupInfo,
-        )
-        const group = Group.externalJoin(streamId, mlsGroup, commit, groupInfoWithExternalKey)
+        const group = await this.mlsCrypto.externalJoin(streamId, latestGroupInfo)
         await this.saveGroup(group)
         const signaturePublicKey = this.getSignaturePublicKey()
+        // TODO: Add checks for commit and groupinfoexternalkey not being null
         return {
-            commit,
-            groupInfoMessage: groupInfoWithExternalKey,
+            commit: group.commit!,
+            groupInfoMessage: group.groupInfoWithExternalKey!,
             signaturePublicKey,
         }
     }
