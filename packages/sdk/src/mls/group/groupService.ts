@@ -28,13 +28,9 @@ export class GroupService {
     private crypto: Crypto
     private coordinator: IGroupServiceCoordinator | undefined
 
-    constructor(
-        groupStore: IGroupStore,
-        mlsCrypto: Crypto,
-        coordinator?: IGroupServiceCoordinator,
-    ) {
+    constructor(groupStore: IGroupStore, crypto: Crypto, coordinator?: IGroupServiceCoordinator) {
         this.groupStore = groupStore
-        this.crypto = mlsCrypto
+        this.crypto = crypto
         this.coordinator = coordinator
     }
 
