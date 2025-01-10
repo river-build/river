@@ -76,7 +76,9 @@ type streamCacheImpl struct {
 	onlineSyncWorkerPool *workerpool.WorkerPool
 }
 
-func NewStreamCache(params *StreamCacheParams) StreamCache {
+var _ StreamCache = (*streamCacheImpl)(nil)
+
+func NewStreamCache(params *StreamCacheParams) *streamCacheImpl {
 	return &streamCacheImpl{
 		params: params,
 		cache:  xsync.NewMapOf[StreamId, *streamImpl](),
