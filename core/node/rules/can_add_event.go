@@ -588,6 +588,10 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 			check(ru.validMemberBlockchainTransaction_IsUnique).
 			check(ru.validMemberBlockchainTransaction_ReceiptMetadata)
 	case *MemberPayload_Mls_:
+		if !params.config.EnableMls {
+			return aeBuilder().
+				fail(RiverError(Err_INVALID_ARGUMENT, "mls disabled globally"))
+		}
 		return params.canAddMlsPayload(content.Mls)
 
 	case *MemberPayload_EncryptionAlgorithm_:
@@ -607,7 +611,6 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 			initializeGroup: content.InitializeGroup,
 		}
 		return aeBuilder().
-			check(params.mlsEnabled).
 			check(params.creatorIsMember).
 			check(ru.validMlsInitializeGroup)
 	case *MemberPayload_Mls_ExternalJoin_:
@@ -616,7 +619,6 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 			externalJoin: content.ExternalJoin,
 		}
 		return aeBuilder().
-			check(params.mlsEnabled).
 			check(params.creatorIsMember).
 			check(params.mlsInitialized).
 			check(ru.validMlsExternalJoin)
@@ -626,7 +628,6 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 			secrets: content.EpochSecrets,
 		}
 		return aeBuilder().
-			check(params.mlsEnabled).
 			check(params.creatorIsMember).
 			check(params.mlsInitialized).
 			check(ru.validMlsEpochSecrets)
@@ -1574,13 +1575,6 @@ func (params *aeParams) creatorIsValidNode() (bool, error) {
 		).Func("CheckNodeIsValid")
 	}
 	return true, nil
-}
-
-func (params *aeParams) mlsEnabled() (bool, error) {
-	if params.config.EnableMls {
-		return true, nil
-	}
-	return false, RiverError(Err_PERMISSION_DENIED, "MLS is not enabled")
 }
 
 func (ru *aeMembershipRules) getPermissionForMembershipOp() (auth.Permission, string, error) {
