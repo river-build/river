@@ -66,6 +66,7 @@ func GetDefaultConfig() *Config {
 			StacksMaxSizeKb:       5 * 1024,
 			Stream:                true,
 			TxPool:                true,
+			CorruptStreams:        true,
 			EnableStorageEndpoint: true,
 		},
 		Scrubbing: ScrubbingConfig{
@@ -452,6 +453,7 @@ type DebugEndpointsConfig struct {
 	StacksMaxSizeKb int
 	Stream          bool
 	TxPool          bool
+	CorruptStreams  bool
 
 	// Make storage statistics available via debug endpoints. This may involve running queries
 	// on the underlying database.

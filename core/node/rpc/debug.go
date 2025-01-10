@@ -105,7 +105,7 @@ func (s *Service) registerDebugHandlers(enableDebugEndpoints bool, cfg config.De
 	if cfg.Stream || enableDebugEndpoints {
 		handler.Handle(mux, "/debug/stream/{streamIdStr}", &streamHandler{store: s.storage})
 	}
-	if s.mode == ServerModeArchive && enableDebugEndpoints {
+	if s.mode == ServerModeArchive && (cfg.CorruptStreams || enableDebugEndpoints) {
 		handler.Handle(mux, "/debug/corrupt_streams", &corruptStreamsHandler{service: s.Archiver})
 	}
 }

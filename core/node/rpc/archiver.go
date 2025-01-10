@@ -158,7 +158,7 @@ func (ct *StreamCorruptionTracker) ReportBlockUpdateSuccess(ctx context.Context)
 	ct.mu.Lock()
 	defer ct.mu.Unlock()
 
-	// dlog.FromCtx(ctx).Info("BlockUpdateSuccess", "streamId", ct.parent.streamId)
+	dlog.FromCtx(ctx).Debug("BlockUpdateSuccess", "streamId", ct.parent.streamId)
 	ct.resetLocked()
 }
 
