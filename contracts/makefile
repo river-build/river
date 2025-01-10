@@ -68,13 +68,15 @@ deploy-any :;
 	@echo "Running $(contract) on remote network"
 	@SAVE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
 	forge script scripts/deployments/${type}/${contract}.s.sol:${contract} \
-	--ffi --rpc-url ${rpc} --private-key ${private_key} --broadcast --verify
+	--ffi --rpc-url ${rpc} $(if $(private_key),--private-key ${private_key},$(if $(account),--account ${account})) \
+	--broadcast --verify
 
 deploy-any-blockscout :;
 	@echo "Running $(contract) on remote network"
 	@SAVE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
 	forge script scripts/deployments/${type}/${contract}.s.sol:${contract} \
-	--ffi --rpc-url ${rpc} --private-key ${private_key} --broadcast --verify --verifier=blockscout --verifier-url=${verifier}
+	--ffi --rpc-url ${rpc} $(if $(private_key),--private-key ${private_key},$(if $(account),--account ${account})) \
+	--broadcast --verify --verifier=blockscout --verifier-url=${verifier}
 
 deploy-any-explicit :;
 	@echo "Running $(contract) on remote network"
