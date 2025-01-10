@@ -1,11 +1,8 @@
 package render
 
 import (
-	"strings"
-
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/rpc/statusinfo"
-	"github.com/river-build/river/core/node/scrub"
 	"github.com/river-build/river/core/node/storage"
 )
 
@@ -41,25 +38,6 @@ type DebugCorruptStreamRecord struct {
 
 type CorruptStreamData struct {
 	Streams []DebugCorruptStreamRecord
-}
-
-func createDebugStreamRecord(apiRecord scrub.CorruptStreamRecord) DebugCorruptStreamRecord {
-	var nodesBuilder strings.Builder
-	for i, node := range apiRecord.Nodes {
-		nodesBuilder.WriteString(node.Hex())
-		if i < len(apiRecord.Nodes)-1 {
-			nodesBuilder.WriteString(",")
-		}
-	}
-
-	return DebugCorruptStreamRecord{
-		StreamId:             apiRecord.StreamId.String(),
-		Nodes:                nodesBuilder.String(),
-		MostRecentBlock:      apiRecord.MostRecentBlock,
-		MostRecentLocalBlock: apiRecord.MostRecentLocalBlock,
-		FirstCorruptBlock:    apiRecord.FirstCorruptBlock,
-		CorruptionReason:     apiRecord.CorruptionReason,
-	}
 }
 
 func (d CorruptStreamData) TemplateName() string {

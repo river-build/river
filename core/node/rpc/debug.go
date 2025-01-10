@@ -137,6 +137,26 @@ func (h *corruptStreamsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 			CorruptionReason:     stream.CorruptionReason,
 		}
 	}
+	slices.SortFunc(
+		reply.Streams,
+		func(a, b render.DebugCorruptStreamRecord) int {
+			// Sort first by nodes, then by stream id, lexicographically
+			if a.Nodes == b.Nodes {
+				if a.StreamId == b.StreamId {
+					return 0
+				}
+				if a.StreamId < b.StreamId {
+					return -1
+				}
+				return 1
+			}
+			if a.Nodes < b.Nodes {
+				return -1
+			}
+			return 1
+		},
+	)
+
 	output, err := render.Execute(&reply)
 	if err != nil {
 		dlog.FromCtx(ctx).Error("unable to render stack data", "err", err)

@@ -26,10 +26,6 @@ import (
 	"github.com/river-build/river/core/node/storage"
 )
 
-type Closer interface {
-	onClose(f any)
-}
-
 // maxFailedConsecutiveUpdates is the maximum number of consecutive update failures allowed
 // before a stream is considered corrupt.
 var maxFailedConsecutiveUpdates = uint32(50)
@@ -63,10 +59,18 @@ type StreamCorruptionTracker struct {
 	corruptionError     error
 
 	// Update failure metadata
+	lastUpdatedBlock          int64
 	consecutiveUpdateFailures uint32
 
 	// Corresponding archive stream. Read-only, set on creation.
 	parent *ArchiveStream
+}
+
+func (ct *StreamCorruptionTracker) GetConsecutiveUpdateFailures() uint32 {
+	ct.mu.RLock()
+	defer ct.mu.RUnlock()
+
+	return ct.consecutiveUpdateFailures
 }
 
 func (ct *StreamCorruptionTracker) IsCorrupt() bool {
@@ -76,30 +80,66 @@ func (ct *StreamCorruptionTracker) IsCorrupt() bool {
 	return ct.corrupt
 }
 
-// IncrementConsecutiveBlockUpdateFailures increments the internal tracker of the number of
-// times we have failed to update the stream to the number of blocks currently stored in the
-// contract. Whenever a stream fully updates up to the current block number as it is stored
-// in the contract, this counter is reset. If the stream fails to fully update
-// `maxFailedConsecutiveUpdates` times, it will be considered corrupt. This is because we
-// suspect the stream may be unavailable due to a bad block, although it's also quite likely
-// to be an intermittent node availability issue.
-func (ct *StreamCorruptionTracker) IncrementConsecutiveBlockUpdateFailures() {
+// RecordBlockUpdateFailure increments the internal tracker of the number of
+// times we have failed to update the stream from it's current number of miniblocks.
+// Whenever a stream fully updates up to the current block number as it is stored
+// in the contract, or if the block number advances at all, this counter is reset.
+// If the stream fails to update `maxFailedConsecutiveUpdates` times, it will be
+// considered corrupt. This is because we suspect the stream may be unavailable
+// due to a bad block, although it's also quite likely to be an intermittent node
+// availability issue.
+func (ct *StreamCorruptionTracker) RecordBlockUpdateFailure(ctx context.Context, err error) {
 	ct.mu.Lock()
 	defer ct.mu.Unlock()
+
+	// If this task run was able to advance the number of blocks, let's reset the update
+	// failure counter.
+	if ct.parent.numBlocksInDb.Load()-1 > ct.lastUpdatedBlock {
+		dlog.FromCtx(ctx).Debug(
+			"Update failure still saw progress, resetting",
+			"streamId",
+			ct.parent.streamId,
+			"error",
+			err,
+		)
+		ct.resetLocked()
+		return
+	}
 
 	ct.consecutiveUpdateFailures = ct.consecutiveUpdateFailures + 1
 	if ct.consecutiveUpdateFailures >= maxFailedConsecutiveUpdates && !ct.corrupt {
 		ct.corrupt = true
 		ct.corruptionReason = FetchFailed
-		ct.firstCorruptBlock = ct.parent.numBlocksInDb.Load() + 1
+		ct.firstCorruptBlock = max(ct.parent.numBlocksInDb.Load(), 0)
+		dlog.FromCtx(ctx).Debug(
+			"Incrementing update failures for stream and toggling corrupt=true",
+			"streamId", ct.parent.streamId,
+			"numBlocksInDb", ct.parent.numBlocksInDb.Load(),
+			"lastUpdatedBlock", ct.lastUpdatedBlock,
+			"isCorrupt", ct.corrupt,
+			"corruptionReason", ct.corruptionReason,
+			"consecutiveUpdateFailures", ct.consecutiveUpdateFailures,
+			"error", err,
+		)
+	} else {
+		if ct.consecutiveUpdateFailures > 0 && ct.consecutiveUpdateFailures%5 == 0 {
+			dlog.FromCtx(ctx).Debug(
+				"Incrementing update failures for stream",
+				"numBlocksInDb", ct.parent.numBlocksInDb.Load(),
+				"lastUpdatedBlock", ct.lastUpdatedBlock,
+				"streamId", ct.parent.streamId,
+				"isCorrupt", ct.corrupt,
+				"corruptionReason", ct.corruptionReason,
+				"consecutiveUpdateFailures", ct.consecutiveUpdateFailures,
+				"error", err,
+			)
+		}
 	}
 }
 
-func (ct *StreamCorruptionTracker) ResetConsecutiveBlockUpdateFailures() {
-	ct.mu.Lock()
-	defer ct.mu.Unlock()
-
+func (ct *StreamCorruptionTracker) resetLocked() {
 	ct.consecutiveUpdateFailures = 0
+	ct.lastUpdatedBlock = max(ct.parent.numBlocksInDb.Load()-1, -1)
 
 	// If the stream was marked corrupt because it was failing to fetch, this may
 	// have been temporary unavailability due to an upgrade, operator outage, etc.
@@ -114,6 +154,14 @@ func (ct *StreamCorruptionTracker) ResetConsecutiveBlockUpdateFailures() {
 	}
 }
 
+func (ct *StreamCorruptionTracker) ReportBlockUpdateSuccess(ctx context.Context) {
+	ct.mu.Lock()
+	defer ct.mu.Unlock()
+
+	// dlog.FromCtx(ctx).Info("BlockUpdateSuccess", "streamId", ct.parent.streamId)
+	ct.resetLocked()
+}
+
 // MarkBlockCorrupt marks a block corrupt as a result of a failed scrub.
 // If the stream was already marked as corrupt, say due to persistent failure to update,
 // this method will update the corruption reason and the first corrupt block.
@@ -123,7 +171,7 @@ func (ct *StreamCorruptionTracker) MarkBlockCorrupt(blockNum int64, scrubErr err
 
 	if blockNum <= ct.latestScrubbedBlock {
 		return AsRiverError(
-			fmt.Errorf("Corrupt block was already marked well-formed"),
+			fmt.Errorf("corrupt block was already marked well-formed"),
 			Err_INTERNAL,
 		).Func("CorruptionTracker.MarkBlockCorrupt").
 			Tag("latestScrubbedBlock", ct.latestScrubbedBlock).
@@ -132,10 +180,11 @@ func (ct *StreamCorruptionTracker) MarkBlockCorrupt(blockNum int64, scrubErr err
 
 	if ct.corrupt && ct.corruptionReason == ScrubFailed && blockNum < ct.firstCorruptBlock {
 		return AsRiverError(
-			fmt.Errorf("Corrupt block was already marked well-formed"),
+			fmt.Errorf("corrupt block was already marked well-formed"),
 			Err_INTERNAL,
 		).Func("CorruptionTracker.MarkBlockCorrupt").
 			Tag("latestScrubbedBlock", ct.latestScrubbedBlock).
+			Tag("firstCorruptBlock", ct.firstCorruptBlock).
 			Tag("blockNum", blockNum)
 	}
 
@@ -145,7 +194,7 @@ func (ct *StreamCorruptionTracker) MarkBlockCorrupt(blockNum int64, scrubErr err
 	// a corrupt miniblock from scrubbing, mark the stream as corrupt for this reason and
 	// record the earliest detected corrupt miniblock. Since the correctness of later
 	// miniblocks depends on previous miniblocks, it doesn't necessarily make sense to consider
-	// any miniblocks after this one.
+	// scrubbing any miniblocks after this one, either.
 	if ct.corruptionReason != ScrubFailed {
 		ct.corruptionReason = ScrubFailed
 		ct.firstCorruptBlock = blockNum
@@ -159,7 +208,7 @@ func (ct *StreamCorruptionTracker) MarkBlockCorrupt(blockNum int64, scrubErr err
 	return nil
 }
 
-func (ct *StreamCorruptionTracker) ReportScrubSuccess(ctx context.Context, blockNum int64) {
+func (ct *StreamCorruptionTracker) ReportScrubSuccess(ctx context.Context, blockNum int64) error {
 	ct.mu.Lock()
 	defer ct.mu.Unlock()
 
@@ -170,20 +219,18 @@ func (ct *StreamCorruptionTracker) ReportScrubSuccess(ctx context.Context, block
 			// miniblock, and we can never skip scrubbing a miniblock in a stream unless it is confirmed
 			// that we have already scrubbed that miniblock. Furthermore, miniblock scrubbing is
 			// deterministic.
-			dlog.FromCtx(ctx).
-				Error(
-					"Successful scrub occurred after a failed scrub",
-					"corruptBlock", ct.firstCorruptBlock,
-					"scrubUntilBlockInclusive", blockNum,
-				)
+			return AsRiverError(fmt.Errorf("successful scrub occurred after a failed scrub"), Err_INTERNAL).
+				Tag("corruptBlock", ct.firstCorruptBlock).
+				Tag("scrubUntilBlockInclusive", blockNum).
+				Func("ReportScrubSuccess").
+				Log(dlog.FromCtx(ctx))
 		}
-		//
-		return
 	}
 
 	if ct.latestScrubbedBlock < blockNum {
 		ct.latestScrubbedBlock = blockNum
 	}
+	return nil
 }
 
 func (ct *StreamCorruptionTracker) GetLatestScrubbedBlock() int64 {
@@ -221,12 +268,18 @@ func (ct *StreamCorruptionTracker) GetConsecutiveFailedUpdates() uint32 {
 	return ct.consecutiveUpdateFailures
 }
 
+func (ct *StreamCorruptionTracker) SetParent(parent *ArchiveStream) {
+	ct.parent = parent
+	ct.lastUpdatedBlock = parent.numBlocksInDb.Load() - 1
+}
+
 // NewStreamCorruptionTracker returns a new CorruptionTracker. A constructor is needed because
 // the default values of some fields are nonzero.
 func NewStreamCorruptionTracker() StreamCorruptionTracker {
 	return StreamCorruptionTracker{
 		latestScrubbedBlock: -1,
 		firstCorruptBlock:   -1,
+		lastUpdatedBlock:    -1,
 	}
 }
 
@@ -259,7 +312,7 @@ func NewArchiveStream(streamId StreamId, nn *[]common.Address, lastKnownMinibloc
 	stream.numBlocksInDb.Store(-1)
 	stream.mostRecentScrubbedBlock.Store(-1)
 	// Set circular reference
-	stream.corrupt.parent = stream
+	stream.corrupt.SetParent(stream)
 
 	return stream
 }
@@ -299,7 +352,10 @@ type Archiver struct {
 	scrubsInProgress           atomic.Int64
 
 	// metrics
-	nodeAdvances *prometheus.CounterVec
+	nodeAdvances        *prometheus.CounterVec
+	successfulDownloads *prometheus.CounterVec
+
+	cancelFuncs []func()
 }
 
 type ArchiverStats struct {
@@ -313,6 +369,7 @@ type ArchiverStats struct {
 	StreamPlacementUpdated     uint64
 	StreamLastMiniblockUpdated uint64
 	StreamScrubsInProgress     int64
+	TasksQueued                int
 }
 
 func NewArchiver(
@@ -406,9 +463,23 @@ func (a *Archiver) setupStatisticsMetrics(factory infra.MetricsFactory) {
 		func() float64 { return float64(a.scrubsInProgress.Load()) },
 	)
 
+	factory.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "stats_tasks_queued",
+			Help: "Total number of tasks currently queued for the archive service",
+		},
+		func() float64 { return float64(len(a.tasks)) },
+	)
+
 	a.nodeAdvances = factory.NewCounterVecEx(
 		"node_advances",
 		"Total times a node was advanced, indicating it was behind or returned an error response",
+		"node_address",
+	)
+
+	a.successfulDownloads = factory.NewCounterVecEx(
+		"successful_downloads",
+		"Total times a node gave the latest miniblock content to the archival service, according to the contract",
 		"node_address",
 	)
 }
@@ -471,13 +542,31 @@ func (a *Archiver) addNewStream(
 	a.streamsExamined.Add(1)
 }
 
+func (a *Archiver) advanceNodeAndRetryWithDelay(stream *ArchiveStream, delay time.Duration) {
+	nodeAddr := stream.nodes.GetStickyPeer()
+	if a.nodeAdvances != nil {
+		a.nodeAdvances.With(prometheus.Labels{"node_address": nodeAddr.String()}).Inc()
+	}
+	stream.nodes.AdvanceStickyPeer(nodeAddr)
+
+	// Continue to retry with a much lower frequency if the stream has failed to update
+	// past the threshold at which we consider it unavailable.
+	if stream.corrupt.GetConsecutiveFailedUpdates() >= maxFailedConsecutiveUpdates {
+		delay = max(delay, time.Minute)
+	}
+
+	time.AfterFunc(delay, func() {
+		a.tasks <- stream.streamId
+	})
+}
+
 // ArchiveStream attempts to add all new miniblocks seen, according to the registry contract,
 // since the last time the stream was archived into storage.  It creates a new stream for
 // streams that have not yet been seen.
 func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) (err error) {
 	defer func() {
 		if err != nil {
-			stream.corrupt.IncrementConsecutiveBlockUpdateFailures()
+			stream.corrupt.RecordBlockUpdateFailure(ctx, err)
 		}
 	}()
 	log := dlog.FromCtx(ctx)
@@ -517,7 +606,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) (er
 	mbsInContract := stream.numBlocksInContract.Load()
 	if mbsInDb >= mbsInContract {
 		a.streamsUpToDate.Add(1)
-		stream.corrupt.ResetConsecutiveBlockUpdateFailures()
+		stream.corrupt.ReportBlockUpdateSuccess(ctx)
 		return nil
 	}
 
@@ -535,11 +624,11 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) (er
 
 	stub, err := a.nodeRegistry.GetStreamServiceClientForAddress(nodeAddr)
 	if err != nil {
+		a.advanceNodeAndRetryWithDelay(stream, time.Second)
 		return err
 	}
 
 	for mbsInDb < mbsInContract {
-
 		toBlock := min(mbsInDb+int64(a.config.GetReadMiniblocksSize()), mbsInContract)
 
 		resp, err := stub.GetMiniblocks(
@@ -561,28 +650,22 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) (er
 				nodeAddr.Hex(),
 			)
 
-			// Advance node
-			if a.nodeAdvances != nil {
-				a.nodeAdvances.With(prometheus.Labels{"node_address": nodeAddr.String()}).Inc()
-			}
-			stream.nodes.AdvanceStickyPeer(nodeAddr)
-
-			// Reschedule all streams unless this stream has passed the threshold of maximum failed
-			// update attempts. If the stream's miniblocks are updated in the contract, this stream
-			// will be re-added to the task queue and another attempt to archive it's most recent blocks
-			// will be made.
-			if stream.corrupt.GetConsecutiveFailedUpdates() < maxFailedConsecutiveUpdates {
-				time.AfterFunc(5*time.Second, func() {
-					a.tasks <- stream.streamId
-				})
-			}
+			a.advanceNodeAndRetryWithDelay(stream, 5*time.Second)
 			return err
 		}
 
 		if (err != nil && AsRiverError(err).Code == Err_NOT_FOUND) || resp.Msg == nil || len(resp.Msg.Miniblocks) == 0 {
 			// If the stream is unable to fully update, consider this attempt to archive the stream as
-			// a failure, but not an error.
-			stream.corrupt.IncrementConsecutiveBlockUpdateFailures()
+			// a failure, even though we do not return an error.
+			stream.corrupt.RecordBlockUpdateFailure(
+				ctx,
+				fmt.Errorf(
+					"failed to update block to latest in contract (fromblock %d, toblock %d): %w",
+					mbsInDb,
+					toBlock,
+					err,
+				),
+			)
 
 			log.Debug(
 				"ArchiveStream: GetMiniblocks did not return data, remote storage is not up-to-date with contract yet",
@@ -595,18 +678,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) (er
 			)
 
 			// Advance node
-			if a.nodeAdvances != nil {
-				a.nodeAdvances.With(prometheus.Labels{"node_address": nodeAddr.String()}).Inc()
-			}
-			stream.nodes.AdvanceStickyPeer(nodeAddr)
-
-			// Reschedule with delay.
-			if !stream.corrupt.IsCorrupt() {
-				streamId := stream.streamId
-				time.AfterFunc(time.Second, func() {
-					a.tasks <- streamId
-				})
-			}
+			a.advanceNodeAndRetryWithDelay(stream, 10*time.Second)
 			return nil
 		}
 
@@ -647,7 +719,11 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) (er
 
 	// Update the consecutive updates counter to reflect that the miniblocks were available
 	// on the network.
-	stream.corrupt.ResetConsecutiveBlockUpdateFailures()
+	stream.corrupt.ReportBlockUpdateSuccess(ctx)
+	if a.successfulDownloads != nil {
+		a.successfulDownloads.With(prometheus.Labels{"node_address": nodeAddr.String()}).Inc()
+	}
+
 	return nil
 }
 
@@ -656,16 +732,13 @@ func (a *Archiver) Start(ctx context.Context, once bool, metrics infra.MetricsFa
 
 	defer a.startedWG.Done()
 
-	// We're not concerned about cancelling these contexts because they will automatically
-	// be cancelled when the parent is cancelled. We just want interdependent Done channels.
-	child, _ := context.WithCancel(ctx)
-	go a.processScrubReports(ctx)
+	child, cancel := context.WithCancel(ctx)
+	a.cancelFuncs = append(a.cancelFuncs, cancel)
+	go a.processScrubReports(child)
 
-	child, _ = context.WithCancel(ctx)
+	child, cancel = context.WithCancel(ctx)
 	go a.processMiniblockScrubs(child)
-
-	child, _ = context.WithCancel(ctx)
-	go a.debugPrintStats(ctx)
+	a.cancelFuncs = append(a.cancelFuncs, cancel)
 
 	err := a.startImpl(ctx, once, metrics)
 	if err != nil {
@@ -674,6 +747,12 @@ func (a *Archiver) Start(ctx context.Context, once bool, metrics infra.MetricsFa
 }
 
 func (a *Archiver) Close() {
+	a.startedWG.Wait()
+
+	for _, cancel := range a.cancelFuncs {
+		cancel()
+	}
+
 	if a.scrubber != nil {
 		a.scrubber.Close()
 	}
@@ -700,7 +779,16 @@ func (a *Archiver) processScrubReports(ctx context.Context) {
 
 			// Corrupt block detected
 			if report.ScrubError != nil && report.FirstCorruptBlock != -1 {
-				as.corrupt.MarkBlockCorrupt(report.FirstCorruptBlock, report.ScrubError)
+				if err := as.corrupt.MarkBlockCorrupt(report.FirstCorruptBlock, report.ScrubError); err != nil {
+					dlog.FromCtx(ctx).Error(
+						"Error marking block as corrupt from failed scrub",
+						"streamId", as.streamId,
+						"corruptBlock", report.FirstCorruptBlock,
+						"error", report.ScrubError,
+						"lastBlockScrubbed", report.LatestBlockScrubbed,
+					)
+					continue
+				}
 				as.mostRecentScrubbedBlock.Store(report.LatestBlockScrubbed)
 				as.scrubInProgress.Store(false)
 
@@ -915,33 +1003,6 @@ func (a *Archiver) WaitForStart() {
 	a.startedWG.Wait()
 }
 
-func (a *Archiver) debugPrintStats(ctx context.Context) {
-	ticker := time.NewTicker(10 * time.Second)
-	log := dlog.FromCtx(ctx)
-	for {
-		select {
-		case <-ctx.Done():
-			ticker.Stop()
-			return
-		case <-ticker.C:
-			stats := a.GetStats()
-			log.Info(
-				"Archiver stats",
-				"failedOpsCount", stats.FailedOpsCount,
-				"miniblocksProcessed", stats.MiniblocksProcessed,
-				"newStreamAllocated", stats.NewStreamAllocated,
-				"streamLastMiniblockUpdated", stats.StreamLastMiniblockUpdated,
-				"streamPlacementUpdated", stats.StreamPlacementUpdated,
-				"streamScrubsInProgress", stats.StreamScrubsInProgress,
-				"streamsCreated", stats.StreamsCreated,
-				"streamsExamined", stats.StreamsExamined,
-				"streamsUpToDate", stats.StreamsUpToDate,
-				"successOpCount", stats.SuccessOpsCount,
-			)
-		}
-	}
-}
-
 func (a *Archiver) GetStats() *ArchiverStats {
 	return &ArchiverStats{
 		StreamsExamined:            a.streamsExamined.Load(),
@@ -954,6 +1015,7 @@ func (a *Archiver) GetStats() *ArchiverStats {
 		StreamPlacementUpdated:     a.streamPlacementUpdated.Load(),
 		StreamLastMiniblockUpdated: a.streamLastMiniblockUpdated.Load(),
 		StreamScrubsInProgress:     a.scrubsInProgress.Load(),
+		TasksQueued:                len(a.tasks),
 	}
 }
 
