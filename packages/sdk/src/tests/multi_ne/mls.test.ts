@@ -13,6 +13,7 @@ import {
     ExternalSnapshot,
     MlsMessage,
     ExportedTree,
+    ClientOptions as MlsClientOptions,
 } from '@river-build/mls-rs-wasm'
 import { randomBytes } from 'crypto'
 import { bin_equal, check } from '@river-build/dlog'
@@ -47,9 +48,13 @@ describe('mlsTests', () => {
     beforeAll(async () => {
         bobClient = await makeInitAndStartClient()
         aliceClient = await makeInitAndStartClient()
-        bobMlsClient = await MlsClient.create(new Uint8Array(randomBytes(32)))
-        aliceMlsClient = await MlsClient.create(new Uint8Array(randomBytes(32)))
-        aliceMlsClient2 = await MlsClient.create(new Uint8Array(randomBytes(32)))
+        const clientOptions: MlsClientOptions = {
+            withAllowExternalCommit: true,
+            withRatchetTreeExtension: false,
+        }
+        bobMlsClient = await MlsClient.create(new Uint8Array(randomBytes(32)), clientOptions)
+        aliceMlsClient = await MlsClient.create(new Uint8Array(randomBytes(32)), clientOptions)
+        aliceMlsClient2 = await MlsClient.create(new Uint8Array(randomBytes(32)), clientOptions)
         bobMlsGroup = await bobMlsClient.createGroup()
         const { streamId: dmStreamId } = await bobClient.createDMChannel(aliceClient.userId)
         await bobClient.waitForStream(dmStreamId)
@@ -491,18 +496,28 @@ describe('mlsTests', () => {
         const keyPackage = Object.values(mls.pendingKeyPackages)[0]
         const kp = MlsMessage.fromBytes(keyPackage.keyPackage)
         const commitOutput = await bobMlsGroup.addMember(kp)
-        await bobMlsGroup.applyPendingCommit()
+
+        // at this point, the commit is still pending
+        await bobMlsGroup.clearPendingCommit()
+
+        const groupInfoMessage = commitOutput.externalCommitGroupInfo
+        expect(groupInfoMessage).toBeDefined()
+        expect(commitOutput.externalCommitGroupInfo).toBeDefined()
 
         const commit = commitOutput.commitMessage.toBytes()
         const welcomeMessages = commitOutput.welcomeMessages.map((wm) => wm.toBytes())
-        const groupInfoMessage = await bobMlsGroup.groupInfoMessageAllowingExtCommit(false)
+
         const payload = makeMlsPayloadWelcomeMessage(
             commit,
             [keyPackage.signaturePublicKey],
-            groupInfoMessage.toBytes(),
+            groupInfoMessage!.toBytes(),
             welcomeMessages,
         )
         await expect(aliceClient._debugSendMls(streamId, payload)).resolves.not.toThrow()
+        await expect(
+            bobMlsGroup.processIncomingMessage(commitOutput.commitMessage),
+        ).resolves.not.toThrow()
+        commits.push(commit)
     })
 
     test('key packages are cleared after being applied', async () => {
