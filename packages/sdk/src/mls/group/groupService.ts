@@ -94,7 +94,9 @@ export class GroupService {
         streamId: string,
         latestGroupInfo: Uint8Array,
     ): Promise<ExternalJoinMessage> {
-        // TODO: Check if we have external group, so we can get the public tree
+        if (this.groupCache.has(streamId)) {
+            throw new Error(`Group already exists for ${streamId}`)
+        }
         const group = await this.mlsCrypto.externalJoin(streamId, latestGroupInfo)
         await this.saveGroup(group)
         const signaturePublicKey = this.getSignaturePublicKey()
