@@ -75,22 +75,19 @@ contract Towns is
     _mint(vault, INITIAL_SUPPLY);
   }
 
-  function lastMintTime() external view returns (uint256) {
-    return TokenInflationLib.lastMintTime();
-  }
-
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           Inflation                        */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
-
-  /// @inheritdoc ITowns
   function inflationReceiver() external view returns (address) {
     return TokenInflationLib.inflationReceiver();
   }
 
-  /// @inheritdoc ITowns
   function currentInflationRate() external view returns (uint256) {
     return TokenInflationLib.getCurrentInflationRateBPS();
+  }
+
+  function lastMintTime() external view returns (uint256) {
+    return TokenInflationLib.lastMintTime();
   }
 
   /// @inheritdoc ITowns
@@ -183,6 +180,17 @@ contract Towns is
 
   function symbol() public pure override returns (string memory) {
     return "TOWNS";
+  }
+
+  /// @notice Clock used for flagging checkpoints, overridden to implement timestamp based
+  /// checkpoints (and voting).
+  function clock() public view override returns (uint48) {
+    return uint48(block.timestamp);
+  }
+
+  /// @notice Machine-readable description of the clock as specified in EIP-6372.
+  function CLOCK_MODE() public pure override returns (string memory) {
+    return "mode=timestamp";
   }
 
   /// @dev Override the delegate function to update the delegators and delegation time

@@ -29,13 +29,11 @@ interface ITownsBase {
 }
 
 interface ITowns is ITownsBase {
-  /// @notice Returns the current receiver of inflation rewards
-  /// @return The address of the inflation receiver
-  function inflationReceiver() external view returns (address);
-
-  /// @notice Returns the current inflation rate in basis points (0-100)
-  /// @return The current inflation rate
-  function currentInflationRate() external view returns (uint256);
+  /// @notice Creates new tokens according to the current inflation rate
+  /// @dev Can only be called by accounts with ROLE_INFLATION_MANAGER
+  /// @dev Mints tokens to the inflation receiver based on current total supply and inflation rate
+  /// @dev Updates lastMintTime to current block timestamp after minting
+  function createInflation() external;
 
   /// @notice Allows the inflation rate manager to override the normal inflation rate
   /// @param overrideInflation Whether to override the normal inflation rate
@@ -52,10 +50,4 @@ interface ITowns is ITownsBase {
   /// @dev Can only be called by accounts with ROLE_INFLATION_MANAGER
   /// @dev receiver cannot be the zero address
   function setInflationReceiver(address receiver) external;
-
-  /// @notice Creates new tokens according to the current inflation rate
-  /// @dev Can only be called by accounts with ROLE_INFLATION_MANAGER
-  /// @dev Mints tokens to the inflation receiver based on current total supply and inflation rate
-  /// @dev Updates lastMintTime to current block timestamp after minting
-  function createInflation() external;
 }
