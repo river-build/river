@@ -117,3 +117,21 @@ func KeyPackageRequest(request *mls_tools.KeyPackageRequest) (*mls_tools.KeyPack
 	}
 	return &result, nil
 }
+
+func WelcomeMessageRequest(request *mls_tools.WelcomeMessageRequest) (*mls_tools.WelcomeMessageResponse, error) {
+	r := &mls_tools.MlsRequest{
+		Content: &mls_tools.MlsRequest_WelcomeMessage{
+			WelcomeMessage: request,
+		},
+	}
+	responseBytes, err := makeMlsRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	result := mls_tools.WelcomeMessageResponse{}
+	err = proto.Unmarshal(responseBytes, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}

@@ -16,6 +16,7 @@ enum ValidationResult {
     INVALID_EXTERNAL_GROUP_TOO_MANY_MEMBERS = 10;
     INVALID_PUBLIC_SIGNATURE_KEY = 11;
     INVALID_KEY_PACKAGE = 12;
+    INVALID_PROPOSAL = 13;
 }
 
 message MlsRequest {
@@ -24,6 +25,7 @@ message MlsRequest {
         ExternalJoinRequest external_join = 2;
         SnapshotExternalGroupRequest snapshot_external_group = 3;
         KeyPackageRequest key_package = 4;
+        WelcomeMessageRequest welcome_message = 5;
     }
 }
 
@@ -64,6 +66,18 @@ message KeyPackageRequest {
 }
 
 message KeyPackageResponse {
+    ValidationResult result = 1;
+}
+
+message WelcomeMessageRequest {
+    MlsGroupState group_state = 1;
+    bytes welcome_message_commit = 2;
+    repeated bytes welcome_messages = 3; // for now lives inside the stream
+    repeated bytes signature_public_keys = 4;
+    bytes group_info_message = 5;
+}
+
+message WelcomeMessageResponse {
     ValidationResult result = 1;
 }
 

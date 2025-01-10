@@ -1,5 +1,9 @@
+use std::collections::HashSet;
+
 use mls_rs::extension::built_in::ExternalPubExt;
 use mls_rs::external_client::*;
+use mls_rs::group::proposal::Proposal;
+use mls_rs::group::CommitEffect;
 use mls_rs::MlsMessage;
 use mls_rs::external_client::builder::ExternalBaseConfig;
 use mls_rs::external_client::builder::WithCryptoProvider as ExternalWithCryptoProvider;
@@ -12,6 +16,8 @@ use river_mls_protocol::KeyPackageRequest;
 use river_mls_protocol::KeyPackageResponse;
 use river_mls_protocol::SnapshotExternalGroupRequest;
 use river_mls_protocol::SnapshotExternalGroupResponse;
+use river_mls_protocol::WelcomeMessageRequest;
+use river_mls_protocol::WelcomeMessageResponse;
 use river_mls_protocol::{InitialGroupInfoRequest, 
     InitialGroupInfoResponse, 
     ExternalJoinRequest, 
@@ -33,13 +39,41 @@ fn create_external_client() -> ExternalClient<ExternalConfig> {
     return external_client
 }
 
-pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> InitialGroupInfoResponse {
-    let external_client = create_external_client();
-    let group_info_message = match MlsMessage::from_bytes(&request.group_info_message) {
+fn validate_group_info_message(group_info_message_bytes: Vec<u8>, expected_epoch: u64, expected_group_id: &[u8]) -> ValidationResult {
+    let group_info_message = match MlsMessage::from_bytes(&group_info_message_bytes) {
         Ok(group_info_message) => group_info_message,
-        Err(_) => return InitialGroupInfoResponse { result: ValidationResult::InvalidGroupInfo.into() }
+        Err(_) => return ValidationResult::InvalidGroupInfo
     };
 
+    let group_info = match group_info_message.into_group_info() {
+        Some(group_info) => group_info,
+        None => return ValidationResult::InvalidGroupInfo
+    };
+
+    if group_info.group_context().epoch() != expected_epoch {
+        return ValidationResult::InvalidGroupInfoEpoch;
+    }
+
+    if group_info.group_context().group_id().to_vec() != expected_group_id.to_vec() {
+        return ValidationResult::InvalidGroupInfoGroupIdMismatch;
+    }
+
+    match group_info.extensions().get_as::<ExternalPubExt>() {
+        Ok(extensions) => {
+            match extensions {
+                Some(_) => {}
+                None => return ValidationResult::InvalidGroupInfoMissingPubKeyExtension
+                
+            }
+        }
+        Err(_) => return ValidationResult::InvalidGroupInfoMissingPubKeyExtension
+    }
+
+    ValidationResult::Valid
+}
+
+pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> InitialGroupInfoResponse {
+    let external_client = create_external_client();
     let external_group_snapshot = match ExternalSnapshot::from_bytes(&request.external_group_snapshot) {
         Ok(external_group_snapshot) => external_group_snapshot,
         Err(_) => return InitialGroupInfoResponse {
@@ -54,47 +88,19 @@ pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> 
         }
     };
 
-    let group_info = match group_info_message.into_group_info() {
-        Some(group_info) => group_info,
-        None => return InitialGroupInfoResponse {
-            result: ValidationResult::InvalidGroupInfo.into(),
+    match validate_group_info_message(request.group_info_message,
+                                      0, 
+                                      external_group.group_context().group_id()) {
+        ValidationResult::Valid => {},
+        result => return InitialGroupInfoResponse {
+            result: result.into(),
         }
-    };
-
-    if group_info.group_context().epoch() != 0 {
-        return InitialGroupInfoResponse {
-            result: ValidationResult::InvalidGroupInfoEpoch.into(),
-        };
     }
 
     if external_group.group_context().epoch() != 0 {
         return InitialGroupInfoResponse {
             result: ValidationResult::InvalidExternalGroupEpoch.into(),
         };
-    }
-
-    if group_info.group_context().group_id() != external_group.group_context().group_id() {
-        return InitialGroupInfoResponse {
-            result: ValidationResult::InvalidGroupInfoGroupIdMismatch.into(),
-        };
-    }
-
-    match group_info.extensions().get_as::<ExternalPubExt>() {
-        Ok(extensions) => {
-            match extensions {
-                Some(_) => {}
-                None => {
-                    return InitialGroupInfoResponse {
-                        result: ValidationResult::InvalidGroupInfoMissingPubKeyExtension.into(),
-                    };
-                }
-            }
-        }
-        Err(_) => {
-            return InitialGroupInfoResponse {
-                result: ValidationResult::InvalidGroupInfoMissingPubKeyExtension.into(),
-            };
-        }
     }
 
     match external_group.export_tree() {
@@ -156,24 +162,13 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJ
         };
     }
 
-    let proposed_group_info_mls_message = match MlsMessage::from_bytes(&request.proposed_external_join_info_message) {
-        Ok(group_info_message) => group_info_message,
-        Err(_) => return ExternalJoinResponse {
-            result: ValidationResult::InvalidGroupInfo.into(),
+    match validate_group_info_message(request.proposed_external_join_info_message, 
+        external_group.group_context().epoch() + 1, 
+        external_group.group_context().group_id()) {
+        ValidationResult::Valid => {},
+        result => return ExternalJoinResponse {
+            result: result.into(),
         }
-    };
-
-    let proposed_group_info_message = match proposed_group_info_mls_message.into_group_info() {
-        Some(group_info) => group_info,
-        None => return ExternalJoinResponse {
-            result: ValidationResult::InvalidGroupInfo.into(),
-        }
-    };
-
-    if proposed_group_info_message.group_context().epoch() != external_group.group_context().epoch() + 1 {
-        return ExternalJoinResponse {
-            result: ValidationResult::InvalidExternalGroupEpoch.into(),
-        };
     }
 
     let proposed_external_join_commit = match MlsMessage::from_bytes(&request.proposed_external_join_commit) {
@@ -282,6 +277,107 @@ pub fn validate_key_package_request(request: KeyPackageRequest) -> KeyPackageRes
 
     return KeyPackageResponse {
         result: ValidationResult::Valid.into(),
+    };
+}
+
+pub fn validate_welcome_message_request(request: WelcomeMessageRequest) -> WelcomeMessageResponse {
+    let group_state = match request.group_state {
+        Some(group_state) => group_state,
+        None => return WelcomeMessageResponse {
+            result: ValidationResult::InvalidExternalGroup.into(),
+        }
+    };
+
+    let external_client = create_external_client();
+
+    let external_group_snapshot = match ExternalSnapshot::from_bytes(&group_state.external_group_snapshot) {
+        Ok(external_group_snapshot) => external_group_snapshot,
+        Err(_) => return WelcomeMessageResponse {
+            result: ValidationResult::InvalidExternalGroup.into(),
+        }
+    };
+
+    let mut external_group = match external_client.load_group(external_group_snapshot) {
+        Ok(group) => group,
+        Err(_) => return WelcomeMessageResponse {
+            result: ValidationResult::InvalidExternalGroup.into(),
+        }
+    };
+
+    // in the off-chance that an invalid commit slips through, we don't want to stop processing, just keep going.
+    for commit_bytes in group_state.commits {
+        let _ = match MlsMessage::from_bytes(&commit_bytes) {
+            Ok(commit) => external_group.process_incoming_message(commit),
+            Err(_) => break
+        };
+    }
+
+    match validate_group_info_message(request.group_info_message, 
+        external_group.group_context().epoch() + 1, 
+        external_group.group_context().group_id()) {
+        ValidationResult::Valid => {},
+        result => return WelcomeMessageResponse {
+            result: result.into(),
+        }
+    }
+
+    let proposed_commit = match MlsMessage::from_bytes(&request.welcome_message_commit) {
+        Ok(welcome_message) => welcome_message,
+        Err(_) => return WelcomeMessageResponse {
+            result: ValidationResult::InvalidCommit.into(),
+        }
+    };
+
+    let external_received_message = match external_group.process_incoming_message(proposed_commit) {
+        Ok(message) => message,
+        Err(_) => return WelcomeMessageResponse {
+            result: ValidationResult::InvalidCommit.into(),
+        }
+    };
+
+    let commit_message_description = match external_received_message {
+        ExternalReceivedMessage::Commit(commit_message_description) => commit_message_description,
+        _ => return WelcomeMessageResponse {
+            result: ValidationResult::InvalidCommit.into(),
+        }
+    };
+
+    let applied_proposals = match commit_message_description.effect {
+        CommitEffect::NewEpoch(ep) => ep.applied_proposals,
+        _ => {
+            return WelcomeMessageResponse {
+                result: ValidationResult::InvalidCommit.into(),
+            };
+        }
+    };
+
+    let expected_public_signatures: HashSet<Vec<u8>> = HashSet::from_iter(request.signature_public_keys.clone());
+    for proposal in applied_proposals.iter() {
+        match &proposal.proposal {
+            Proposal::Add(proposal) => {
+                let public_signature = proposal.signing_identity().signature_key.to_vec();
+                if !expected_public_signatures.contains(&public_signature) {
+                    return WelcomeMessageResponse {
+                        result: ValidationResult::InvalidPublicSignatureKey.into(),
+                    };
+                }
+            }
+            _ => {
+                return  WelcomeMessageResponse {
+                    result: ValidationResult::InvalidProposal.into(),
+                };
+            }
+        }
+    }
+
+    if applied_proposals.len() != request.signature_public_keys.len() {
+        return WelcomeMessageResponse {
+            result: ValidationResult::InvalidPublicSignatureKey.into(),
+        };
+    }
+
+    return WelcomeMessageResponse { 
+        result: ValidationResult::Valid.into(), 
     };
 }
 
