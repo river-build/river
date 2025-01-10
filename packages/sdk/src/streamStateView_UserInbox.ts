@@ -8,7 +8,6 @@ import {
     UserInboxPayload_GroupEncryptionSessions,
     UserInboxPayload_Ack,
     MemberPayload_Mls_WelcomeMessage,
-    UserInboxPayload_MlsWelcomeMessage,
 } from '@river-build/proto'
 import { StreamStateView_AbstractContent } from './streamStateView_AbstractContent'
 import { check } from '@river-build/dlog'
