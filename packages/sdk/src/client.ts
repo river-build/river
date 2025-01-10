@@ -1945,9 +1945,11 @@ export class Client
         toUserId: string,
         opts?: SendBlockchainTransactionOptions,
     ): Promise<{ eventId: string }> {
-        const stream = this.stream(event.channelId)
-        check(isDefined(stream), 'stream not found')
-        const tags = opts?.disableTags ? undefined : makeTipTags(event, toUserId, stream.view)
+        const stream = this.stream(ensureNoHexPrefix(event.channelId))
+        const tags =
+            opts?.disableTags || !stream?.view
+                ? undefined
+                : makeTipTags(event, toUserId, stream.view)
         return this.addTransaction(
             chainId,
             receipt,
@@ -2523,4 +2525,8 @@ export class Client
             method: 'mls',
         })
     }
+}
+
+function ensureNoHexPrefix(value: string): string {
+    return value.startsWith('0x') ? value.slice(2) : value
 }

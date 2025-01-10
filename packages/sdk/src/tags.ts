@@ -2,8 +2,9 @@ import { PlainMessage } from '@bufbuild/protobuf'
 import { ChannelMessage, GroupMentionType, MessageInteractionType, Tags } from '@river-build/proto'
 import { IStreamStateView } from './streamStateView'
 import { addressFromUserId } from './id'
-import { bin_fromHexString } from '@river-build/dlog'
+import { bin_fromHexString, check } from '@river-build/dlog'
 import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
+import { isDefined } from './check'
 
 export function makeTags(
     message: PlainMessage<ChannelMessage>,
@@ -23,6 +24,7 @@ export function makeTipTags(
     toUserId: string,
     streamView: IStreamStateView,
 ): PlainMessage<Tags> | undefined {
+    check(isDefined(streamView), 'stream not found')
     return {
         messageInteractionType: MessageInteractionType.TIP,
         groupMentionTypes: [],
