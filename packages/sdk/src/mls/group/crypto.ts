@@ -99,4 +99,12 @@ export class Crypto {
     public currentEpoch(group: Group): bigint {
         return group.group.currentEpoch
     }
+
+    public signaturePublicKey(): Uint8Array {
+        if (!this.client) {
+            this.log.error('signaturePublicKey: Client not initialized')
+            throw new Error('Client not initialized')
+        }
+        return this.client.signaturePublicKey()
+    }
 }

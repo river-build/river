@@ -175,7 +175,7 @@ export class GroupService {
     }
 
     private getSignaturePublicKey(): Uint8Array {
-        throw new Error('Not implemented')
+        return this.crypto.signaturePublicKey()
     }
 }
 
