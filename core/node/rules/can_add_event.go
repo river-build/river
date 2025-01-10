@@ -439,6 +439,9 @@ func (params *aeParams) canAddUserInboxPayload(payload *StreamEvent_UserInboxPay
 	case *UserInboxPayload_Ack_:
 		return aeBuilder().
 			check(params.creatorIsMember)
+	case *UserInboxPayload_MlsWelcomeMessage_:
+		return aeBuilder().
+			check(params.creatorIsValidNode)
 	default:
 		return aeBuilder().
 			fail(unknownContentType(content))
@@ -1353,29 +1356,6 @@ func (ru *aeUserMembershipRules) parentEventForUserMembership() (*DerivedEvent, 
 	}, nil
 }
 
-func (ru *aeMlsWelcomeMessageRules) parentEventsForMlsWelcomeMessage() ([]*DerivedEvent, error) {
-
-	pendingKeyPackages, err := ru.params.streamView.(events.MlsStreamView).GetMlsPendingKeyPackages()
-	if err != nil {
-		return nil, err
-	}
-	streamId := ru.params.streamView.StreamId()
-	
-	derivedEvents := make([]*DerivedEvent, 0)
-	for _, signaturePublicKey := range ru.welcomeMessage.SignaturePublicKeys {
-		if keyPackage, ok := pendingKeyPackages[common.Bytes2Hex(signaturePublicKey)]; ok {
-			userStreamId := shared.UserInboxStreamIdFromAddr(common.Address(keyPackage.UserAddress))
-			derivedEvent := &DerivedEvent{
-				Payload: events.Make_UserInboxPayload_MlsWelcomeMessage(*streamId, ru.welcomeMessage),
-				StreamId: userStreamId,
-			}
-			derivedEvents = append(derivedEvents, derivedEvent)
-		}
-	}
-
-	return derivedEvents, nil
-}
-
 // / user actions perform user membership events on other user's streams
 func (ru *aeUserMembershipActionRules) parentEventForUserMembershipAction() (*DerivedEvent, error) {
 	if ru.action == nil {
@@ -1399,6 +1379,29 @@ func (ru *aeUserMembershipActionRules) parentEventForUserMembershipAction() (*De
 		Payload:  payload,
 		StreamId: toUserStreamId,
 	}, nil
+}
+
+func (ru *aeMlsWelcomeMessageRules) parentEventsForMlsWelcomeMessage() ([]*DerivedEvent, error) {
+
+	pendingKeyPackages, err := ru.params.streamView.(events.MlsStreamView).GetMlsPendingKeyPackages()
+	if err != nil {
+		return nil, err
+	}
+	streamId := ru.params.streamView.StreamId()
+	
+	derivedEvents := make([]*DerivedEvent, 0)
+	for _, signaturePublicKey := range ru.welcomeMessage.SignaturePublicKeys {
+		if keyPackage, ok := pendingKeyPackages[common.Bytes2Hex(signaturePublicKey)]; ok {
+			userStreamId := shared.UserInboxStreamIdFromAddr(common.Address(keyPackage.UserAddress))
+			derivedEvent := &DerivedEvent{
+				Payload: events.Make_UserInboxPayload_MlsWelcomeMessage(*streamId, ru.welcomeMessage),
+				StreamId: userStreamId,
+			}
+			derivedEvents = append(derivedEvents, derivedEvent)
+		}
+	}
+
+	return derivedEvents, nil
 }
 
 func (ru *aeMembershipRules) spaceMembershipEntitlements() (*auth.ChainAuthArgs, error) {

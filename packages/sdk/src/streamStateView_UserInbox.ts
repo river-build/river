@@ -7,11 +7,14 @@ import {
     UserInboxPayload_Snapshot_DeviceSummary,
     UserInboxPayload_GroupEncryptionSessions,
     UserInboxPayload_Ack,
+    MemberPayload_Mls_WelcomeMessage,
+    UserInboxPayload_MlsWelcomeMessage,
 } from '@river-build/proto'
 import { StreamStateView_AbstractContent } from './streamStateView_AbstractContent'
 import { check } from '@river-build/dlog'
 import { logNever } from './check'
 import { StreamEncryptionEvents, StreamStateEvents } from './streamEvents'
+import { streamIdAsString } from './id'
 
 export class StreamStateView_UserInbox extends StreamStateView_AbstractContent {
     readonly streamId: string
@@ -19,6 +22,10 @@ export class StreamStateView_UserInbox extends StreamStateView_AbstractContent {
     pendingGroupSessions: Record<
         string,
         { creatorUserId: string; value: UserInboxPayload_GroupEncryptionSessions }
+    > = {}
+    pendingWelcomeMessages: Record<
+        string,
+        { streamId: string; value: MemberPayload_Mls_WelcomeMessage }
     > = {}
 
     constructor(streamId: string) {
@@ -48,6 +55,12 @@ export class StreamStateView_UserInbox extends StreamStateView_AbstractContent {
             delete this.pendingGroupSessions[eventId]
             this.addGroupSessions(payload.creatorUserId, payload.value, emitter)
         }
+
+        const mlsPayload = this.pendingWelcomeMessages[eventId]
+        if (mlsPayload) {
+            delete this.pendingWelcomeMessages[eventId]
+            this.addMlsWelcomeMessage(mlsPayload, encryptionEmitter)
+        }
     }
 
     prependEvent(
@@ -67,6 +80,15 @@ export class StreamStateView_UserInbox extends StreamStateView_AbstractContent {
             case 'ack':
                 break
             case 'mlsWelcomeMessage':
+                if (payload.content.value.welcomeMessage) {
+                    this.addMlsWelcomeMessage(
+                        {
+                            streamId: streamIdAsString(payload.content.value.streamId),
+                            value: payload.content.value.welcomeMessage,
+                        },
+                        encryptionEmitter,
+                    )
+                }
                 break
             case undefined:
                 break
@@ -96,6 +118,12 @@ export class StreamStateView_UserInbox extends StreamStateView_AbstractContent {
                 this.updateDeviceSummary(event.remoteEvent, payload.content.value, stateEmitter)
                 break
             case 'mlsWelcomeMessage':
+                if (payload.content.value.welcomeMessage) {
+                    this.pendingWelcomeMessages[event.hashStr] = {
+                        streamId: streamIdAsString(payload.content.value.streamId),
+                        value: payload.content.value.welcomeMessage,
+                    }
+                }
                 break
             case undefined:
                 break
@@ -122,6 +150,17 @@ export class StreamStateView_UserInbox extends StreamStateView_AbstractContent {
         encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
     ) {
         encryptionEmitter?.emit('newGroupSessions', content, creatorUserId)
+    }
+
+    private addMlsWelcomeMessage(
+        content: { streamId: string; value: MemberPayload_Mls_WelcomeMessage },
+        encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
+    ) {
+        encryptionEmitter?.emit(
+            'mlsWelcomeMessage',
+            content.streamId,
+            content.value.welcomeMessages,
+        )
     }
 
     private updateDeviceSummary(

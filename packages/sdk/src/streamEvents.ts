@@ -54,6 +54,7 @@ export type StreamEncryptionEvents = {
     ) => void
     userDeviceKeyMessage: (streamId: string, userId: string, userDevice: UserDevice) => void
     // MLS-specific encryption events
+    mlsWelcomeMessage: (streamId: string, welcomeMessages: Uint8Array[]) => void
     mlsNewEncryptedContent: (streamId: string, eventId: string, content: EncryptedContent) => void
     mlsInitializeGroup: (
         streamId: string,

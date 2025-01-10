@@ -2,7 +2,7 @@
  * @group main
  */
 
-import { makeTestClient, waitFor } from '../testUtils'
+import { makeDonePromise, makeTestClient, waitFor } from '../testUtils'
 import { Client } from '../../client'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { MemberPayload_Mls } from '@river-build/proto'
@@ -43,6 +43,9 @@ describe('mlsTests', () => {
     let latestGroupInfoMessage: Uint8Array
     let latestExternalGroupSnapshot: Uint8Array
     let latestAliceMlsKeyPackage: Uint8Array
+    let uploadedWelcomeMessages: Uint8Array[]
+
+    const aliceWelcomeMessageInInboxPromise = makeDonePromise()
     const commits: Uint8Array[] = []
 
     beforeAll(async () => {
@@ -60,6 +63,18 @@ describe('mlsTests', () => {
         await bobClient.waitForStream(dmStreamId)
         await aliceClient.waitForStream(dmStreamId)
         streamId = dmStreamId
+
+        // set up inbox subscription
+        aliceClient.on('mlsWelcomeMessage', (updatedStreamId, welcomeMessages) => {
+            expect(updatedStreamId).toBe(streamId)
+            expect(welcomeMessages.length).toBeGreaterThan(0)
+            expect(welcomeMessages.length).toBe(uploadedWelcomeMessages.length)
+
+            for (let i = 0; i < welcomeMessages.length; i++) {
+                expect(bin_equal(welcomeMessages[i], uploadedWelcomeMessages[i])).toBe(true)
+            }
+            aliceWelcomeMessageInInboxPromise.done()
+        })
     })
 
     afterAll(async () => {
@@ -552,6 +567,9 @@ describe('mlsTests', () => {
         const commit = commitOutput.commitMessage.toBytes()
         const welcomeMessages = commitOutput.welcomeMessages.map((wm) => wm.toBytes())
 
+        // save for later
+        uploadedWelcomeMessages = welcomeMessages
+
         const payload = makeMlsPayloadWelcomeMessage(
             commit,
             [keyPackage.signaturePublicKey],
@@ -574,6 +592,10 @@ describe('mlsTests', () => {
             const kp = stream!.view.membershipContent.mls.pendingKeyPackages[key]
             check(!isDefined(kp))
         })
+    })
+
+    test('key packages appear in the user inbox', async () => {
+        await aliceWelcomeMessageInInboxPromise.expectToSucceed()
     })
 
     test('devices added from key packages are added to the members', async () => {

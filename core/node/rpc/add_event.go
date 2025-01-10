@@ -133,6 +133,15 @@ func (s *Service) addParsedEvent(
 		}
 	}
 
+	if len(sideEffects.RequiredParentEvents) > 0 {
+		for _, parentEvent := range sideEffects.RequiredParentEvents {
+			err := s.AddEventPayload(ctx, parentEvent.StreamId, parentEvent.Payload)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	stream := &replicatedStream{
 		streamId:    streamId.String(),
 		localStream: localStream,
