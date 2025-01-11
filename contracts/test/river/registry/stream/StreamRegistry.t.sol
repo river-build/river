@@ -7,6 +7,7 @@ import {IOwnableBase} from "@river-build/diamond/src/facets/ownable/IERC173.sol"
 import {Stream, StreamWithId, SetMiniblock} from "contracts/src/river/registry/libraries/RegistryStorage.sol";
 import {RiverRegistryErrors} from "contracts/src/river/registry/libraries/RegistryErrors.sol";
 import {IStreamRegistryBase} from "contracts/src/river/registry/facets/stream/IStreamRegistry.sol";
+import {StreamFlags} from "contracts/src/river/registry/facets/stream/StreamRegistry.sol";
 // contracts
 // deployments
 import {RiverRegistryBaseSetup} from "contracts/test/river/registry/RiverRegistryBaseSetup.t.sol";
@@ -136,15 +137,12 @@ contract StreamRegistryTest is
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-  /*                       allocateSealedStream                 */
+  /*                       createStream                         */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
-  function test_fuzz_allocateSealedStream(
+  function test_fuzz_createStream(
     address nodeOperator,
-    bytes32 streamId,
-    TestNode[] memory nodes,
-    bytes32 genesisMiniblockHash,
-    bytes32 lastMiniblockHash,
-    uint64 lastMiniblockNum
+    TestStream memory testStream,
+    TestNode[] memory nodes
   )
   external
   givenNodeOperatorIsApproved(nodeOperator)
@@ -158,43 +156,41 @@ contract StreamRegistryTest is
       nodeAddresses[i] = nodes[i].node;
     }
 
+    Stream memory streamToCreate = Stream({
+      lastMiniblockHash: testStream.genesisMiniblockHash,
+      lastMiniblockNum: 1,
+      flags: StreamFlags.SEALED,
+      reserved0: 0,
+      nodes: nodeAddresses
+    });
+
     vm.prank(nodes[0].node);
     vm.expectEmit(address(streamRegistry));
-    emit SealedStreamAllocated(
-      streamId,
-      nodeAddresses,
-      genesisMiniblockHash,
-      lastMiniblockHash,
-      lastMiniblockNum
+    emit StreamCreated(
+      testStream.streamId,
+      testStream.genesisMiniblockHash,
+      streamToCreate
     );
-    streamRegistry.allocateSealedStream(
-      streamId,
-      nodeAddresses,
-      genesisMiniblockHash,
-      lastMiniblockHash,
-      lastMiniblockNum
+    streamRegistry.createStream(
+      testStream.streamId,
+      testStream.genesisMiniblockHash,
+      streamToCreate
     );
 
     assertEq(streamRegistry.getStreamCount(), 1);
     assertEq(streamRegistry.getStreamCountOnNode(nodes[0].node), 1);
-    assertTrue(streamRegistry.isStream(streamId));
+    assertTrue(streamRegistry.isStream(testStream.streamId));
 
-    Stream memory stream = streamRegistry.getStream(streamId);
-    assertEq(stream.lastMiniblockHash, lastMiniblockHash);
+    Stream memory stream = streamRegistry.getStream(testStream.streamId);
+    assertEq(stream.lastMiniblockHash, testStream.genesisMiniblockHash);
     assertEq(stream.nodes.length, nodesLength);
     assertContains(stream.nodes, nodes[0].node);
-
-    (,bytes32 gmh,) = streamRegistry.getStreamWithGenesis(streamId);
-    assertEq(gmh, genesisMiniblockHash);
   }
 
-  function test_revertWhen_allocateSealedStream_streamIdAlreadyExists(
+  function test_revertWhen_createStream_streamIdAlreadyExists(
     address nodeOperator,
-    bytes32 streamId,
-    TestNode memory node,
-    bytes32 genesisMiniblockHash,
-    bytes32 lastMiniblockHash,
-    uint64 lastMiniblockNum
+    TestStream memory testStream,
+    TestNode memory node
   )
   external
   givenNodeOperatorIsApproved(nodeOperator)
@@ -202,58 +198,61 @@ contract StreamRegistryTest is
   {
     address[] memory nodes = new address[](1);
     nodes[0] = node.node;
+    Stream memory streamToCreate = Stream({
+      lastMiniblockHash: testStream.genesisMiniblockHash,
+      lastMiniblockNum: 1,
+      flags: StreamFlags.SEALED,
+      reserved0: 0,
+      nodes: nodes
+    });
 
     vm.prank(node.node);
-    streamRegistry.allocateSealedStream(
-      streamId,
-      nodes,
-      genesisMiniblockHash,
-      lastMiniblockHash,
-      lastMiniblockNum
+    streamRegistry.createStream(
+      testStream.streamId,
+      testStream.genesisMiniblockHash,
+      streamToCreate
     );
 
     vm.prank(node.node);
     vm.expectRevert(bytes(RiverRegistryErrors.ALREADY_EXISTS));
-    streamRegistry.allocateSealedStream(
-      streamId,
-      nodes,
-      genesisMiniblockHash,
-      lastMiniblockHash,
-      lastMiniblockNum
+    streamRegistry.createStream(
+      testStream.streamId,
+      testStream.genesisMiniblockHash,
+      streamToCreate
     );
   }
 
   /// @notice This test is to ensure that the node who is calling the allocateSealedStream function is registered.
-  function test_revertWhen_allocateSealedStream_nodeNotRegistered(
+  function test_revertWhen_createStream_nodeNotRegistered(
     address nodeOperator,
-    bytes32 streamId,
-    TestNode memory node,
-    bytes32 genesisMiniblockHash,
-    bytes32 lastMiniblockHash,
-    uint64 lastMiniblockNum
+    TestStream memory testStream,
+    TestNode memory node
   ) external givenNodeOperatorIsApproved(nodeOperator) {
     address[] memory nodes = new address[](1);
     nodes[0] = node.node;
+    Stream memory streamToCreate = Stream({
+      lastMiniblockHash: testStream.genesisMiniblockHash,
+      lastMiniblockNum: 1,
+      flags: StreamFlags.SEALED,
+      reserved0: 0,
+      nodes: nodes
+    });
 
     vm.prank(node.node);
     vm.expectRevert(bytes(RiverRegistryErrors.NODE_NOT_FOUND));
-    streamRegistry.allocateSealedStream(
-      streamId,
-      nodes,
-      genesisMiniblockHash,
-      lastMiniblockHash,
-      lastMiniblockNum
+    streamRegistry.createStream(
+      testStream.streamId,
+      testStream.genesisMiniblockHash,
+      streamToCreate
     );
   }
 
   /// @notice This test is to ensure that the nodes being passed in are registered before allocating a sealed stream.
-  function test_revertWhen_allocateSealedStream_nodesNotRegistered(
+  function test_revertWhen_createStream_nodesNotRegistered(
     address nodeOperator,
-    bytes32 streamId,
-    TestNode memory node,
-    bytes32 genesisMiniblockHash,
-    bytes32 lastMiniblockHash,
-    uint64 lastMiniblockNum
+    address randomNode,
+    TestStream memory testStream,
+    TestNode memory node
   )
   external
   givenNodeOperatorIsApproved(nodeOperator)
@@ -262,15 +261,20 @@ contract StreamRegistryTest is
     address[] memory nodes = new address[](2);
     nodes[0] = node.node;
     nodes[1] = randomNode;
+    Stream memory streamToCreate = Stream({
+      lastMiniblockHash: testStream.genesisMiniblockHash,
+      lastMiniblockNum: 1,
+      flags: StreamFlags.SEALED,
+      reserved0: 0,
+      nodes: nodes
+    });
 
     vm.prank(node.node);
     vm.expectRevert(bytes(RiverRegistryErrors.NODE_NOT_FOUND));
-    streamRegistry.allocateSealedStream(
-      streamId,
-      nodes,
-      genesisMiniblockHash,
-      lastMiniblockHash,
-      lastMiniblockNum
+    streamRegistry.createStream(
+      testStream.streamId,
+      testStream.genesisMiniblockHash,
+      streamToCreate
     );
   }
 

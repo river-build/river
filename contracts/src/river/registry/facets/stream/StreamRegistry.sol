@@ -61,45 +61,32 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
   }
 
   /// @inheritdoc IStreamRegistry
-  function allocateSealedStream(
+  function createStream(
     bytes32 streamId,
-    address[] memory nodes,
     bytes32 genesisMiniblockHash,
-    bytes32 lastMiniblockHash,
-    uint64 lastMiniblockNum
-    ) external onlyNode(msg.sender) {
-      // verify that the streamId is not already in the registry
-      if (ds.streams.contains(streamId))
-        revert(RiverRegistryErrors.ALREADY_EXISTS);
+    Stream memory stream
+  ) external onlyNode(msg.sender) {
+    // verify that the streamId is not already in the registry
+    if (ds.streams.contains(streamId))
+      revert(RiverRegistryErrors.ALREADY_EXISTS);
 
-      // verify that the nodes stream is placed on are in the registry
-      uint256 nodeCount = nodes.length;
-      for (uint256 i = 0; i < nodeCount; ++i) {
-        if (!ds.nodes.contains(nodes[i]))
-          revert(RiverRegistryErrors.NODE_NOT_FOUND);
-      }
-
-      // Add the sealed stream to the registry
-      Stream memory stream = Stream({
-        lastMiniblockHash: lastMiniblockHash,
-        lastMiniblockNum: lastMiniblockNum,
-        flags: StreamFlags.SEALED,
-        reserved0: 0,
-        nodes: nodes
-      });
-
-      ds.streams.add(streamId);
-      ds.streamById[streamId] = stream;
-      ds.genesisMiniblockHashByStreamId[streamId] = genesisMiniblockHash;
-
-      emit SealedStreamAllocated(
-        streamId,
-        nodes,
-        genesisMiniblockHash,
-        lastMiniblockHash,
-        lastMiniblockNum
-      );
+    // verify that the nodes stream is placed on are in the registry
+    uint256 nodeCount = stream.nodes.length;
+    for (uint256 i = 0; i < nodeCount; ++i) {
+      if (!ds.nodes.contains(stream.nodes[i]))
+        revert(RiverRegistryErrors.NODE_NOT_FOUND);
     }
+
+    ds.streams.add(streamId);
+    ds.streamById[streamId] = stream;
+    ds.genesisMiniblockHashByStreamId[streamId] = genesisMiniblockHash;
+
+    emit StreamCreated(
+      streamId,
+      genesisMiniblockHash,
+      stream
+    );
+  }
 
   /// @inheritdoc IStreamRegistry
   function getStream(bytes32 streamId) external view returns (Stream memory) {

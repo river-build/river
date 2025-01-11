@@ -18,12 +18,10 @@ interface IStreamRegistryBase {
     bytes genesisMiniblock
   );
 
-  event SealedStreamAllocated(
+  event StreamCreated(
     bytes32 streamId,
-    address[] nodes,
     bytes32 genesisMiniblockHash,
-    bytes32 lastMiniblockHash,
-    uint64 lastMiniblockNum
+    Stream stream
   );
 
   event StreamLastMiniblockUpdated(
@@ -75,20 +73,14 @@ interface IStreamRegistry is IStreamRegistryBase {
   ) external;
 
   /**
-   * @notice Allocate a new sealed stream in the registry
-   * @param streamId The ID of the stream to allocate
-   * @param nodes The list of nodes to place the stream on
-   * @param genesisMiniblockHash The hash of the genesis miniblock
-   * @param lastMiniblockHash The hash of the new last miniblock
-   * @param lastMiniblockNum The number of the new last miniblock
+   * @notice Create a new stream in the registry
+   * @param stream is the Stream object to be created
    * @dev Only callable by registered nodes
    */
-  function allocateSealedStream(
+  function createStream(
     bytes32 streamId,
-    address[] memory nodes,
     bytes32 genesisMiniblockHash,
-    bytes32 lastMiniblockHash,
-    uint64 lastMiniblockNum
+    Stream memory stream
   ) external;
 
   /**
