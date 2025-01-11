@@ -196,7 +196,7 @@ func (s *Service) createReplicatedMediaStream(
 			),
 		)
 
-		return nil
+		return err
 	})
 
 	if err = sender.Wait(); err != nil {
@@ -212,7 +212,7 @@ func (s *Service) createReplicatedMediaStream(
 		NextCreationCookie: &CreationCookie{
 			StreamId:          streamId[:],
 			Nodes:             nodesListRaw,
-			MiniblockNum:      1, // next block number after the genesis one is 1
+			MiniblockNum:      1, // the block number after the genesis one is 1
 			PrevMiniblockHash: mb.Header.Hash,
 		},
 		Miniblocks: []*Miniblock{mb},
