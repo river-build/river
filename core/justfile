@@ -20,18 +20,17 @@ LOCAL_PRIVATE_KEY := `source ../contracts/.env.localhost && echo "${LOCAL_PRIVAT
 JUST_BASH_OPTS := env_var_or_default("JUST_BASH_OPTS", "")
 BASH_OPTS := '-euo pipefail ' + JUST_BASH_OPTS
 
+# NOTE: first command also runs when just is called without arguments
+
+help:
+    @just --list
+
 _require_run_env:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
     if [ "${RUN_ENV}" == "none" ]; then
         echo "RUN_ENV is not set, must be one of: multi, multi_ne"
         exit 1
     fi
-
-default:
-    @just --list
-
-help:
-    @just --list
 
 print-env:
     @echo "RUN_ENV=${RUN_ENV}"
