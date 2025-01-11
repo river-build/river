@@ -95,6 +95,10 @@ type StreamStorage interface {
 		prevMinipoolSize int,
 	) error
 
+	// WriteEphemeralMiniblock writes a miniblock as part of ephemeral stream. Skips a bunch of consistency checks.
+	// Stream with the given ID must be ephemeral.
+	WriteEphemeralMiniblock(ctx context.Context, streamId StreamId, miniblock *WriteMiniblockData) error
+
 	// CreateStreamArchiveStorage creates a new archive storage for the given stream.
 	// Unlike regular CreateStreamStorage, only entry in es table and partition table for miniblocks are created.
 	CreateStreamArchiveStorage(
