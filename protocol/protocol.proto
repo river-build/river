@@ -978,7 +978,7 @@ message GetMiniblockHeaderRequest {
 }
 
 message GetMiniblockHeaderResponse {
-    MiniblockHeader header = 1;
+    Envelope header = 1;
 }
 
 service StreamService {

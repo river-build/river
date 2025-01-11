@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"connectrpc.com/connect"
-	"github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/protocol"
 )
 
@@ -21,12 +20,7 @@ func (s *Service) GetMiniblockHeader(
 	if err != nil {
 		return nil, err
 	}
-	miniblock := miniblocksResponse.Msg.Miniblocks[0]
-	info, err := events.NewMiniblockInfoFromProto(miniblock, &events.ParsedMiniblockInfoOpts{})
-	if err != nil {
-		return nil, err
-	}
 	return connect.NewResponse(&GetMiniblockHeaderResponse{
-		Header: info.Header(),
+		Header: miniblocksResponse.Msg.Miniblocks[0].GetHeader(),
 	}), nil
 }
