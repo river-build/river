@@ -15,7 +15,7 @@ import (
 
 // TestCreateMediaStream tests creating a media stream
 func TestCreateMediaStream(t *testing.T) {
-	tt := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
+	tt := newServiceTester(t, serviceTesterOpts{numNodes: 5, replicationFactor: 5, start: true})
 
 	alice := tt.newTestClient(0)
 	_ = alice.createUserStream()
