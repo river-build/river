@@ -24,7 +24,6 @@ import (
 
 type AddableStream interface {
 	AddEvent(ctx context.Context, event *ParsedEvent) error
-	ApplyMiniblock(ctx context.Context, miniblock *MiniblockInfo) error
 }
 
 type MiniblockStream interface {

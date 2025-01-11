@@ -20,10 +20,6 @@ type remoteStream struct {
 
 var _ Stream = (*remoteStream)(nil)
 
-func (r *remoteStream) ApplyMiniblock(ctx context.Context, miniblock *MiniblockInfo) error {
-	return nil
-}
-
 func (s *Service) loadStream(ctx context.Context, streamId StreamId) (Stream, error) {
 	stream, err := s.cache.GetStreamNoWait(ctx, streamId)
 	if err != nil {

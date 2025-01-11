@@ -6,8 +6,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-
 	"connectrpc.com/connect"
 
 	. "github.com/river-build/river/core/node/base"
@@ -377,7 +375,7 @@ func (s *Service) getMiniblocksImpl(
 		return nil, err
 	}
 
-	stream, err := s.cache.GetEphemeralStream(ctx, streamId, nil) // TODO: Revert
+	stream, err := s.cache.GetStreamNoWait(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}
@@ -516,7 +514,6 @@ func (s *Service) AddMediaEvent(
 	return executeConnectHandler(ctx, req, s, s.addMediaEventImpl, "AddMediaEvent")
 }
 
-// TODO: To be completed
 func (s *Service) addMediaEventImpl(
 	ctx context.Context,
 	req *connect.Request[AddMediaEventRequest],
@@ -526,52 +523,10 @@ func (s *Service) addMediaEventImpl(
 		return nil, err
 	}
 
-	cc := req.Msg.GetCreationCookie()
-	nodesRaw := cc.GetNodes()
-	nodes := make([]common.Address, len(nodesRaw))
-	for i, node := range nodesRaw {
-		nodes[i] = common.BytesToAddress(node)
-	}
-
-	stream, err := s.cache.GetEphemeralStream(ctx, streamId, nodes)
-	if err != nil {
+	// TODO: Create ephemeral specific functions
+	if _, err = s.storage.GetLastMiniblockNumber(ctx, streamId); err != nil {
 		return nil, err
 	}
 
-	view, err := stream.GetViewIfLocal(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	for view != nil {
-		return s.localAddMediaEvent(ctx, req, stream, view)
-	}
-
-	if req.Header().Get(RiverNoForwardHeader) == RiverNoForwardValue {
-		return nil, RiverError(Err_UNAVAILABLE, "Forwarding disabled by request header").
-			Func("service.addMediaEventImpl").
-			Tags("streamId", req.Msg.StreamId,
-				RiverFromNodeHeader, req.Header().Get(RiverFromNodeHeader),
-				RiverToNodeHeader, req.Header().Get(RiverToNodeHeader),
-			)
-	}
-
-	// TODO: smarter remote select? random?
-	// TODO: retry?
-	firstRemote := stream.GetStickyPeer()
-	dlog.FromCtx(ctx).Debug("Forwarding request", "nodeAddress", firstRemote)
-	stub, err := s.nodeRegistry.GetStreamServiceClientForAddress(firstRemote)
-	if err != nil {
-		return nil, err
-	}
-
-	newReq := connect.NewRequest(req.Msg)
-	newReq.Header().Set(RiverNoForwardHeader, RiverNoForwardValue)
-	newReq.Header().Set(RiverFromNodeHeader, s.wallet.Address.Hex())
-	newReq.Header().Set(RiverToNodeHeader, firstRemote.Hex())
-	ret, err := stub.AddMediaEvent(ctx, newReq)
-	if err != nil {
-		return nil, err
-	}
-	return connect.NewResponse(ret.Msg), nil
+	return s.localAddMediaEvent(ctx, req)
 }
