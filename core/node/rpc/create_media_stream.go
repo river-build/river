@@ -123,7 +123,6 @@ func (s *Service) createMediaStream(ctx context.Context, req *CreateMediaStreamR
 				csRules.ChainAuth.String(),
 			).Func("createStream")
 		}
-
 	}
 
 	// create the stream
@@ -167,30 +166,32 @@ func (s *Service) createReplicatedMediaStream(
 
 	nodes := NewStreamNodesWithLock(nodesList, s.wallet.Address)
 	remotes, isLocal := nodes.GetRemotesAndIsLocal()
-	sender := NewQuorumPool("method", "createReplicatedStream", "streamId", streamId)
+	sender := NewQuorumPool("method", "createReplicatedMediaStream", "streamId", streamId)
 
-	// Remove the last node from the list if the current node were not selected
+	// Remove the last node from the list if the current node were not selected.
+	// The media stream receiver node is some sort of constant leader for the given media stream.
 	if !isLocal && len(remotes) > 0 {
 		remotes = remotes[:len(remotes)-1]
 	}
 
+	// Create ephemeral stream within the local node
 	sender.GoLocal(ctx, func(ctx context.Context) error {
 		return s.storage.CreateEphemeralStreamStorage(ctx, streamId, mbBytes)
 	})
 
+	// Create ephemeral stream in replicas
 	sender.GoRemotes(ctx, remotes, func(ctx context.Context, node common.Address) error {
 		stub, err := s.nodeRegistry.GetNodeToNodeClientForAddress(node)
 		if err != nil {
 			return err
 		}
 
-		_, err = stub.AllocateStream(
+		_, err = stub.AllocateEphemeralStream(
 			ctx,
-			connect.NewRequest[AllocateStreamRequest](
-				&AllocateStreamRequest{
-					StreamId:    streamId[:],
-					Miniblock:   mb,
-					IsEphemeral: true,
+			connect.NewRequest[AllocateEphemeralStreamRequest](
+				&AllocateEphemeralStreamRequest{
+					StreamId:  streamId[:],
+					Miniblock: mb,
 				},
 			),
 		)
