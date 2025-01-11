@@ -6,7 +6,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/gammazero/workerpool"
 	"github.com/prometheus/client_golang/prometheus"
@@ -51,7 +50,6 @@ type StreamCache interface {
 	GetStreamWaitForLocal(ctx context.Context, streamId StreamId) (SyncStream, error)
 	// GetStreamNoWait is a transitional method to support existing GetStream API before block number are wired through APIs.
 	GetStreamNoWait(ctx context.Context, streamId StreamId) (SyncStream, error)
-	GetEphemeralStream(ctx context.Context, streamId StreamId, nodes []common.Address) (SyncStream, error)
 	ForceFlushAll(ctx context.Context)
 	GetLoadedViews(ctx context.Context) []StreamView
 	GetMbCandidateStreams(ctx context.Context) []*streamImpl
@@ -80,10 +78,7 @@ type streamCacheImpl struct {
 
 var _ StreamCache = (*streamCacheImpl)(nil)
 
-func NewStreamCache(
-	ctx context.Context,
-	params *StreamCacheParams,
-) *streamCacheImpl {
+func NewStreamCache(params *StreamCacheParams) *streamCacheImpl {
 	return &streamCacheImpl{
 		params: params,
 		cache:  xsync.NewMapOf[StreamId, *streamImpl](),
@@ -363,34 +358,6 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 	return stream, err
 }
 
-func (s *streamCacheImpl) tryGetEphemeralStream(
-	ctx context.Context,
-	streamId StreamId,
-	nodes []common.Address,
-) (*streamImpl, error) {
-	stream := &streamImpl{
-		params:           s.params,
-		streamId:         streamId,
-		lastAccessedTime: time.Now(),
-		local:            &localStreamState{},
-	}
-	stream.nodesLocked.Reset(nodes, s.params.Wallet.Address)
-
-	if !stream.nodesLocked.IsLocal() {
-		stream, _ = s.cache.LoadOrStore(streamId, stream)
-		return stream, nil
-	}
-
-	stream.local = &localStreamState{}
-
-	//stream, _, err := s.createStreamStorage(ctx, stream, nil, true)
-	//if err != nil {
-	//	return nil, err
-	//}
-
-	return stream, nil
-}
-
 func (s *streamCacheImpl) createStreamStorage(
 	ctx context.Context,
 	stream *streamImpl,
@@ -464,26 +431,6 @@ func (s *streamCacheImpl) getStreamImpl(
 	stream, _ := s.cache.Load(streamId)
 	if stream == nil {
 		return s.tryLoadStreamRecord(ctx, streamId, waitForLocal)
-	}
-	return stream, nil
-}
-
-func (s *streamCacheImpl) GetEphemeralStream(
-	ctx context.Context,
-	streamId StreamId,
-	nodes []common.Address,
-) (SyncStream, error) {
-	return s.getEphemeralStreamImpl(ctx, streamId, nodes)
-}
-
-func (s *streamCacheImpl) getEphemeralStreamImpl(
-	ctx context.Context,
-	streamId StreamId,
-	nodes []common.Address,
-) (*streamImpl, error) {
-	stream, _ := s.cache.Load(streamId)
-	if stream == nil {
-		return s.tryGetEphemeralStream(ctx, streamId, nodes)
 	}
 	return stream, nil
 }

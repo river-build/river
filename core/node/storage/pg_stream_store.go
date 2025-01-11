@@ -492,6 +492,39 @@ func (s *PostgresStreamStore) lockStream(
 	return lastSnapshotMiniblock, nil
 }
 
+func (s *PostgresStreamStore) lockEphemeralStream(
+	ctx context.Context,
+	tx pgx.Tx,
+	streamId StreamId,
+	write bool,
+) (
+	lastSnapshotMiniblock int64,
+	err error,
+) {
+	if write {
+		err = tx.QueryRow(
+			ctx,
+			"SELECT latest_snapshot_miniblock from es WHERE stream_id = $1 AND ephemeral IS TRUE FOR UPDATE",
+			streamId,
+		).Scan(&lastSnapshotMiniblock)
+	} else {
+		err = tx.QueryRow(
+			ctx,
+			"SELECT latest_snapshot_miniblock from es WHERE stream_id = $1 AND ephemeral IS TRUE FOR SHARE",
+			streamId,
+		).Scan(&lastSnapshotMiniblock)
+	}
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, RiverError(Err_NOT_FOUND, "Ephemeral stream not found", "streamId", streamId)
+		}
+		return 0, err
+	}
+
+	return lastSnapshotMiniblock, nil
+}
+
 func (s *PostgresStreamStore) createStreamStorageTx(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -828,7 +861,7 @@ func (s *PostgresStreamStore) readStreamFromLastSnapshotTx(
 	}, nil
 }
 
-// Adds event to the given minipool.
+// WriteEvent adds event to the given minipool.
 // Current generation of minipool should match minipoolGeneration,
 // and there should be exactly minipoolSlot events in the minipool.
 func (s *PostgresStreamStore) WriteEvent(
@@ -1463,6 +1496,59 @@ func (s *PostgresStreamStore) writeMiniblocksTx(
 		streamId,
 		newMinipoolGeneration,
 	)
+	return err
+}
+
+// WriteEphemeralMiniblock adds a miniblock to the ephemeral miniblock store.
+func (s *PostgresStreamStore) WriteEphemeralMiniblock(
+	ctx context.Context,
+	streamId StreamId,
+	miniblock *WriteMiniblockData,
+) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	return s.txRunner(
+		ctx,
+		"WriteEphemeralMiniblock",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			return s.writeEphemeralMiniblockTx(
+				ctx,
+				tx,
+				streamId,
+				miniblock,
+			)
+		},
+		nil,
+		"streamId", streamId,
+	)
+}
+
+func (s *PostgresStreamStore) writeEphemeralMiniblockTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	streamId StreamId,
+	miniblock *WriteMiniblockData,
+) error {
+	_, err := s.lockEphemeralStream(ctx, tx, streamId, true)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(
+		ctx,
+		s.sqlForStream(
+			"INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, $2, $3)",
+			streamId,
+		),
+		streamId,
+		miniblock.Number,
+		miniblock.Data)
+	if err != nil {
+		return err
+	}
+
 	return err
 }
 

@@ -13,7 +13,8 @@ import (
 	. "github.com/river-build/river/core/node/shared"
 )
 
-func TestSaveEphemeralMiniblock(t *testing.T) {
+// TestCreateEphemeralStream tests creating an ephemeral stream using internode RPC endpoints.
+func TestCreateEphemeralStream(t *testing.T) {
 	tt := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
 
 	alice := tt.newTestClient(0)
@@ -45,18 +46,16 @@ func TestSaveEphemeralMiniblock(t *testing.T) {
 	tt.require.NoError(err)
 
 	// Create ephemeral media stream
-	asResp, err := alice.node2nodeClient.AllocateStream(alice.ctx, connect.NewRequest(&AllocateStreamRequest{
-		Miniblock:   genesisMb,
-		StreamId:    mediaStreamId[:],
-		IsEphemeral: true,
+	_, err = alice.node2nodeClient.AllocateEphemeralStream(alice.ctx, connect.NewRequest(&AllocateEphemeralStreamRequest{
+		Miniblock: genesisMb,
+		StreamId:  mediaStreamId[:],
 	}))
 	tt.require.NoError(err)
 
 	mb := &MiniblockRef{
-		Hash: common.BytesToHash(asResp.Msg.SyncCookie.PrevMiniblockHash),
+		Hash: common.BytesToHash(genesisMb.Header.Hash),
 		Num:  0,
 	}
-	prevHash := genesisMb.Header.Hash
 	mediaChunks := make([][]byte, chunks)
 	for i := 0; i < chunks; i++ {
 		// Create media chunk event
@@ -67,9 +66,9 @@ func TestSaveEphemeralMiniblock(t *testing.T) {
 
 		header, err := events.MakeEnvelopeWithPayload(alice.wallet, events.Make_MiniblockHeader(&MiniblockHeader{
 			MiniblockNum:             int64(i + 1),
-			PrevMiniblockHash:        prevHash[:],
+			PrevMiniblockHash:        mb.Hash[:],
 			Timestamp:                nil,
-			EventHashes:              nil,
+			EventHashes:              [][]byte{envelope.Hash},
 			Snapshot:                 nil,
 			EventNumOffset:           0,
 			PrevSnapshotMiniblockNum: 0,
@@ -86,21 +85,12 @@ func TestSaveEphemeralMiniblock(t *testing.T) {
 		}))
 		tt.require.NoError(err)
 
-		prevHash = header.Hash
+		mb.Num = int64(i + 1)
+		mb.Hash = common.BytesToHash(header.Hash)
 	}
 
-	// Get Miniblocks for the given stream
-	resp, err := alice.client.GetMiniblocks(alice.ctx, connect.NewRequest(&GetMiniblocksRequest{
-		StreamId:      mediaStreamId[:],
-		FromInclusive: 0,
-		ToExclusive:   chunks * 2,
-	}))
-	tt.require.NoError(err)
-	tt.require.NotNil(resp)
-
-	for _, mb := range resp.Msg.GetMiniblocks() {
-		pe, err := events.ParseEvent(mb.GetEvents()[0])
-		tt.require.NoError(err)
-		fmt.Printf("Miniblock: %T\n", pe.Event.GetPayload())
-	}
+	// No events in storage since the stream still ephemeral.
+	// The first miniblock is the stream creation miniblock, the rest 10 are media chunks.
+	// TODO: Make sure AddEvent does not work for ephemeral streams.
+	tt.compareStreamDataInStorage(t, mediaStreamId, 11, 0)
 }

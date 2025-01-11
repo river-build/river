@@ -947,7 +947,7 @@ func (s *streamImpl) getStatus() *streamImplStatus {
 func (s *streamImpl) SaveMiniblockCandidate(ctx context.Context, mb *Miniblock) error {
 	mbInfo, err := NewMiniblockInfoFromProto(
 		mb,
-		NewMiniblockInfoFromProtoOpts{ExpectedBlockNumber: -1},
+		NewParsedMiniblockInfoOpts(),
 	)
 	if err != nil {
 		return err

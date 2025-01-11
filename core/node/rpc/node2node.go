@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"google.golang.org/protobuf/proto"
-
 	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/protocol"
@@ -43,28 +41,9 @@ func (s *Service) allocateStream(ctx context.Context, req *AllocateStreamRequest
 
 	// TODO: check request is signed by correct node
 	// TODO: all checks that should be done on create?
-	var stream SyncStream
-	if req.GetIsEphemeral() {
-		// TODO: Move this part to a separate endpoint
-		mbBytes, err := proto.Marshal(req.Miniblock)
-		if err != nil {
-			return nil, err
-		}
-
-		err = s.storage.CreateEphemeralStreamStorage(ctx, streamId, mbBytes)
-		if err != nil {
-			return nil, err
-		}
-
-		stream, err = s.cache.GetEphemeralStream(ctx, streamId, nil) // no needed nodes here
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		stream, err = s.cache.GetStreamWaitForLocal(ctx, streamId)
-		if err != nil {
-			return nil, err
-		}
+	stream, err := s.cache.GetStreamWaitForLocal(ctx, streamId)
+	if err != nil {
+		return nil, err
 	}
 
 	view, err := stream.GetView(ctx)
@@ -226,57 +205,4 @@ func (s *Service) saveMiniblockCandidate(
 	}
 
 	return &SaveMiniblockCandidateResponse{}, nil
-}
-
-func (s *Service) SaveEphemeralMiniblock(
-	ctx context.Context,
-	req *connect.Request[SaveEphemeralMiniblockRequest],
-) (*connect.Response[SaveEphemeralMiniblockResponse], error) {
-	ctx, log := utils.CtxAndLogForRequest(ctx, req)
-	ctx, cancel := utils.UncancelContext(ctx, 5*time.Second, 10*time.Second)
-	defer cancel()
-	log.Debug("SaveEphemeralMiniblock ENTER")
-	r, e := s.saveEphemeralMiniblock(ctx, req.Msg)
-	if e != nil {
-		return nil, AsRiverError(
-			e,
-		).Func("SaveEphemeralMiniblock").
-			Tag("streamId", req.Msg.StreamId).
-			LogWarn(log).
-			AsConnectError()
-	}
-	log.Debug("SaveEphemeralMiniblock LEAVE", "response", r)
-	return connect.NewResponse(r), nil
-}
-
-func (s *Service) saveEphemeralMiniblock(
-	ctx context.Context,
-	req *SaveEphemeralMiniblockRequest,
-) (*SaveEphemeralMiniblockResponse, error) {
-	streamId, err := StreamIdFromBytes(req.StreamId)
-	if err != nil {
-		return nil, err
-	}
-
-	stream, err := s.cache.GetEphemeralStream(ctx, streamId, nil) // no needed nodes here
-	if err != nil {
-		return nil, err
-	}
-
-	mbInfo, err := NewMiniblockInfoFromProto(
-		req.Miniblock,
-		NewMiniblockInfoFromProtoOpts{
-			ExpectedBlockNumber: -1,
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	err = stream.ApplyMiniblock(ctx, mbInfo)
-	if err != nil {
-		return nil, err
-	}
-
-	return &SaveEphemeralMiniblockResponse{}, nil
 }

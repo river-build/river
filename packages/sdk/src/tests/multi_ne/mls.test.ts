@@ -148,7 +148,7 @@ describe('mlsTests', () => {
             await createGroupInfoAndExternalSnapshot(group)
 
         const mlsPayload = makeMlsPayloadInitializeGroup(
-            (await bobMlsClient.signaturePublicKey()).slice(1), // slice 1 byte to make it invalid
+            bobMlsClient.signaturePublicKey().slice(1), // slice 1 byte to make it invalid
             externalGroupSnapshot,
             groupInfoMessage,
         )
@@ -159,7 +159,7 @@ describe('mlsTests', () => {
 
     test('invalid MLS group is not accepted', async () => {
         const mlsPayload = makeMlsPayloadInitializeGroup(
-            await bobMlsClient.signaturePublicKey(),
+            bobMlsClient.signaturePublicKey(),
             new Uint8Array([]),
             new Uint8Array([]),
         )
@@ -178,7 +178,7 @@ describe('mlsTests', () => {
         )
 
         const mlsPayload = makeMlsPayloadInitializeGroup(
-            await bobMlsClient.signaturePublicKey(),
+            bobMlsClient.signaturePublicKey(),
             externalGroupSnapshot1,
             groupInfoMessage2,
         )
@@ -196,7 +196,7 @@ describe('mlsTests', () => {
             await createGroupInfoAndExternalSnapshot(groupAtEpoch1)
 
         const mlsPayload = makeMlsPayloadInitializeGroup(
-            await aliceMlsClient.signaturePublicKey(),
+            aliceMlsClient.signaturePublicKey(),
             externalGroupSnapshot,
             groupInfoMessage,
         )
@@ -210,7 +210,7 @@ describe('mlsTests', () => {
         const { groupInfoMessage, externalGroupSnapshot } =
             await createGroupInfoAndExternalSnapshot(bobGroup)
         const mlsPayload = makeMlsPayloadInitializeGroup(
-            await bobMlsClient.signaturePublicKey(),
+            bobMlsClient.signaturePublicKey(),
             externalGroupSnapshot,
             groupInfoMessage,
         )
@@ -226,7 +226,7 @@ describe('mlsTests', () => {
         const { groupInfoMessage, externalGroupSnapshot } =
             await createGroupInfoAndExternalSnapshot(group)
         const mlsPayload = makeMlsPayloadInitializeGroup(
-            await bobMlsClient.signaturePublicKey(),
+            bobMlsClient.signaturePublicKey(),
             externalGroupSnapshot,
             groupInfoMessage,
         )
@@ -274,7 +274,7 @@ describe('mlsTests', () => {
             )
 
         const aliceMlsPayload = makeMlsPayloadExternalJoin(
-            await aliceMlsClient.signaturePublicKey(),
+            aliceMlsClient.signaturePublicKey(),
             aliceCommit,
             aliceGroupInfoMessage,
         )
@@ -304,8 +304,8 @@ describe('mlsTests', () => {
             bobClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true }),
         ).resolves.not.toThrow()
 
-        const bobSignaturePublicKey = await bobMlsClient.signaturePublicKey()
-        const aliceSignaturePublicKey = await aliceMlsClient.signaturePublicKey()
+        const bobSignaturePublicKey = bobMlsClient.signaturePublicKey()
+        const aliceSignaturePublicKey = aliceMlsClient.signaturePublicKey()
         // verify that the signature public keys are mapped per user
         // and that the signature public keys are correct
         const streamAfterSnapshot = await bobClient.getStream(streamId)
