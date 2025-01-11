@@ -6452,7 +6452,7 @@ __metadata:
   dependencies:
     "@openzeppelin/contracts": ^5.1.0
     solady: ^0.0.281
-  checksum: 2666668787f50af79a76004ccea89798fb362f07eea88557cdcf13a70d1164b2ad58c9278fd19ff5b304d9fc1439d097d57e03676b6c1dfeeb98535dd5059b50
+  checksum: 3884bdab0e68b6f64293404a8e3670280d5ad6255f905c189121e2c34d210ec7fa3d9ffda67447a08d060c02564591d0ee0923ae9f13a3d71c0ddfd46e898ff7
   languageName: node
   linkType: hard
 
@@ -6542,17 +6542,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@river-build/mls-rs-wasm-node@npm:^0.0.7":
-  version: 0.0.7
-  resolution: "@river-build/mls-rs-wasm-node@npm:0.0.7"
-  checksum: 8450e798b0bb2e8e826f16a63a0bd2f12b678eb0dd419d741b0cf8ad5a290419a95c4c492c0f1cb1fad3b5583a16f8d1cd86b4c8478e4a3cf3fe933b7ff13d0d
+"@river-build/mls-rs-wasm-node@npm:^0.0.15":
+  version: 0.0.15
+  resolution: "@river-build/mls-rs-wasm-node@npm:0.0.15"
+  checksum: c12f4de13976004136009e62846f9d56b129084e1c5e13faa3d2d0068d332d5a5c9a7ec70c16c2721b5c7b0f841daae182f4be4061ea7ddb3f5c812da6182fc4
   languageName: node
   linkType: hard
 
-"@river-build/mls-rs-wasm@npm:^0.0.11":
-  version: 0.0.11
-  resolution: "@river-build/mls-rs-wasm@npm:0.0.11"
-  checksum: 57abfaf019575ef6e5f20bd934170c83360439c55f38f711857eabc74e0e63ba2820b6b8f020c9ff865096fc697b67434dd0349ee6895ddbe67ff32f81297296
+"@river-build/mls-rs-wasm@npm:^0.0.15":
+  version: 0.0.15
+  resolution: "@river-build/mls-rs-wasm@npm:0.0.15"
+  checksum: 89ecc4e1b75f46ce6bef73dafeb0a692c78b9b243e1902d6875e01e208f3bb1ccd083f7c0e91f4f1cc68fe9cfa04f254af341ff0819c3dad5e86e93b25e0ac56
   languageName: node
   linkType: hard
 
@@ -6693,7 +6693,7 @@ __metadata:
     "@river-build/dlog": "workspace:^"
     "@river-build/encryption": "workspace:^"
     "@river-build/generated": "workspace:^"
-    "@river-build/mls-rs-wasm": ^0.0.11
+    "@river-build/mls-rs-wasm": ^0.0.15
     "@river-build/proto": "workspace:^"
     "@river-build/web3": "workspace:^"
     "@testing-library/react": ^14.2.1
@@ -6778,7 +6778,7 @@ __metadata:
     "@bufbuild/protobuf": ^1.9.0
     "@river-build/dlog": "workspace:^"
     "@river-build/encryption": "workspace:^"
-    "@river-build/mls-rs-wasm-node": ^0.0.7
+    "@river-build/mls-rs-wasm-node": ^0.0.15
     "@river-build/proto": "workspace:^"
     "@river-build/sdk": "workspace:^"
     "@river-build/web3": "workspace:^"
