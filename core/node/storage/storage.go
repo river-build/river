@@ -26,6 +26,9 @@ type StreamStorage interface {
 	// Minipool is set to generation number 1 (i.e. number of miniblock that is going to be produced next) and is empty.
 	CreateStreamStorage(ctx context.Context, streamId StreamId, genesisMiniblock []byte) error
 
+	// CreateEphemeralStreamStorage same as CreateStreamStorage but marks the stream as ephemeral.
+	CreateEphemeralStreamStorage(ctx context.Context, streamId StreamId, genesisMiniblock []byte) error
+
 	// ReadStreamFromLastSnapshot reads last stream miniblocks and guarantees that last snapshot miniblock is included.
 	// It attempts to read at least numToRead miniblocks, but may return less if there are not enough miniblocks in storage,
 	// or more, if there are more miniblocks since the last snapshot.
@@ -91,6 +94,10 @@ type StreamStorage interface {
 		prevMinipoolGeneration int64,
 		prevMinipoolSize int,
 	) error
+
+	// WriteEphemeralMiniblock writes a miniblock as part of ephemeral stream. Skips a bunch of consistency checks.
+	// Stream with the given ID must be ephemeral.
+	WriteEphemeralMiniblock(ctx context.Context, streamId StreamId, miniblock *WriteMiniblockData) error
 
 	// CreateStreamArchiveStorage creates a new archive storage for the given stream.
 	// Unlike regular CreateStreamStorage, only entry in es table and partition table for miniblocks are created.
