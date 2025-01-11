@@ -196,7 +196,7 @@ func (s *Service) createReplicatedMediaStream(
 			),
 		)
 
-		return nil
+		return err
 	})
 
 	if err = sender.Wait(); err != nil {
