@@ -136,6 +136,145 @@ contract StreamRegistryTest is
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                       allocateSealedStream                 */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+  function test_fuzz_allocateSealedStream(
+    address nodeOperator,
+    bytes32 streamId,
+    TestNode[] memory nodes,
+    bytes32 genesisMiniblockHash,
+    bytes32 lastMiniblockHash,
+    uint64 lastMiniblockNum
+  )
+  external
+  givenNodeOperatorIsApproved(nodeOperator)
+  givenNodesAreRegistered(nodeOperator, nodes)
+  {
+    vm.assume(nodes.length > 0 && nodes.length <= 100);
+
+    address[] memory nodeAddresses = new address[](nodes.length);
+    uint256 nodesLength = nodes.length;
+    for (uint256 i; i < nodesLength; ++i) {
+      nodeAddresses[i] = nodes[i].node;
+    }
+
+    vm.prank(nodes[0].node);
+    vm.expectEmit(address(streamRegistry));
+    emit SealedStreamAllocated(
+      streamId,
+      nodeAddresses,
+      genesisMiniblockHash,
+      lastMiniblockHash,
+      lastMiniblockNum
+    );
+    streamRegistry.allocateSealedStream(
+      streamId,
+      nodeAddresses,
+      genesisMiniblockHash,
+      lastMiniblockHash,
+      lastMiniblockNum
+    );
+
+    assertEq(streamRegistry.getStreamCount(), 1);
+    assertEq(streamRegistry.getStreamCountOnNode(nodes[0].node), 1);
+    assertTrue(streamRegistry.isStream(streamId));
+
+    Stream memory stream = streamRegistry.getStream(streamId);
+    assertEq(stream.lastMiniblockHash, lastMiniblockHash);
+    assertEq(stream.nodes.length, nodesLength);
+    assertContains(stream.nodes, nodes[0].node);
+
+    (,bytes32 gmh,) = streamRegistry.getStreamWithGenesis(streamId);
+    assertEq(gmh, genesisMiniblockHash);
+  }
+
+  function test_revertWhen_allocateSealedStream_streamIdAlreadyExists(
+    address nodeOperator,
+    bytes32 streamId,
+    TestNode memory node,
+    bytes32 genesisMiniblockHash,
+    bytes32 lastMiniblockHash,
+    uint64 lastMiniblockNum
+  )
+  external
+  givenNodeOperatorIsApproved(nodeOperator)
+  givenNodeIsRegistered(nodeOperator, node.node, node.url)
+  {
+    address[] memory nodes = new address[](1);
+    nodes[0] = node.node;
+
+    vm.prank(node.node);
+    streamRegistry.allocateSealedStream(
+      streamId,
+      nodes,
+      genesisMiniblockHash,
+      lastMiniblockHash,
+      lastMiniblockNum
+    );
+
+    vm.prank(node.node);
+    vm.expectRevert(bytes(RiverRegistryErrors.ALREADY_EXISTS));
+    streamRegistry.allocateSealedStream(
+      streamId,
+      nodes,
+      genesisMiniblockHash,
+      lastMiniblockHash,
+      lastMiniblockNum
+    );
+  }
+
+  /// @notice This test is to ensure that the node who is calling the allocateSealedStream function is registered.
+  function test_revertWhen_allocateSealedStream_nodeNotRegistered(
+    address nodeOperator,
+    bytes32 streamId,
+    TestNode memory node,
+    bytes32 genesisMiniblockHash,
+    bytes32 lastMiniblockHash,
+    uint64 lastMiniblockNum
+  ) external givenNodeOperatorIsApproved(nodeOperator) {
+    address[] memory nodes = new address[](1);
+    nodes[0] = node.node;
+
+    vm.prank(node.node);
+    vm.expectRevert(bytes(RiverRegistryErrors.NODE_NOT_FOUND));
+    streamRegistry.allocateSealedStream(
+      streamId,
+      nodes,
+      genesisMiniblockHash,
+      lastMiniblockHash,
+      lastMiniblockNum
+    );
+  }
+
+  /// @notice This test is to ensure that the nodes being passed in are registered before allocating a sealed stream.
+  function test_revertWhen_allocateSealedStream_nodesNotRegistered(
+    address nodeOperator,
+    bytes32 streamId,
+    TestNode memory node,
+    bytes32 genesisMiniblockHash,
+    bytes32 lastMiniblockHash,
+    uint64 lastMiniblockNum
+  )
+  external
+  givenNodeOperatorIsApproved(nodeOperator)
+  givenNodeIsRegistered(nodeOperator, node.node, node.url)
+  {
+    address[] memory nodes = new address[](2);
+    nodes[0] = node.node;
+    nodes[1] = randomNode;
+
+    vm.prank(node.node);
+    vm.expectRevert(bytes(RiverRegistryErrors.NODE_NOT_FOUND));
+    streamRegistry.allocateSealedStream(
+      streamId,
+      nodes,
+      genesisMiniblockHash,
+      lastMiniblockHash,
+      lastMiniblockNum
+    );
+  }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                 setStreamLastMiniblockBatch                */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
   function test_setStreamLastMiniblockBatch(
