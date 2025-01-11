@@ -3,8 +3,6 @@ package rpc
 import (
 	"context"
 
-	"github.com/river-build/river/core/node/storage"
-
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
 
@@ -12,6 +10,7 @@ import (
 	. "github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
+	"github.com/river-build/river/core/node/storage"
 )
 
 type replicatedStream struct {
