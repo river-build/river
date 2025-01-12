@@ -144,9 +144,9 @@ contract StreamRegistryTest is
     TestStream memory testStream,
     TestNode[] memory nodes
   )
-  external
-  givenNodeOperatorIsApproved(nodeOperator)
-  givenNodesAreRegistered(nodeOperator, nodes)
+    external
+    givenNodeOperatorIsApproved(nodeOperator)
+    givenNodesAreRegistered(nodeOperator, nodes)
   {
     vm.assume(nodes.length > 0 && nodes.length <= 100);
 
@@ -192,9 +192,9 @@ contract StreamRegistryTest is
     TestStream memory testStream,
     TestNode memory node
   )
-  external
-  givenNodeOperatorIsApproved(nodeOperator)
-  givenNodeIsRegistered(nodeOperator, node.node, node.url)
+    external
+    givenNodeOperatorIsApproved(nodeOperator)
+    givenNodeIsRegistered(nodeOperator, node.node, node.url)
   {
     address[] memory nodes = new address[](1);
     nodes[0] = node.node;
@@ -254,9 +254,9 @@ contract StreamRegistryTest is
     TestStream memory testStream,
     TestNode memory node
   )
-  external
-  givenNodeOperatorIsApproved(nodeOperator)
-  givenNodeIsRegistered(nodeOperator, node.node, node.url)
+    external
+    givenNodeOperatorIsApproved(nodeOperator)
+    givenNodeIsRegistered(nodeOperator, node.node, node.url)
   {
     address[] memory nodes = new address[](2);
     nodes[0] = node.node;
