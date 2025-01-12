@@ -514,6 +514,7 @@ message UserInboxPayload {
         repeated string session_ids = 3;
         // deviceKey: per device ciphertext of encrypted session keys that match session_ids 
         map<string, string> ciphertexts = 4;
+        string algorithm = 5;
     }
 
     message Ack {

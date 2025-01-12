@@ -16,6 +16,25 @@ export enum GroupEncryptionAlgorithmId {
     GroupEncryption = 'r.group-encryption.v1.aes-sha2',
 }
 
+export function isGroupEncryptionAlgorithmId(value: string): value is GroupEncryptionAlgorithmId {
+    return Object.values(GroupEncryptionAlgorithmId).includes(value as GroupEncryptionAlgorithmId)
+}
+
+type Unset = { kind: 'unset' }
+type Matched = { kind: 'matched'; value: GroupEncryptionAlgorithmId }
+type Unrecognized = { kind: 'unrecognized'; value: string }
+
+export function parseGroupEncryptionAlgorithmId(value: string): Matched | Unset | Unrecognized {
+    if (value === '') {
+        // for backwards compatibility, historically there were places where this was not defined
+        return { kind: 'unset' }
+    }
+    if (isGroupEncryptionAlgorithmId(value)) {
+        return { kind: 'matched', value: value as GroupEncryptionAlgorithmId }
+    }
+    return { kind: 'unrecognized', value }
+}
+
 export interface UserDevice {
     deviceKey: string
     fallbackKey: string
