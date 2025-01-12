@@ -8,7 +8,7 @@ import {
     Utility,
 } from './encryptionTypes'
 import { EncryptionDelegate } from './encryptionDelegate'
-import { GROUP_ENCRYPTION_ALGORITHM, GroupEncryptionSession } from './olmLib'
+import { GroupEncryptionAlgorithmId, GroupEncryptionSession } from './olmLib'
 import { dlog } from '@river-build/dlog'
 import type { ExtendedInboundGroupSessionData, GroupSessionRecord } from './storeTypes'
 
@@ -729,7 +729,7 @@ export class EncryptionDevice {
             streamId: streamId,
             sessionId: sessionId,
             sessionKey: sessionKey,
-            algorithm: GROUP_ENCRYPTION_ALGORITHM,
+            algorithm: GroupEncryptionAlgorithmId.GroupEncryption,
         }
     }
 
@@ -757,7 +757,7 @@ export class EncryptionDevice {
                     streamId: sessionData.streamId,
                     sessionId: sessionData.sessionId,
                     sessionKey: sessionKey,
-                    algorithm: GROUP_ENCRYPTION_ALGORITHM,
+                    algorithm: GroupEncryptionAlgorithmId.GroupEncryption,
                 })
             }
         })
