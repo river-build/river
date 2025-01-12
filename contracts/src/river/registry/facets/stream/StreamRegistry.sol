@@ -81,11 +81,7 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
     ds.streamById[streamId] = stream;
     ds.genesisMiniblockHashByStreamId[streamId] = genesisMiniblockHash;
 
-    emit StreamCreated(
-      streamId,
-      genesisMiniblockHash,
-      stream
-    );
+    emit StreamCreated(streamId, genesisMiniblockHash, stream);
   }
 
   /// @inheritdoc IStreamRegistry
