@@ -45,7 +45,6 @@ import {
     BaseDecryptionExtensions,
     CryptoStore,
     DecryptionEvents,
-    EncryptionDevice,
     EntitlementsDelegate,
     GroupEncryptionCrypto,
     GroupEncryptionSession,
@@ -277,13 +276,6 @@ export class Client
 
     get cryptoInitialized(): boolean {
         return this.cryptoBackend !== undefined
-    }
-
-    get encryptionDevice(): EncryptionDevice {
-        if (!this.cryptoBackend) {
-            throw new Error('cryptoBackend not initialized')
-        }
-        return this.cryptoBackend.encryptionDevice
     }
 
     async stop(): Promise<void> {
@@ -2378,6 +2370,14 @@ export class Client
         this.decryptionExtensions?.setHighPriorityStreams(streamIds)
     }
 
+    public async ensureOutboundSession(
+        streamId: string,
+        opts: { awaitInitialShareSession: boolean },
+    ) {
+        check(isDefined(this.cryptoBackend), 'crypto backend not initialized')
+        return this.cryptoBackend.ensureOutboundSession(streamId, opts)
+    }
+
     /**
      * decrypts and updates the decrypted event
      */
@@ -2493,10 +2493,10 @@ export class Client
 
     // Used during testing
     userDeviceKey(): UserDevice {
-        return {
-            deviceKey: this.encryptionDevice.deviceCurve25519Key!,
-            fallbackKey: this.encryptionDevice.fallbackKey.key,
+        if (!this.cryptoBackend) {
+            throw new Error('cryptoBackend not initialized')
         }
+        return this.cryptoBackend.getUserDevice()
     }
 
     public async debugForceMakeMiniblock(

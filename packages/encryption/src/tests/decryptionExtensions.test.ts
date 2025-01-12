@@ -111,7 +111,7 @@ describe.concurrent('TestDecryptionExtensions', () => {
         const encryptedData = await bobCrypto.encryptGroupEvent(streamId, bobsPlaintext)
         // alice doesn't have the session key
         // alice imports the keys exported by bob
-        const roomKeys = await bobDex.crypto.encryptionDevice.exportRoomKeys()
+        const roomKeys = await bobDex.crypto.exportRoomKeys()
         if (roomKeys) {
             await aliceDex.crypto.importRoomKeys(roomKeys)
         }
@@ -160,10 +160,7 @@ async function createCryptoMocks(
     const client = new MockGroupEncryptionClient(clientDiscoveryService)
     const crypto = new GroupEncryptionCrypto(client, cryptoStore)
     await crypto.init()
-    const userDevice: UserDevice = {
-        deviceKey: crypto.encryptionDevice.deviceCurve25519Key!,
-        fallbackKey: crypto.encryptionDevice.fallbackKey.key,
-    }
+    const userDevice: UserDevice = crypto.getUserDevice()
     const decryptionExtension = new MockDecryptionExtensions(
         userId,
         crypto,
@@ -379,12 +376,7 @@ class MockGroupEncryptionClient
     public decryptionExtensions: MockDecryptionExtensions | undefined
 
     public get userDevice(): UserDevice | undefined {
-        return this.crypto
-            ? {
-                  deviceKey: this.crypto.encryptionDevice.deviceCurve25519Key!,
-                  fallbackKey: this.crypto.encryptionDevice.fallbackKey.key,
-              }
-            : undefined
+        return this.crypto ? this.crypto.getUserDevice() : undefined
     }
 
     public downloadUserDeviceInfo(
@@ -404,6 +396,12 @@ class MockGroupEncryptionClient
 
     public getDevicesInStream(_streamId: string): Promise<UserDeviceCollection> {
         return Promise.resolve({})
+    }
+
+    public getMiniblockInfo(
+        _streamId: string,
+    ): Promise<{ miniblockNum: bigint; miniblockHash: Uint8Array }> {
+        return Promise.resolve({ miniblockNum: 0n, miniblockHash: new Uint8Array() })
     }
 
     public sendKeySolicitation(args: KeySolicitationContent): Promise<GroupSessionsData> {
