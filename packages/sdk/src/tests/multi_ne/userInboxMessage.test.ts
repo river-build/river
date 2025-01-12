@@ -5,7 +5,7 @@
 import { Client } from '../../client'
 import { makeDonePromise, makeTestClient, makeUniqueSpaceStreamId } from '../testUtils'
 import { dlog } from '@river-build/dlog'
-import { UserDeviceCollection } from '@river-build/encryption'
+import { GroupEncryptionAlgorithmId, UserDeviceCollection } from '@river-build/encryption'
 import { UserInboxPayload_GroupEncryptionSessions } from '@river-build/proto'
 import { makeUniqueChannelStreamId, streamIdAsString } from '../../id'
 
@@ -65,7 +65,7 @@ describe('inboxMessageTest', () => {
                         streamId: fakeStreamId,
                         sessionId: '300',
                         sessionKey: '400',
-                        algorithm: '',
+                        algorithm: GroupEncryptionAlgorithmId.GroupEncryption,
                     },
                 ],
                 recipients,
