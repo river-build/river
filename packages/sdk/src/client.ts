@@ -1546,9 +1546,26 @@ export class Client
             case MLS_ALGORITHM:
                 message = await this.encryptGroupEventEpochSecret(payload, streamId)
                 break
+            case GroupEncryptionAlgorithmId.HybridGroupEncryption:
+                message = await this.encryptGroupEvent(
+                    payload,
+                    streamId,
+                    GroupEncryptionAlgorithmId.HybridGroupEncryption,
+                )
+                break
+            case GroupEncryptionAlgorithmId.GroupEncryption:
+                message = await this.encryptGroupEvent(
+                    payload,
+                    streamId,
+                    GroupEncryptionAlgorithmId.GroupEncryption,
+                )
+                break
             default: {
-                const algorithm = this.defaultGroupEncryptionAlgorithm
-                message = await this.encryptGroupEvent(payload, streamId, algorithm)
+                message = await this.encryptGroupEvent(
+                    payload,
+                    streamId,
+                    this.defaultGroupEncryptionAlgorithm,
+                )
             }
         }
         if (!message) {
@@ -2149,6 +2166,23 @@ export class Client
             Object.keys(info).map((key) => `${key} (${info[key].length})`),
         )
         return info
+    }
+
+    async getMiniblockInfo(
+        streamId: string,
+    ): Promise<{ miniblockNum: bigint; miniblockHash: Uint8Array }> {
+        let streamView = this.stream(streamId)?.view
+        // if we don't have a local copy, or if it's just not initialized, fetch the latest
+        if (!streamView || !streamView.isInitialized) {
+            streamView = await this.getStream(streamId)
+        }
+        check(isDefined(streamView), `stream not found: ${streamId}`)
+        check(isDefined(streamView.miniblockInfo), `stream not initialized: ${streamId}`)
+        check(isDefined(streamView.prevMiniblockHash), `prevMiniblockHash not found: ${streamId}`)
+        return {
+            miniblockNum: streamView.miniblockInfo.min,
+            miniblockHash: streamView.prevMiniblockHash,
+        }
     }
 
     async downloadNewInboxMessages(): Promise<void> {
