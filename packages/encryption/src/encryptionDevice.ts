@@ -9,8 +9,15 @@ import {
 } from './encryptionTypes'
 import { EncryptionDelegate } from './encryptionDelegate'
 import { GroupEncryptionAlgorithmId, GroupEncryptionSession } from './olmLib'
-import { dlog } from '@river-build/dlog'
-import type { ExtendedInboundGroupSessionData, GroupSessionRecord } from './storeTypes'
+import { bigIntToBytes, bin_fromHexString, bin_toHexString, dlog } from '@river-build/dlog'
+import type {
+    ExtendedInboundGroupSessionData,
+    GroupSessionRecord,
+    HybridGroupSessionRecord,
+} from './storeTypes'
+import { HybridGroupSessionKey } from '@river-build/proto'
+import { generateAESKeyAsync } from './crypto_utils'
+import { createHash } from 'crypto'
 
 const log = dlog('csb:encryption:encryptionDevice')
 
@@ -33,6 +40,7 @@ export type ExportedDevice = {
     pickledAccount: string
     outboundSessions: GroupSessionRecord[]
     inboundSessions: ExtendedInboundGroupSessionData[]
+    hybridGroupSessions: HybridGroupSessionRecord[]
 }
 
 export type EncryptionDeviceInitOpts = {
@@ -183,6 +191,9 @@ export class EncryptionDevice {
                         session,
                     ),
                 ),
+                ...exportedData.hybridGroupSessions.map((session) =>
+                    this.cryptoStore.storeHybridGroupSession(session),
+                ),
             ])
         })
         account.unpickle(this.pickleKey, exportedData.pickledAccount)
@@ -208,9 +219,10 @@ export class EncryptionDevice {
         const pickledAccount = account.pickle(this.pickleKey)
         account.free()
 
-        const [inboundSessions, outboundSessions] = await Promise.all([
+        const [inboundSessions, outboundSessions, hybridGroupSessions] = await Promise.all([
             this.cryptoStore.getAllEndToEndInboundGroupSessions(),
             this.cryptoStore.getAllEndToEndOutboundGroupSessions(),
+            this.cryptoStore.getAllHybridGroupSessions(),
         ])
 
         return {
@@ -218,6 +230,7 @@ export class EncryptionDevice {
             pickledAccount,
             inboundSessions,
             outboundSessions,
+            hybridGroupSessions,
         }
     }
 
@@ -374,6 +387,44 @@ export class EncryptionDevice {
         return { chain_index, key }
     }
 
+    /** */
+    public async getHybridGroupSessionKeyForStream(
+        streamId: string,
+    ): Promise<HybridGroupSessionKey> {
+        return this.cryptoStore.withGroupSessions(async () => {
+            const sessionRecords = await this.cryptoStore.getHybridGroupSessionsForStream(streamId)
+            if (sessionRecords.length === 0) {
+                throw new Error(`hybrid group session not found for stream ${streamId}`)
+            }
+            // sort on session.miniblockNum decending
+            const sessionRecord = sessionRecords.reduce(
+                (max, current) => (current.miniblockNum > max.miniblockNum ? current : max),
+                sessionRecords[0],
+            )
+            const session = HybridGroupSessionKey.fromBinary(
+                bin_fromHexString(sessionRecord.sessionKey),
+            )
+            return session
+        })
+    }
+
+    /** */
+    public async getHybridGroupSessionKey(
+        streamId: string,
+        sessionId: string,
+    ): Promise<HybridGroupSessionKey> {
+        return this.cryptoStore.withGroupSessions(async () => {
+            const sessionRecord = await this.cryptoStore.getHybridGroupSession(streamId, sessionId)
+            if (!sessionRecord) {
+                throw new Error(`hybrid group session not found for stream ${streamId}`)
+            }
+            const session = HybridGroupSessionKey.fromBinary(
+                bin_fromHexString(sessionRecord.sessionKey),
+            )
+            return session
+        })
+    }
+
     /**
      * Generate a new outbound group session
      *
@@ -408,6 +459,39 @@ export class EncryptionDevice {
                 session.free()
                 inboundSession.free()
             }
+        })
+    }
+
+    /** */
+    public async createHybridGroupSession(
+        streamId: string,
+        miniblockNum: bigint,
+        miniblockHash: Uint8Array,
+    ): Promise<{
+        sessionId: string
+        sessionRecord: HybridGroupSessionRecord
+        sessionKey: HybridGroupSessionKey
+    }> {
+        const { key, iv } = await generateAESKeyAsync()
+        const sessionId = hybridSessionKeyHash(streamId, key, iv, miniblockNum, miniblockHash)
+        const sessionKey = new HybridGroupSessionKey({
+            sessionId,
+            streamId,
+            iv: iv,
+            key: key,
+            miniblockNum,
+            miniblockHash,
+        })
+        const sessionRecord = {
+            sessionId,
+            streamId,
+            sessionKey: bin_toHexString(sessionKey.toBinary()),
+            miniblockNum,
+        } satisfies HybridGroupSessionRecord
+
+        return this.cryptoStore.withGroupSessions(async () => {
+            await this.cryptoStore.storeHybridGroupSession(sessionRecord)
+            return { sessionId, sessionRecord, sessionKey }
         })
     }
 
@@ -544,15 +628,35 @@ export class EncryptionDevice {
                 session: session.pickle(this.pickleKey),
                 keysClaimed: keysClaimed,
             })
-
-            await this.cryptoStore.storeEndToEndInboundGroupSession(
-                streamId,
-                sessionId,
-                sessionData,
-            )
+            await this.cryptoStore.withGroupSessions(async () => {
+                await this.cryptoStore.storeEndToEndInboundGroupSession(
+                    streamId,
+                    sessionId,
+                    sessionData,
+                )
+            })
         } finally {
             session.free()
         }
+    }
+
+    /** */
+    public async addHybridGroupSession(streamId: string, sessionId: string, sessionKey: string) {
+        const session = HybridGroupSessionKey.fromBinary(bin_fromHexString(sessionKey))
+        if (session.streamId !== streamId) {
+            throw new Error(`Stream ID mismatch for hybrid group session ${streamId}`)
+        }
+        if (session.sessionId !== sessionId) {
+            throw new Error(`Session ID mismatch for hybrid group session ${sessionId}`)
+        }
+        await this.cryptoStore.withGroupSessions(async () => {
+            await this.cryptoStore.storeHybridGroupSession({
+                sessionId,
+                streamId,
+                sessionKey,
+                miniblockNum: session.miniblockNum,
+            })
+        })
     }
 
     /**
@@ -674,6 +778,10 @@ export class EncryptionDevice {
         return await this.cryptoStore.getInboundGroupSessionIds(streamId)
     }
 
+    public async getHybridGroupSessionIds(streamId: string): Promise<string[]> {
+        return await this.cryptoStore.getHybridGroupSessionIds(streamId)
+    }
+
     /**
      * Determine if we have the keys for a given group session
      *
@@ -700,6 +808,12 @@ export class EncryptionDevice {
         } else {
             return true
         }
+    }
+
+    /** */
+    public async hasHybridGroupSessionKey(streamId: string, sessionId: string): Promise<boolean> {
+        const key = await this.cryptoStore.getHybridGroupSession(streamId, sessionId)
+        return key !== undefined
     }
 
     /**
@@ -730,6 +844,24 @@ export class EncryptionDevice {
             sessionId: sessionId,
             sessionKey: sessionKey,
             algorithm: GroupEncryptionAlgorithmId.GroupEncryption,
+        }
+    }
+
+    /** */
+    public async exportHybridGroupSession(
+        streamId: string,
+        sessionId: string,
+        algorithm: GroupEncryptionAlgorithmId,
+    ): Promise<GroupEncryptionSession | undefined> {
+        const sessionData = await this.cryptoStore.getHybridGroupSession(streamId, sessionId)
+        if (!sessionData) {
+            return undefined
+        }
+        return {
+            streamId: streamId,
+            sessionId: sessionId,
+            sessionKey: sessionData.sessionKey,
+            algorithm,
         }
     }
 
@@ -764,4 +896,40 @@ export class EncryptionDevice {
 
         return exportedSessions
     }
+
+    public async exportHybridGroupSessions(
+        algorithm: GroupEncryptionAlgorithmId,
+    ): Promise<GroupEncryptionSession[]> {
+        const sessions = await this.cryptoStore.getAllHybridGroupSessions()
+        return sessions.map((session) => {
+            return {
+                streamId: session.streamId,
+                sessionId: session.sessionId,
+                sessionKey: session.sessionKey,
+                algorithm,
+            }
+        })
+    }
+}
+
+export function hybridSessionKeyHash(
+    streamId: string,
+    key: string,
+    iv: string,
+    miniblockNum: bigint,
+    miniblockHash: Uint8Array,
+) {
+    const PREFIX = 'RVR_HSK:'
+    const prefixBytes = new TextEncoder().encode(PREFIX)
+    const miniblockBytes = bigIntToBytes(miniblockNum)
+    // aellis - i don't understand why we need to slice here, the go and ios code both truncate the leading 0's
+    const hashBytes = createHash('sha256')
+        .update(prefixBytes)
+        .update(streamId)
+        .update(key)
+        .update(iv)
+        .update(miniblockBytes)
+        .update(miniblockHash)
+        .digest()
+    return bin_toHexString(hashBytes)
 }

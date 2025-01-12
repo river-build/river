@@ -158,6 +158,15 @@ message SessionKeys {
     repeated string keys = 1;
 }
 
+message HybridGroupSessionKey {
+    string session_id = 1;
+    string stream_id = 2;
+    string iv = 3;
+    string key = 4;
+    int64 miniblock_num = 5;
+    bytes miniblock_hash = 6;
+}
+
 message MediaInfo {
     string mimetype = 1;
     int64 sizeBytes = 2;

@@ -13,6 +13,8 @@ import { GroupEncryption } from './groupEncryption'
 import { EncryptionDevice, ExportedDevice, type EncryptionDeviceInitOpts } from './encryptionDevice'
 import { EncryptionDelegate } from './encryptionDelegate'
 import { check, dlog } from '@river-build/dlog'
+import { HybridGroupEncryption } from './hybridGroupEncryption'
+import { HybridGroupDecryption } from './hybridGroupDecryption'
 
 const log = dlog('csb:encryption:groupEncryptionCrypto')
 
@@ -60,9 +62,16 @@ export class GroupEncryptionCrypto {
                 device: this.encryptionDevice,
                 client,
             }),
+            [GroupEncryptionAlgorithmId.HybridGroupEncryption]: new HybridGroupEncryption({
+                device: this.encryptionDevice,
+                client,
+            }),
         }
         this.groupDecryption = {
             [GroupEncryptionAlgorithmId.GroupEncryption]: new GroupDecryption({
+                device: this.encryptionDevice,
+            }),
+            [GroupEncryptionAlgorithmId.HybridGroupEncryption]: new HybridGroupDecryption({
                 device: this.encryptionDevice,
             }),
         }

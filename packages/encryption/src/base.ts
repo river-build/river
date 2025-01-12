@@ -12,6 +12,7 @@ export interface IGroupEncryptionClient {
         algorithm: GroupEncryptionAlgorithmId,
     ): Promise<void>
     getDevicesInStream(streamId: string): Promise<UserDeviceCollection>
+    getMiniblockInfo(streamId: string): Promise<{ miniblockNum: bigint; miniblockHash: Uint8Array }>
 }
 
 export interface IDecryptionParams {

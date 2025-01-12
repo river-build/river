@@ -2115,6 +2115,23 @@ export class Client
         return info
     }
 
+    async getMiniblockInfo(
+        streamId: string,
+    ): Promise<{ miniblockNum: bigint; miniblockHash: Uint8Array }> {
+        let streamView = this.stream(streamId)?.view
+        // if we don't have a local copy, or if it's just not initialized, fetch the latest
+        if (!streamView || !streamView.isInitialized) {
+            streamView = await this.getStream(streamId)
+        }
+        check(isDefined(streamView), `stream not found: ${streamId}`)
+        check(isDefined(streamView.miniblockInfo), `stream not initialized: ${streamId}`)
+        check(isDefined(streamView.prevMiniblockHash), `prevMiniblockHash not found: ${streamId}`)
+        return {
+            miniblockNum: streamView.miniblockInfo.min,
+            miniblockHash: streamView.prevMiniblockHash,
+        }
+    }
+
     async downloadNewInboxMessages(): Promise<void> {
         this.logCall('downloadNewInboxMessages')
         check(isDefined(this.userInboxStreamId))
