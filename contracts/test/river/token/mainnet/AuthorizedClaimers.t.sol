@@ -39,6 +39,7 @@ contract AuthorizedClaimersTest is TestUtils, IAuthorizedClaimersBase {
     address claimer,
     address newClaimer
   ) public {
+    vm.assume(claimer != newClaimer);
     authorizedClaimers.authorizeClaimer(claimer);
     assertEq(
       authorizedClaimers.getAuthorizedClaimer(address(this)),
