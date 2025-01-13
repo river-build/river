@@ -60,6 +60,7 @@ func TestAPNSPushNotification(t *testing.T) {
 		DeviceToken: deviceToken,
 		LastSeen:    time.Now(),
 		Environment: protocol.APNEnvironment_APN_ENVIRONMENT_SANDBOX,
+		PushVersion: protocol.NotificationPushVersion_NOTIFICATION_PUSH_VERSION_1,
 	}
 
 	expired, _, err := notifier.SendApplePushNotification(

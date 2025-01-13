@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"log/slog"
 	"net/http"
@@ -307,6 +308,91 @@ func (p *MessageToNotificationsProcessor) onSpaceChannelPayload(
 	return false
 }
 
+func (p *MessageToNotificationsProcessor) apnPayloadV1(
+	channelID shared.StreamId,
+	spaceID *shared.StreamId,
+	event *events.ParsedEvent,
+	kind string,
+	receivers []string,
+) (map[string]interface{}, error) {
+	eventBytes, err := proto.Marshal(event.Event)
+	if err != nil {
+		return nil, base.AsRiverError(err, Err_INTERNAL)
+	}
+
+	eventBytesHex := hex.EncodeToString(eventBytes)
+
+	apnPayload := map[string]interface{}{
+		"channelId": hex.EncodeToString(channelID[:]),
+		"kind":      kind,
+		"senderId":  hex.EncodeToString(event.Event.CreatorAddress),
+	}
+
+	if len(eventBytesHex) <= MaxAPNAllowedNotificationStreamEventPayloadSize {
+		apnPayload["event"] = eventBytesHex
+	}
+
+	if len(receivers) > 0 {
+		apnPayload["recipients"] = receivers
+	}
+
+	if spaceID != nil {
+		apnPayload["spaceId"] = spaceID.String()
+	}
+
+	if threadID := event.Event.GetTags().GetThreadId(); len(threadID) > 0 {
+		apnPayload["threadId"] = hex.EncodeToString(threadID)
+	}
+
+	return apnPayload, nil
+}
+
+func (p *MessageToNotificationsProcessor) apnPayloadV2(
+	channelID shared.StreamId,
+	spaceID *shared.StreamId,
+	event *events.ParsedEvent,
+	kind string,
+	eventHash string,
+	receivers []string,
+) (map[string]interface{}, error) {
+	// only include fields that the iOS/OSX uses to reduce payload size
+	eventBytes, err := proto.Marshal(&StreamEvent{
+		CreatorAddress:   event.Event.GetCreatorAddress(),
+		CreatedAtEpochMs: event.Event.GetCreatedAtEpochMs(),
+		Payload:          event.Event.GetPayload(),
+	})
+
+	if err != nil {
+		return nil, base.AsRiverError(err, Err_INTERNAL)
+	}
+
+	apnPayload := map[string]interface{}{
+		"channelId": hex.EncodeToString(channelID[:]),
+		"kind":      kind,
+		"senderId":  hex.EncodeToString(event.Event.CreatorAddress),
+		"eventId":   eventHash,
+	}
+
+	// only add the (stream)event if there is a reasonable chance that the payload isn't too large.
+	if base64.StdEncoding.EncodedLen(len(eventBytes)) <= MaxAPNAllowedNotificationStreamEventPayloadSize {
+		apnPayload["event"] = base64.StdEncoding.EncodeToString(eventBytes)
+	}
+
+	if len(receivers) > 0 {
+		apnPayload["recipients"] = receivers
+	}
+
+	if spaceID != nil {
+		apnPayload["spaceId"] = spaceID.String()
+	}
+
+	if threadID := event.Event.GetTags().GetThreadId(); len(threadID) > 0 {
+		apnPayload["threadId"] = hex.EncodeToString(threadID)
+	}
+
+	return apnPayload, nil
+}
+
 func (p *MessageToNotificationsProcessor) sendNotification(
 	ctx context.Context,
 	user common.Address,
@@ -395,45 +481,15 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 		// eventHash is used by iOS/OSX to route the user on the device notification to the message
 		eventHash := hex.EncodeToString(crypto.RiverHash(eventBytes).Bytes())
 
-		// only include fields that the iOS/OSX uses to reduce payload size
-		eventBytes, err := proto.Marshal(&StreamEvent{
-			CreatorAddress:   event.Event.GetCreatorAddress(),
-			CreatedAtEpochMs: event.Event.GetCreatedAtEpochMs(),
-			Payload:          event.Event.GetPayload(),
-		})
-
-		if err != nil {
-			p.log.Error("Unable to marshal event", "error", err)
-			return
-		}
-
-		apnPayload := map[string]interface{}{
-			"channelId": hex.EncodeToString(channelID[:]),
-			"kind":      kind,
-			"senderId":  hex.EncodeToString(event.Event.CreatorAddress),
-			"eventId":   eventHash,
-		}
-
-		// only add the (stream)event if there is a reasonable chance that the payload isn't too large.
-		if base64.StdEncoding.EncodedLen(len(eventBytes)) <= MaxAPNAllowedNotificationStreamEventPayloadSize {
-			apnPayload["event"] = base64.StdEncoding.EncodeToString(eventBytes)
-		}
-
-		if len(receivers) > 0 {
-			apnPayload["recipients"] = receivers
-		}
-
-		if spaceID != nil {
-			apnPayload["spaceId"] = spaceID.String()
-		}
-
-		if threadID := event.Event.GetTags().GetThreadId(); len(threadID) > 0 {
-			apnPayload["threadId"] = hex.EncodeToString(threadID)
-		}
-
 		for _, sub := range userPref.Subscriptions.APNPush {
 			if time.Since(sub.LastSeen) >= p.subscriptionExpiration {
-				p.log.Warn("Ignore APN subscription due to no activity",
+				if err := p.cache.RemoveAPNSubscription(ctx, sub.DeviceToken, userPref.UserID); err != nil {
+					p.log.Error("Unable to remove expired APN subscription",
+						"user", userPref.UserID, "err", err)
+					continue
+				}
+
+				p.log.Info("Removed APN subscription due to no activity",
 					"user", user,
 					"event", event.Hash,
 					"channelID", channelID,
@@ -441,15 +497,33 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 					"since", time.Since(sub.LastSeen),
 					"sub.expiration", p.subscriptionExpiration,
 				)
+
+				continue
+			}
+
+			var (
+				apnPayload map[string]interface{}
+				err        error
+			)
+
+			switch sub.PushVersion {
+			case NotificationPushVersion_NOTIFICATION_PUSH_VERSION_1:
+				apnPayload, err = p.apnPayloadV1(channelID, spaceID, event, kind, receivers)
+			case NotificationPushVersion_NOTIFICATION_PUSH_VERSION_2:
+				apnPayload, err = p.apnPayloadV2(channelID, spaceID, event, kind, eventHash, receivers)
+			default:
+				p.log.Warn("Ignore APN subscription due to unsupported push payload format",
+					"pushVersion", sub.PushVersion)
 				continue
 			}
 
 			subscriptionExpired, statusCode, err := p.sendAPNNotification(channelID, sub, event, apnPayload)
-			// APN returned an error that the payload is too large, drop the (stream)event from the payload and retry.
+
+			// APN can return an error that the payload is too large, drop the (stream)event from the payload and retry.
 			// The client can handle notifications with no (stream)event and doesn't show a preview to the user.
 			if err != nil && statusCode == http.StatusRequestEntityTooLarge {
 				if _, exists := apnPayload["event"]; exists {
-					delete(apnPayload, "event") // also drop event for other APN subscriptions
+					delete(apnPayload, "event")
 					subscriptionExpired, _, err = p.sendAPNNotification(channelID, sub, event, apnPayload)
 				}
 			}
