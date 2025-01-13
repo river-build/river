@@ -79,8 +79,8 @@ fn validate_external_group_can_process_group_info_message(mut external_group: Ex
     };
 
     match external_group.process_incoming_message(group_info_message) {
-        Ok(_) => return Ok(()),
-        Err(_) => Err(ValidationResult::InvalidGroupInfo.into())
+        Ok(ExternalReceivedMessage::GroupInfo(_)) => Ok(()),
+        _ => Err(ValidationResult::InvalidGroupInfo.into())
     }
 }
 
