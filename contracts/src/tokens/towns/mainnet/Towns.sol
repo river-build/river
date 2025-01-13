@@ -78,16 +78,25 @@ contract Towns is
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           Inflation                        */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  /// @notice The final inflation rate in basis points (0-100)
+  function finalInflationRate() external view returns (uint256) {
+    return TokenInflationLib.finalInflationRate();
+  }
+
+  /// @notice The address that receives the inflation
   function inflationReceiver() external view returns (address) {
     return TokenInflationLib.inflationReceiver();
   }
 
-  function currentInflationRate() external view returns (uint256) {
-    return TokenInflationLib.getCurrentInflationRateBPS();
-  }
-
+  /// @notice The last time the inflation was minted
   function lastMintTime() external view returns (uint256) {
     return TokenInflationLib.lastMintTime();
+  }
+
+  /// @notice The current inflation rate in basis points (0-100)
+  function currentInflationRate() external view returns (uint256) {
+    return TokenInflationLib.getCurrentInflationRateBPS();
   }
 
   /// @inheritdoc ITowns
