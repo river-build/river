@@ -8,10 +8,7 @@ import { PlainMessage } from '@bufbuild/protobuf'
 import { Crypto } from './crypto'
 import { DLogger, dlog } from '@river-build/dlog'
 
-type InitializeGroupMessage = Omit<
-    PlainMessage<MemberPayload_Mls_InitializeGroup>,
-    'externalGroupSnapshot'
->
+type InitializeGroupMessage = PlainMessage<MemberPayload_Mls_InitializeGroup>
 type ExternalJoinMessage = PlainMessage<MemberPayload_Mls_ExternalJoin>
 
 // Placeholder for a coordinator
@@ -180,11 +177,14 @@ export class GroupService {
         const group = await this.crypto.createGroup(streamId)
         await this.saveGroup(group)
 
+        const externalGroupSnapshot = this.exportGroupSnapshot(group)
+
         const signaturePublicKey = this.getSignaturePublicKey()
 
         return {
             groupInfoMessage: group.groupInfoWithExternalKey!,
             signaturePublicKey,
+            externalGroupSnapshot,
         }
     }
 
