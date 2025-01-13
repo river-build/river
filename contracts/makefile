@@ -12,7 +12,7 @@ update:; forge update
 
 build:; forge build
 
-test :; forge test --ffi --nmc Fork
+test :; forge test --ffi --nmc Fork --fuzz-runs 4096
 
 fork-test :; forge test --ffi --mc Fork
 
