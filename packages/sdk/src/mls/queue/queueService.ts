@@ -6,9 +6,19 @@ import {
     MemberPayload_Mls_InitializeGroup,
 } from '@river-build/proto'
 import { GroupService, IGroupServiceCoordinator } from '../group'
-import { EpochSecretService } from '../epoch'
+import { EpochSecret, EpochSecretService } from '../epoch'
 import { ExternalGroupService } from '../externalGroup'
-import { DLogger } from '@river-build/dlog'
+import { check, DLogger } from '@river-build/dlog'
+import { isDefined, logNever } from '../../check'
+import { EncryptedContentItem } from '@river-build/encryption'
+import {
+    EncryptedContent,
+    isEncryptedContentKind,
+    toDecryptedContent,
+} from '../../encryptedContentTypes'
+import { Client } from '../../client'
+import { IPersistenceStore } from '../../persistenceStore'
+import { IAwaiter, IndefiniteAwaiter } from './awaiter'
 
 type InitializeGroupMessage = PlainMessage<MemberPayload_Mls_InitializeGroup>
 type ExternalJoinMessage = PlainMessage<MemberPayload_Mls_ExternalJoin>
@@ -57,7 +67,8 @@ type EpochSecretsEvent = {
 type EncryptedContentEvent = {
     tag: 'encryptedContent'
     streamId: string
-    message: EncryptedData
+    eventId: string
+    message: EncryptedContent
 }
 
 type QueueEvent =
@@ -66,16 +77,38 @@ type QueueEvent =
     | EpochSecretsEvent
     | EncryptedContentEvent
 
+type MlsEncryptedContentItem = {
+    streamId: string
+    eventId: string
+    kind: string
+    encryptedData: EncryptedData
+}
+
+const textEncoder = new TextEncoder()
+const textDecoder = new TextDecoder()
+
+function encode(value: string): Uint8Array {
+    return textEncoder.encode(value)
+}
+
+function decode(value: Uint8Array): string {
+    return textDecoder.decode(value)
+}
+
 // This feels more like a coordinator
 export class QueueService {
     private epochSecretService!: EpochSecretService
     private groupService!: GroupService
     private externalGroupService!: ExternalGroupService
+    private decryptionFailures: Map<string, Map<bigint, MlsEncryptedContentItem[]>> = new Map()
+    private client!: Client
+    private persistenceStore!: IPersistenceStore
+    private awaitingGroupActive: Map<string, IAwaiter> = new Map()
+
     private log!: {
         error: DLogger
         debug: DLogger
     }
-
 
     constructor() {
         // nop
@@ -83,31 +116,128 @@ export class QueueService {
 
     // API needed by the client
     // TODO: How long will be the timeout here?
-    public encryptGroupEventEpochSecret(
-        _streamId: string,
-        _event: Message,
+    public async encryptGroupEventEpochSecret(
+        streamId: string,
+        event: Message,
     ): Promise<EncryptedData> {
-        throw new Error('Not implemented')
+        const hasGroup = this.groupService.getGroup(streamId) !== undefined
+        if (!hasGroup) {
+            // No group so we request joining
+            // NOTE: We are enqueueing command instead of doing the async call
+            this.enqueueCommand({ tag: 'joinOrCreateGroup', streamId })
+        }
+        // Wait for the group to become active
+        await this.awaitGroupActive(streamId)
+        const activeGroup = this.groupService.getGroup(streamId)
+        if (activeGroup === undefined) {
+            throw new Error('Fatal: no group after awaitGroupActive')
+        }
+
+        if (activeGroup.status !== 'GROUP_ACTIVE') {
+            throw new Error('Fatal: group is not active')
+        }
+
+        const epoch = this.groupService.currentEpoch(activeGroup)
+
+        const epochSecret = this.epochSecretService.getEpochSecret(streamId, epoch)
+
+        if (epochSecret === undefined) {
+            throw new Error('Fatal: no epoch secret for active group current epoch')
+        }
+
+        const plaintext_ = event.toJsonString()
+        const plaintext = encode(plaintext_)
+
+        return this.epochSecretService.encryptMessage(epochSecret, plaintext)
+    }
+
+    // TODO: Maybe this could be refactored into a separate class
+    private async decryptGroupEvent(
+        epochSecret: EpochSecret,
+        streamId: string,
+        eventId: string,
+        kind: string, // kind of data
+        encryptedData: EncryptedData,
+    ) {
+        // this.logCall('decryptGroupEvent', streamId, eventId, kind,
+        // encryptedData)
+        const stream = this.client.stream(streamId)
+        check(isDefined(stream), 'stream not found')
+        check(isEncryptedContentKind(kind), `invalid kind ${kind}`)
+
+        // check cache
+        let cleartext = await this.persistenceStore.getCleartext(eventId)
+        if (cleartext === undefined) {
+            const cleartext_ = await this.epochSecretService.decryptMessage(
+                epochSecret,
+                encryptedData,
+            )
+            cleartext = decode(cleartext_)
+        }
+        const decryptedContent = toDecryptedContent(kind, cleartext)
+
+        stream.updateDecryptedContent(eventId, decryptedContent)
     }
 
     // # MLS Coordinator #
 
-    public async handleInitializeGroup(_streamId: string, _message: InitializeGroupMessage) {
-        const group = this.groupService.getGroup(_streamId)
+    public async handleInitializeGroup(streamId: string, message: InitializeGroupMessage) {
+        const group = this.groupService.getGroup(streamId)
         if (group !== undefined) {
-            await this.groupService.handleInitializeGroup(group, _message)
+            await this.groupService.handleInitializeGroup(group, message)
         }
     }
 
-    public async handleExternalJoin(_streamId: string, _message: ExternalJoinMessage) {
-        const group = this.groupService.getGroup(_streamId)
+    public async handleExternalJoin(streamId: string, message: ExternalJoinMessage) {
+        const group = this.groupService.getGroup(streamId)
         if (group !== undefined) {
-            await this.groupService.handleExternalJoin(group, _message)
+            await this.groupService.handleExternalJoin(group, message)
         }
     }
 
-    public async handleEpochSecrets(_streamId: string, _message: EpochSecretsMessage) {
-        return this.epochSecretService.handleEpochSecrets(_streamId, _message)
+    public async handleEpochSecrets(streamId: string, message: EpochSecretsMessage) {
+        return this.epochSecretService.handleEpochSecrets(streamId, message)
+    }
+
+    public async handleEncryptedContent(
+        streamId: string,
+        eventId: string,
+        message: EncryptedContent,
+    ) {
+        const encryptedData = message.content
+        // TODO: Check if message was encrypted with MLS
+        // const ciphertext = encryptedData.mls!.ciphertext
+        const epoch = encryptedData.mls!.epoch
+        const kind = message.kind
+
+        const epochSecret = this.epochSecretService.getEpochSecret(streamId, epoch)
+        if (epochSecret === undefined) {
+            this.log.debug('Epoch secret not found', { streamId, epoch })
+            this.enqueueDecryptionFailure(streamId, epoch, {
+                streamId,
+                eventId,
+                kind,
+                encryptedData,
+            })
+            return
+        }
+
+        // Decrypt immediately
+        return this.decryptGroupEvent(epochSecret, streamId, eventId, kind, encryptedData)
+    }
+
+    private enqueueDecryptionFailure(streamId: string, epoch: bigint, item: EncryptedContentItem) {
+        let perStream = this.decryptionFailures.get(streamId)
+        if (perStream === undefined) {
+            perStream = new Map()
+            this.decryptionFailures.set(item.streamId, perStream)
+        }
+        let perEpoch = perStream.get(epoch)
+        if (perEpoch === undefined) {
+            perEpoch = []
+            perStream.set(epoch, perEpoch)
+        }
+        perEpoch.push(item)
     }
 
     public async initializeGroupMessage(streamId: string): Promise<InitializeGroupMessage> {
@@ -138,11 +268,40 @@ export class QueueService {
         throw new Error('Not implemented')
     }
 
-    public async groupActive(_streamId: string): Promise<void> {
-        throw new Error('Not implemented')
+    // NOTE: Critical section, no awaits permitted
+    public awaitGroupActive(streamId: string): Promise<void> {
+        // this.log(`awaitGroupActive ${streamId}`)
+        if (this.groupService.getGroup(streamId)?.status === 'GROUP_ACTIVE') {
+            return Promise.resolve()
+        }
+
+        let awaiter = this.awaitingGroupActive.get(streamId)
+        if (awaiter === undefined) {
+            const internalAwaiter = new IndefiniteAwaiter()
+            // NOTE: we clear after the promise has resolved
+            const promise = internalAwaiter.promise.finally(() => {
+                this.awaitingGroupActive.delete(streamId)
+            })
+            awaiter = {
+                promise,
+                resolve: internalAwaiter.resolve,
+            }
+            this.awaitingGroupActive.set(streamId, awaiter)
+        }
+
+        return awaiter.promise
     }
 
-    public async newEpochSecrets(_streamId: string, _epoch: bigint): Promise<void> {
+    public groupActive(streamId: string): void {
+        const awaiter = this.awaitingGroupActive.get(streamId)
+        if (awaiter !== undefined) {
+            awaiter.resolve()
+        }
+    }
+
+    public async newEpochSecret(_streamId: string, _epoch: bigint): Promise<void> {
+        // TODO: Decrypt all messages for that particular epoch secret
+        // TODO: Try opening a new epoch
         throw new Error('Not implemented')
     }
 
@@ -255,7 +414,9 @@ export class QueueService {
             case 'groupActive':
                 return this.groupActive(command.streamId)
             case 'newEpochSecrets':
-                return this.newEpochSecrets(command.streamId, command.epoch)
+                return this.newEpochSecret(command.streamId, command.epoch)
+            default:
+                logNever(command)
         }
     }
 
@@ -267,6 +428,10 @@ export class QueueService {
                 return this.handleExternalJoin(event.streamId, event.message)
             case 'epochSecrets':
                 return this.handleEpochSecrets(event.streamId, event.message)
+            case 'encryptedContent':
+                return this.handleEncryptedContent(event.streamId, event.eventId, event.message)
+            default:
+                logNever(event)
         }
     }
 }
