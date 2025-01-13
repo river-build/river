@@ -88,7 +88,7 @@ contract Towns is
   /*                           Inflation                        */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-  /// @notice The final inflation rate in basis points (0-100)
+  /// @notice The final inflation rate in basis points (0-10_000)
   function finalInflationRate() external view returns (uint256) {
     return TokenInflationLib.finalInflationRate();
   }
@@ -103,7 +103,7 @@ contract Towns is
     return TokenInflationLib.lastMintTime();
   }
 
-  /// @notice The current inflation rate in basis points (0-100)
+  /// @notice The current inflation rate in basis points (0-10_000)
   function currentInflationRate() external view returns (uint256) {
     return TokenInflationLib.getCurrentInflationRateBPS();
   }
@@ -163,6 +163,19 @@ contract Towns is
   /// @inheritdoc IVotesEnumerable
   function getDelegators() external view returns (address[] memory) {
     return VotesEnumerableLib.getDelegators();
+  }
+
+  /// @inheritdoc IVotesEnumerable
+  function getDelegatorsCount() external view returns (uint256) {
+    return VotesEnumerableLib.getDelegatorsCount();
+  }
+
+  /// @inheritdoc IVotesEnumerable
+  function getPaginatedDelegators(
+    uint256 cursor,
+    uint256 size
+  ) external view returns (address[] memory delegators, uint256 next) {
+    return VotesEnumerableLib.getPaginatedDelegators(cursor, size);
   }
 
   /// @inheritdoc IVotesEnumerable

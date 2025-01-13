@@ -141,4 +141,56 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
     assertEq(delegators[0], alice);
     assertEq(delegators[1], bob);
   }
+
+  struct TestPaginatedDelegators {
+    address holder;
+    address delegatee;
+    uint256 tokenAmount;
+  }
+
+  address private constant _ZERO_SENTINEL =
+    0x0000000000000000000000fbb67FDa52D4Bfb8Bf;
+
+  function test_getPaginatedDelegators(
+    TestPaginatedDelegators[10] memory test
+  ) external {
+    for (uint256 i = 0; i < test.length; ++i) {
+      test[i].tokenAmount = bound(test[i].tokenAmount, 1, 100);
+      vm.assume(test[i].holder != test[i].delegatee);
+      vm.assume(test[i].holder != _ZERO_SENTINEL);
+      vm.assume(test[i].delegatee != _ZERO_SENTINEL);
+      vm.assume(test[i].holder != address(0));
+      vm.assume(test[i].delegatee != address(0));
+      vm.assume(towns.delegates(test[i].holder) == address(0));
+
+      vm.prank(vault);
+      towns.transfer(test[i].holder, test[i].tokenAmount);
+
+      vm.prank(test[i].holder);
+      towns.delegate(test[i].delegatee);
+    }
+
+    uint256 delegatorsCount = towns.getDelegatorsCount();
+    assertEq(delegatorsCount, test.length);
+
+    (address[] memory delegators, uint256 next) = towns.getPaginatedDelegators(
+      0,
+      5
+    );
+    assertEq(delegators.length, 5);
+    assertEq(next, 5);
+
+    (delegators, next) = towns.getPaginatedDelegators(5, 5);
+    assertEq(delegators.length, 5);
+    assertEq(next, 0);
+  }
+
+  function test_getPaginatedDelegators_whenNoMoreDelegators() external view {
+    (address[] memory delegators, uint256 next) = towns.getPaginatedDelegators(
+      0,
+      10
+    );
+    assertEq(delegators.length, 0);
+    assertEq(next, 0);
+  }
 }

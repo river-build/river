@@ -29,6 +29,15 @@ abstract contract VotesEnumerable is IVotesEnumerable {
     return VotesEnumerableStorage.layout().delegationTimeForDelegator[account];
   }
 
+  function getDelegatorsCount() external view returns (uint256) {
+    return VotesEnumerableStorage.layout().delegators.length();
+  }
+
+  function getPaginatedDelegators(
+    uint256 cursor,
+    uint256 size
+  ) external view returns (address[] memory, uint256 next) {}
+
   function _setDelegators(
     address account,
     address newDelegatee,

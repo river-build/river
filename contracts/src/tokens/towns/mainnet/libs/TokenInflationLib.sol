@@ -68,22 +68,21 @@ library TokenInflationLib {
 
   /**
    * @dev Returns the current inflation rate.
-   * @return inflation rate in basis points (0-100)
+   * @return inflation rate in basis points (0-10_000)
    */
   function getCurrentInflationRateBPS() internal view returns (uint256) {
     Layout storage ds = layout();
 
     if (ds.overrideInflation) return ds.overrideInflationRate; // override inflation rate
 
-    uint256 yearsSinceDeployment = (block.timestamp - ds.lastMintTime) /
-      365 days;
+    uint256 timeSinceLastMint = (block.timestamp - ds.lastMintTime) / 365 days;
 
-    // return final inflation rate if yearsSinceDeployment is greater than or equal to inflationDecreaseInterval
-    if (yearsSinceDeployment >= ds.inflationDecayInterval)
+    // return final inflation rate if timeSinceLastMint is greater than or equal to inflationDecreaseInterval
+    if (timeSinceLastMint >= ds.inflationDecayInterval)
       return ds.finalInflationRate;
 
     // linear decrease from initialInflationRate to finalInflationRate over the inflationDecreateInterval
-    uint256 decreasePerYear = ds.inflationDecayRate / ds.inflationDecayInterval;
-    return ds.initialInflationRate - (yearsSinceDeployment * decreasePerYear);
+    uint256 decayRate = ds.inflationDecayRate / ds.inflationDecayInterval;
+    return ds.initialInflationRate - (timeSinceLastMint * decayRate);
   }
 }
