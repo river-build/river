@@ -245,7 +245,7 @@ func (m *miniblockScrubTaskProcessorImpl) ScheduleStreamMiniblocksScrub(
 	streamId shared.StreamId,
 	fromBlockNum int64,
 ) error {
-	latest, err := m.store.GetLastMiniblockNumber(ctx, streamId)
+	latest, err := m.store.GetMaxArchivedMiniblockNumber(ctx, streamId)
 	if err != nil {
 		return base.AsRiverError(err, protocol.Err_DB_OPERATION_FAILURE).
 			Func("ScheduleStreamMiniblockScrub").

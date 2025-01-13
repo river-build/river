@@ -2031,7 +2031,7 @@ func (s *PostgresStreamStore) getLastMiniblockNumberTx(
 	err = tx.QueryRow(
 		ctx,
 		s.sqlForStream(
-			"SELECT COALESCE(MAX(seq_num), -1) FROM {{miniblocks}} WHERE stream_id = $1",
+			"SELECT MAX(seq_num) FROM {{miniblocks}} WHERE stream_id = $1",
 			streamID,
 		),
 		streamID,
