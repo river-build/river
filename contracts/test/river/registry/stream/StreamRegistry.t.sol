@@ -222,7 +222,7 @@ contract StreamRegistryTest is
     );
   }
 
-  /// @notice This test is to ensure that the node who is calling the allocateSealedStream function is registered.
+  /// @notice This test is to ensure that the node who is calling the addStream function is registered.
   function test_revertWhen_addStream_nodeNotRegistered(
     address nodeOperator,
     TestStream memory testStream,
@@ -247,7 +247,7 @@ contract StreamRegistryTest is
     );
   }
 
-  /// @notice This test is to ensure that the nodes being passed in are registered before allocating a sealed stream.
+  /// @notice This test is to ensure that the nodes being passed in are registered before allocating a stream.
   function test_revertWhen_addStream_nodesNotRegistered(
     address nodeOperator,
     address randomNode,
