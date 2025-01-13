@@ -16,6 +16,18 @@ contract DeployTownsMainnet is Deployer, ITownsBase {
   address public constant manager =
     address(0x18038ee5692FCE1cc0B0b3F2D63e09639A597F94);
 
+  function inflationConfig() public pure returns (InflationConfig memory) {
+    return
+      InflationConfig({
+        initialMintTime: 1_709_667_671, // Tuesday, March 5, 2024 7:41:11 PM
+        initialInflationRate: 800,
+        finalInflationRate: 200,
+        inflationDecayRate: 600,
+        finalInflationYears: 20,
+        inflationReceiver: vault
+      });
+  }
+
   function versionName() public pure override returns (string memory) {
     return "townsMainnet";
   }
@@ -24,18 +36,7 @@ contract DeployTownsMainnet is Deployer, ITownsBase {
     vm.broadcast(deployer);
     return
       address(
-        new Towns({
-          vault: vault,
-          manager: manager,
-          config: InflationConfig({
-            lastMintTime: 1_709_667_671, // Tuesday, March 5, 2024 7:41:11 PM
-            initialInflationRate: 800,
-            finalInflationRate: 200,
-            inflationDecayRate: 600,
-            inflationDecayInterval: 20,
-            inflationReceiver: vault
-          })
-        })
+        new Towns({vault: vault, manager: manager, config: inflationConfig()})
       );
   }
 }

@@ -15,7 +15,7 @@ library TokenInflationLib {
     uint256 initialInflationRate;
     uint256 finalInflationRate;
     uint256 inflationDecayRate;
-    uint256 inflationDecayInterval;
+    uint256 finalInflationYears;
     bool overrideInflation;
     uint256 overrideInflationRate;
   }
@@ -30,12 +30,12 @@ library TokenInflationLib {
 
   function initialize(ITownsBase.InflationConfig memory config) internal {
     Layout storage ds = layout();
-    ds.lastMintTime = config.lastMintTime;
+    ds.lastMintTime = config.initialMintTime;
     ds.inflationReceiver = config.inflationReceiver;
     ds.initialInflationRate = config.initialInflationRate;
     ds.finalInflationRate = config.finalInflationRate;
     ds.inflationDecayRate = config.inflationDecayRate;
-    ds.inflationDecayInterval = config.inflationDecayInterval;
+    ds.finalInflationYears = config.finalInflationYears;
   }
 
   function finalInflationRate() internal view returns (uint256) {
@@ -70,19 +70,20 @@ library TokenInflationLib {
    * @dev Returns the current inflation rate.
    * @return inflation rate in basis points (0-10_000)
    */
-  function getCurrentInflationRateBPS() internal view returns (uint256) {
+  function getCurrentInflationRateBPS(
+    uint256 initialMintTime
+  ) internal view returns (uint256) {
     Layout storage ds = layout();
 
     if (ds.overrideInflation) return ds.overrideInflationRate; // override inflation rate
 
-    uint256 timeSinceLastMint = (block.timestamp - ds.lastMintTime) / 365 days;
+    uint256 timeSinceInitialMint = (block.timestamp - initialMintTime) /
+      365 days;
 
-    // return final inflation rate if timeSinceLastMint is greater than or equal to inflationDecreaseInterval
-    if (timeSinceLastMint >= ds.inflationDecayInterval)
+    if (timeSinceInitialMint >= ds.finalInflationYears)
       return ds.finalInflationRate;
 
-    // linear decrease from initialInflationRate to finalInflationRate over the inflationDecreateInterval
-    uint256 decayRate = ds.inflationDecayRate / ds.inflationDecayInterval;
-    return ds.initialInflationRate - (timeSinceLastMint * decayRate);
+    uint256 decreasePerYear = ds.inflationDecayRate / ds.finalInflationYears;
+    return ds.initialInflationRate - (timeSinceInitialMint * decreasePerYear);
   }
 }

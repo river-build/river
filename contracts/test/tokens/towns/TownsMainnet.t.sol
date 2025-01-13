@@ -11,6 +11,7 @@ import {ITownsBase} from "contracts/src/tokens/towns/mainnet/ITowns.sol";
 
 //libraries
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
+import {TokenInflationLib} from "contracts/src/tokens/towns/mainnet/libs/TokenInflationLib.sol";
 
 //contracts
 import {DeployTownsMainnet} from "contracts/scripts/deployments/utils/DeployTownsMainnet.s.sol";
@@ -22,6 +23,8 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
   /// @dev initial supply is 10 billion tokens
   uint256 internal INITIAL_SUPPLY = 10_000_000_000 ether;
 
+  uint256 internal INITIAL_MINT_TIME = 1_709_667_671; // Tuesday, March 5, 2024 7:41:11 PM
+
   address internal vault;
   address internal manager;
 
@@ -32,7 +35,9 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
     vault = deployTownsMainnet.vault();
     manager = deployTownsMainnet.manager();
 
-    vm.warp(1_736_373_074); // Wednesday, January 8, 2025 9:51:14 PM
+    TokenInflationLib.initialize(deployTownsMainnet.inflationConfig());
+
+    vm.warp(INITIAL_MINT_TIME);
   }
 
   function test_init() external view {
@@ -72,6 +77,11 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
     vm.warp(towns.lastMintTime() + 365 days);
 
     uint256 inflationRateBPS = towns.currentInflationRate();
+    assertEq(
+      inflationRateBPS,
+      TokenInflationLib.getCurrentInflationRateBPS(INITIAL_MINT_TIME)
+    );
+
     uint256 inflationAmount = BasisPoints.calculate(
       towns.totalSupply(),
       inflationRateBPS
@@ -88,6 +98,38 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
     vm.prank(vault);
     vm.expectRevert(MintingTooSoon.selector);
     towns.createInflation();
+  }
+
+  function test_currentInflationRate() external {
+    uint256 currentInflationRate = towns.currentInflationRate();
+    assertEq(
+      currentInflationRate,
+      TokenInflationLib.getCurrentInflationRateBPS(INITIAL_MINT_TIME)
+    );
+
+    // wait 2 years
+    vm.warp(block.timestamp + 2 * 365 days);
+    currentInflationRate = towns.currentInflationRate();
+    assertEq(
+      currentInflationRate,
+      TokenInflationLib.getCurrentInflationRateBPS(INITIAL_MINT_TIME)
+    );
+
+    // wait 10 years
+    vm.warp(block.timestamp + 10 * 365 days);
+    currentInflationRate = towns.currentInflationRate();
+    assertEq(
+      currentInflationRate,
+      TokenInflationLib.getCurrentInflationRateBPS(INITIAL_MINT_TIME)
+    );
+
+    // wait 20 years
+    vm.warp(block.timestamp + 20 * 365 days);
+    currentInflationRate = towns.currentInflationRate();
+    assertEq(
+      currentInflationRate,
+      TokenInflationLib.getCurrentInflationRateBPS(INITIAL_MINT_TIME)
+    );
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/

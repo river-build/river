@@ -12,11 +12,11 @@ interface ITownsBase {
   /*                           Structs                          */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
   struct InflationConfig {
-    uint256 lastMintTime;
+    uint256 initialMintTime;
     uint256 initialInflationRate;
     uint256 finalInflationRate;
+    uint256 finalInflationYears;
     uint256 inflationDecayRate;
-    uint256 inflationDecayInterval;
     address inflationReceiver;
   }
 

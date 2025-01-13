@@ -22,6 +22,9 @@ import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {IntrospectionBase} from "@river-build/diamond/src/facets/introspection/IntrospectionBase.sol";
 import {ERC20Votes} from "solady/tokens/ERC20Votes.sol";
 
+// debugging
+import {console} from "forge-std/console.sol";
+
 contract Towns is
   OwnableRoles,
   ERC20Votes,
@@ -52,6 +55,9 @@ contract Towns is
   /// @dev the role for the inflation rate manager
   uint256 public constant ROLE_INFLATION_RATE_MANAGER = 2;
 
+  /// @dev the initial mint time
+  uint256 public immutable initialMintTime;
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           Constructor                      */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -79,6 +85,8 @@ contract Towns is
     _addInterface(type(IVotes).interfaceId);
     _addInterface(type(IERC6372).interfaceId);
 
+    initialMintTime = config.initialMintTime;
+
     TokenInflationLib.initialize(config);
 
     _mint(vault, INITIAL_SUPPLY);
@@ -105,7 +113,7 @@ contract Towns is
 
   /// @notice The current inflation rate in basis points (0-10_000)
   function currentInflationRate() external view returns (uint256) {
-    return TokenInflationLib.getCurrentInflationRateBPS();
+    return TokenInflationLib.getCurrentInflationRateBPS(initialMintTime);
   }
 
   /// @inheritdoc ITowns
@@ -144,7 +152,9 @@ contract Towns is
       CustomRevert.revertWith(MintingTooSoon.selector);
     }
 
-    uint256 inflationRateBPS = TokenInflationLib.getCurrentInflationRateBPS();
+    uint256 inflationRateBPS = TokenInflationLib.getCurrentInflationRateBPS(
+      initialMintTime
+    );
     uint256 inflationAmount = BasisPoints.calculate(
       totalSupply(),
       inflationRateBPS
