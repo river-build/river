@@ -216,6 +216,10 @@ export class GroupService {
         throw new Error('Not implemented')
     }
 
+    public currentEpoch(group: Group): bigint {
+        return this.crypto.currentEpoch(group)
+    }
+
     private getSignaturePublicKey(): Uint8Array {
         return this.crypto.signaturePublicKey()
     }
