@@ -25,6 +25,9 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
 
   uint256 internal INITIAL_MINT_TIME = 1_709_667_671; // Tuesday, March 5, 2024 7:41:11 PM
 
+  address internal constant _ZERO_SENTINEL =
+    0x0000000000000000000000fbb67FDa52D4Bfb8Bf;
+
   address internal vault;
   address internal manager;
 
@@ -62,6 +65,8 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
     vm.assume(caller != address(0));
     vm.assume(delegatee != address(0));
     vm.assume(caller != delegatee);
+    vm.assume(towns.delegates(caller) == address(0));
+    vm.assume(delegatee != _ZERO_SENTINEL);
 
     vm.prank(caller);
     towns.delegate(delegatee);
@@ -74,6 +79,7 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function test_createInflation() external {
+    // wait 1 year
     vm.warp(towns.lastMintTime() + 365 days);
 
     uint256 inflationRateBPS = towns.currentInflationRate();
@@ -92,6 +98,29 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
 
     assertEq(towns.totalSupply(), INITIAL_SUPPLY + inflationAmount);
     assertEq(towns.lastMintTime(), block.timestamp);
+  }
+
+  function test_createInflation_multipleTimes(uint256 times) external {
+    times = bound(times, 1, 20);
+
+    for (uint256 i = 0; i < times; ++i) {
+      vm.warp(towns.lastMintTime() + 365 days);
+      uint256 inflationRateBPS = towns.currentInflationRate();
+      uint256 totalSupply = towns.totalSupply();
+      uint256 inflationAmount = BasisPoints.calculate(
+        totalSupply,
+        inflationRateBPS
+      );
+
+      assertEq(
+        inflationRateBPS,
+        TokenInflationLib.getCurrentInflationRateBPS(INITIAL_MINT_TIME)
+      );
+
+      vm.prank(vault);
+      towns.createInflation();
+      assertEq(towns.totalSupply(), totalSupply + inflationAmount);
+    }
   }
 
   function test_revertWhen_createInflation_mintingTooSoon() external {
@@ -189,9 +218,6 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
     address delegatee;
     uint256 tokenAmount;
   }
-
-  address private constant _ZERO_SENTINEL =
-    0x0000000000000000000000fbb67FDa52D4Bfb8Bf;
 
   function test_getPaginatedDelegators(
     TestPaginatedDelegators[10] memory test
