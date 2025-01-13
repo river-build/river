@@ -508,6 +508,9 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 			)
 
 			switch sub.PushVersion {
+			case NotificationPushVersion_NOTIFICATION_PUSH_VERSION_UNSPECIFIED:
+				p.log.Error("Unspecified APN push version in subscription", "deviceToken", sub.DeviceToken)
+				continue
 			case NotificationPushVersion_NOTIFICATION_PUSH_VERSION_1:
 				apnPayload, err = p.apnPayloadV1(channelID, spaceID, event, kind, receivers)
 			case NotificationPushVersion_NOTIFICATION_PUSH_VERSION_2:
@@ -515,6 +518,11 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 			default:
 				p.log.Warn("Ignore APN subscription due to unsupported push payload format",
 					"pushVersion", sub.PushVersion)
+				continue
+			}
+
+			if err != nil {
+				p.log.Error("Unable to prepare APN payload", "err", err)
 				continue
 			}
 
