@@ -2,16 +2,16 @@
 pragma solidity ^0.8.23;
 
 // libraries
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 
 library VotesEnumerableLib {
-  using EnumerableSet for EnumerableSet.AddressSet;
+  using EnumerableSetLib for EnumerableSetLib.AddressSet;
 
   struct Layout {
     // Set of all delegators
-    EnumerableSet.AddressSet delegators;
+    EnumerableSetLib.AddressSet delegators;
     // Mapping of delegatee to their delegators
-    mapping(address => EnumerableSet.AddressSet) delegatorsByDelegatee;
+    mapping(address => EnumerableSetLib.AddressSet) delegatorsByDelegatee;
     // Mapping of delegator to their delegation timestamp
     mapping(address => uint256) delegationTimeForDelegator;
   }

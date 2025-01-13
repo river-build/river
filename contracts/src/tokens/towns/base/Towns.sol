@@ -36,6 +36,15 @@ contract Towns is
   /// @notice Semantic version.
   string public constant version = "1.3.0";
 
+  /// @notice The name of the token
+  string public constant NAME = "Towns";
+
+  /// @notice The symbol of the token
+  string public constant SYMBOL = "TOWNS";
+
+  /// @notice The name hash of the token
+  bytes32 public constant NAME_HASH = keccak256(bytes(NAME));
+
   ///@notice Address of the corresponding version of this token on the remote chain
   address public immutable REMOTE_TOKEN;
 
@@ -45,6 +54,7 @@ contract Towns is
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                        Modifiers                           */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   /// @notice A modifier that only allows the bridge to call
   modifier onlyBridge() {
     require(msg.sender == BRIDGE, "Towns: only bridge can mint and burn");
@@ -80,6 +90,7 @@ contract Towns is
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                        Bridge                              */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   /// @custom:legacy
   /// @notice Legacy getter for the remote token. Use REMOTE_TOKEN going forward.
   function l1Token() external view returns (address) {
@@ -107,6 +118,8 @@ contract Towns is
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                     Introspection                          */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  /// @inheritdoc IERC165
   function supportsInterface(
     bytes4 interfaceId
   ) public view virtual override returns (bool) {
@@ -118,11 +131,11 @@ contract Towns is
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function name() public pure override returns (string memory) {
-    return "Towns";
+    return NAME;
   }
 
   function symbol() public pure override returns (string memory) {
-    return "TOWNS";
+    return SYMBOL;
   }
 
   /// @notice Allows the StandardBridge on this network to mint tokens.
@@ -159,16 +172,17 @@ contract Towns is
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                     Internal Overrides                     */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   function _authorizeUpgrade(
     address newImplementation
   ) internal override onlyOwner {}
 
   /// @dev Override the name hash to be a constant value for performance in EIP-712
   function _constantNameHash() internal pure override returns (bytes32) {
-    return keccak256(bytes(name()));
+    return NAME_HASH;
   }
 
-  /// @dev This allows Permit2 to be used for single transaction ERC20 `transferFrom`
+  /// @dev This allows Permit2 to be used without prior approval.
   function _givePermit2InfiniteAllowance()
     internal
     pure

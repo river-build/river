@@ -34,6 +34,15 @@ contract Towns is
   /*                  Constants & Immutables                    */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
+  /// @notice The name of the token
+  string public constant NAME = "Towns";
+
+  /// @notice The symbol of the token
+  string public constant SYMBOL = "TOWNS";
+
+  /// @notice The name hash of the token
+  bytes32 public constant NAME_HASH = keccak256(bytes(NAME));
+
   /// @dev initial supply is 10 billion tokens
   uint256 internal constant INITIAL_SUPPLY = 10_000_000_000 ether;
 
@@ -173,6 +182,8 @@ contract Towns is
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                     Introspection                          */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  /// @inheritdoc IERC165
   function supportsInterface(
     bytes4 interfaceId
   ) public view virtual override returns (bool) {
@@ -184,11 +195,11 @@ contract Towns is
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function name() public pure override returns (string memory) {
-    return "Towns";
+    return NAME;
   }
 
   function symbol() public pure override returns (string memory) {
-    return "TOWNS";
+    return SYMBOL;
   }
 
   /// @notice Clock used for flagging checkpoints, overridden to implement timestamp based
@@ -208,10 +219,10 @@ contract Towns is
 
   /// @dev Override the name hash to be a constant value for performance in EIP-712
   function _constantNameHash() internal pure override returns (bytes32) {
-    return keccak256(bytes(name()));
+    return NAME_HASH;
   }
 
-  /// @dev This allows Permit2 to be used for single transaction ERC20 `transferFrom`
+  /// @dev This allows Permit2 to be used without prior approval.
   function _givePermit2InfiniteAllowance()
     internal
     pure
