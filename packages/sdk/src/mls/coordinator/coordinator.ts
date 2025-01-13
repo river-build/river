@@ -282,6 +282,11 @@ export class Coordinator implements ICoordinator {
     // }
 
     public async joinOrCreateGroup(_streamId: string): Promise<void> {
+        const hasGroup = this.groupService.getGroup(_streamId) !== undefined
+        if (hasGroup) {
+            return
+        }
+
         throw new Error('Not implemented')
     }
 
