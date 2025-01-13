@@ -4,7 +4,6 @@
 
 import { beforeEach, describe, expect } from 'vitest'
 import { CipherSuite } from '@river-build/mls-rs-wasm'
-import { dlog } from '@river-build/dlog'
 import {
     EpochSecret,
     EpochSecretService,
@@ -12,8 +11,6 @@ import {
     InMemoryEpochSecretStore,
 } from '../../mls/epoch'
 import { EncryptedData } from '@river-build/proto'
-
-const log = dlog('test:mls:epoch')
 
 const encoder = new TextEncoder()
 
