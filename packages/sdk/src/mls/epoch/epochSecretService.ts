@@ -250,11 +250,29 @@ export class EpochSecretService {
     }
 
     public async handleEpochSecrets(_streamId: string, _message: EpochSecretsMessage) {
-        throw new Error('Not implemented')
+        for (const epochSecret of _message.secrets) {
+            await this.addAnnouncedSealedEpochSecret(
+                _streamId,
+                epochSecret.epoch,
+                epochSecret.secret,
+            )
+            this.coordinator?.newSealedEpochSecret(_streamId, epochSecret.epoch)
+        }
     }
 
     public epochSecretMessage(_epochSecret: EpochSecret): EpochSecretsMessage {
-        throw new Error('Not implemented')
+        if (_epochSecret.sealedEpochSecret === undefined) {
+            throw new Error('Fatal: epoch secret not sealed')
+        }
+
+        return {
+            secrets: [
+                {
+                    epoch: _epochSecret.epoch,
+                    secret: _epochSecret.sealedEpochSecret,
+                },
+            ],
+        }
     }
 
     public isOpen(epochSecret: EpochSecret): boolean {

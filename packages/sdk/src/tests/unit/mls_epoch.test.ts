@@ -26,8 +26,8 @@ describe('mlsEpochTests', () => {
     const streamId = 'stream'
 
     beforeEach(() => {
-        epochStore = new InMemoryEpochSecretStore(log.extend('store'))
-        epochService = new EpochSecretService(cipherSuite, epochStore, log.extend('service'))
+        epochStore = new InMemoryEpochSecretStore()
+        epochService = new EpochSecretService(cipherSuite, epochStore)
     })
 
     it('shouldCreateEpochSecretService', () => {
@@ -102,8 +102,8 @@ describe('mlsEpochTests', () => {
 
         // Create another service that seals it's epoch secret and gives us
         beforeEach(async () => {
-            epochStore2 = new InMemoryEpochSecretStore(log.extend('store2'))
-            epochService2 = new EpochSecretService(cipherSuite, epochStore2, log.extend('service2'))
+            epochStore2 = new InMemoryEpochSecretStore()
+            epochService2 = new EpochSecretService(cipherSuite, epochStore2)
 
             await epochService2.addOpenEpochSecret(streamId, epoch, secret)
             await epochService2.addOpenEpochSecret(streamId, epoch2, secret2)
@@ -189,7 +189,7 @@ describe('mlsEpochTests', () => {
     describe('epochSecretStorage', () => {
         beforeEach(async () => {
             await epochService.addOpenEpochSecret(streamId, epoch, secret)
-            epochService = new EpochSecretService(cipherSuite, epochStore, log.extend('service2'))
+            epochService = new EpochSecretService(cipherSuite, epochStore)
         })
 
         it('shouldLoadEpochSecretFromStorage', async () => {

@@ -4,6 +4,7 @@ import {
     MemberPayload_Mls_EpochSecrets,
     MemberPayload_Mls_ExternalJoin,
     MemberPayload_Mls_InitializeGroup,
+    StreamEvent,
 } from '@river-build/proto'
 import { GroupService, InMemoryGroupStore, Crypto } from '../group'
 import { EpochSecret, EpochSecretService, InMemoryEpochSecretStore } from '../epoch'
@@ -26,6 +27,7 @@ import {
     GroupServiceCoordinatorAdapter,
 } from '../queue'
 import { addressFromUserId } from '../../id'
+import { make_MemberPayload_Mls } from '../../types'
 
 type InitializeGroupMessage = PlainMessage<MemberPayload_Mls_InitializeGroup>
 type ExternalJoinMessage = PlainMessage<MemberPayload_Mls_ExternalJoin>
@@ -80,7 +82,7 @@ export class Coordinator implements ICoordinator {
     private client!: Client
     private persistenceStore!: IPersistenceStore
     private awaitingGroupActive: Map<string, IAwaiter> = new Map()
-    private queueService: IQueueService
+    private readonly queueService: IQueueService
 
     private log: {
         error: DLogger
@@ -257,37 +259,74 @@ export class Coordinator implements ICoordinator {
         perEpoch.push(item)
     }
 
-    public async initializeGroupMessage(streamId: string): Promise<InitializeGroupMessage> {
+    private async initializeGroupMessage(streamId: string): Promise<InitializeGroupMessage> {
         // TODO: Check preconditions
         // TODO: Catch the error
         return this.groupService.initializeGroupMessage(streamId)
     }
 
-    public async externalJoinMessage(streamId: string): Promise<ExternalJoinMessage> {
-        const externalGroup = await this.externalGroupService.getExternalGroup('streamId')
-        if (externalGroup === undefined) {
-            this.log.error('External group not found', { streamId })
-            throw new Error('External group not found')
+    private async externalJoinMessage(
+        streamId: string,
+        externalInfo: {
+            externalGroupSnapshot: Uint8Array
+            groupInfoMessage: Uint8Array
+            commits: { commit: Uint8Array; groupInfoMessage: Uint8Array }[]
+        },
+    ): Promise<ExternalJoinMessage> {
+        const externalGroup = await this.externalGroupService.loadSnapshot(
+            streamId,
+            externalInfo.externalGroupSnapshot,
+        )
+        for (const commit of externalInfo.commits) {
+            await this.externalGroupService.processCommit(externalGroup, commit.commit)
         }
-
         const exportedTree = this.externalGroupService.exportTree(externalGroup)
-        const latestGroupInfo = this.externalGroupService.latestGroupInfo(externalGroup)
+        const latestGroupInfo = externalInfo.groupInfoMessage
 
         return this.groupService.externalJoinMessage(streamId, latestGroupInfo, exportedTree)
     }
-    //
-    // public epochSecretsMessage(streamId: string): EpochSecretsMessage {
-    //     // TODO: Check preconditions
-    //     return this.epochSecretService.epochSecretMessage(epochSecret)
-    // }
 
-    public async joinOrCreateGroup(_streamId: string): Promise<void> {
-        const hasGroup = this.groupService.getGroup(_streamId) !== undefined
+    private async epochSecretsMessage(epochSecret: EpochSecret): Promise<EpochSecretsMessage> {
+        // TODO: Check preconditions
+        return this.epochSecretService.epochSecretMessage(epochSecret)
+    }
+
+    public async joinOrCreateGroup(streamId: string): Promise<void> {
+        const hasGroup = this.groupService.getGroup(streamId) !== undefined
         if (hasGroup) {
             return
         }
+        const externalInfo = await this.client.getMlsExternalGroupInfo(streamId)
 
-        throw new Error('Not implemented')
+        let joinOrCreateGroupMessage: PlainMessage<StreamEvent>['payload']
+
+        if (externalInfo === undefined) {
+            const initializeGroupMessage = await this.initializeGroupMessage(streamId)
+            joinOrCreateGroupMessage = make_MemberPayload_Mls({
+                content: {
+                    case: 'initializeGroup',
+                    value: initializeGroupMessage,
+                },
+            })
+        } else {
+            const externalJoinMessage = await this.externalJoinMessage(streamId, externalInfo)
+            joinOrCreateGroupMessage = make_MemberPayload_Mls({
+                content: {
+                    case: 'externalJoin',
+                    value: externalJoinMessage,
+                },
+            })
+        }
+
+        // Send message to the node
+        try {
+            await this.client.makeEventAndAddToStream(streamId, joinOrCreateGroupMessage)
+        } catch (e) {
+            this.log.error('Failed to join or create group', { streamId, error: e })
+            if (this.groupService.getGroup(streamId) !== undefined) {
+                await this.groupService.clearGroup(streamId)
+            }
+        }
     }
 
     // NOTE: Critical section, no awaits permitted
@@ -428,10 +467,35 @@ export class Coordinator implements ICoordinator {
     }
 
     public async announceEpochSecret(_streamId: string, _epoch: bigint) {
-        // NOP
+        let epochSecret = this.epochSecretService.getEpochSecret(_streamId, _epoch)
+        if (epochSecret === undefined) {
+            throw new Error('Fatal: announceEpochSecret called for missing epoch secret')
+        }
+
+        if (epochSecret.sealedEpochSecret === undefined) {
+            const nextEpochKey = this.epochSecretService.getEpochSecret(
+                epochSecret.streamId,
+                epochSecret.epoch + 1n,
+            )
+            if (nextEpochKey?.derivedKeys !== undefined) {
+                await this.epochSecretService.sealEpochSecret(epochSecret, nextEpochKey.derivedKeys)
+                epochSecret = this.epochSecretService.getEpochSecret(
+                    epochSecret.streamId,
+                    epochSecret.epoch,
+                )
+                if (epochSecret === undefined) {
+                    throw new Error('Fatal: epoch secret not found after sealing')
+                }
+            }
+        }
+
+        return this.tryAnnouncingSealedEpochSecret(epochSecret)
     }
 
     private async tryAnnouncingSealedEpochSecret(epochSecret: EpochSecret): Promise<void> {
+        const streamId = epochSecret.streamId
+        const epoch = epochSecret.epoch
+
         if (epochSecret.sealedEpochSecret === undefined) {
             throw new Error('Fatal: announceSealedEpoch called for missing sealed secret')
         }
@@ -440,8 +504,21 @@ export class Coordinator implements ICoordinator {
             return
         }
 
-        const _message = this.epochSecretService.epochSecretMessage(epochSecret)
-        // TODO: Client sends message to the stream
-        throw new Error('Not finished')
+        const epochSecretsMessage = await this.epochSecretsMessage(epochSecret)
+
+        try {
+            await this.client.makeEventAndAddToStream(
+                streamId,
+                make_MemberPayload_Mls({
+                    content: {
+                        case: 'epochSecrets',
+                        value: epochSecretsMessage,
+                    },
+                }),
+            )
+        } catch (e) {
+            this.log.error('Failed to announce epoch secret', { streamId, epoch, error: e })
+            this.queueService.enqueueCommand({ tag: 'announceEpochSecret', streamId, epoch })
+        }
     }
 }

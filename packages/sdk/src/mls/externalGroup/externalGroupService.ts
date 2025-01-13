@@ -21,15 +21,15 @@ export class ExternalGroupService {
         }
     }
 
-    public async getExternalGroup(_streamId: string): Promise<ExternalGroup | undefined> {
-        throw new Error('Not implemented')
+    public exportTree(group: ExternalGroup): Uint8Array {
+        return this.crypto.exportTree(group)
     }
 
-    public exportTree(_group: ExternalGroup): Uint8Array {
-        throw new Error('Not implemented')
+    public async loadSnapshot(streamId: string, snapshot: Uint8Array): Promise<ExternalGroup> {
+        return this.crypto.loadExternalGroupFromSnapshot(streamId, snapshot)
     }
 
-    public latestGroupInfo(_group: ExternalGroup): Uint8Array {
-        throw new Error('Not implemented')
+    public async processCommit(externalGroup: ExternalGroup, commit: Uint8Array): Promise<void> {
+        return this.crypto.processCommit(externalGroup, commit)
     }
 }
