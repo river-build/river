@@ -10,12 +10,8 @@ export interface IGroupStore {
     clearGroup(streamId: string): Promise<void>
 }
 
-
 export class InMemoryGroupStore implements IGroupStore {
     private groups: Map<string, GroupDTO> = new Map()
-
-    constructor() {
-    }
 
     public async hasGroup(streamId: string): Promise<boolean> {
         return this.groups.has(streamId)
