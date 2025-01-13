@@ -29,10 +29,6 @@ export class ExternalGroupService {
         throw new Error('Not implemented')
     }
 
-    public snapshot(_group: ExternalGroup): Promise<Uint8Array> {
-        throw new Error('Not implemented')
-    }
-
     public latestGroupInfo(_group: ExternalGroup): Uint8Array {
         throw new Error('Not implemented')
     }

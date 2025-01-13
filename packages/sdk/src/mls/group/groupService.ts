@@ -212,8 +212,8 @@ export class GroupService {
         }
     }
 
-    public exportTree(group: Group): Uint8Array {
-        return this.crypto.exportTree(group)
+    public exportGroupSnapshot(_group: Group): Uint8Array {
+        throw new Error('Not implemented')
     }
 
     private getSignaturePublicKey(): Uint8Array {
