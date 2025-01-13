@@ -5,10 +5,10 @@ import {
     MemberPayload_Mls_ExternalJoin,
     MemberPayload_Mls_InitializeGroup,
 } from '@river-build/proto'
-import { GroupService } from '../group'
-import { EpochSecret, EpochSecretService } from '../epoch'
-import { ExternalGroupService } from '../externalGroup'
-import { check, DLogger } from '@river-build/dlog'
+import { GroupService, InMemoryGroupStore, Crypto } from '../group'
+import { EpochSecret, EpochSecretService, InMemoryEpochSecretStore } from '../epoch'
+import { ExternalCrypto, ExternalGroupService } from '../externalGroup'
+import { check, dlog, DLogger } from '@river-build/dlog'
 import { isDefined } from '../../check'
 import { EncryptedContentItem } from '@river-build/encryption'
 import {
@@ -19,7 +19,13 @@ import {
 import { Client } from '../../client'
 import { IPersistenceStore } from '../../persistenceStore'
 import { IAwaiter, IndefiniteAwaiter } from './awaiter'
-import { IQueueService } from '../queue'
+import {
+    IQueueService,
+    QueueService,
+    EpochSecretServiceCoordinatorAdapter,
+    GroupServiceCoordinatorAdapter,
+} from '../queue'
+import { addressFromUserId } from '../../id'
 
 type InitializeGroupMessage = PlainMessage<MemberPayload_Mls_InitializeGroup>
 type ExternalJoinMessage = PlainMessage<MemberPayload_Mls_ExternalJoin>
@@ -61,23 +67,63 @@ export interface ICoordinator {
     ): Promise<void>
 }
 
+const defaultLogger = dlog('csb:mls:coordinator')
+
 export class Coordinator implements ICoordinator {
-    private epochSecretService!: EpochSecretService
-    private groupService!: GroupService
-    private externalGroupService!: ExternalGroupService
+    private userId: string
+    private readonly userAddress: Uint8Array
+    private readonly deviceKey: Uint8Array
+    private epochSecretService: EpochSecretService
+    private groupService: GroupService
+    private externalGroupService: ExternalGroupService
     private decryptionFailures: Map<string, Map<bigint, MlsEncryptedContentItem[]>> = new Map()
     private client!: Client
     private persistenceStore!: IPersistenceStore
     private awaitingGroupActive: Map<string, IAwaiter> = new Map()
-    private queueService: IQueueService | undefined
+    private queueService: IQueueService
 
-    private log!: {
+    private log: {
         error: DLogger
         debug: DLogger
     }
 
-    constructor() {
-        // nop
+    constructor(
+        userId: string,
+        deviceKey: Uint8Array,
+        client: Client,
+        persistenceStore: IPersistenceStore,
+        opts?: { log: DLogger },
+    ) {
+        this.client = client
+        this.persistenceStore = persistenceStore
+        const logger = opts?.log ?? defaultLogger
+        this.log = {
+            debug: logger.extend('debug'),
+            error: logger.extend('error'),
+        }
+
+        this.userId = userId
+        this.userAddress = addressFromUserId(userId)
+        this.deviceKey = deviceKey
+
+        // Composing all the dependencies
+        this.queueService = new QueueService(this)
+        this.externalGroupService = new ExternalGroupService(new ExternalCrypto(), opts)
+        const groupStore = new InMemoryGroupStore()
+        const crypto = new Crypto(this.userAddress, this.deviceKey, opts)
+        const groupServiceCoordinator = new GroupServiceCoordinatorAdapter(this.queueService)
+
+        this.groupService = new GroupService(groupStore, crypto, groupServiceCoordinator, opts)
+        const epochSecretStore = new InMemoryEpochSecretStore()
+        const epochSecretServiceCoordinator = new EpochSecretServiceCoordinatorAdapter(
+            this.queueService,
+        )
+        this.epochSecretService = new EpochSecretService(
+            crypto.ciphersuite(),
+            epochSecretStore,
+            epochSecretServiceCoordinator,
+            opts,
+        )
     }
 
     // API needed by the client

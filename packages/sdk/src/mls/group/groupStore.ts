@@ -1,4 +1,3 @@
-import { DLogger } from '@river-build/dlog'
 import { Group } from './group'
 
 // Group DTO replaces group with groupId
@@ -11,12 +10,11 @@ export interface IGroupStore {
     clearGroup(streamId: string): Promise<void>
 }
 
+
 export class InMemoryGroupStore implements IGroupStore {
     private groups: Map<string, GroupDTO> = new Map()
-    log: DLogger
 
-    constructor(log: DLogger) {
-        this.log = log
+    constructor() {
     }
 
     public async hasGroup(streamId: string): Promise<boolean> {

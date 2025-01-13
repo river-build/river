@@ -253,9 +253,9 @@ export class QueueService implements IQueueService {
 }
 
 export class GroupServiceCoordinatorAdapter implements IGroupServiceCoordinator {
-    public readonly queueService: QueueService
+    public readonly queueService: IQueueService
 
-    constructor(queueService: QueueService) {
+    constructor(queueService: IQueueService) {
         this.queueService = queueService
     }
 
@@ -271,9 +271,9 @@ export class GroupServiceCoordinatorAdapter implements IGroupServiceCoordinator 
 }
 
 export class EpochSecretServiceCoordinatorAdapter implements IEpochSecretServiceCoordinator {
-    public readonly queueService: QueueService
+    public readonly queueService: IQueueService
 
-    constructor(queueService: QueueService) {
+    constructor(queueService: IQueueService) {
         this.queueService = queueService
     }
 

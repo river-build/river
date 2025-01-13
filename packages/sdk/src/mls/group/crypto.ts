@@ -2,6 +2,7 @@ import {
     Client as MlsClient,
     ExportedTree as MlsExportedTree,
     Group as MlsGroup,
+    CipherSuite as MlsCipherSuite,
     MlsMessage,
 } from '@river-build/mls-rs-wasm'
 import { dlog, DLogger } from '@river-build/dlog'
@@ -115,5 +116,9 @@ export class Crypto {
     public async exportEpochSecret(group: Group): Promise<Uint8Array> {
         const secret = await group.group.currentEpochSecret()
         return secret.toBytes()
+    }
+
+    public ciphersuite(): MlsCipherSuite {
+        return new MlsCipherSuite()
     }
 }
