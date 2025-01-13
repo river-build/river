@@ -320,14 +320,14 @@ func (p *MessageToNotificationsProcessor) apnPayloadV1(
 		return nil, base.AsRiverError(err, Err_INTERNAL)
 	}
 
-	eventBytesHex := hex.EncodeToString(eventBytes)
-
 	apnPayload := map[string]interface{}{
-		"channelId": hex.EncodeToString(channelID[:]),
-		"kind":      kind,
-		"senderId":  hex.EncodeToString(event.Event.CreatorAddress),
+		"channelId":      hex.EncodeToString(channelID[:]),
+		"kind":           kind,
+		"senderId":       hex.EncodeToString(event.Event.CreatorAddress),
+		"payloadVersion": int(NotificationPushVersion_NOTIFICATION_PUSH_VERSION_1),
 	}
 
+	eventBytesHex := hex.EncodeToString(eventBytes)
 	if len(eventBytesHex) <= MaxAPNAllowedNotificationStreamEventPayloadSize {
 		apnPayload["event"] = eventBytesHex
 	}
@@ -367,10 +367,11 @@ func (p *MessageToNotificationsProcessor) apnPayloadV2(
 	}
 
 	apnPayload := map[string]interface{}{
-		"channelId": hex.EncodeToString(channelID[:]),
-		"kind":      kind,
-		"senderId":  hex.EncodeToString(event.Event.CreatorAddress),
-		"eventId":   eventHash,
+		"channelId":      hex.EncodeToString(channelID[:]),
+		"kind":           kind,
+		"senderId":       hex.EncodeToString(event.Event.CreatorAddress),
+		"eventId":        eventHash,
+		"payloadVersion": int(NotificationPushVersion_NOTIFICATION_PUSH_VERSION_2),
 	}
 
 	// only add the (stream)event if there is a reasonable chance that the payload isn't too large.
@@ -535,6 +536,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 					"channelID", channelID,
 					"deviceToken", sub.DeviceToken,
 					"env", sub.Environment,
+					"version", sub.PushVersion,
 				)
 			} else if !subscriptionExpired {
 				p.log.Error("Unable to send APN notification",
@@ -544,6 +546,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 					"channelID", channelID,
 					"deviceToken", sub.DeviceToken,
 					"env", sub.Environment,
+					"version", sub.PushVersion,
 					"err", err)
 			} else {
 				if err := p.cache.RemoveAPNSubscription(ctx, sub.DeviceToken, userPref.UserID); err != nil {
