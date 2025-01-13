@@ -15,7 +15,7 @@ type ExternalJoinMessage = PlainMessage<MemberPayload_Mls_ExternalJoin>
 export interface IGroupServiceCoordinator {
     joinOrCreateGroup(streamId: string): void
     groupActive(streamId: string): void
-    newEpochSecret(streamId: string, epoch: bigint): void
+    newEpoch(streamId: string, epoch: bigint): void
 }
 
 const defaultLogger = dlog('csb:mls:groupService')
@@ -129,7 +129,7 @@ export class GroupService {
 
         this.coordinator?.groupActive(group.streamId)
         const epoch = this.crypto.currentEpoch(group)
-        this.coordinator?.newEpochSecret(group.streamId, epoch)
+        this.coordinator?.newEpoch(group.streamId, epoch)
     }
 
     public async handleExternalJoin(group: Group, message: ExternalJoinMessage) {
@@ -140,7 +140,7 @@ export class GroupService {
             await this.crypto.processCommit(group, message.commit)
             await this.saveGroup(group)
             const epoch = this.crypto.currentEpoch(group)
-            this.coordinator?.newEpochSecret(group.streamId, epoch)
+            this.coordinator?.newEpoch(group.streamId, epoch)
             return
         }
 
@@ -163,7 +163,7 @@ export class GroupService {
 
         this.coordinator?.groupActive(group.streamId)
         const epoch = this.crypto.currentEpoch(group)
-        this.coordinator?.newEpochSecret(group.streamId, epoch)
+        this.coordinator?.newEpoch(group.streamId, epoch)
     }
 
     public async initializeGroupMessage(streamId: string): Promise<InitializeGroupMessage> {
@@ -222,5 +222,9 @@ export class GroupService {
 
     private getSignaturePublicKey(): Uint8Array {
         return this.crypto.signaturePublicKey()
+    }
+
+    public async exportEpochSecret(group: Group): Promise<Uint8Array> {
+        return this.crypto.exportEpochSecret(group)
     }
 }

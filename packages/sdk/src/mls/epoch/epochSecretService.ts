@@ -15,20 +15,28 @@ const MLS_ALGORITHM = 'mls_0.0.1'
 
 type EpochSecretsMessage = PlainMessage<MemberPayload_Mls_EpochSecrets>
 
+export interface IEpochSecretServiceCoordinator {
+    newOpenEpochSecret(streamId: string, epoch: bigint): void
+    newSealedEpochSecret(streamId: string, epoch: bigint): void
+}
+
 export class EpochSecretService {
     private epochSecretStore: IEpochSecretStore
     private cipherSuite: MlsCipherSuite
     private cache: Map<EpochSecretId, EpochSecret> = new Map()
+    private coordinator?: IEpochSecretServiceCoordinator
     log: DLogger
 
     public constructor(
         cipherSuite: MlsCipherSuite,
         epochSecretStore: IEpochSecretStore,
         log: DLogger,
+        coordinator?: IEpochSecretServiceCoordinator,
     ) {
         this.log = log
         this.cipherSuite = cipherSuite
         this.epochSecretStore = epochSecretStore
+        this.coordinator = coordinator
     }
 
     /// Gets epochKey from the cache
@@ -107,6 +115,7 @@ export class EpochSecretService {
         }
         // TODO: Should this method store epochKey?
         await this.saveEpochSecret(epochSecret)
+        this.coordinator?.newSealedEpochSecret(streamId, epoch)
     }
 
     // TODO: Should this method persist the epoch secret?
@@ -140,6 +149,7 @@ export class EpochSecretService {
         }
         // TODO: Should this method store epochKey
         await this.saveEpochSecret(epochSecret)
+        this.coordinator?.newOpenEpochSecret(streamId, epoch)
     }
 
     public async openSealedEpochSecret(
@@ -234,7 +244,17 @@ export class EpochSecretService {
         throw new Error('Not implemented')
     }
 
-    public epochSecretMessage(streamId: string): EpochSecretsMessage {
+    public epochSecretMessage(_epochSecret: EpochSecret): EpochSecretsMessage {
         throw new Error('Not implemented')
+    }
+
+    public isOpen(epochSecret: EpochSecret): boolean {
+        return epochSecret.openEpochSecret !== undefined
+    }
+
+    public canBeOpened(epochSecret: EpochSecret): boolean {
+        return (
+            epochSecret.openEpochSecret === undefined && epochSecret.sealedEpochSecret !== undefined
+        )
     }
 }

@@ -6,7 +6,7 @@ import {
     MemberPayload_Mls_InitializeGroup,
 } from '@river-build/proto'
 import { GroupService, IGroupServiceCoordinator } from '../group'
-import { EpochSecret, EpochSecretService } from '../epoch'
+import { EpochSecret, EpochSecretService, IEpochSecretServiceCoordinator } from '../epoch'
 import { ExternalGroupService } from '../externalGroup'
 import { check, DLogger } from '@river-build/dlog'
 import { isDefined, logNever } from '../../check'
@@ -36,13 +36,37 @@ type GroupActiveCommand = {
     streamId: string
 }
 
-type NewEpochSecretCommand = {
-    tag: 'newEpochSecrets'
+type NewEpochCommand = {
+    tag: 'newEpoch'
     streamId: string
     epoch: bigint
 }
 
-type QueueCommand = JoinOrCreateGroupCommand | GroupActiveCommand | NewEpochSecretCommand
+type NewOpenEpochSecretCommand = {
+    tag: 'newOpenEpochSecret'
+    streamId: string
+    epoch: bigint
+}
+
+type NewSealedEpochSecretCommand = {
+    tag: 'newSealedEpochSecret'
+    streamId: string
+    epoch: bigint
+}
+
+type AnnounceEpochSecretCommand = {
+    tag: 'announceEpochSecret'
+    streamId: string
+    epoch: bigint
+}
+
+type QueueCommand =
+    | JoinOrCreateGroupCommand
+    | GroupActiveCommand
+    | NewEpochCommand
+    | NewOpenEpochSecretCommand
+    | NewSealedEpochSecretCommand
+    | AnnounceEpochSecretCommand
 
 // Events, which we are processing from outside
 type InitializeGroupEvent = {
@@ -139,10 +163,15 @@ export class QueueService {
 
         const epoch = this.groupService.currentEpoch(activeGroup)
 
-        const epochSecret = this.epochSecretService.getEpochSecret(streamId, epoch)
+        let epochSecret = this.epochSecretService.getEpochSecret(streamId, epoch)
 
         if (epochSecret === undefined) {
-            throw new Error('Fatal: no epoch secret for active group current epoch')
+            // NOTE: queue has not processed new epoch event yet, force it manually
+            await this.newEpoch(streamId, epoch)
+            epochSecret = this.epochSecretService.getEpochSecret(streamId, epoch)
+            if (epochSecret === undefined) {
+                throw new Error('Fatal: epoch secret not found')
+            }
         }
 
         const plaintext_ = event.toJsonString()
@@ -258,11 +287,11 @@ export class QueueService {
 
         return this.groupService.externalJoinMessage(streamId, latestGroupInfo, exportedTree)
     }
-
-    public epochSecretsMessage(streamId: string): EpochSecretsMessage {
-        // TODO: Check preconditions
-        return this.epochSecretService.epochSecretMessage(streamId)
-    }
+    //
+    // public epochSecretsMessage(streamId: string): EpochSecretsMessage {
+    //     // TODO: Check preconditions
+    //     return this.epochSecretService.epochSecretMessage(epochSecret)
+    // }
 
     public async joinOrCreateGroup(_streamId: string): Promise<void> {
         throw new Error('Not implemented')
@@ -299,10 +328,128 @@ export class QueueService {
         }
     }
 
-    public async newEpochSecret(_streamId: string, _epoch: bigint): Promise<void> {
+    public async newEpoch(streamId: string, epoch: bigint): Promise<void> {
+        const epochAlreadyProcessed =
+            this.epochSecretService.getEpochSecret(streamId, epoch) !== undefined
+        if (epochAlreadyProcessed) {
+            return
+        }
+
+        const group = this.groupService.getGroup(streamId)
+        if (group === undefined) {
+            throw new Error('Fatal: newEpoch called for missing group')
+        }
+
+        if (group.status !== 'GROUP_ACTIVE') {
+            throw new Error('Fatal: newEpoch called for non-active group')
+        }
+
+        if (this.groupService.currentEpoch(group) !== epoch) {
+            throw new Error('Fatal: newEpoch called for wrong epoch')
+        }
+
+        const epochSecret = await this.groupService.exportEpochSecret(group)
+        await this.epochSecretService.addOpenEpochSecret(streamId, epoch, epochSecret)
+        this.enqueueCommand({ tag: 'announceEpochSecret', streamId, epoch })
+    }
+
+    public async newOpenEpochSecret(streamId: string, _epoch: bigint): Promise<void> {
+        const epochSecret = this.epochSecretService.getEpochSecret(streamId, _epoch)
+        if (epochSecret === undefined) {
+            throw new Error('Fatal: newEpochSecret called for missing epoch secret')
+        }
+
+        if (epochSecret.derivedKeys === undefined) {
+            throw new Error('Fatal: missing derived keys for open secret')
+        }
+
         // TODO: Decrypt all messages for that particular epoch secret
-        // TODO: Try opening a new epoch
-        throw new Error('Not implemented')
+        const perStream = this.decryptionFailures.get(streamId)
+        if (perStream !== undefined) {
+            const perEpoch = perStream.get(_epoch)
+            if (perEpoch !== undefined) {
+                perStream.delete(_epoch)
+                // TODO: Can this be Promise.all?
+                for (const decryptionFailure of perEpoch) {
+                    await this.decryptGroupEvent(
+                        epochSecret,
+                        decryptionFailure.streamId,
+                        decryptionFailure.eventId,
+                        decryptionFailure.kind,
+                        decryptionFailure.encryptedData,
+                    )
+                }
+            }
+        }
+
+        const previousEpochSecret = this.epochSecretService.getEpochSecret(streamId, _epoch - 1n)
+        if (
+            previousEpochSecret !== undefined &&
+            this.epochSecretService.canBeOpened(previousEpochSecret)
+        ) {
+            await this.epochSecretService.openSealedEpochSecret(
+                previousEpochSecret,
+                epochSecret.derivedKeys,
+            )
+        }
+    }
+
+    private async newSealedEpochSecret(streamId: string, epoch: bigint): Promise<void> {
+        const epochSecret = this.epochSecretService.getEpochSecret(streamId, epoch)
+        if (epochSecret === undefined) {
+            throw new Error('Fatal: newSealedEpochSecret called for missing epoch secret')
+        }
+
+        if (epochSecret.sealedEpochSecret === undefined) {
+            throw new Error('Fatal: missing sealed secret for sealed secret')
+        }
+
+        // TODO: Maybe this can be Promise.all?
+        await this.tryOpeningSealedEpochSecret(epochSecret)
+        await this.tryAnnouncingSealedEpochSecret(epochSecret)
+    }
+
+    private async tryOpeningSealedEpochSecret(sealedEpochSecret: EpochSecret): Promise<void> {
+        if (sealedEpochSecret.sealedEpochSecret === undefined) {
+            throw new Error('Fatal: tryOpeningSealedEpochSecret called for missing sealed secret')
+        }
+
+        // Already open
+        if (sealedEpochSecret.openEpochSecret !== undefined) {
+            return
+        }
+
+        // Missing derived keys needed to open
+        const nextEpochSecret = this.epochSecretService.getEpochSecret(
+            sealedEpochSecret.streamId,
+            sealedEpochSecret.epoch + 1n,
+        )
+        if (nextEpochSecret?.derivedKeys === undefined) {
+            return
+        }
+
+        return this.epochSecretService.openSealedEpochSecret(
+            sealedEpochSecret,
+            nextEpochSecret.derivedKeys,
+        )
+    }
+
+    public async announceEpochSecret(_streamId: string, _epoch: bigint) {
+        // NOP
+    }
+
+    private async tryAnnouncingSealedEpochSecret(epochSecret: EpochSecret): Promise<void> {
+        if (epochSecret.sealedEpochSecret === undefined) {
+            throw new Error('Fatal: announceSealedEpoch called for missing sealed secret')
+        }
+
+        if (epochSecret.announced) {
+            return
+        }
+
+        const message = this.epochSecretService.epochSecretMessage(epochSecret)
+        // TODO: Client sends message to the stream
+        throw new Error('Not finished')
     }
 
     // # Queue-related operations #
@@ -413,8 +560,14 @@ export class QueueService {
                 return this.joinOrCreateGroup(command.streamId)
             case 'groupActive':
                 return this.groupActive(command.streamId)
-            case 'newEpochSecrets':
-                return this.newEpochSecret(command.streamId, command.epoch)
+            case 'newEpoch':
+                return this.newOpenEpochSecret(command.streamId, command.epoch)
+            case 'newOpenEpochSecret':
+                return this.newOpenEpochSecret(command.streamId, command.epoch)
+            case 'newSealedEpochSecret':
+                return this.newSealedEpochSecret(command.streamId, command.epoch)
+            case 'announceEpochSecret':
+                return this.announceEpochSecret(command.streamId, command.epoch)
             default:
                 logNever(command)
         }
@@ -434,6 +587,7 @@ export class QueueService {
                 logNever(event)
         }
     }
+
 }
 
 export class GroupServiceCoordinatorAdapter implements IGroupServiceCoordinator {
@@ -443,13 +597,28 @@ export class GroupServiceCoordinatorAdapter implements IGroupServiceCoordinator 
         this.queueService = queueService
     }
 
-    joinOrCreateGroup(streamId: string): void {
+    public joinOrCreateGroup(streamId: string): void {
         this.queueService.enqueueCommand({ tag: 'joinOrCreateGroup', streamId })
     }
-    groupActive(streamId: string): void {
+    public groupActive(streamId: string): void {
         this.queueService.enqueueCommand({ tag: 'groupActive', streamId })
     }
-    newEpochSecret(streamId: string, epoch: bigint): void {
-        this.queueService.enqueueCommand({ tag: 'newEpochSecrets', streamId, epoch })
+    public newEpoch(streamId: string, epoch: bigint): void {
+        this.queueService.enqueueCommand({ tag: 'newEpoch', streamId, epoch })
+    }
+}
+
+export class EpochSecretServiceCoordinatorAdapter implements IEpochSecretServiceCoordinator {
+    public readonly queueService: QueueService
+
+    constructor(queueService: QueueService) {
+        this.queueService = queueService
+    }
+
+    public newOpenEpochSecret(streamId: string, epoch: bigint): void {
+        this.queueService.enqueueCommand({ tag: 'newOpenEpochSecret', streamId, epoch })
+    }
+    public newSealedEpochSecret(streamId: string, epoch: bigint): void {
+        this.queueService.enqueueCommand({ tag: 'newSealedEpochSecret', streamId, epoch })
     }
 }

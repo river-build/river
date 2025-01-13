@@ -111,4 +111,9 @@ export class Crypto {
         }
         return this.client.signaturePublicKey()
     }
+
+    public async exportEpochSecret(group: Group): Promise<Uint8Array> {
+        const secret = await group.group.currentEpochSecret()
+        return secret.toBytes()
+    }
 }
