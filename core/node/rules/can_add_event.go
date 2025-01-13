@@ -10,6 +10,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/mls_service"
 	"github.com/river-build/river/core/node/mls_service/mls_tools"
@@ -30,7 +31,8 @@ import (
 
 type aeParams struct {
 	ctx                   context.Context
-	cfg                   crypto.OnChainConfiguration
+	config                config.Config
+	chainConfig           crypto.OnChainConfiguration
 	mediaMaxChunkSize     int
 	streamMembershipLimit int
 	validNodeAddresses    []common.Address
@@ -99,6 +101,16 @@ type aeMlsEpochSecrets struct {
 	secrets *MemberPayload_Mls_EpochSecrets
 }
 
+type aeMlsKeyPackageRules struct {
+	params     *aeParams
+	keyPackage *MemberPayload_KeyPackage
+}
+
+type aeMlsWelcomeMessageRules struct {
+	params         *aeParams
+	welcomeMessage *MemberPayload_Mls_WelcomeMessage
+}
+
 type aeMediaPayloadChunkRules struct {
 	params *aeParams
 	chunk  *MediaPayload_Chunk
@@ -158,6 +170,7 @@ type aeHideUserJoinLeaveEventsWrapperRules struct {
 */
 func CanAddEvent(
 	ctx context.Context,
+	config config.Config,
 	chainConfig crypto.OnChainConfiguration,
 	validNodeAddresses []common.Address,
 	currentTime time.Time,
@@ -195,7 +208,8 @@ func CanAddEvent(
 
 	ru := &aeParams{
 		ctx:                   ctx,
-		cfg:                   chainConfig,
+		config:                config,
+		chainConfig:           chainConfig,
 		mediaMaxChunkSize:     int(settings.MediaMaxChunkSize),
 		streamMembershipLimit: int(settings.MembershipLimits.ForType(streamView.StreamId().Type())),
 		validNodeAddresses:    validNodeAddresses,
@@ -584,6 +598,10 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 			check(ru.validMemberBlockchainTransaction_IsUnique).
 			check(ru.validMemberBlockchainTransaction_ReceiptMetadata)
 	case *MemberPayload_Mls_:
+		if !params.config.EnableMls {
+			return aeBuilder().
+				fail(RiverError(Err_INVALID_ARGUMENT, "mls disabled globally"))
+		}
 		return params.canAddMlsPayload(content.Mls)
 
 	case *MemberPayload_EncryptionAlgorithm_:
@@ -623,6 +641,26 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 			check(params.creatorIsMember).
 			check(params.mlsInitialized).
 			check(ru.validMlsEpochSecrets)
+
+	case *MemberPayload_Mls_KeyPackage:
+		ru := &aeMlsKeyPackageRules{
+			params:     params,
+			keyPackage: content.KeyPackage,
+		}
+		return aeBuilder().
+			check(params.creatorIsMember).
+			check(params.mlsInitialized).
+			check(ru.validMlsKeyPackage)
+
+	case *MemberPayload_Mls_WelcomeMessage_:
+		ru := &aeMlsWelcomeMessageRules{
+			params:         params,
+			welcomeMessage: content.WelcomeMessage,
+		}
+		return aeBuilder().
+			check(params.creatorIsMember).
+			check(params.mlsInitialized).
+			check(ru.validMlsWelcomeMessage)
 	default:
 		return aeBuilder().
 			fail(unknownContentType(content))
@@ -1438,13 +1476,18 @@ func (ru *aeMlsInitializeGroupRules) validMlsInitializeGroup() (bool, error) {
 
 func (ru *aeMlsExternalJoinRules) validMlsExternalJoin() (bool, error) {
 	view := ru.params.streamView.(events.MlsStreamView)
-	externalJoinRequest, err := view.GetMlsExternalJoinRequest()
+	mlsGroupState, err := view.GetMlsGroupState()
 	if err != nil {
 		return false, err
 	}
-	externalJoinRequest.ProposedExternalJoinCommit = ru.externalJoin.Commit
-	externalJoinRequest.ProposedExternalJoinInfoMessage = ru.externalJoin.GroupInfoMessage
-	externalJoinRequest.SignaturePublicKey = ru.externalJoin.SignaturePublicKey
+
+	externalJoinRequest := &mls_tools.ExternalJoinRequest{
+		GroupState: mlsGroupState,
+		ProposedExternalJoinCommit: ru.externalJoin.Commit,
+		ProposedExternalJoinInfoMessage: ru.externalJoin.GroupInfoMessage,
+		SignaturePublicKey: ru.externalJoin.SignaturePublicKey,
+	}
+	
 	resp, err := mls_service.ExternalJoinRequest(externalJoinRequest)
 	if err != nil {
 		return false, err
@@ -1469,6 +1512,60 @@ func (ru *aeMlsEpochSecrets) validMlsEpochSecrets() (bool, error) {
 			return false, RiverError(Err_INVALID_ARGUMENT, "epoch already exists", "epoch", secret.Epoch)
 		}
 	}
+	return true, nil
+}
+
+func (ru *aeMlsKeyPackageRules) validMlsKeyPackage() (bool, error) {
+	view := ru.params.streamView.(events.MlsStreamView)
+	mlsGroupState, err := view.GetMlsGroupState()
+	if err != nil {
+		return false, err
+	}
+
+	keyPackageRequest := &mls_tools.KeyPackageRequest {
+		GroupState: mlsGroupState,
+		KeyPackage: &mls_tools.KeyPackage{
+			KeyPackage: ru.keyPackage.KeyPackage,
+			SignaturePublicKey: ru.keyPackage.SignaturePublicKey,
+		},
+	}
+
+	resp, err := mls_service.KeyPackageRequest(keyPackageRequest)
+	if err != nil {
+		return false, err
+	}
+
+	if resp.GetResult() != mls_tools.ValidationResult_VALID {
+		return false, RiverError(Err_INVALID_ARGUMENT, "invalid key package", "result", resp.GetResult())
+	}
+
+	return true, nil
+}
+
+func (ru *aeMlsWelcomeMessageRules) validMlsWelcomeMessage() (bool, error) {
+	view := ru.params.streamView.(events.MlsStreamView)
+	mlsGroupState, err := view.GetMlsGroupState()
+	if err != nil {
+		return false, err
+	}
+
+	welcomeMessageRequest := &mls_tools.WelcomeMessageRequest{
+		GroupState: mlsGroupState,
+		SignaturePublicKeys: ru.welcomeMessage.SignaturePublicKeys,
+		GroupInfoMessage: ru.welcomeMessage.GroupInfoMessage,
+		WelcomeMessages: ru.welcomeMessage.WelcomeMessages,
+		WelcomeMessageCommit: ru.welcomeMessage.Commit,
+	}
+	
+	resp, err := mls_service.WelcomeMessageRequest(welcomeMessageRequest)
+	if err != nil {
+		return false, err
+	}
+
+	if resp.GetResult() != mls_tools.ValidationResult_VALID {
+		return false, RiverError(Err_INVALID_ARGUMENT, "invalid welcome message", "result", resp.GetResult())
+	}
+
 	return true, nil
 }
 
