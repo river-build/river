@@ -36,17 +36,13 @@ export function extractMlsExternalGroup(streamView: IStreamStateView): {
         const mlsPayload = payload.value.content.value
         switch (mlsPayload.content.case) {
             case 'externalJoin':
-                commits.push({
-                    commit: mlsPayload.content.value.commit,
-                    groupInfoMessage: mlsPayload.content.value.groupInfoMessage,
-                })
-                break
             case 'welcomeMessage':
                 commits.push({
                     commit: mlsPayload.content.value.commit,
                     groupInfoMessage: mlsPayload.content.value.groupInfoMessage,
                 })
                 break
+
             case undefined:
                 break
             default:
