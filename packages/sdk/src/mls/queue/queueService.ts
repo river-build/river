@@ -9,7 +9,7 @@ import { IEpochSecretServiceCoordinator } from '../epoch'
 import { DLogger } from '@river-build/dlog'
 import { logNever } from '../../check'
 import { EncryptedContent } from '../../encryptedContentTypes'
-import { ICoordinator } from '../coordinator/coordinator'
+import { ICoordinator } from '../coordinator'
 
 type InitializeGroupMessage = PlainMessage<MemberPayload_Mls_InitializeGroup>
 type ExternalJoinMessage = PlainMessage<MemberPayload_Mls_ExternalJoin>
