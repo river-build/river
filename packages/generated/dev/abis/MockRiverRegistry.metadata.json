@@ -477,6 +477,55 @@
             "type": "bytes32"
           },
           {
+            "internalType": "bytes32",
+            "name": "genesisMiniblockHash",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "struct Stream",
+            "name": "stream",
+            "type": "tuple",
+            "components": [
+              {
+                "internalType": "bytes32",
+                "name": "lastMiniblockHash",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "uint64",
+                "name": "lastMiniblockNum",
+                "type": "uint64"
+              },
+              {
+                "internalType": "uint64",
+                "name": "reserved0",
+                "type": "uint64"
+              },
+              {
+                "internalType": "uint64",
+                "name": "flags",
+                "type": "uint64"
+              },
+              {
+                "internalType": "address[]",
+                "name": "nodes",
+                "type": "address[]"
+              }
+            ]
+          }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function",
+        "name": "addStream"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "bytes32",
+            "name": "streamId",
+            "type": "bytes32"
+          },
+          {
             "internalType": "address[]",
             "name": "nodes",
             "type": "address[]"
@@ -538,55 +587,6 @@
             "type": "bool"
           }
         ]
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "bytes32",
-            "name": "streamId",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "genesisMiniblockHash",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "struct Stream",
-            "name": "stream",
-            "type": "tuple",
-            "components": [
-              {
-                "internalType": "bytes32",
-                "name": "lastMiniblockHash",
-                "type": "bytes32"
-              },
-              {
-                "internalType": "uint64",
-                "name": "lastMiniblockNum",
-                "type": "uint64"
-              },
-              {
-                "internalType": "uint64",
-                "name": "reserved0",
-                "type": "uint64"
-              },
-              {
-                "internalType": "uint64",
-                "name": "flags",
-                "type": "uint64"
-              },
-              {
-                "internalType": "address[]",
-                "name": "nodes",
-                "type": "address[]"
-              }
-            ]
-          }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function",
-        "name": "createStream"
       },
       {
         "inputs": [
@@ -1299,6 +1299,12 @@
     "devdoc": {
       "kind": "dev",
       "methods": {
+        "addStream(bytes32,bytes32,(bytes32,uint64,uint64,uint64,address[]))": {
+          "details": "Only callable by registered nodes",
+          "params": {
+            "stream": "is the Stream object to be created"
+          }
+        },
         "allocateStream(bytes32,address[],bytes32,bytes)": {
           "details": "Only callable by registered nodes",
           "params": {
@@ -1319,12 +1325,6 @@
           },
           "returns": {
             "_0": "True if the setting exists"
-          }
-        },
-        "createStream(bytes32,bytes32,(bytes32,uint64,uint64,uint64,address[]))": {
-          "details": "Only callable by registered nodes",
-          "params": {
-            "stream": "is the Stream object to be created"
           }
         },
         "deleteConfiguration(bytes32)": {
@@ -1466,6 +1466,9 @@
     "userdoc": {
       "kind": "user",
       "methods": {
+        "addStream(bytes32,bytes32,(bytes32,uint64,uint64,uint64,address[]))": {
+          "notice": "Create a new stream in the registry"
+        },
         "allocateStream(bytes32,address[],bytes32,bytes)": {
           "notice": "Allocate a new stream in the registry"
         },
@@ -1474,9 +1477,6 @@
         },
         "configurationExists(bytes32)": {
           "notice": "Indication if there is a setting for the given key"
-        },
-        "createStream(bytes32,bytes32,(bytes32,uint64,uint64,uint64,address[]))": {
-          "notice": "Create a new stream in the registry"
         },
         "deleteConfiguration(bytes32)": {
           "notice": "Deletes the setting for the given key on all blocks"
@@ -1615,18 +1615,18 @@
       "license": "MIT"
     },
     "contracts/src/river/registry/facets/stream/IStreamRegistry.sol": {
-      "keccak256": "0xb2031169bb78ac20a0273aa08392de2a514e69c1c0d41b7049d1708ac8aa375c",
+      "keccak256": "0xa72836372c31f4dbb87ef2ef4eada35173d8d18b0a3d56a1d7c8c1984d0e4795",
       "urls": [
-        "bzz-raw://eec04a2e40dbe64aed1accf9142ff1364ff4e6337506efbd06701ba2c38e899a",
-        "dweb:/ipfs/QmfCyJTVDAEK8a34TQRKEsc68PQL39Ne2qJcaLdUWb9tH2"
+        "bzz-raw://aaf8c0d16891fb009b8c3d2fd23d2a82752a5841a77709ba8334070ff877aed6",
+        "dweb:/ipfs/QmWEmMtnvVLUis4kcDthoQ7PkkVsZtCBNLhKKrtcKJhyUT"
       ],
       "license": "MIT"
     },
     "contracts/src/river/registry/facets/stream/StreamRegistry.sol": {
-      "keccak256": "0x5e29ad60240982d4cd96d694930fcdcb57bbc4674e80356de6bc8b0840afc70a",
+      "keccak256": "0x1cec2bdaf1b5d06005670b0d384e9adcf42e7ac245f91418f2e494bcea521911",
       "urls": [
-        "bzz-raw://fb6d351becadc01b84051bb461365d90a0953681070228631f4177c0359b85e7",
-        "dweb:/ipfs/QmPeD9D6Z19uie7J9k3257m39cpP3Vofp6YgX8Htwcq42P"
+        "bzz-raw://fa60476e2d91889ea13a1469ae7573b54d7a20e252e6f6f3438a49688198bd56",
+        "dweb:/ipfs/QmYXJLsawZSmAkkgNwQEL9U2CyxvSg1oAPEBSo9YS7v8Ww"
       ],
       "license": "MIT"
     },

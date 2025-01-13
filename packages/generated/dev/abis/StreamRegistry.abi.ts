@@ -1,35 +1,7 @@
 export default [
   {
     "type": "function",
-    "name": "allocateStream",
-    "inputs": [
-      {
-        "name": "streamId",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "nodes",
-        "type": "address[]",
-        "internalType": "address[]"
-      },
-      {
-        "name": "genesisMiniblockHash",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "genesisMiniblock",
-        "type": "bytes",
-        "internalType": "bytes"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "createStream",
+    "name": "addStream",
     "inputs": [
       {
         "name": "streamId",
@@ -72,6 +44,34 @@ export default [
             "internalType": "address[]"
           }
         ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "allocateStream",
+    "inputs": [
+      {
+        "name": "streamId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "nodes",
+        "type": "address[]",
+        "internalType": "address[]"
+      },
+      {
+        "name": "genesisMiniblockHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "genesisMiniblock",
+        "type": "bytes",
+        "internalType": "bytes"
       }
     ],
     "outputs": [],
