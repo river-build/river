@@ -6,7 +6,7 @@ import {
 } from '@river-build/proto'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { Crypto } from './crypto'
-import { DLogger, dlog } from '@river-build/dlog'
+import { DLogger, dlog, bin_equal } from '@river-build/dlog'
 
 type InitializeGroupMessage = PlainMessage<MemberPayload_Mls_InitializeGroup>
 type ExternalJoinMessage = PlainMessage<MemberPayload_Mls_ExternalJoin>
@@ -115,8 +115,8 @@ export class GroupService {
         const wasInitializeGroupOurOwn =
             group.status === 'GROUP_PENDING_CREATE' &&
             group.groupInfoWithExternalKey !== undefined &&
-            uint8ArrayEqual(_message.groupInfoMessage, group.groupInfoWithExternalKey) &&
-            uint8ArrayEqual(_message.signaturePublicKey, this.getSignaturePublicKey())
+            bin_equal(_message.groupInfoMessage, group.groupInfoWithExternalKey) &&
+            bin_equal(_message.signaturePublicKey, this.getSignaturePublicKey())
 
         if (!wasInitializeGroupOurOwn) {
             await this.clearGroup(group.streamId)
@@ -147,10 +147,10 @@ export class GroupService {
         const wasExternalJoinOurOwn =
             group.status === 'GROUP_PENDING_JOIN' &&
             group.groupInfoWithExternalKey !== undefined &&
-            uint8ArrayEqual(message.groupInfoMessage, group.groupInfoWithExternalKey) &&
+            bin_equal(message.groupInfoMessage, group.groupInfoWithExternalKey) &&
             group.commit !== undefined &&
-            uint8ArrayEqual(message.commit, group.commit) &&
-            uint8ArrayEqual(message.signaturePublicKey, this.getSignaturePublicKey())
+            bin_equal(message.commit, group.commit) &&
+            bin_equal(message.signaturePublicKey, this.getSignaturePublicKey())
 
         if (!wasExternalJoinOurOwn) {
             await this.clearGroup(group.streamId)
@@ -219,19 +219,4 @@ export class GroupService {
     private getSignaturePublicKey(): Uint8Array {
         return this.crypto.signaturePublicKey()
     }
-}
-
-function uint8ArrayEqual(a: Uint8Array, b: Uint8Array): boolean {
-    if (a === b) {
-        return true
-    }
-    if (a.length !== b.length) {
-        return false
-    }
-    for (const [i, byte] of a.entries()) {
-        if (byte !== b[i]) {
-            return false
-        }
-    }
-    return true
 }
