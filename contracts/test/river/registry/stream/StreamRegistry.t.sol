@@ -137,9 +137,9 @@ contract StreamRegistryTest is
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-  /*                       createStream                         */
+  /*                       addStream                            */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
-  function test_fuzz_createStream(
+  function test_fuzz_addStream(
     address nodeOperator,
     TestStream memory testStream,
     TestNode[] memory nodes
@@ -171,7 +171,7 @@ contract StreamRegistryTest is
       testStream.genesisMiniblockHash,
       streamToCreate
     );
-    streamRegistry.createStream(
+    streamRegistry.addStream(
       testStream.streamId,
       testStream.genesisMiniblockHash,
       streamToCreate
@@ -187,7 +187,7 @@ contract StreamRegistryTest is
     assertContains(stream.nodes, nodes[0].node);
   }
 
-  function test_revertWhen_createStream_streamIdAlreadyExists(
+  function test_revertWhen_addStream_streamIdAlreadyExists(
     address nodeOperator,
     TestStream memory testStream,
     TestNode memory node
@@ -207,7 +207,7 @@ contract StreamRegistryTest is
     });
 
     vm.prank(node.node);
-    streamRegistry.createStream(
+    streamRegistry.addStream(
       testStream.streamId,
       testStream.genesisMiniblockHash,
       streamToCreate
@@ -215,7 +215,7 @@ contract StreamRegistryTest is
 
     vm.prank(node.node);
     vm.expectRevert(bytes(RiverRegistryErrors.ALREADY_EXISTS));
-    streamRegistry.createStream(
+    streamRegistry.addStream(
       testStream.streamId,
       testStream.genesisMiniblockHash,
       streamToCreate
@@ -223,7 +223,7 @@ contract StreamRegistryTest is
   }
 
   /// @notice This test is to ensure that the node who is calling the allocateSealedStream function is registered.
-  function test_revertWhen_createStream_nodeNotRegistered(
+  function test_revertWhen_addStream_nodeNotRegistered(
     address nodeOperator,
     TestStream memory testStream,
     TestNode memory node
@@ -240,7 +240,7 @@ contract StreamRegistryTest is
 
     vm.prank(node.node);
     vm.expectRevert(bytes(RiverRegistryErrors.NODE_NOT_FOUND));
-    streamRegistry.createStream(
+    streamRegistry.addStream(
       testStream.streamId,
       testStream.genesisMiniblockHash,
       streamToCreate
@@ -248,7 +248,7 @@ contract StreamRegistryTest is
   }
 
   /// @notice This test is to ensure that the nodes being passed in are registered before allocating a sealed stream.
-  function test_revertWhen_createStream_nodesNotRegistered(
+  function test_revertWhen_addStream_nodesNotRegistered(
     address nodeOperator,
     address randomNode,
     TestStream memory testStream,
@@ -271,7 +271,7 @@ contract StreamRegistryTest is
 
     vm.prank(node.node);
     vm.expectRevert(bytes(RiverRegistryErrors.NODE_NOT_FOUND));
-    streamRegistry.createStream(
+    streamRegistry.addStream(
       testStream.streamId,
       testStream.genesisMiniblockHash,
       streamToCreate

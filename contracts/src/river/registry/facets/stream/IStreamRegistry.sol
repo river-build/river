@@ -77,7 +77,7 @@ interface IStreamRegistry is IStreamRegistryBase {
    * @param stream is the Stream object to be created
    * @dev Only callable by registered nodes
    */
-  function createStream(
+  function addStream(
     bytes32 streamId,
     bytes32 genesisMiniblockHash,
     Stream memory stream

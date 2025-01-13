@@ -61,7 +61,7 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
   }
 
   /// @inheritdoc IStreamRegistry
-  function createStream(
+  function addStream(
     bytes32 streamId,
     bytes32 genesisMiniblockHash,
     Stream memory stream
