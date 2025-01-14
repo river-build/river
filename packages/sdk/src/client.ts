@@ -2528,7 +2528,7 @@ export class Client
         let miniblockNum = streamView.miniblockInfo?.min
         check(isDefined(miniblockNum), `miniblockNum not found: ${streamId}`)
 
-        function checkDone(commits: Uint8Array[]) {
+        function checkDone() {
             for (const commit of commits) {
                 try {
                     const message = MlsMessage.fromBytes(commit)
@@ -2542,7 +2542,7 @@ export class Client
             return false
         }
 
-        while (!checkDone(commits)) {
+        while (!checkDone()) {
             const header = await this.getMiniblockHeader(streamId, miniblockNum)
             const mls = header.snapshot?.members?.mls
             check(isDefined(mls), `mls snapshot not found: ${streamId}`)
