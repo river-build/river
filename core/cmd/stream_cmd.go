@@ -295,7 +295,7 @@ func runStreamDumpCmd(cmd *cobra.Command, args []string) error {
 
 	streamAndCookie := response.Msg.GetStream()
 
-	to := streamAndCookie.GetNextSyncCookie().GetMinipoolGen()
+	maxBlock := streamAndCookie.GetNextSyncCookie().GetMinipoolGen()
 	blockRange := int64(100)
 	if len(args) == 2 {
 		blockRange, err = strconv.ParseInt(args[1], 10, 64)
@@ -303,53 +303,67 @@ func runStreamDumpCmd(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
-	from := max(to-blockRange, 0)
+	from := int64(0)
+	to := min(int64(from)+blockRange, maxBlock)
 
-	miniblocks, err := remoteClient.GetMiniblocks(ctx, connect.NewRequest(&protocol.GetMiniblocksRequest{
-		StreamId:      streamID[:],
-		FromInclusive: from,
-		ToExclusive:   to,
-	}))
-	if err != nil {
-		return err
-	}
-
-	for n, miniblock := range miniblocks.Msg.GetMiniblocks() {
-		// Parse header
-		info, err := events.NewMiniblockInfoFromProto(
-			miniblock,
-			events.NewParsedMiniblockInfoOpts().WithExpectedBlockNumber(from+int64(n)),
-		)
+	for {
+		miniblocks, err := remoteClient.GetMiniblocks(ctx, connect.NewRequest(&protocol.GetMiniblocksRequest{
+			StreamId:      streamID[:],
+			FromInclusive: from,
+			ToExclusive:   to,
+		}))
 		if err != nil {
 			return err
 		}
 
-		mbHeader, ok := info.HeaderEvent().Event.Payload.(*protocol.StreamEvent_MiniblockHeader)
-		if !ok {
-			return fmt.Errorf("unable to parse header event as miniblock header")
-		}
-
-		if len(mbHeader.MiniblockHeader.EventHashes) != len(miniblock.Events) {
-			return fmt.Errorf("malformatted miniblock: header event count and miniblock event count do not match")
-		}
-
-		for i, hash := range mbHeader.MiniblockHeader.EventHashes {
-			if !bytes.Equal(miniblock.Events[i].Hash, hash) {
-				return fmt.Errorf(
-					"event %d hashes do not match: %v v %v in the header",
-					i,
-					hex.EncodeToString(miniblock.Events[i].Hash),
-					hex.EncodeToString(hash),
-				)
+		for n, miniblock := range miniblocks.Msg.GetMiniblocks() {
+			// Parse header
+			info, err := events.NewMiniblockInfoFromProto(
+				miniblock,
+				events.NewParsedMiniblockInfoOpts().WithExpectedBlockNumber(from+int64(n)),
+			)
+			if err != nil {
+				return err
 			}
+
+			mbHeader, ok := info.HeaderEvent().Event.Payload.(*protocol.StreamEvent_MiniblockHeader)
+			if !ok {
+				return fmt.Errorf("unable to parse header event as miniblock header")
+			}
+
+			if len(mbHeader.MiniblockHeader.EventHashes) != len(miniblock.Events) {
+				return fmt.Errorf("malformatted miniblock: header event count and miniblock event count do not match")
+			}
+
+			for i, hash := range mbHeader.MiniblockHeader.EventHashes {
+				if !bytes.Equal(miniblock.Events[i].Hash, hash) {
+					return fmt.Errorf(
+						"event %d hashes do not match: %v v %v in the header",
+						i,
+						hex.EncodeToString(miniblock.Events[i].Hash),
+						hex.EncodeToString(hash),
+					)
+				}
+			}
+
+			fmt.Printf(
+				"\nMiniblock %d\n=========\n%s",
+				mbHeader.MiniblockHeader.MiniblockNum,
+				protojson.Format(miniblock),
+			)
+			fmt.Printf("\n(Parsed Header)\n-------------\n%s\n", protojson.Format(mbHeader.MiniblockHeader))
 		}
 
-		fmt.Printf(
-			"\nMiniblock %d\n=========\n%s",
-			mbHeader.MiniblockHeader.MiniblockNum,
-			protojson.Format(miniblock),
-		)
-		fmt.Printf("\n(Parsed Header)\n-------------\n%s\n", protojson.Format(mbHeader.MiniblockHeader))
+		from = from + int64(len(miniblocks.Msg.Miniblocks))
+		to = min(from+blockRange, maxBlock)
+
+		if len(miniblocks.Msg.Miniblocks) == 0 || from == to {
+			break
+		}
+	}
+
+	if from < maxBlock-1 {
+		return fmt.Errorf("Unable to download all blocks from stream")
 	}
 
 	return nil
