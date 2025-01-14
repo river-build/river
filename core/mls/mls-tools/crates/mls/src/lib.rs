@@ -93,7 +93,7 @@ pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> 
         }
     };
 
-    let mut external_group = match external_client.load_group(external_group_snapshot) {
+    let external_group = match external_client.load_group(external_group_snapshot) {
         Ok(group) => group,
         Err(_) => return InitialGroupInfoResponse {
             result: ValidationResult::InvalidExternalGroup.into(),
@@ -289,6 +289,13 @@ pub fn validate_key_package_request(request: KeyPackageRequest) -> KeyPackageRes
         }
     };
 
+    match external_client.validate_key_package(proposed_key_package_message.clone()) {
+        Ok(_) => {},
+        Err(_) => return KeyPackageResponse {
+            result: ValidationResult::InvalidKeyPackage.into(),
+        }
+    }
+
     let key_package = match proposed_key_package_message.into_key_package() {
         Some(key_package) => key_package,
         None => return KeyPackageResponse {
@@ -401,6 +408,29 @@ pub fn validate_welcome_message_request(request: WelcomeMessageRequest) -> Welco
         return WelcomeMessageResponse {
             result: ValidationResult::InvalidPublicSignatureKey.into(),
         };
+    }
+
+    for message in request.welcome_messages {
+        let message = match MlsMessage::from_bytes(&message) {
+            Ok(message) => message,
+            Err(_) => return WelcomeMessageResponse {
+                result: ValidationResult::InvalidWelcomeMessage.into(),
+            }
+        };
+
+        let external_received_message = match external_group.process_incoming_message(message) {
+            Ok(value) => value,
+            Err(_) => return WelcomeMessageResponse {
+                result: ValidationResult::InvalidWelcomeMessage.into(),
+            }
+        };
+
+        match external_received_message {
+            ExternalReceivedMessage::Welcome => {},
+            _ => return WelcomeMessageResponse {
+                result: ValidationResult::InvalidWelcomeMessage.into(),
+            }
+        }
     }
 
     match validate_external_group_can_process_group_info_message(external_group, request.group_info_message) {
