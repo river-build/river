@@ -1,0 +1,15 @@
+{
+  "name": "xchain-monitor",
+  "packageManager": "yarn@3.8.0",
+  "dependencies": {
+    "@river-build/generated": "workspace:^",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3",
+    "viem": "^2.22.8"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "dev": "yarn ts-node src/index.ts"
+  }
+}
