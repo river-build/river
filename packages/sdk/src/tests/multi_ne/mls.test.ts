@@ -401,6 +401,18 @@ describe('mlsTests', () => {
         expect(bin_equal(mls.groupInfoMessage, latestGroupInfoMessage)).toBe(true)
     })
 
+    test('commits are snapshotted after external commit', async () => {
+        const streamAfterSnapshot = await aliceClient.getStream(streamId)
+        const lastSnapshotMiniblockNum = streamAfterSnapshot.miniblockInfo!.min
+        const header = await bobClient.getMiniblockHeader(streamId, lastSnapshotMiniblockNum)
+        const commitsSinceLastSnapshot = header.snapshot?.members?.mls?.commitsSinceLastSnapshot
+        expect(commitsSinceLastSnapshot).toBeDefined()
+        expect(commitsSinceLastSnapshot!.length).toBe(commits.length)
+        for (let i = 0; i < commits.length; i++) {
+            expect(bin_equal(commitsSinceLastSnapshot![i], commits[i])).toBe(true)
+        }
+    })
+
     test('Signature public keys are mapped per user in the snapshot', async () => {
         // force snapshot
         await expect(
