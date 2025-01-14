@@ -363,7 +363,7 @@ func runStreamDumpCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	if from < maxBlock-1 {
-		return fmt.Errorf("Unable to download all blocks from stream")
+		return fmt.Errorf("unable to download all blocks from stream")
 	}
 
 	return nil
