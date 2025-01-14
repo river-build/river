@@ -46,7 +46,7 @@ func TestCreateMediaStream(t *testing.T) {
 	}))
 	tt.require.NoError(err)
 
-	creationCookie := csResp.Msg.Stream.NextCreationCookie
+	creationCookie := csResp.Msg.NextCreationCookie
 	mb := &MiniblockRef{
 		Hash: common.BytesToHash(creationCookie.PrevMiniblockHash),
 		Num:  creationCookie.MiniblockNum,
