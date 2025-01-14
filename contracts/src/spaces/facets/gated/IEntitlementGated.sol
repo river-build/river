@@ -31,7 +31,7 @@ interface IEntitlementGatedBase {
   error EntitlementGated_TransactionNotRegistered();
   error EntitlementGated_NodeNotFound();
   error EntitlementGated_NodeAlreadyVoted();
-
+  error EntitlementGated_OnlyEntitlementChecker();
   event EntitlementCheckResultPosted(
     bytes32 indexed transactionId,
     NodeVoteStatus result

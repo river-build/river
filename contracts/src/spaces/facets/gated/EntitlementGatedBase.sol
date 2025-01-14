@@ -12,6 +12,15 @@ import {EntitlementGatedStorage} from "./EntitlementGatedStorage.sol";
 import {MembershipStorage} from "contracts/src/spaces/facets/membership/MembershipStorage.sol";
 
 abstract contract EntitlementGatedBase is IEntitlementGatedBase {
+  modifier onlyEntitlementChecker() {
+    if (
+      msg.sender != address(EntitlementGatedStorage.layout().entitlementChecker)
+    ) {
+      revert EntitlementGated_OnlyEntitlementChecker();
+    }
+    _;
+  }
+
   function _setEntitlementChecker(
     IEntitlementChecker entitlementChecker
   ) internal {
@@ -145,6 +154,81 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
       }
     }
   }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           V2                               */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+  function _requestEntitlementCheckV2(
+    bytes32 transactionId,
+    IRuleEntitlement entitlement,
+    uint256 requestId
+  ) internal {
+    EntitlementGatedStorage.Layout storage ds = EntitlementGatedStorage
+      .layout();
+
+    Transaction storage transaction = ds.transactions[transactionId];
+
+    if (transaction.hasBenSet) {
+      uint256 _length = transaction.roleIds.length;
+      for (uint256 i; i < _length; ++i) {
+        if (transaction.roleIds[i] == requestId) {
+          revert EntitlementGated_TransactionCheckAlreadyRegistered();
+        }
+      }
+    }
+
+    // if the entitlement checker has not been set, set it
+    if (address(ds.entitlementChecker) == address(0)) {
+      _setFallbackEntitlementChecker();
+    }
+
+    if (!transaction.hasBenSet) {
+      transaction.hasBenSet = true;
+      transaction.entitlement = entitlement;
+    }
+
+    transaction.roleIds.push(requestId);
+
+    ds.entitlementChecker.requestEntitlementCheckV2{value: msg.value}(
+      transactionId,
+      requestId
+    );
+  }
+
+  function _postEntitlementCheckResultV2(
+    bytes32 transactionId,
+    uint256 roleId,
+    NodeVoteStatus result
+  ) internal {
+    EntitlementGatedStorage.Layout storage ds = EntitlementGatedStorage
+      .layout();
+    Transaction storage transaction = ds.transactions[transactionId];
+
+    if (transaction.hasBenSet == false) {
+      revert EntitlementGated_TransactionNotRegistered();
+    }
+
+    if (transaction.isCompleted[roleId]) {
+      revert EntitlementGated_TransactionCheckAlreadyCompleted();
+    }
+
+    transaction.isCompleted[roleId] = true;
+
+    bool allRoleIdsCompleted = _checkAllRoleIdsCompleted(transactionId);
+
+    if (allRoleIdsCompleted) {
+      _removeTransaction(transactionId);
+    }
+
+    if (result == NodeVoteStatus.PASSED || allRoleIdsCompleted) {
+      _onEntitlementCheckResultPosted(transactionId, result);
+      emit EntitlementCheckResultPosted(transactionId, result);
+    }
+  }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           Helpers                          */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function _checkAllRoleIdsCompleted(
     bytes32 transactionId

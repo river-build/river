@@ -8,6 +8,7 @@ import {IEntitlementChecker} from "./IEntitlementChecker.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {EntitlementCheckerStorage} from "./EntitlementCheckerStorage.sol";
 import {NodeOperatorStorage, NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
+import {XChainLib} from "contracts/src/xchain/XChainLib.sol";
 
 // contracts
 import {Facet} from "@river-build/diamond/src/facets/Facet.sol";
@@ -157,6 +158,29 @@ contract EntitlementChecker is IEntitlementChecker, Facet {
       transactionId,
       roleId,
       nodes
+    );
+  }
+
+  function requestEntitlementCheckV2(
+    bytes32 transactionId,
+    uint256 requestId
+  ) external payable {
+    XChainLib.layout().callers[transactionId] = msg.sender;
+
+    address[] memory randomNodes = _getRandomNodes(5);
+
+    XChainLib.Check storage check = XChainLib.layout().checks[transactionId];
+
+    for (uint256 i; i < randomNodes.length; ++i) {
+      check.nodes[requestId].add(randomNodes[i]);
+    }
+
+    emit EntitlementCheckRequested(
+      msg.sender,
+      address(this),
+      transactionId,
+      requestId,
+      randomNodes
     );
   }
 

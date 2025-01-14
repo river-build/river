@@ -5,6 +5,7 @@ pragma solidity ^0.8.23;
 import {IEntitlementCheckerBase} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
 import {IEntitlementGatedBase} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
+import {IEntitlementGated} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
 
 //libraries
 import {RuleEntitlementUtil} from "./RuleEntitlementUtil.sol";
@@ -13,6 +14,8 @@ import {RuleEntitlementUtil} from "./RuleEntitlementUtil.sol";
 import {MockEntitlementGated} from "contracts/test/mocks/MockEntitlementGated.sol";
 import {EntitlementTestUtils} from "contracts/test/utils/EntitlementTestUtils.sol";
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
+
+import {Vm} from "forge-std/Test.sol";
 
 contract EntitlementGatedTest is
   EntitlementTestUtils,
@@ -33,6 +36,45 @@ contract EntitlementGatedTest is
   // =============================================================
   //                  Request Entitlement Check
   // =============================================================
+  function test_requestEntitlementCheckV2() external {
+    bytes32 transactionHash = keccak256(
+      abi.encodePacked(tx.origin, block.number)
+    );
+
+    uint256[] memory roleIds = new uint256[](1);
+    roleIds[0] = 0;
+
+    vm.recordLogs();
+    bytes32 realRequestId = gated.requestEntitlementCheckV3(
+      roleIds,
+      RuleEntitlementUtil.getMockERC721RuleData()
+    );
+    Vm.Log[] memory requestLogs = vm.getRecordedLogs(); // Retrieve the recorded logs
+
+    (
+      address callerAddress,
+      address contractAddress,
+      bytes32 transactionId,
+      uint256 roleId,
+      address[] memory selectedNodes
+    ) = _getEntitlementEventData(requestLogs);
+
+    assertEq(realRequestId, transactionHash);
+    assertEq(callerAddress, address(gated));
+    assertEq(contractAddress, address(entitlementChecker));
+
+    uint256 halfNodes = selectedNodes.length / 2;
+
+    for (uint256 i; i < halfNodes; ++i) {
+      vm.prank(selectedNodes[i]);
+      IEntitlementGated(contractAddress).postEntitlementCheckResult(
+        transactionId,
+        roleId,
+        NodeVoteStatus.PASSED
+      );
+    }
+  }
+
   function test_requestEntitlementCheck() external {
     vm.prank(address(gated));
     address[] memory nodes = entitlementChecker.getRandomNodes(5);
@@ -316,6 +358,38 @@ contract EntitlementGatedTest is
       }
 
       vm.stopPrank();
+    }
+  }
+
+  function _getEntitlementEventData(
+    Vm.Log[] memory requestLogs
+  )
+    internal
+    pure
+    returns (
+      address callerAddress,
+      address contractAddress,
+      bytes32 transactionId,
+      uint256 roleId,
+      address[] memory selectedNodes
+    )
+  {
+    for (uint256 i = 0; i < requestLogs.length; i++) {
+      if (
+        requestLogs[i].topics.length > 0 &&
+        requestLogs[i].topics[0] == CHECK_REQUESTED
+      ) {
+        (
+          callerAddress,
+          contractAddress,
+          transactionId,
+          roleId,
+          selectedNodes
+        ) = abi.decode(
+          requestLogs[i].data,
+          (address, address, bytes32, uint256, address[])
+        );
+      }
     }
   }
 }
