@@ -45,6 +45,7 @@ describe('mlsTests', () => {
     let latestGroupInfoMessage: Uint8Array
     let latestExternalGroupSnapshot: Uint8Array
     let latestAliceMlsKeyPackage: Uint8Array
+    let welcomeMessageCommit: Uint8Array
     const commits: Uint8Array[] = []
 
     beforeAll(async () => {
@@ -583,6 +584,7 @@ describe('mlsTests', () => {
         ).resolves.not.toThrow()
         latestGroupInfoMessage = groupInfoMessage!.toBytes()
         commits.push(commit)
+        welcomeMessageCommit = commit
     })
 
     test('key packages are cleared after being applied', async () => {
@@ -690,7 +692,7 @@ describe('mlsTests', () => {
 
         expect(miniblocks.length).toBe(1)
         const welcomeMessage = getWelcomeMessage(miniblocks[0])
-        expect(bin_equal(welcomeMessage.commit, commits[commits.length - 1])).toBe(true)
+        expect(bin_equal(welcomeMessage.commit, welcomeMessageCommit)).toBe(true)
         expect(
             welcomeMessage.signaturePublicKeys.find((val) => bin_equal(val, signature)),
         ).toBeDefined()
