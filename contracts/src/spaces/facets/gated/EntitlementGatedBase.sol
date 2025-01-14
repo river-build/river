@@ -12,24 +12,6 @@ import {EntitlementGatedStorage} from "./EntitlementGatedStorage.sol";
 import {MembershipStorage} from "contracts/src/spaces/facets/membership/MembershipStorage.sol";
 
 abstract contract EntitlementGatedBase is IEntitlementGatedBase {
-  // Function to convert the first four bytes of bytes32 to a hex string of 8 characters
-  /*
-  function bytes32ToHexStringFirst8(
-    bytes32 _data
-  ) public pure returns (string memory) {
-    bytes memory alphabet = "0123456789abcdef";
-    bytes memory str = new bytes(8); // Since we need only the first 8 hex characters
-
-    for (uint256 i = 0; i < 4; i++) {
-      // Loop only through the first 4 bytes
-      str[i * 2] = alphabet[uint256(uint8(_data[i] >> 4))];
-      str[1 + i * 2] = alphabet[uint256(uint8(_data[i] & 0x0f))];
-    }
-
-    return string(str);
-  }
-  */
-
   function _setEntitlementChecker(
     IEntitlementChecker entitlementChecker
   ) internal {
