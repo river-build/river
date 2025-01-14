@@ -601,7 +601,7 @@ describe('mlsTests', () => {
         const kp = MlsMessage.fromBytes(keyPackage.keyPackage)
         const commitOutput = await bobMlsGroup.addMember(kp)
         // at this point, the commit is still pending
-        await bobMlsGroup.clearPendingCommit()
+        bobMlsGroup.clearPendingCommit()
 
         const groupInfoMessage = commitOutput.externalCommitGroupInfo
         const commit = commitOutput.commitMessage.toBytes()
@@ -623,7 +623,7 @@ describe('mlsTests', () => {
         const keyPackage = Object.values(mls.pendingKeyPackages)[0]
         const kp = MlsMessage.fromBytes(keyPackage.keyPackage)
         const commitOutput = await bobMlsGroup.addMember(kp)
-        await bobMlsGroup.clearPendingCommit()
+        bobMlsGroup.clearPendingCommit()
         const groupInfoMessage = commitOutput.externalCommitGroupInfo!.toBytes()
 
         // tamper with the message a little bit
