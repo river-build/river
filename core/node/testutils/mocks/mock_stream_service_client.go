@@ -47,6 +47,36 @@ func (_m *MockStreamServiceClient) AddEvent(_a0 context.Context, _a1 *connect.Re
 	return r0, r1
 }
 
+// AddMediaEvent provides a mock function with given fields: _a0, _a1
+func (_m *MockStreamServiceClient) AddMediaEvent(_a0 context.Context, _a1 *connect.Request[protocol.AddMediaEventRequest]) (*connect.Response[protocol.AddMediaEventResponse], error) {
+	ret := _m.Called(_a0, _a1)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AddMediaEvent")
+	}
+
+	var r0 *connect.Response[protocol.AddMediaEventResponse]
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *connect.Request[protocol.AddMediaEventRequest]) (*connect.Response[protocol.AddMediaEventResponse], error)); ok {
+		return rf(_a0, _a1)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *connect.Request[protocol.AddMediaEventRequest]) *connect.Response[protocol.AddMediaEventResponse]); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*connect.Response[protocol.AddMediaEventResponse])
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *connect.Request[protocol.AddMediaEventRequest]) error); ok {
+		r1 = rf(_a0, _a1)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // AddStreamToSync provides a mock function with given fields: _a0, _a1
 func (_m *MockStreamServiceClient) AddStreamToSync(_a0 context.Context, _a1 *connect.Request[protocol.AddStreamToSyncRequest]) (*connect.Response[protocol.AddStreamToSyncResponse], error) {
 	ret := _m.Called(_a0, _a1)
