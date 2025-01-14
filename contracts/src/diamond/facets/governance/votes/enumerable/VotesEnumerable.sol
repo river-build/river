@@ -5,13 +5,10 @@ pragma solidity ^0.8.23;
 import {IVotesEnumerable} from "contracts/src/diamond/facets/governance/votes/enumerable/IVotesEnumerable.sol";
 
 // libraries
-import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {VotesEnumerableLib} from "contracts/src/diamond/facets/governance/votes/enumerable/VotesEnumerableLib.sol";
 
 // contracts
 abstract contract VotesEnumerable is IVotesEnumerable {
-  using EnumerableSetLib for EnumerableSetLib.AddressSet;
-
   /// @inheritdoc IVotesEnumerable
   function getDelegators() external view returns (address[] memory) {
     return VotesEnumerableLib.getDelegators();
