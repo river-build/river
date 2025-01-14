@@ -147,13 +147,13 @@ contract EntitlementChecker is IEntitlementChecker, Facet {
    * @param nodes The selected nodes
    */
   function requestEntitlementCheck(
-    address callerAddress,
+    address walletAddress,
     bytes32 transactionId,
     uint256 roleId,
     address[] memory nodes
   ) external {
     emit EntitlementCheckRequested(
-      callerAddress,
+      walletAddress,
       msg.sender,
       transactionId,
       roleId,
@@ -162,11 +162,14 @@ contract EntitlementChecker is IEntitlementChecker, Facet {
   }
 
   function requestEntitlementCheckV2(
+    address walletAddress,
     bytes32 transactionId,
     uint256 requestId
   ) external payable {
+    address space = msg.sender;
+
     XChainLib.layout().requests[transactionId] = XChainLib.Request({
-      caller: msg.sender,
+      caller: space,
       value: msg.value
     });
 
@@ -178,8 +181,9 @@ contract EntitlementChecker is IEntitlementChecker, Facet {
       check.nodes[requestId].add(randomNodes[i]);
     }
 
-    emit EntitlementCheckRequested(
-      msg.sender,
+    emit EntitlementCheckRequestedV2(
+      walletAddress,
+      space,
       address(this),
       transactionId,
       requestId,

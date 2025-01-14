@@ -15,11 +15,20 @@ interface IEntitlementCheckerBase {
 
   /// @notice Event emitted when an entitlement check is requested
   event EntitlementCheckRequested(
-    address callerAddress, // The address of the caller
-    address contractAddress, // The address of the contract
-    bytes32 transactionId, // The ID of the transaction
-    uint256 roleId, // The ID of the role
-    address[] selectedNodes // The nodes selected for the entitlement check
+    address callerAddress,
+    address contractAddress,
+    bytes32 transactionId,
+    uint256 roleId,
+    address[] selectedNodes
+  );
+
+  event EntitlementCheckRequestedV2(
+    address walletAddress,
+    address spaceAddress,
+    address resolverAddress,
+    bytes32 transactionId,
+    uint256 roleId,
+    address[] selectedNodes
   );
 }
 
@@ -46,6 +55,7 @@ interface IEntitlementChecker is IEntitlementCheckerBase {
   ) external;
 
   function requestEntitlementCheckV2(
+    address walletAddress,
     bytes32 transactionId,
     uint256 requestId
   ) external payable;

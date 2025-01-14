@@ -159,6 +159,7 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
   /*                           V2                               */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
   function _requestEntitlementCheckV2(
+    address walletAddress,
     bytes32 transactionId,
     IRuleEntitlement entitlement,
     uint256 requestId
@@ -190,6 +191,7 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
     transaction.roleIds.push(requestId);
 
     ds.entitlementChecker.requestEntitlementCheckV2{value: msg.value}(
+      walletAddress,
       transactionId,
       requestId
     );

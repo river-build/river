@@ -21,6 +21,13 @@ contract XChain is IEntitlementGated, IEntitlementCheckerBase, Facet {
     _addInterface(type(IEntitlementGated).interfaceId);
   }
 
+  function isCompleted(
+    bytes32 transactionId,
+    uint256 requestId
+  ) external view returns (bool) {
+    return XChainLib.layout().checks[transactionId].voteCompleted[requestId];
+  }
+
   function postEntitlementCheckResult(
     bytes32 transactionId,
     uint256 requestId,

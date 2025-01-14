@@ -58,20 +58,21 @@ contract EntitlementGatedTest is
     Vm.Log[] memory requestLogs = vm.getRecordedLogs(); // Retrieve the recorded logs
 
     (
-      address callerAddress,
-      address contractAddress,
+      address walletAddress,
+      address spaceAddress,
+      address resolverAddress,
       bytes32 transactionId,
       uint256 roleId,
       address[] memory selectedNodes
     ) = _getEntitlementEventData(requestLogs);
 
     assertEq(realRequestId, transactionHash);
-    assertEq(callerAddress, address(gated));
-    assertEq(contractAddress, address(entitlementChecker));
+    assertEq(spaceAddress, address(gated));
+    assertEq(resolverAddress, address(entitlementChecker));
 
     for (uint256 i; i < 3; ++i) {
       vm.prank(selectedNodes[i]);
-      IEntitlementGated(contractAddress).postEntitlementCheckResult(
+      IEntitlementGated(resolverAddress).postEntitlementCheckResult(
         transactionId,
         roleId,
         NodeVoteStatus.PASSED
@@ -373,8 +374,9 @@ contract EntitlementGatedTest is
     internal
     pure
     returns (
-      address callerAddress,
-      address contractAddress,
+      address walletAddress,
+      address spaceAddress,
+      address resolverAddress,
       bytes32 transactionId,
       uint256 roleId,
       address[] memory selectedNodes
@@ -383,17 +385,18 @@ contract EntitlementGatedTest is
     for (uint256 i = 0; i < requestLogs.length; i++) {
       if (
         requestLogs[i].topics.length > 0 &&
-        requestLogs[i].topics[0] == CHECK_REQUESTED
+        requestLogs[i].topics[0] == CHECK_REQUESTED_V2
       ) {
         (
-          callerAddress,
-          contractAddress,
+          walletAddress,
+          spaceAddress,
+          resolverAddress,
           transactionId,
           roleId,
           selectedNodes
         ) = abi.decode(
           requestLogs[i].data,
-          (address, address, bytes32, uint256, address[])
+          (address, address, address, bytes32, uint256, address[])
         );
       }
     }
