@@ -36,6 +36,7 @@ describe('mlsTests', () => {
     let bobClient: Client
     let bobMlsGroup: MlsGroup
     let aliceClient: Client
+    let observerClient: Client
     let bobMlsClient: MlsClient
     let aliceMlsClient: MlsClient
     let aliceMlsClient2: MlsClient
@@ -49,8 +50,12 @@ describe('mlsTests', () => {
     const commits: Uint8Array[] = []
 
     beforeAll(async () => {
-        bobClient = await makeInitAndStartClient()
-        aliceClient = await makeInitAndStartClient()
+        ;[bobClient, aliceClient, observerClient] = await Promise.all([
+            makeInitAndStartClient(),
+            makeInitAndStartClient(),
+            makeInitAndStartClient(),
+        ])
+
         const clientOptions: MlsClientOptions = {
             withAllowExternalCommit: true,
             withRatchetTreeExtension: false,
@@ -781,5 +786,23 @@ describe('mlsTests', () => {
         expect(
             welcomeMessage.signaturePublicKeys.find((val) => bin_equal(val, signature)),
         ).toBeDefined()
+    })
+
+    test('fetch all commits from epoch 0n (from streamview)', async () => {
+        const allCommits = await bobClient.getMlsCommits(streamId, 0n)
+        expect(allCommits.length).toBe(commits.length)
+        expect(allCommits.length).toBeGreaterThan(2)
+        for (let i = 0; i < allCommits.length; i++) {
+            expect(bin_equal(allCommits[i], commits[i])).toBe(true)
+        }
+    })
+
+    test('fetch all commits from epoch 0n (from get stream)', async () => {
+        const allCommits = await observerClient.getMlsCommits(streamId, 0n)
+        expect(allCommits.length).toBe(commits.length)
+        expect(allCommits.length).toBeGreaterThan(2)
+        for (let i = 0; i < allCommits.length; i++) {
+            expect(bin_equal(allCommits[i], commits[i])).toBe(true)
+        }
     })
 })

@@ -1,10 +1,38 @@
 import { check } from '@river-build/dlog'
 import { IStreamStateView } from '../../streamStateView'
 
+import { StreamTimelineEvent } from '../../types'
+
 export type ExtractMlsExternalGroupResult = {
     externalGroupSnapshot: Uint8Array
     groupInfoMessage: Uint8Array
     commits: { commit: Uint8Array; groupInfoMessage: Uint8Array }[]
+}
+
+function commitFromEvent(
+    event: StreamTimelineEvent,
+): { commit: Uint8Array; groupInfoMessage: Uint8Array } | undefined {
+    const payload = event.remoteEvent?.event.payload
+    if (payload?.case !== 'memberPayload') {
+        return undefined
+    }
+    if (payload?.value?.content.case !== 'mls') {
+        return undefined
+    }
+
+    const mlsPayload = payload.value.content.value
+    switch (mlsPayload.content.case) {
+        case 'externalJoin':
+        case 'welcomeMessage':
+            return {
+                commit: mlsPayload.content.value.commit,
+                groupInfoMessage: mlsPayload.content.value.groupInfoMessage,
+            }
+        case undefined:
+            return undefined
+        default:
+            return undefined
+    }
 }
 
 export function extractMlsExternalGroup(
@@ -33,30 +61,27 @@ export function extractMlsExternalGroup(
     check(groupInfoMessage !== undefined, 'no groupInfoMessage found')
     const commits: { commit: Uint8Array; groupInfoMessage: Uint8Array }[] = []
     for (let i = indexOfLastSnapshot; i < streamView.timeline.length; i++) {
-        const event = streamView.timeline[i]
-        const payload = event.remoteEvent?.event.payload
-        if (payload?.case !== 'memberPayload') {
-            continue
-        }
-        if (payload?.value?.content.case !== 'mls') {
-            continue
-        }
-
-        const mlsPayload = payload.value.content.value
-        switch (mlsPayload.content.case) {
-            case 'externalJoin':
-            case 'welcomeMessage':
-                commits.push({
-                    commit: mlsPayload.content.value.commit,
-                    groupInfoMessage: mlsPayload.content.value.groupInfoMessage,
-                })
-                break
-
-            case undefined:
-                break
-            default:
-                break
+        const commit = commitFromEvent(streamView.timeline[i])
+        if (commit) {
+            commits.push(commit)
         }
     }
     return { externalGroupSnapshot, groupInfoMessage, commits: commits }
 }
+
+export function mlsCommitsFromStreamView(streamView: IStreamStateView): Uint8Array[] {
+    const commits: Uint8Array[] = []
+    const firstMiniblockNum = streamView.miniblockInfo?.min ?? 0n
+    for (let i = 0; i < streamView.timeline.length; i++) {
+        if (streamView.timeline[i].miniblockNum == firstMiniblockNum) {
+            continue
+        }
+        const commit = commitFromEvent(streamView.timeline[i])
+        if (commit) {
+            commits.push(commit.commit)
+        }
+    }
+    return commits
+}
+
+// export function mlsCommitsFromMiniblockHeader(miniblockHeader: MiniblockHeader) {}

@@ -154,7 +154,12 @@ import { SignerContext } from './signerContext'
 import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from './crypto_utils'
 import { makeTags, makeTipTags } from './tags'
 import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
-import { extractMlsExternalGroup, ExtractMlsExternalGroupResult } from './mls/utils/mlsutils'
+import {
+    extractMlsExternalGroup,
+    ExtractMlsExternalGroupResult,
+    mlsCommitsFromStreamView,
+} from './mls/utils/mlsutils'
+import { MlsMessage } from '@river-build/mls-rs-wasm'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -2510,6 +2515,44 @@ export class Client
             payload.toJsonString(),
             deviceKeys.filter((key) => key.deviceKey !== this.userDeviceKey().deviceKey),
         )
+    }
+
+    async getMlsCommits(streamId: string, fromEpoch: bigint) {
+        let streamView = this.stream(streamId)?.view
+        let commits: Uint8Array[] = []
+        if (!streamView || !streamView.isInitialized) {
+            streamView = await this.getStream(streamId)
+        }
+        commits = mlsCommitsFromStreamView(streamView)
+        check(isDefined(streamView), `stream not found: ${streamId}`)
+        let miniblockNum = streamView.miniblockInfo?.min
+        check(isDefined(miniblockNum), `miniblockNum not found: ${streamId}`)
+
+        function checkDone(commits: Uint8Array[]) {
+            for (const commit of commits) {
+                try {
+                    const message = MlsMessage.fromBytes(commit)
+                    if (message.epoch && message.epoch <= fromEpoch) {
+                        return true
+                    }
+                } catch {
+                    // ignore
+                }
+            }
+            return false
+        }
+
+        while (!checkDone(commits)) {
+            const header = await this.getMiniblockHeader(streamId, miniblockNum)
+            const mls = header.snapshot?.members?.mls
+            check(isDefined(mls), `mls snapshot not found: ${streamId}`)
+            commits = mls.commitsSinceLastSnapshot.concat(commits)
+            if (miniblockNum === 0n) {
+                break
+            }
+            miniblockNum = header.prevSnapshotMiniblockNum
+        }
+        return commits
     }
 
     // Used during testing
