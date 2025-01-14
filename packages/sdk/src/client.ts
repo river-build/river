@@ -2532,8 +2532,8 @@ export class Client
             for (const commit of commits) {
                 try {
                     const message = MlsMessage.fromBytes(commit)
-                    if (message.epoch && message.epoch <= fromEpoch) {
-                        return true
+                    if (message.epoch) {
+                        return message.epoch <= fromEpoch
                     }
                 } catch {
                     // ignore
