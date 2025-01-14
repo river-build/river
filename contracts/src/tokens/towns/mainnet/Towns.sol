@@ -22,9 +22,6 @@ import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {IntrospectionBase} from "@river-build/diamond/src/facets/introspection/IntrospectionBase.sol";
 import {ERC20Votes} from "solady/tokens/ERC20Votes.sol";
 
-// debugging
-import {console} from "forge-std/console.sol";
-
 contract Towns is
   OwnableRoles,
   ERC20Votes,
@@ -38,13 +35,13 @@ contract Towns is
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   /// @notice The name of the token
-  string public constant NAME = "Towns";
+  string internal constant NAME = "Towns";
 
   /// @notice The symbol of the token
-  string public constant SYMBOL = "TOWNS";
+  string internal constant SYMBOL = "TOWNS";
 
   /// @notice The name hash of the token
-  bytes32 public constant NAME_HASH = keccak256(bytes(NAME));
+  bytes32 internal constant NAME_HASH = keccak256(bytes(NAME));
 
   /// @dev initial supply is 10 billion tokens
   uint256 internal constant INITIAL_SUPPLY = 10_000_000_000 ether;

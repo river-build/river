@@ -37,13 +37,13 @@ contract Towns is
   string public constant version = "1.3.0";
 
   /// @notice The name of the token
-  string public constant NAME = "Towns";
+  string internal constant NAME = "Towns";
 
   /// @notice The symbol of the token
-  string public constant SYMBOL = "TOWNS";
+  string internal constant SYMBOL = "TOWNS";
 
   /// @notice The name hash of the token
-  bytes32 public constant NAME_HASH = keccak256(bytes(NAME));
+  bytes32 internal constant NAME_HASH = keccak256(bytes(NAME));
 
   ///@notice Address of the corresponding version of this token on the remote chain
   address public immutable REMOTE_TOKEN;
