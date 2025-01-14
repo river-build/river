@@ -472,12 +472,11 @@ export class EncryptionDevice {
         sessionRecord: HybridGroupSessionRecord
         sessionKey: HybridGroupSessionKey
     }> {
-        const { key, iv } = await generateAESKeyAsync()
-        const sessionId = hybridSessionKeyHash(streamId, key, iv, miniblockNum, miniblockHash)
+        const { key } = await generateAESKeyAsync()
+        const sessionId = hybridSessionKeyHash(streamId, key, miniblockNum, miniblockHash)
         const sessionKey = new HybridGroupSessionKey({
             sessionId,
             streamId,
-            iv: iv,
             key: key,
             miniblockNum,
             miniblockHash,
@@ -915,7 +914,6 @@ export class EncryptionDevice {
 export function hybridSessionKeyHash(
     streamId: string,
     key: string,
-    iv: string,
     miniblockNum: bigint,
     miniblockHash: Uint8Array,
 ) {
@@ -927,7 +925,6 @@ export function hybridSessionKeyHash(
         .update(prefixBytes)
         .update(streamId)
         .update(key)
-        .update(iv)
         .update(miniblockBytes)
         .update(miniblockHash)
         .digest()

@@ -1,15 +1,16 @@
 import * as crypto from 'crypto'
 
 // Function to encrypt a message
-export function encryptAESCBC(plainText: string, key: string, iv: string): string {
+export function encryptAESCBC(plainText: string, key: string): { ciphertext: string; iv: string } {
+    const iv = crypto.randomBytes(16)
     const cipher = crypto.createCipheriv(
         'aes-256-cbc', // use cbc because it doesn't require a nonce
         Buffer.from(key, 'hex'),
-        Buffer.from(iv, 'hex'),
+        iv,
     )
     let encrypted = cipher.update(plainText, 'utf8', 'hex')
     encrypted += cipher.final('hex')
-    return encrypted
+    return { ciphertext: encrypted, iv: iv.toString('hex') }
 }
 
 export function decryptAESCBC(encryptedText: string, key: string, iv: string): string {
@@ -27,11 +28,10 @@ export function decryptAESCBC(encryptedText: string, key: string, iv: string): s
 export async function encryptAESCBCAsync(
     plainText: string,
     key: string,
-    iv: string,
-): Promise<string> {
+): Promise<{ ciphertext: string; iv: string }> {
     return new Promise((resolve, reject) => {
         try {
-            const encrypted = encryptAESCBC(plainText, key, iv)
+            const encrypted = encryptAESCBC(plainText, key)
             resolve(encrypted)
         } catch (error) {
             reject(error)
@@ -55,17 +55,16 @@ export async function decryptAESCBCAsync(
     })
 }
 
-export function generateAESKey(): { key: string; iv: string } {
+export function generateAESKey(): { key: string } {
     const key = crypto.randomBytes(32).toString('hex') // AES-256 requires a 32-byte key
-    const iv = crypto.randomBytes(16).toString('hex') // Initialization vector (16 bytes)
-    return { key, iv }
+    return { key }
 }
 
-export function generateAESKeyAsync(): Promise<{ key: string; iv: string }> {
+export function generateAESKeyAsync(): Promise<{ key: string }> {
     return new Promise((resolve, reject) => {
         try {
-            const { key, iv } = generateAESKey()
-            resolve({ key, iv })
+            const { key } = generateAESKey()
+            resolve({ key })
         } catch (error) {
             reject(error)
         }

@@ -234,7 +234,7 @@ export class Client
         this.unpackEnvelopeOpts = unpackEnvelopeOpts
         this.userId = userIdFromAddress(signerContext.creatorAddress)
         this.defaultGroupEncryptionAlgorithm =
-            defaultGroupEncryptionAlgorithm ?? GroupEncryptionAlgorithmId.GroupEncryption
+            defaultGroupEncryptionAlgorithm ?? GroupEncryptionAlgorithmId.HybridGroupEncryption
 
         const shortId = shortenHexString(
             this.userId.startsWith('0x') ? this.userId.slice(2) : this.userId,

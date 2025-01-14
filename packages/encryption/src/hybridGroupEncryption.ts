@@ -100,12 +100,12 @@ export class HybridGroupEncryption extends EncryptionAlgorithm {
 
         const sessionKey = await this._ensureOutboundSession(streamId)
 
-        const ciphertext = await encryptAESCBCAsync(payload, sessionKey.key, sessionKey.iv)
+        const { ciphertext, iv } = await encryptAESCBCAsync(payload, sessionKey.key)
 
         return new EncryptedData({
             algorithm: this.algorithm,
             senderKey: this.device.deviceCurve25519Key!,
-            ciphertext: ciphertext,
+            ciphertext: iv + ciphertext,
             sessionId: sessionKey.sessionId,
         } satisfies PlainMessage<EncryptedData>)
     }

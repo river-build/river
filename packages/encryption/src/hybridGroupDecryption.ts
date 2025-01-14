@@ -32,8 +32,10 @@ export class HybridGroupDecryption extends DecryptionAlgorithm {
         }
 
         const session = await this.device.getHybridGroupSessionKey(streamId, content.sessionId)
+        const iv = content.ciphertext.slice(0, 32)
+        const ciphertext = content.ciphertext.slice(32)
 
-        const result = decryptAESCBCAsync(content.ciphertext, session.key, session.iv)
+        const result = decryptAESCBCAsync(ciphertext, session.key, iv)
         return result
     }
 
