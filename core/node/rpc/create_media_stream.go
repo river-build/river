@@ -21,22 +21,22 @@ func (s *Service) createMediaStreamImpl(
 	ctx context.Context,
 	req *connect.Request[CreateMediaStreamRequest],
 ) (*connect.Response[CreateMediaStreamResponse], error) {
-	stream, err := s.createMediaStream(ctx, req.Msg)
+	cc, err := s.createMediaStream(ctx, req.Msg)
 	if err != nil {
 		return nil, AsRiverError(err).Func("createMediaStreamImpl")
 	}
-	resMsg := &CreateMediaStreamResponse{
-		Stream: stream,
-	}
-	return connect.NewResponse(resMsg), nil
+
+	return connect.NewResponse(&CreateMediaStreamResponse{
+		NextCreationCookie: cc,
+	}), nil
 }
 
-func (s *Service) createMediaStream(ctx context.Context, req *CreateMediaStreamRequest) (*StreamAndCreationCookie, error) {
+func (s *Service) createMediaStream(ctx context.Context, req *CreateMediaStreamRequest) (*CreationCookie, error) {
 	log := dlog.FromCtx(ctx)
 
 	streamId, err := StreamIdFromBytes(req.StreamId)
 	if err != nil {
-		return nil, RiverError(Err_BAD_STREAM_CREATION_PARAMS, "invalid stream id", "err", err)
+		return nil, AsRiverError(err, Err_BAD_STREAM_CREATION_PARAMS)
 	}
 
 	if len(req.Events) == 0 {
@@ -148,7 +148,7 @@ func (s *Service) createReplicatedMediaStream(
 	ctx context.Context,
 	streamId StreamId,
 	parsedEvents []*ParsedEvent,
-) (*StreamAndCreationCookie, error) {
+) (*CreationCookie, error) {
 	mb, err := MakeGenesisMiniblock(s.wallet, parsedEvents)
 	if err != nil {
 		return nil, err
@@ -208,13 +208,10 @@ func (s *Service) createReplicatedMediaStream(
 		nodesListRaw[i] = addr.Bytes()
 	}
 
-	return &StreamAndCreationCookie{
-		NextCreationCookie: &CreationCookie{
-			StreamId:          streamId[:],
-			Nodes:             nodesListRaw,
-			MiniblockNum:      1, // the block number after the genesis one is 1
-			PrevMiniblockHash: mb.Header.Hash,
-		},
-		Miniblocks: []*Miniblock{mb},
+	return &CreationCookie{
+		StreamId:          streamId[:],
+		Nodes:             nodesListRaw,
+		MiniblockNum:      1, // the block number after the genesis one is 1
+		PrevMiniblockHash: mb.Header.Hash,
 	}, nil
 }

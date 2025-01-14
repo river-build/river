@@ -775,14 +775,6 @@ message StreamAndCookie {
     bool sync_reset = 4;
 }
 
-message StreamAndCreationCookie {
-    repeated Envelope events = 1;
-    CreationCookie next_creation_cookie = 2;
-    // if non-empty, contains all blocks since the latest snapshot, miniblocks[0].header is the latest snapshot
-    repeated Miniblock miniblocks = 3;
-    bool sync_reset = 4;
-}
-
 message GetStreamExRequest {
     bytes stream_id = 1;
 }
@@ -828,7 +820,7 @@ message CreateMediaStreamRequest {
 }
 
 message CreateMediaStreamResponse {
-    StreamAndCreationCookie stream = 1;
+    CreationCookie next_creation_cookie = 1;
 }
 
 message GetStreamRequest {

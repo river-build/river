@@ -47,8 +47,8 @@ func TestCreateMediaStream(t *testing.T) {
 	tt.require.NoError(err)
 
 	mb := &MiniblockRef{
-		Hash: common.BytesToHash(csResp.Msg.Stream.NextCreationCookie.PrevMiniblockHash),
-		Num:  csResp.Msg.Stream.NextCreationCookie.MiniblockNum,
+		Hash: common.BytesToHash(csResp.Msg.NextCreationCookie.PrevMiniblockHash),
+		Num:  csResp.Msg.NextCreationCookie.MiniblockNum,
 	}
 
 	// Make sure AddEvent does not work for ephemeral streams.
