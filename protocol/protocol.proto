@@ -761,6 +761,15 @@ message EncryptedData {
     }
 
     optional Mls mls = 7;
+
+    // Used if algorithm is set to 'gaes'
+    bytes ciphertext_bytes = 8;
+
+    // Used if algorithm is set to 'gaes'
+    bytes iv_bytes = 9;
+
+    // Used if algorithm is set to 'gaes'
+    bytes session_id_bytes = 10;
 }
 
 message WrappedEncryptedData {

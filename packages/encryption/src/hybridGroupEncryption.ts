@@ -3,7 +3,7 @@ import { PlainMessage } from '@bufbuild/protobuf'
 import { EncryptionAlgorithm, IEncryptionParams } from './base'
 import { GroupEncryptionAlgorithmId } from './olmLib'
 import { dlog } from '@river-build/dlog'
-import { encryptAESCBCAsync } from './crypto_utils'
+import { encryptAesGcm, importAesGsmKeyBytes } from './cryptoAesGcm'
 
 const log = dlog('csb:encryption:groupEncryption')
 
@@ -95,18 +95,24 @@ export class HybridGroupEncryption extends EncryptionAlgorithm {
      *
      * @returns Promise which resolves to the new event body
      */
-    public async encrypt(streamId: string, payload: string): Promise<EncryptedData> {
+    public async encrypt(streamId: string, payload: string | Uint8Array): Promise<EncryptedData> {
         log('Starting to encrypt event')
 
-        const sessionKey = await this._ensureOutboundSession(streamId)
+        const payloadBytes =
+            typeof payload === 'string' ? new TextEncoder().encode(payload) : payload
 
-        const { ciphertext, iv } = await encryptAESCBCAsync(payload, sessionKey.key)
+        const sessionKey: HybridGroupSessionKey = await this._ensureOutboundSession(streamId)
+
+        const key = await importAesGsmKeyBytes(sessionKey.key)
+
+        const { ciphertext, iv } = await encryptAesGcm(key, payloadBytes)
 
         return new EncryptedData({
             algorithm: this.algorithm,
             senderKey: this.device.deviceCurve25519Key!,
-            ciphertext: iv + ciphertext,
-            sessionId: sessionKey.sessionId,
-        } satisfies PlainMessage<EncryptedData>)
+            sessionIdBytes: sessionKey.sessionId,
+            ciphertextBytes: ciphertext,
+            ivBytes: iv,
+        })
     }
 }

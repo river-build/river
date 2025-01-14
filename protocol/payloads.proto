@@ -159,12 +159,11 @@ message SessionKeys {
 }
 
 message HybridGroupSessionKey {
-    string session_id = 1;
-    string stream_id = 2;
-    string iv = 3;
-    string key = 4;
-    int64 miniblock_num = 5;
-    bytes miniblock_hash = 6;
+    bytes session_id = 1;
+    bytes stream_id = 2;
+    bytes key = 3;
+    int64 miniblock_num = 4;
+    bytes miniblock_hash = 5;
 }
 
 message MediaInfo {

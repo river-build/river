@@ -16,8 +16,8 @@ import type {
     HybridGroupSessionRecord,
 } from './storeTypes'
 import { HybridGroupSessionKey } from '@river-build/proto'
-import { generateAESKeyAsync } from './crypto_utils'
 import { createHash } from 'crypto'
+import { exportAesGsmKeyBytes, generateNewAesGcmKey } from './cryptoAesGcm'
 
 const log = dlog('csb:encryption:encryptionDevice')
 
@@ -401,10 +401,7 @@ export class EncryptionDevice {
                 (max, current) => (current.miniblockNum > max.miniblockNum ? current : max),
                 sessionRecords[0],
             )
-            const session = HybridGroupSessionKey.fromBinary(
-                bin_fromHexString(sessionRecord.sessionKey),
-            )
-            return session
+            return HybridGroupSessionKey.fromBinary(sessionRecord.sessionKey)
         })
     }
 
@@ -418,10 +415,7 @@ export class EncryptionDevice {
             if (!sessionRecord) {
                 throw new Error(`hybrid group session not found for stream ${streamId}`)
             }
-            const session = HybridGroupSessionKey.fromBinary(
-                bin_fromHexString(sessionRecord.sessionKey),
-            )
-            return session
+            return HybridGroupSessionKey.fromBinary(sessionRecord.sessionKey)
         })
     }
 
@@ -472,21 +466,29 @@ export class EncryptionDevice {
         sessionRecord: HybridGroupSessionRecord
         sessionKey: HybridGroupSessionKey
     }> {
-        const { key } = await generateAESKeyAsync()
-        const sessionId = hybridSessionKeyHash(streamId, key, miniblockNum, miniblockHash)
+        const streamIdBytes = bin_fromHexString(streamId)
+        const aesKey = await generateNewAesGcmKey()
+        const aesKeyBytes = await exportAesGsmKeyBytes(aesKey)
+        const sessionIdBytes = await hybridSessionKeyHash(
+            streamIdBytes,
+            aesKeyBytes,
+            miniblockNum,
+            miniblockHash,
+        )
         const sessionKey = new HybridGroupSessionKey({
-            sessionId,
-            streamId,
-            key: key,
+            sessionId: sessionIdBytes,
+            streamId: streamIdBytes,
+            key: aesKeyBytes,
             miniblockNum,
             miniblockHash,
         })
-        const sessionRecord = {
+        const sessionId = bin_toHexString(sessionIdBytes)
+        const sessionRecord: HybridGroupSessionRecord = {
             sessionId,
-            streamId,
-            sessionKey: bin_toHexString(sessionKey.toBinary()),
+            streamId: streamId,
+            sessionKey: sessionKey.toBinary(),
             miniblockNum,
-        } satisfies HybridGroupSessionRecord
+        }
 
         return this.cryptoStore.withGroupSessions(async () => {
             await this.cryptoStore.storeHybridGroupSession(sessionRecord)
@@ -641,18 +643,19 @@ export class EncryptionDevice {
 
     /** */
     public async addHybridGroupSession(streamId: string, sessionId: string, sessionKey: string) {
-        const session = HybridGroupSessionKey.fromBinary(bin_fromHexString(sessionKey))
-        if (session.streamId !== streamId) {
+        const sessionKeyBytes = bin_fromHexString(sessionKey)
+        const session = HybridGroupSessionKey.fromBinary(sessionKeyBytes)
+        if (bin_toHexString(session.streamId) !== streamId) {
             throw new Error(`Stream ID mismatch for hybrid group session ${streamId}`)
         }
-        if (session.sessionId !== sessionId) {
+        if (bin_toHexString(session.sessionId) !== sessionId) {
             throw new Error(`Session ID mismatch for hybrid group session ${sessionId}`)
         }
         await this.cryptoStore.withGroupSessions(async () => {
             await this.cryptoStore.storeHybridGroupSession({
                 sessionId,
                 streamId,
-                sessionKey,
+                sessionKey: sessionKeyBytes,
                 miniblockNum: session.miniblockNum,
             })
         })
@@ -859,7 +862,7 @@ export class EncryptionDevice {
         return {
             streamId: streamId,
             sessionId: sessionId,
-            sessionKey: sessionData.sessionKey,
+            sessionKey: bin_toHexString(sessionData.sessionKey),
             algorithm,
         }
     }
@@ -900,33 +903,51 @@ export class EncryptionDevice {
         algorithm: GroupEncryptionAlgorithmId,
     ): Promise<GroupEncryptionSession[]> {
         const sessions = await this.cryptoStore.getAllHybridGroupSessions()
-        return sessions.map((session) => {
+        return sessions.map((session: HybridGroupSessionRecord): GroupEncryptionSession => {
             return {
                 streamId: session.streamId,
                 sessionId: session.sessionId,
-                sessionKey: session.sessionKey,
+                sessionKey: bin_toHexString(session.sessionKey),
                 algorithm,
             }
         })
     }
 }
 
-export function hybridSessionKeyHash(
-    streamId: string,
-    key: string,
+const hybridSessionKeyHashPrefixBytes = new TextEncoder().encode('RVR_HSK:')
+
+// TODO: needs unit tests
+export async function hybridSessionKeyHash(
+    streamId: Uint8Array,
+    key: Uint8Array,
     miniblockNum: bigint,
     miniblockHash: Uint8Array,
-) {
-    const PREFIX = 'RVR_HSK:'
-    const prefixBytes = new TextEncoder().encode(PREFIX)
-    const miniblockBytes = bigIntToBytes(miniblockNum)
-    // aellis - i don't understand why we need to slice here, the go and ios code both truncate the leading 0's
-    const hashBytes = createHash('sha256')
-        .update(prefixBytes)
-        .update(streamId)
-        .update(key)
-        .update(miniblockBytes)
-        .update(miniblockHash)
-        .digest()
-    return bin_toHexString(hashBytes)
+): Promise<Uint8Array> {
+    const length =
+        hybridSessionKeyHashPrefixBytes.length +
+        streamId.length +
+        key.length +
+        8 +
+        miniblockHash.length
+
+    const bytes = new ArrayBuffer(length)
+
+    const dataView = new DataView(bytes)
+    const arrayView = new Uint8Array(bytes)
+    arrayView.set(hybridSessionKeyHashPrefixBytes)
+    let offset = hybridSessionKeyHashPrefixBytes.length
+    arrayView.set(streamId, offset)
+    offset += streamId.length
+    arrayView.set(key, offset)
+    offset += key.length
+    dataView.setBigUint64(offset, miniblockNum)
+    offset += 8
+    arrayView.set(miniblockHash, offset)
+    offset += miniblockHash.length
+    if (offset !== length) {
+        throw new Error(`Final offset ${offset} does not match expected length ${length}`)
+    }
+
+    const hashBytes = await crypto.subtle.digest('SHA-256', bytes)
+    return new Uint8Array(hashBytes)
 }

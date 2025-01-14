@@ -89,6 +89,6 @@ export class GroupEncryption extends EncryptionAlgorithm {
             senderKey: this.device.deviceCurve25519Key!,
             ciphertext: result.ciphertext,
             sessionId: result.sessionId,
-        } satisfies PlainMessage<EncryptedData>)
+        })
     }
 }

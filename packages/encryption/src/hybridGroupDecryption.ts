@@ -1,8 +1,8 @@
 import { DecryptionAlgorithm, DecryptionError, IDecryptionParams } from './base'
 import { GroupEncryptionAlgorithmId, GroupEncryptionSession } from './olmLib'
-import { EncryptedData } from '@river-build/proto'
-import { dlog } from '@river-build/dlog'
-import { decryptAESCBCAsync } from './crypto_utils'
+import { EncryptedData, HybridGroupSessionKey } from '@river-build/proto'
+import { bin_toHexString, dlog } from '@river-build/dlog'
+import { decryptAesGcm, importAesGsmKeyBytes } from './cryptoAesGcm'
 
 const log = dlog('csb:encryption:groupDecryption')
 
@@ -24,19 +24,27 @@ export class HybridGroupDecryption extends DecryptionAlgorithm {
      * problem decrypting the event.
      */
     public async decrypt(streamId: string, content: EncryptedData): Promise<string> {
-        if (!content.senderKey || !content.sessionId || !content.ciphertext) {
+        if (
+            !content.senderKey ||
+            !content.sessionIdBytes ||
+            !content.ciphertextBytes ||
+            !content.ivBytes
+        ) {
             throw new DecryptionError(
                 'HYBRID_GROUP_DECRYPTION_MISSING_FIELDS',
                 'Missing fields in input',
             )
         }
 
-        const session = await this.device.getHybridGroupSessionKey(streamId, content.sessionId)
-        const iv = content.ciphertext.slice(0, 32)
-        const ciphertext = content.ciphertext.slice(32)
+        const sessionId = bin_toHexString(content.sessionIdBytes)
+        const session: HybridGroupSessionKey = await this.device.getHybridGroupSessionKey(
+            streamId,
+            sessionId,
+        )
 
-        const result = decryptAESCBCAsync(ciphertext, session.key, iv)
-        return result
+        const key = await importAesGsmKeyBytes(session.key)
+        const result = await decryptAesGcm(key, content.ciphertextBytes, content.ivBytes)
+        return new TextDecoder().decode(result) // TODO: what kind of string is actually expected here? TODO: convert to Uint8Array
     }
 
     /**

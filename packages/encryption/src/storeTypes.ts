@@ -14,7 +14,7 @@ export interface GroupSessionRecord {
 export interface HybridGroupSessionRecord {
     sessionId: string
     streamId: string
-    sessionKey: string
+    sessionKey: Uint8Array
     miniblockNum: bigint
 }
 
