@@ -165,7 +165,10 @@ contract EntitlementChecker is IEntitlementChecker, Facet {
     bytes32 transactionId,
     uint256 requestId
   ) external payable {
-    XChainLib.layout().callers[transactionId] = msg.sender;
+    XChainLib.layout().requests[transactionId] = XChainLib.Request({
+      caller: msg.sender,
+      value: msg.value
+    });
 
     address[] memory randomNodes = _getRandomNodes(5);
 

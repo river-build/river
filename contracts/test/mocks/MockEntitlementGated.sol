@@ -73,7 +73,7 @@ contract MockEntitlementGated is EntitlementGated {
   function requestEntitlementCheckV3(
     uint256[] calldata roleIds,
     IRuleEntitlement.RuleDataV2 calldata ruleData
-  ) external returns (bytes32) {
+  ) external payable returns (bytes32) {
     for (uint256 i = 0; i < roleIds.length; i++) {
       ruleDatasV2ByRoleId[roleIds[i]] = ruleData;
     }

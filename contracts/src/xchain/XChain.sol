@@ -14,9 +14,6 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {EntitlementGated} from "contracts/src/spaces/facets/gated/EntitlementGated.sol";
 import {Facet} from "@river-build/diamond/src/facets/Facet.sol";
 
-// debugging
-import {console} from "forge-std/console.sol";
-
 contract XChain is IEntitlementGated, IEntitlementCheckerBase, Facet {
   using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -61,67 +58,19 @@ contract XChain is IEntitlementGated, IEntitlementCheckerBase, Facet {
     }
 
     if (check.voteCompleted[requestId]) {
-      address caller = XChainLib.layout().callers[transactionId];
+      XChainLib.Request memory request = XChainLib.layout().requests[
+        transactionId
+      ];
 
       NodeVoteStatus finalStatusForRole = check.votesCount[requestId].passed >
         check.votesCount[requestId].failed
         ? NodeVoteStatus.PASSED
         : NodeVoteStatus.FAILED;
 
-      EntitlementGated(caller).postEntitlementCheckResultV2(
-        transactionId,
-        requestId,
-        finalStatusForRole
-      );
+      EntitlementGated(request.caller).postEntitlementCheckResultV2{
+        value: request.value
+      }(transactionId, requestId, finalStatusForRole);
     }
-
-    // uint256 passed = 0;
-    // uint256 failed = 0;
-
-    // uint256 nodesLength = check.nodes[requestId].length();
-
-    // for (uint256 i; i < nodesLength; ++i) {
-    //   NodeVote memory currentVote = check.votes[requestId][i];
-
-    //   if (
-    //     currentVote.node == msg.sender &&
-    //     currentVote.vote != NodeVoteStatus.NOT_VOTED
-    //   ) {
-    //     revert("XChain: node already voted");
-    //   }
-
-    //   if (currentVote.node == msg.sender) {
-    //     currentVote.vote = result;
-    //   }
-
-    //   unchecked {
-    //     NodeVoteStatus currentStatus = currentVote.vote;
-    //     // Count votes
-    //     if (currentStatus == NodeVoteStatus.PASSED) {
-    //       ++passed;
-    //     } else if (currentStatus == NodeVoteStatus.FAILED) {
-    //       ++failed;
-    //     }
-    //   }
-    // }
-
-    // console.log("passed", passed);
-    // console.log("failed", failed);
-
-    // if (passed > nodesLength / 2 || failed > nodesLength / 2) {
-    //   check.voteCompleted[requestId] = true;
-    //   NodeVoteStatus finalStatusForRole = passed > failed
-    //     ? NodeVoteStatus.PASSED
-    //     : NodeVoteStatus.FAILED;
-
-    //   address caller = XChainLib.layout().callers[transactionId];
-
-    //   EntitlementGated(caller).postEntitlementCheckResultV2(
-    //     transactionId,
-    //     requestId,
-    //     finalStatusForRole
-    //   );
-    // }
   }
 
   function getRuleData(

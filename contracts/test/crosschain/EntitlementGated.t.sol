@@ -44,8 +44,14 @@ contract EntitlementGatedTest is
     uint256[] memory roleIds = new uint256[](1);
     roleIds[0] = 0;
 
+    address caller = _randomAddress();
+
+    vm.deal(caller, 1 ether);
+
     vm.recordLogs();
-    bytes32 realRequestId = gated.requestEntitlementCheckV3(
+
+    vm.prank(caller);
+    bytes32 realRequestId = gated.requestEntitlementCheckV3{value: 1 ether}(
       roleIds,
       RuleEntitlementUtil.getMockERC721RuleData()
     );
@@ -63,9 +69,7 @@ contract EntitlementGatedTest is
     assertEq(callerAddress, address(gated));
     assertEq(contractAddress, address(entitlementChecker));
 
-    uint256 halfNodes = selectedNodes.length / 2;
-
-    for (uint256 i; i < halfNodes; ++i) {
+    for (uint256 i; i < 3; ++i) {
       vm.prank(selectedNodes[i]);
       IEntitlementGated(contractAddress).postEntitlementCheckResult(
         transactionId,
@@ -73,6 +77,8 @@ contract EntitlementGatedTest is
         NodeVoteStatus.PASSED
       );
     }
+
+    assertEq(address(gated).balance, 1 ether);
   }
 
   function test_requestEntitlementCheck() external {

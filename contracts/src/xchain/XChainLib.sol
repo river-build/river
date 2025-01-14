@@ -28,9 +28,14 @@ library XChainLib {
     mapping(uint256 requestId => bool voteCompleted) voteCompleted;
   }
 
+  struct Request {
+    address caller;
+    uint256 value;
+  }
+
   struct Layout {
     IEntitlementChecker entitlementChecker;
-    mapping(bytes32 txId => address caller) callers;
+    mapping(bytes32 txId => Request) requests;
     mapping(bytes32 txId => Check) checks;
   }
 
