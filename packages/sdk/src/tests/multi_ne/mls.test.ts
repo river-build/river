@@ -559,6 +559,29 @@ describe('mlsTests', () => {
         )
     })
 
+    test('invalid welcome messages return an error', async () => {
+        const mls = bobClient.streams.get(streamId)!.view.membershipContent.mls
+        const keyPackage = Object.values(mls.pendingKeyPackages)[0]
+        const kp = MlsMessage.fromBytes(keyPackage.keyPackage)
+        const commitOutput = await bobMlsGroup.addMember(kp)
+        // at this point, the commit is still pending
+        await bobMlsGroup.clearPendingCommit()
+
+        const groupInfoMessage = commitOutput.externalCommitGroupInfo
+        const commit = commitOutput.commitMessage.toBytes()
+        const welcomeMessages = commitOutput.welcomeMessages.map((wm) => wm.toBytes())
+
+        const payload = makeMlsPayloadWelcomeMessage(
+            commit,
+            [keyPackage.signaturePublicKey],
+            groupInfoMessage!.toBytes(),
+            welcomeMessages.map((wm) => wm.reverse()), // modify the content
+        )
+        await expect(aliceClient._debugSendMls(streamId, payload)).rejects.toThrow(
+            'INVALID_WELCOME_MESSAGE',
+        )
+    })
+
     test('clients can add other members from key packages', async () => {
         const mls = bobClient.streams.get(streamId)!.view.membershipContent.mls
         const keyPackage = Object.values(mls.pendingKeyPackages)[0]
