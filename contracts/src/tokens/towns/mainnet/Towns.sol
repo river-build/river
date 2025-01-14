@@ -14,8 +14,8 @@ import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC2
 // libraries
 import {OwnableRoles} from "solady/auth/OwnableRoles.sol";
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
-import {TokenInflationLib} from "./libs/TokenInflationLib.sol";
-import {VotesEnumerableLib} from "./libs/VotesEnumerableLib.sol";
+import {TokenInflationLib} from "contracts/src/tokens/towns/mainnet/libs/TokenInflationLib.sol";
+import {VotesEnumerableLib} from "contracts/src/diamond/facets/governance/votes/enumerable/VotesEnumerableLib.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 
 // contracts

@@ -11,7 +11,7 @@ import {ILock} from "contracts/src/tokens/lock/ILock.sol";
 
 // libraries
 import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
-import {VotesEnumerableLib} from "contracts/src/tokens/towns/mainnet/libs/VotesEnumerableLib.sol";
+import {VotesEnumerableLib} from "contracts/src/diamond/facets/governance/votes/enumerable/VotesEnumerableLib.sol";
 
 // contracts
 

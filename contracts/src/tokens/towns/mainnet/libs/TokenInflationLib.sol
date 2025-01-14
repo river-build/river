@@ -82,8 +82,9 @@ library TokenInflationLib {
 
     if (yearsSinceInitialMint >= ds.finalInflationYears)
       return ds.finalInflationRate;
-
-    uint256 decreasePerYear = ds.inflationDecayRate / ds.finalInflationYears;
-    return ds.initialInflationRate - (yearsSinceInitialMint * decreasePerYear);
+    // Calculate decrease per year with higher precision by doing multiplication before division
+    uint256 decreasePerYear = (yearsSinceInitialMint * ds.inflationDecayRate) /
+      ds.finalInflationYears;
+    return ds.initialInflationRate - decreasePerYear;
   }
 }

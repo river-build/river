@@ -6,7 +6,7 @@ import {IVotesEnumerable} from "contracts/src/diamond/facets/governance/votes/en
 
 // libraries
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
-import {VotesEnumerableLib} from "contracts/src/tokens/towns/mainnet/libs/VotesEnumerableLib.sol";
+import {VotesEnumerableLib} from "contracts/src/diamond/facets/governance/votes/enumerable/VotesEnumerableLib.sol";
 
 // contracts
 abstract contract VotesEnumerable is IVotesEnumerable {

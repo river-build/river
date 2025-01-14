@@ -14,7 +14,7 @@ import {ILock} from "contracts/src/tokens/lock/ILock.sol";
 
 // libraries
 import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
-import {VotesEnumerableLib} from "contracts/src/tokens/towns/mainnet/libs/VotesEnumerableLib.sol";
+import {VotesEnumerableLib} from "contracts/src/diamond/facets/governance/votes/enumerable/VotesEnumerableLib.sol";
 // contracts
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
