@@ -78,10 +78,7 @@ type streamCacheImpl struct {
 
 var _ StreamCache = (*streamCacheImpl)(nil)
 
-func NewStreamCache(
-	ctx context.Context,
-	params *StreamCacheParams,
-) *streamCacheImpl {
+func NewStreamCache(params *StreamCacheParams) *streamCacheImpl {
 	return &streamCacheImpl{
 		params: params,
 		cache:  xsync.NewMapOf[StreamId, *streamImpl](),
