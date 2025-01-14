@@ -629,7 +629,7 @@ describe('mlsTests', () => {
     })
 
     test('correct external group info is returned', async () => {
-        const externalGroupInfo = await bobClient.getMlsExternalGroupInfo(streamId)
+        const externalGroupInfo = (await bobClient.getMlsExternalGroupInfo(streamId))!
         const externalClient = new ExternalClient()
         const externalGroupSnapshot = ExternalSnapshot.fromBytes(
             externalGroupInfo.externalGroupSnapshot,
