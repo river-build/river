@@ -81,7 +81,7 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
 
   function test_createInflation() external {
     // wait 1 year
-    vm.warp(towns.lastMintTime() + 365 days);
+    skip(365 days);
 
     uint256 inflationRateBPS = towns.currentInflationRate();
     assertEq(
@@ -97,8 +97,11 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
     vm.prank(vault);
     towns.createInflation();
 
-    assertEq(towns.totalSupply(), INITIAL_SUPPLY + inflationAmount);
+    uint256 totalMinted = INITIAL_SUPPLY + inflationAmount;
+
+    assertEq(towns.totalSupply(), totalMinted);
     assertEq(towns.lastMintTime(), block.timestamp);
+    assertEq(towns.balanceOf(vault), totalMinted);
   }
 
   function test_createInflation_multipleTimes(uint256 times) external {
@@ -118,9 +121,12 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
         TokenInflationLib.getCurrentInflationRateBPS(INITIAL_MINT_TIME)
       );
 
+      uint256 totalMinted = totalSupply + inflationAmount;
+
       vm.prank(vault);
       towns.createInflation();
-      assertEq(towns.totalSupply(), totalSupply + inflationAmount);
+      assertEq(towns.totalSupply(), totalMinted);
+      assertEq(towns.balanceOf(vault), totalMinted);
     }
   }
 
@@ -138,7 +144,7 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
     );
 
     // wait 2 years
-    vm.warp(block.timestamp + 2 * 365 days);
+    skip(2 * 365 days);
     currentInflationRate = towns.currentInflationRate();
     assertEq(
       currentInflationRate,
@@ -146,7 +152,7 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
     );
 
     // wait 10 years
-    vm.warp(block.timestamp + 10 * 365 days);
+    skip(10 * 365 days);
     currentInflationRate = towns.currentInflationRate();
     assertEq(
       currentInflationRate,
@@ -154,7 +160,7 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
     );
 
     // wait 20 years
-    vm.warp(block.timestamp + 20 * 365 days);
+    skip(20 * 365 days);
     currentInflationRate = towns.currentInflationRate();
     assertEq(
       currentInflationRate,

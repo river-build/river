@@ -11,6 +11,7 @@ import {ILock} from "contracts/src/tokens/lock/ILock.sol";
 
 // libraries
 import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
+import {VotesEnumerableLib} from "contracts/src/tokens/towns/mainnet/libs/VotesEnumerableLib.sol";
 
 // contracts
 
@@ -157,7 +158,7 @@ contract River is
     address currentDelegatee = delegates(account);
     super._delegate(account, delegatee);
 
-    _setDelegators(account, delegatee, currentDelegatee);
+    VotesEnumerableLib.setDelegators(account, delegatee, currentDelegatee);
   }
 
   // =============================================================

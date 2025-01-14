@@ -77,13 +77,13 @@ library TokenInflationLib {
 
     if (ds.overrideInflation) return ds.overrideInflationRate; // override inflation rate
 
-    uint256 timeSinceInitialMint = (block.timestamp - initialMintTime) /
+    uint256 yearsSinceInitialMint = (block.timestamp - initialMintTime) /
       365 days;
 
-    if (timeSinceInitialMint >= ds.finalInflationYears)
+    if (yearsSinceInitialMint >= ds.finalInflationYears)
       return ds.finalInflationRate;
 
     uint256 decreasePerYear = ds.inflationDecayRate / ds.finalInflationYears;
-    return ds.initialInflationRate - (timeSinceInitialMint * decreasePerYear);
+    return ds.initialInflationRate - (yearsSinceInitialMint * decreasePerYear);
   }
 }

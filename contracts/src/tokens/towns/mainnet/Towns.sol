@@ -20,14 +20,15 @@ import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 
 // contracts
 import {IntrospectionBase} from "@river-build/diamond/src/facets/introspection/IntrospectionBase.sol";
+import {VotesEnumerable} from "contracts/src/diamond/facets/governance/votes/enumerable/VotesEnumerable.sol";
 import {ERC20Votes} from "solady/tokens/ERC20Votes.sol";
 
 contract Towns is
   OwnableRoles,
   ERC20Votes,
   IntrospectionBase,
+  VotesEnumerable,
   ITowns,
-  IVotesEnumerable,
   IERC165
 {
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -161,42 +162,6 @@ contract Towns is
     _mint(receiver, inflationAmount);
 
     TokenInflationLib.updateLastMintTime();
-  }
-
-  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-  /*                        Delegators                          */
-  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
-
-  /// @inheritdoc IVotesEnumerable
-  function getDelegators() external view returns (address[] memory) {
-    return VotesEnumerableLib.getDelegators();
-  }
-
-  /// @inheritdoc IVotesEnumerable
-  function getDelegatorsCount() external view returns (uint256) {
-    return VotesEnumerableLib.getDelegatorsCount();
-  }
-
-  /// @inheritdoc IVotesEnumerable
-  function getPaginatedDelegators(
-    uint256 cursor,
-    uint256 size
-  ) external view returns (address[] memory delegators, uint256 next) {
-    return VotesEnumerableLib.getPaginatedDelegators(cursor, size);
-  }
-
-  /// @inheritdoc IVotesEnumerable
-  function getDelegatorsByDelegatee(
-    address delegatee
-  ) external view returns (address[] memory) {
-    return VotesEnumerableLib.getDelegatorsByDelegatee(delegatee);
-  }
-
-  /// @inheritdoc IVotesEnumerable
-  function getDelegationTimeForDelegator(
-    address delegator
-  ) external view returns (uint256) {
-    return VotesEnumerableLib.getDelegationTimeForDelegator(delegator);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
