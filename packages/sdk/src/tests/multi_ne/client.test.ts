@@ -4,7 +4,7 @@
 
 import { dlog, check } from '@river-build/dlog'
 import { isDefined } from '../../check'
-import { DecryptionStatus, UserDevice } from '@river-build/encryption'
+import { DecryptionStatus, UserDevice, deriveKeyAndIV } from '@river-build/encryption'
 import { Client } from '../../client'
 import {
     makeUserStreamId,
@@ -45,7 +45,6 @@ import {
     make_MemberPayload_KeySolicitation,
 } from '../../types'
 import { SignerContext } from '../../signerContext'
-import { deriveKeyAndIV } from '../../crypto_utils'
 import { nanoid } from 'nanoid'
 
 const log = dlog('csb:test')

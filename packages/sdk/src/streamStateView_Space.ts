@@ -19,7 +19,7 @@ import { DecryptedContent } from './encryptedContentTypes'
 import { check, throwWithCode } from '@river-build/dlog'
 import { logNever } from './check'
 import { contractAddressFromSpaceId, isDefaultChannelId, streamIdAsString } from './id'
-import { decryptDerivedAESGCM } from './crypto_utils'
+import { decryptDerivedAESGCM } from '@river-build/encryption'
 
 export type ParsedChannelProperties = {
     isDefault: boolean

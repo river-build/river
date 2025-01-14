@@ -8,7 +8,7 @@ import { dlog } from '@river-build/dlog'
 import { AES_GCM_DERIVED_ALGORITHM } from '@river-build/encryption'
 import { makeUniqueChannelStreamId, makeUniqueMediaStreamId } from '../../id'
 import { ChunkedMedia, MediaInfo, MembershipOp } from '@river-build/proto'
-import { deriveKeyAndIV } from '../../crypto_utils'
+import { deriveKeyAndIV } from '@river-build/encryption'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { nanoid } from 'nanoid'
 

@@ -6,7 +6,7 @@ import { makeTestClient, makeUniqueSpaceStreamId } from '../testUtils'
 import { Client } from '../../client'
 import { makeUniqueChannelStreamId, makeDMStreamId } from '../../id'
 import { InfoRequest } from '@river-build/proto'
-import { deriveKeyAndIV, encryptAESGCM } from '../../crypto_utils'
+import { deriveKeyAndIV, encryptAESGCM } from '@river-build/encryption'
 
 describe('mediaTests', () => {
     let bobsClient: Client

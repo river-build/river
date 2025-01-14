@@ -4,8 +4,8 @@
 
 import { throwWithCode } from '@river-build/dlog'
 import { EncryptedData, Err } from '@river-build/proto'
-import { AES_GCM_DERIVED_ALGORITHM } from '@river-build/encryption'
 import crypto from 'crypto'
+import { AES_GCM_DERIVED_ALGORITHM } from './derivedEncryption'
 
 export function uint8ArrayToBase64(uint8Array: Uint8Array): string {
     return Buffer.from(uint8Array).toString('base64')

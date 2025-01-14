@@ -15,7 +15,7 @@ import { logNever } from './check'
 import { UserDevice } from '@river-build/encryption'
 import { StreamEncryptionEvents, StreamStateEvents } from './streamEvents'
 import { getUserIdFromStreamId } from './id'
-import { decryptDerivedAESGCM } from './crypto_utils'
+import { decryptDerivedAESGCM } from '@river-build/encryption'
 
 export class StreamStateView_UserMetadata extends StreamStateView_AbstractContent {
     readonly streamId: string
