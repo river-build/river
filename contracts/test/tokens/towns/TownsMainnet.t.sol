@@ -25,9 +25,6 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
 
   uint256 internal INITIAL_MINT_TIME = 1_709_667_671; // Tuesday, March 5, 2024 7:41:11 PM
 
-  address internal constant _ZERO_SENTINEL =
-    0x0000000000000000000000fbb67FDa52D4Bfb8Bf;
-
   address internal vault;
   address internal manager;
 
@@ -66,8 +63,8 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
     vm.assume(delegatee != address(0));
     vm.assume(caller != delegatee);
     vm.assume(towns.delegates(caller) == address(0));
-    vm.assume(delegatee != _ZERO_SENTINEL);
-    vm.assume(caller != _ZERO_SENTINEL);
+    vm.assume(delegatee != ZERO_SENTINEL);
+    vm.assume(caller != ZERO_SENTINEL);
 
     vm.prank(caller);
     towns.delegate(delegatee);
@@ -232,8 +229,8 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
     for (uint256 i = 0; i < test.length; ++i) {
       test[i].tokenAmount = bound(test[i].tokenAmount, 1, 100);
       vm.assume(test[i].holder != test[i].delegatee);
-      vm.assume(test[i].holder != _ZERO_SENTINEL);
-      vm.assume(test[i].delegatee != _ZERO_SENTINEL);
+      vm.assume(test[i].holder != ZERO_SENTINEL);
+      vm.assume(test[i].delegatee != ZERO_SENTINEL);
       vm.assume(test[i].holder != address(0));
       vm.assume(test[i].delegatee != address(0));
       vm.assume(towns.delegates(test[i].holder) == address(0));

@@ -19,6 +19,9 @@ contract TestUtils is Context, Test {
   address public constant NATIVE_TOKEN =
     address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
+  address public constant ZERO_SENTINEL =
+    0x0000000000000000000000fbb67FDa52D4Bfb8Bf;
+
   bytes4 private constant RANDOM_ADDRESS_SIG =
     bytes4(keccak256("randomAddress()"));
   bytes4 private constant RANDOM_UINT_SIG_0 = bytes4(keccak256("randomUint()"));
