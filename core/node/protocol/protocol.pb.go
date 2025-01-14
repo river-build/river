@@ -4092,6 +4092,132 @@ func (x *AddEventResponse) GetError() *AddEventResponse_Error {
 	return nil
 }
 
+type AddMediaEventRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	StreamId       []byte          `protobuf:"bytes,1,opt,name=stream_id,json=streamId,proto3" json:"stream_id,omitempty"`
+	Event          *Envelope       `protobuf:"bytes,2,opt,name=event,proto3" json:"event,omitempty"`
+	CreationCookie *CreationCookie `protobuf:"bytes,3,opt,name=creation_cookie,json=creationCookie,proto3" json:"creation_cookie,omitempty"`
+	Optional       bool            `protobuf:"varint,4,opt,name=optional,proto3" json:"optional,omitempty"` // if true, response will contain non nil error if event didn't pass validation
+}
+
+func (x *AddMediaEventRequest) Reset() {
+	*x = AddMediaEventRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_protocol_proto_msgTypes[40]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *AddMediaEventRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddMediaEventRequest) ProtoMessage() {}
+
+func (x *AddMediaEventRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_protocol_proto_msgTypes[40]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddMediaEventRequest.ProtoReflect.Descriptor instead.
+func (*AddMediaEventRequest) Descriptor() ([]byte, []int) {
+	return file_protocol_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *AddMediaEventRequest) GetStreamId() []byte {
+	if x != nil {
+		return x.StreamId
+	}
+	return nil
+}
+
+func (x *AddMediaEventRequest) GetEvent() *Envelope {
+	if x != nil {
+		return x.Event
+	}
+	return nil
+}
+
+func (x *AddMediaEventRequest) GetCreationCookie() *CreationCookie {
+	if x != nil {
+		return x.CreationCookie
+	}
+	return nil
+}
+
+func (x *AddMediaEventRequest) GetOptional() bool {
+	if x != nil {
+		return x.Optional
+	}
+	return false
+}
+
+type AddMediaEventResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Error          *AddMediaEventResponse_Error `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"` // only set if AddMediaEventRequest.optional is true
+	CreationCookie *CreationCookie              `protobuf:"bytes,2,opt,name=creation_cookie,json=creationCookie,proto3" json:"creation_cookie,omitempty"`
+}
+
+func (x *AddMediaEventResponse) Reset() {
+	*x = AddMediaEventResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_protocol_proto_msgTypes[41]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *AddMediaEventResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddMediaEventResponse) ProtoMessage() {}
+
+func (x *AddMediaEventResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_protocol_proto_msgTypes[41]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddMediaEventResponse.ProtoReflect.Descriptor instead.
+func (*AddMediaEventResponse) Descriptor() ([]byte, []int) {
+	return file_protocol_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *AddMediaEventResponse) GetError() *AddMediaEventResponse_Error {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+func (x *AddMediaEventResponse) GetCreationCookie() *CreationCookie {
+	if x != nil {
+		return x.CreationCookie
+	}
+	return nil
+}
+
 // SyncStreamsRequest is a request to start a streams sync session.
 type SyncStreamsRequest struct {
 	state         protoimpl.MessageState
@@ -4105,7 +4231,7 @@ type SyncStreamsRequest struct {
 func (x *SyncStreamsRequest) Reset() {
 	*x = SyncStreamsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[40]
+		mi := &file_protocol_proto_msgTypes[42]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4118,7 +4244,7 @@ func (x *SyncStreamsRequest) String() string {
 func (*SyncStreamsRequest) ProtoMessage() {}
 
 func (x *SyncStreamsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[40]
+	mi := &file_protocol_proto_msgTypes[42]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4131,7 +4257,7 @@ func (x *SyncStreamsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncStreamsRequest.ProtoReflect.Descriptor instead.
 func (*SyncStreamsRequest) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{40}
+	return file_protocol_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *SyncStreamsRequest) GetSyncPos() []*SyncCookie {
@@ -4166,7 +4292,7 @@ type SyncStreamsResponse struct {
 func (x *SyncStreamsResponse) Reset() {
 	*x = SyncStreamsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[41]
+		mi := &file_protocol_proto_msgTypes[43]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4179,7 +4305,7 @@ func (x *SyncStreamsResponse) String() string {
 func (*SyncStreamsResponse) ProtoMessage() {}
 
 func (x *SyncStreamsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[41]
+	mi := &file_protocol_proto_msgTypes[43]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4192,7 +4318,7 @@ func (x *SyncStreamsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncStreamsResponse.ProtoReflect.Descriptor instead.
 func (*SyncStreamsResponse) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{41}
+	return file_protocol_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *SyncStreamsResponse) GetSyncId() string {
@@ -4245,7 +4371,7 @@ type AddStreamToSyncRequest struct {
 func (x *AddStreamToSyncRequest) Reset() {
 	*x = AddStreamToSyncRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[42]
+		mi := &file_protocol_proto_msgTypes[44]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4258,7 +4384,7 @@ func (x *AddStreamToSyncRequest) String() string {
 func (*AddStreamToSyncRequest) ProtoMessage() {}
 
 func (x *AddStreamToSyncRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[42]
+	mi := &file_protocol_proto_msgTypes[44]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4271,7 +4397,7 @@ func (x *AddStreamToSyncRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddStreamToSyncRequest.ProtoReflect.Descriptor instead.
 func (*AddStreamToSyncRequest) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{42}
+	return file_protocol_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *AddStreamToSyncRequest) GetSyncId() string {
@@ -4297,7 +4423,7 @@ type AddStreamToSyncResponse struct {
 func (x *AddStreamToSyncResponse) Reset() {
 	*x = AddStreamToSyncResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[43]
+		mi := &file_protocol_proto_msgTypes[45]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4310,7 +4436,7 @@ func (x *AddStreamToSyncResponse) String() string {
 func (*AddStreamToSyncResponse) ProtoMessage() {}
 
 func (x *AddStreamToSyncResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[43]
+	mi := &file_protocol_proto_msgTypes[45]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4323,7 +4449,7 @@ func (x *AddStreamToSyncResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddStreamToSyncResponse.ProtoReflect.Descriptor instead.
 func (*AddStreamToSyncResponse) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{43}
+	return file_protocol_proto_rawDescGZIP(), []int{45}
 }
 
 // RemoveStreamFromSyncRequest stops the client to receive updates from this stream in the sync session.
@@ -4341,7 +4467,7 @@ type RemoveStreamFromSyncRequest struct {
 func (x *RemoveStreamFromSyncRequest) Reset() {
 	*x = RemoveStreamFromSyncRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[44]
+		mi := &file_protocol_proto_msgTypes[46]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4354,7 +4480,7 @@ func (x *RemoveStreamFromSyncRequest) String() string {
 func (*RemoveStreamFromSyncRequest) ProtoMessage() {}
 
 func (x *RemoveStreamFromSyncRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[44]
+	mi := &file_protocol_proto_msgTypes[46]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4367,7 +4493,7 @@ func (x *RemoveStreamFromSyncRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveStreamFromSyncRequest.ProtoReflect.Descriptor instead.
 func (*RemoveStreamFromSyncRequest) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{44}
+	return file_protocol_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *RemoveStreamFromSyncRequest) GetSyncId() string {
@@ -4393,7 +4519,7 @@ type RemoveStreamFromSyncResponse struct {
 func (x *RemoveStreamFromSyncResponse) Reset() {
 	*x = RemoveStreamFromSyncResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[45]
+		mi := &file_protocol_proto_msgTypes[47]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4406,7 +4532,7 @@ func (x *RemoveStreamFromSyncResponse) String() string {
 func (*RemoveStreamFromSyncResponse) ProtoMessage() {}
 
 func (x *RemoveStreamFromSyncResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[45]
+	mi := &file_protocol_proto_msgTypes[47]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4419,7 +4545,7 @@ func (x *RemoveStreamFromSyncResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveStreamFromSyncResponse.ProtoReflect.Descriptor instead.
 func (*RemoveStreamFromSyncResponse) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{45}
+	return file_protocol_proto_rawDescGZIP(), []int{47}
 }
 
 // ModifySyncRequest adds or removes streams from an existing sync session.
@@ -4439,7 +4565,7 @@ type ModifySyncRequest struct {
 func (x *ModifySyncRequest) Reset() {
 	*x = ModifySyncRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[46]
+		mi := &file_protocol_proto_msgTypes[48]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4452,7 +4578,7 @@ func (x *ModifySyncRequest) String() string {
 func (*ModifySyncRequest) ProtoMessage() {}
 
 func (x *ModifySyncRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[46]
+	mi := &file_protocol_proto_msgTypes[48]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4465,7 +4591,7 @@ func (x *ModifySyncRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ModifySyncRequest.ProtoReflect.Descriptor instead.
 func (*ModifySyncRequest) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{46}
+	return file_protocol_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *ModifySyncRequest) GetSyncId() string {
@@ -4506,7 +4632,7 @@ type SyncStreamOpStatus struct {
 func (x *SyncStreamOpStatus) Reset() {
 	*x = SyncStreamOpStatus{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[47]
+		mi := &file_protocol_proto_msgTypes[49]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4519,7 +4645,7 @@ func (x *SyncStreamOpStatus) String() string {
 func (*SyncStreamOpStatus) ProtoMessage() {}
 
 func (x *SyncStreamOpStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[47]
+	mi := &file_protocol_proto_msgTypes[49]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4532,7 +4658,7 @@ func (x *SyncStreamOpStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncStreamOpStatus.ProtoReflect.Descriptor instead.
 func (*SyncStreamOpStatus) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{47}
+	return file_protocol_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *SyncStreamOpStatus) GetStreamId() []byte {
@@ -4571,7 +4697,7 @@ type ModifySyncResponse struct {
 func (x *ModifySyncResponse) Reset() {
 	*x = ModifySyncResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[48]
+		mi := &file_protocol_proto_msgTypes[50]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4584,7 +4710,7 @@ func (x *ModifySyncResponse) String() string {
 func (*ModifySyncResponse) ProtoMessage() {}
 
 func (x *ModifySyncResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[48]
+	mi := &file_protocol_proto_msgTypes[50]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4597,7 +4723,7 @@ func (x *ModifySyncResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ModifySyncResponse.ProtoReflect.Descriptor instead.
 func (*ModifySyncResponse) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{48}
+	return file_protocol_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *ModifySyncResponse) GetAdds() []*SyncStreamOpStatus {
@@ -4627,7 +4753,7 @@ type CancelSyncRequest struct {
 func (x *CancelSyncRequest) Reset() {
 	*x = CancelSyncRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[49]
+		mi := &file_protocol_proto_msgTypes[51]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4640,7 +4766,7 @@ func (x *CancelSyncRequest) String() string {
 func (*CancelSyncRequest) ProtoMessage() {}
 
 func (x *CancelSyncRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[49]
+	mi := &file_protocol_proto_msgTypes[51]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4653,7 +4779,7 @@ func (x *CancelSyncRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelSyncRequest.ProtoReflect.Descriptor instead.
 func (*CancelSyncRequest) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{49}
+	return file_protocol_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *CancelSyncRequest) GetSyncId() string {
@@ -4672,7 +4798,7 @@ type CancelSyncResponse struct {
 func (x *CancelSyncResponse) Reset() {
 	*x = CancelSyncResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[50]
+		mi := &file_protocol_proto_msgTypes[52]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4685,7 +4811,7 @@ func (x *CancelSyncResponse) String() string {
 func (*CancelSyncResponse) ProtoMessage() {}
 
 func (x *CancelSyncResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[50]
+	mi := &file_protocol_proto_msgTypes[52]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4698,7 +4824,7 @@ func (x *CancelSyncResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelSyncResponse.ProtoReflect.Descriptor instead.
 func (*CancelSyncResponse) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{50}
+	return file_protocol_proto_rawDescGZIP(), []int{52}
 }
 
 // PingSyncRequest is a request to receive a pong in the sync session stream.
@@ -4716,7 +4842,7 @@ type PingSyncRequest struct {
 func (x *PingSyncRequest) Reset() {
 	*x = PingSyncRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[51]
+		mi := &file_protocol_proto_msgTypes[53]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4729,7 +4855,7 @@ func (x *PingSyncRequest) String() string {
 func (*PingSyncRequest) ProtoMessage() {}
 
 func (x *PingSyncRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[51]
+	mi := &file_protocol_proto_msgTypes[53]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4742,7 +4868,7 @@ func (x *PingSyncRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PingSyncRequest.ProtoReflect.Descriptor instead.
 func (*PingSyncRequest) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{51}
+	return file_protocol_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *PingSyncRequest) GetSyncId() string {
@@ -4768,7 +4894,7 @@ type PingSyncResponse struct {
 func (x *PingSyncResponse) Reset() {
 	*x = PingSyncResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[52]
+		mi := &file_protocol_proto_msgTypes[54]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4781,7 +4907,7 @@ func (x *PingSyncResponse) String() string {
 func (*PingSyncResponse) ProtoMessage() {}
 
 func (x *PingSyncResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[52]
+	mi := &file_protocol_proto_msgTypes[54]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4794,7 +4920,7 @@ func (x *PingSyncResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PingSyncResponse.ProtoReflect.Descriptor instead.
 func (*PingSyncResponse) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{52}
+	return file_protocol_proto_rawDescGZIP(), []int{54}
 }
 
 type InfoRequest struct {
@@ -4808,7 +4934,7 @@ type InfoRequest struct {
 func (x *InfoRequest) Reset() {
 	*x = InfoRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[53]
+		mi := &file_protocol_proto_msgTypes[55]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4821,7 +4947,7 @@ func (x *InfoRequest) String() string {
 func (*InfoRequest) ProtoMessage() {}
 
 func (x *InfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[53]
+	mi := &file_protocol_proto_msgTypes[55]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4834,7 +4960,7 @@ func (x *InfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InfoRequest.ProtoReflect.Descriptor instead.
 func (*InfoRequest) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{53}
+	return file_protocol_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *InfoRequest) GetDebug() []string {
@@ -4857,7 +4983,7 @@ type InfoResponse struct {
 func (x *InfoResponse) Reset() {
 	*x = InfoResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[54]
+		mi := &file_protocol_proto_msgTypes[56]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4870,7 +4996,7 @@ func (x *InfoResponse) String() string {
 func (*InfoResponse) ProtoMessage() {}
 
 func (x *InfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[54]
+	mi := &file_protocol_proto_msgTypes[56]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4883,7 +5009,7 @@ func (x *InfoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InfoResponse.ProtoReflect.Descriptor instead.
 func (*InfoResponse) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{54}
+	return file_protocol_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *InfoResponse) GetGraffiti() string {
@@ -4923,7 +5049,7 @@ type MemberPayload_Snapshot struct {
 func (x *MemberPayload_Snapshot) Reset() {
 	*x = MemberPayload_Snapshot{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[55]
+		mi := &file_protocol_proto_msgTypes[57]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4936,7 +5062,7 @@ func (x *MemberPayload_Snapshot) String() string {
 func (*MemberPayload_Snapshot) ProtoMessage() {}
 
 func (x *MemberPayload_Snapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[55]
+	mi := &file_protocol_proto_msgTypes[57]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5001,7 +5127,7 @@ type MemberPayload_Membership struct {
 func (x *MemberPayload_Membership) Reset() {
 	*x = MemberPayload_Membership{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[56]
+		mi := &file_protocol_proto_msgTypes[58]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5014,7 +5140,7 @@ func (x *MemberPayload_Membership) String() string {
 func (*MemberPayload_Membership) ProtoMessage() {}
 
 func (x *MemberPayload_Membership) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[56]
+	mi := &file_protocol_proto_msgTypes[58]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5072,7 +5198,7 @@ type MemberPayload_KeySolicitation struct {
 func (x *MemberPayload_KeySolicitation) Reset() {
 	*x = MemberPayload_KeySolicitation{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[57]
+		mi := &file_protocol_proto_msgTypes[59]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5085,7 +5211,7 @@ func (x *MemberPayload_KeySolicitation) String() string {
 func (*MemberPayload_KeySolicitation) ProtoMessage() {}
 
 func (x *MemberPayload_KeySolicitation) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[57]
+	mi := &file_protocol_proto_msgTypes[59]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5142,7 +5268,7 @@ type MemberPayload_KeyFulfillment struct {
 func (x *MemberPayload_KeyFulfillment) Reset() {
 	*x = MemberPayload_KeyFulfillment{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[58]
+		mi := &file_protocol_proto_msgTypes[60]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5155,7 +5281,7 @@ func (x *MemberPayload_KeyFulfillment) String() string {
 func (*MemberPayload_KeyFulfillment) ProtoMessage() {}
 
 func (x *MemberPayload_KeyFulfillment) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[58]
+	mi := &file_protocol_proto_msgTypes[60]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5205,7 +5331,7 @@ type MemberPayload_Nft struct {
 func (x *MemberPayload_Nft) Reset() {
 	*x = MemberPayload_Nft{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[59]
+		mi := &file_protocol_proto_msgTypes[61]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5218,7 +5344,7 @@ func (x *MemberPayload_Nft) String() string {
 func (*MemberPayload_Nft) ProtoMessage() {}
 
 func (x *MemberPayload_Nft) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[59]
+	mi := &file_protocol_proto_msgTypes[61]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5267,7 +5393,7 @@ type MemberPayload_SnappedPin struct {
 func (x *MemberPayload_SnappedPin) Reset() {
 	*x = MemberPayload_SnappedPin{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[60]
+		mi := &file_protocol_proto_msgTypes[62]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5280,7 +5406,7 @@ func (x *MemberPayload_SnappedPin) String() string {
 func (*MemberPayload_SnappedPin) ProtoMessage() {}
 
 func (x *MemberPayload_SnappedPin) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[60]
+	mi := &file_protocol_proto_msgTypes[62]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5322,7 +5448,7 @@ type MemberPayload_Pin struct {
 func (x *MemberPayload_Pin) Reset() {
 	*x = MemberPayload_Pin{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[61]
+		mi := &file_protocol_proto_msgTypes[63]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5335,7 +5461,7 @@ func (x *MemberPayload_Pin) String() string {
 func (*MemberPayload_Pin) ProtoMessage() {}
 
 func (x *MemberPayload_Pin) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[61]
+	mi := &file_protocol_proto_msgTypes[63]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5376,7 +5502,7 @@ type MemberPayload_Unpin struct {
 func (x *MemberPayload_Unpin) Reset() {
 	*x = MemberPayload_Unpin{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[62]
+		mi := &file_protocol_proto_msgTypes[64]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5389,7 +5515,7 @@ func (x *MemberPayload_Unpin) String() string {
 func (*MemberPayload_Unpin) ProtoMessage() {}
 
 func (x *MemberPayload_Unpin) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[62]
+	mi := &file_protocol_proto_msgTypes[64]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5428,7 +5554,7 @@ type MemberPayload_Mls struct {
 func (x *MemberPayload_Mls) Reset() {
 	*x = MemberPayload_Mls{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[63]
+		mi := &file_protocol_proto_msgTypes[65]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5441,7 +5567,7 @@ func (x *MemberPayload_Mls) String() string {
 func (*MemberPayload_Mls) ProtoMessage() {}
 
 func (x *MemberPayload_Mls) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[63]
+	mi := &file_protocol_proto_msgTypes[65]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5518,7 +5644,7 @@ type MemberPayload_EncryptionAlgorithm struct {
 func (x *MemberPayload_EncryptionAlgorithm) Reset() {
 	*x = MemberPayload_EncryptionAlgorithm{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[64]
+		mi := &file_protocol_proto_msgTypes[66]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5531,7 +5657,7 @@ func (x *MemberPayload_EncryptionAlgorithm) String() string {
 func (*MemberPayload_EncryptionAlgorithm) ProtoMessage() {}
 
 func (x *MemberPayload_EncryptionAlgorithm) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[64]
+	mi := &file_protocol_proto_msgTypes[66]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5566,7 +5692,7 @@ type MemberPayload_MemberBlockchainTransaction struct {
 func (x *MemberPayload_MemberBlockchainTransaction) Reset() {
 	*x = MemberPayload_MemberBlockchainTransaction{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[65]
+		mi := &file_protocol_proto_msgTypes[67]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5579,7 +5705,7 @@ func (x *MemberPayload_MemberBlockchainTransaction) String() string {
 func (*MemberPayload_MemberBlockchainTransaction) ProtoMessage() {}
 
 func (x *MemberPayload_MemberBlockchainTransaction) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[65]
+	mi := &file_protocol_proto_msgTypes[67]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5625,7 +5751,7 @@ type MemberPayload_Snapshot_Mls struct {
 func (x *MemberPayload_Snapshot_Mls) Reset() {
 	*x = MemberPayload_Snapshot_Mls{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[66]
+		mi := &file_protocol_proto_msgTypes[68]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5638,7 +5764,7 @@ func (x *MemberPayload_Snapshot_Mls) String() string {
 func (*MemberPayload_Snapshot_Mls) ProtoMessage() {}
 
 func (x *MemberPayload_Snapshot_Mls) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[66]
+	mi := &file_protocol_proto_msgTypes[68]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5700,7 +5826,7 @@ type MemberPayload_Snapshot_Member struct {
 func (x *MemberPayload_Snapshot_Member) Reset() {
 	*x = MemberPayload_Snapshot_Member{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[67]
+		mi := &file_protocol_proto_msgTypes[69]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5713,7 +5839,7 @@ func (x *MemberPayload_Snapshot_Member) String() string {
 func (*MemberPayload_Snapshot_Member) ProtoMessage() {}
 
 func (x *MemberPayload_Snapshot_Member) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[67]
+	mi := &file_protocol_proto_msgTypes[69]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5796,7 +5922,7 @@ type MemberPayload_Snapshot_Mls_Member struct {
 func (x *MemberPayload_Snapshot_Mls_Member) Reset() {
 	*x = MemberPayload_Snapshot_Mls_Member{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[69]
+		mi := &file_protocol_proto_msgTypes[71]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5809,7 +5935,7 @@ func (x *MemberPayload_Snapshot_Mls_Member) String() string {
 func (*MemberPayload_Snapshot_Mls_Member) ProtoMessage() {}
 
 func (x *MemberPayload_Snapshot_Mls_Member) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[69]
+	mi := &file_protocol_proto_msgTypes[71]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5845,7 +5971,7 @@ type MemberPayload_Mls_InitializeGroup struct {
 func (x *MemberPayload_Mls_InitializeGroup) Reset() {
 	*x = MemberPayload_Mls_InitializeGroup{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[72]
+		mi := &file_protocol_proto_msgTypes[74]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5858,7 +5984,7 @@ func (x *MemberPayload_Mls_InitializeGroup) String() string {
 func (*MemberPayload_Mls_InitializeGroup) ProtoMessage() {}
 
 func (x *MemberPayload_Mls_InitializeGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[72]
+	mi := &file_protocol_proto_msgTypes[74]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5908,7 +6034,7 @@ type MemberPayload_Mls_ExternalJoin struct {
 func (x *MemberPayload_Mls_ExternalJoin) Reset() {
 	*x = MemberPayload_Mls_ExternalJoin{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[73]
+		mi := &file_protocol_proto_msgTypes[75]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5921,7 +6047,7 @@ func (x *MemberPayload_Mls_ExternalJoin) String() string {
 func (*MemberPayload_Mls_ExternalJoin) ProtoMessage() {}
 
 func (x *MemberPayload_Mls_ExternalJoin) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[73]
+	mi := &file_protocol_proto_msgTypes[75]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5969,7 +6095,7 @@ type MemberPayload_Mls_EpochSecrets struct {
 func (x *MemberPayload_Mls_EpochSecrets) Reset() {
 	*x = MemberPayload_Mls_EpochSecrets{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[74]
+		mi := &file_protocol_proto_msgTypes[76]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5982,7 +6108,7 @@ func (x *MemberPayload_Mls_EpochSecrets) String() string {
 func (*MemberPayload_Mls_EpochSecrets) ProtoMessage() {}
 
 func (x *MemberPayload_Mls_EpochSecrets) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[74]
+	mi := &file_protocol_proto_msgTypes[76]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6017,7 +6143,7 @@ type MemberPayload_Mls_EpochSecrets_EpochSecret struct {
 func (x *MemberPayload_Mls_EpochSecrets_EpochSecret) Reset() {
 	*x = MemberPayload_Mls_EpochSecrets_EpochSecret{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[75]
+		mi := &file_protocol_proto_msgTypes[77]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6030,7 +6156,7 @@ func (x *MemberPayload_Mls_EpochSecrets_EpochSecret) String() string {
 func (*MemberPayload_Mls_EpochSecrets_EpochSecret) ProtoMessage() {}
 
 func (x *MemberPayload_Mls_EpochSecrets_EpochSecret) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[75]
+	mi := &file_protocol_proto_msgTypes[77]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6075,7 +6201,7 @@ type SpacePayload_Snapshot struct {
 func (x *SpacePayload_Snapshot) Reset() {
 	*x = SpacePayload_Snapshot{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[76]
+		mi := &file_protocol_proto_msgTypes[78]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6088,7 +6214,7 @@ func (x *SpacePayload_Snapshot) String() string {
 func (*SpacePayload_Snapshot) ProtoMessage() {}
 
 func (x *SpacePayload_Snapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[76]
+	mi := &file_protocol_proto_msgTypes[78]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6137,7 +6263,7 @@ type SpacePayload_SnappedSpaceImage struct {
 func (x *SpacePayload_SnappedSpaceImage) Reset() {
 	*x = SpacePayload_SnappedSpaceImage{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[77]
+		mi := &file_protocol_proto_msgTypes[79]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6150,7 +6276,7 @@ func (x *SpacePayload_SnappedSpaceImage) String() string {
 func (*SpacePayload_SnappedSpaceImage) ProtoMessage() {}
 
 func (x *SpacePayload_SnappedSpaceImage) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[77]
+	mi := &file_protocol_proto_msgTypes[79]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6192,7 +6318,7 @@ type SpacePayload_Inception struct {
 func (x *SpacePayload_Inception) Reset() {
 	*x = SpacePayload_Inception{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[78]
+		mi := &file_protocol_proto_msgTypes[80]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6205,7 +6331,7 @@ func (x *SpacePayload_Inception) String() string {
 func (*SpacePayload_Inception) ProtoMessage() {}
 
 func (x *SpacePayload_Inception) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[78]
+	mi := &file_protocol_proto_msgTypes[80]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6247,7 +6373,7 @@ type SpacePayload_ChannelSettings struct {
 func (x *SpacePayload_ChannelSettings) Reset() {
 	*x = SpacePayload_ChannelSettings{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[79]
+		mi := &file_protocol_proto_msgTypes[81]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6260,7 +6386,7 @@ func (x *SpacePayload_ChannelSettings) String() string {
 func (*SpacePayload_ChannelSettings) ProtoMessage() {}
 
 func (x *SpacePayload_ChannelSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[79]
+	mi := &file_protocol_proto_msgTypes[81]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6305,7 +6431,7 @@ type SpacePayload_ChannelMetadata struct {
 func (x *SpacePayload_ChannelMetadata) Reset() {
 	*x = SpacePayload_ChannelMetadata{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[80]
+		mi := &file_protocol_proto_msgTypes[82]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6318,7 +6444,7 @@ func (x *SpacePayload_ChannelMetadata) String() string {
 func (*SpacePayload_ChannelMetadata) ProtoMessage() {}
 
 func (x *SpacePayload_ChannelMetadata) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[80]
+	mi := &file_protocol_proto_msgTypes[82]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6383,7 +6509,7 @@ type SpacePayload_ChannelUpdate struct {
 func (x *SpacePayload_ChannelUpdate) Reset() {
 	*x = SpacePayload_ChannelUpdate{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[81]
+		mi := &file_protocol_proto_msgTypes[83]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6396,7 +6522,7 @@ func (x *SpacePayload_ChannelUpdate) String() string {
 func (*SpacePayload_ChannelUpdate) ProtoMessage() {}
 
 func (x *SpacePayload_ChannelUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[81]
+	mi := &file_protocol_proto_msgTypes[83]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6452,7 +6578,7 @@ type SpacePayload_UpdateChannelAutojoin struct {
 func (x *SpacePayload_UpdateChannelAutojoin) Reset() {
 	*x = SpacePayload_UpdateChannelAutojoin{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[82]
+		mi := &file_protocol_proto_msgTypes[84]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6465,7 +6591,7 @@ func (x *SpacePayload_UpdateChannelAutojoin) String() string {
 func (*SpacePayload_UpdateChannelAutojoin) ProtoMessage() {}
 
 func (x *SpacePayload_UpdateChannelAutojoin) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[82]
+	mi := &file_protocol_proto_msgTypes[84]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6507,7 +6633,7 @@ type SpacePayload_UpdateChannelHideUserJoinLeaveEvents struct {
 func (x *SpacePayload_UpdateChannelHideUserJoinLeaveEvents) Reset() {
 	*x = SpacePayload_UpdateChannelHideUserJoinLeaveEvents{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[83]
+		mi := &file_protocol_proto_msgTypes[85]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6520,7 +6646,7 @@ func (x *SpacePayload_UpdateChannelHideUserJoinLeaveEvents) String() string {
 func (*SpacePayload_UpdateChannelHideUserJoinLeaveEvents) ProtoMessage() {}
 
 func (x *SpacePayload_UpdateChannelHideUserJoinLeaveEvents) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[83]
+	mi := &file_protocol_proto_msgTypes[85]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6562,7 +6688,7 @@ type ChannelPayload_Snapshot struct {
 func (x *ChannelPayload_Snapshot) Reset() {
 	*x = ChannelPayload_Snapshot{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[84]
+		mi := &file_protocol_proto_msgTypes[86]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6575,7 +6701,7 @@ func (x *ChannelPayload_Snapshot) String() string {
 func (*ChannelPayload_Snapshot) ProtoMessage() {}
 
 func (x *ChannelPayload_Snapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[84]
+	mi := &file_protocol_proto_msgTypes[86]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6612,7 +6738,7 @@ type ChannelPayload_Inception struct {
 func (x *ChannelPayload_Inception) Reset() {
 	*x = ChannelPayload_Inception{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[85]
+		mi := &file_protocol_proto_msgTypes[87]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6625,7 +6751,7 @@ func (x *ChannelPayload_Inception) String() string {
 func (*ChannelPayload_Inception) ProtoMessage() {}
 
 func (x *ChannelPayload_Inception) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[85]
+	mi := &file_protocol_proto_msgTypes[87]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6680,7 +6806,7 @@ type ChannelPayload_Redaction struct {
 func (x *ChannelPayload_Redaction) Reset() {
 	*x = ChannelPayload_Redaction{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[86]
+		mi := &file_protocol_proto_msgTypes[88]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6693,7 +6819,7 @@ func (x *ChannelPayload_Redaction) String() string {
 func (*ChannelPayload_Redaction) ProtoMessage() {}
 
 func (x *ChannelPayload_Redaction) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[86]
+	mi := &file_protocol_proto_msgTypes[88]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6727,7 +6853,7 @@ type DmChannelPayload_Snapshot struct {
 func (x *DmChannelPayload_Snapshot) Reset() {
 	*x = DmChannelPayload_Snapshot{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[87]
+		mi := &file_protocol_proto_msgTypes[89]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6740,7 +6866,7 @@ func (x *DmChannelPayload_Snapshot) String() string {
 func (*DmChannelPayload_Snapshot) ProtoMessage() {}
 
 func (x *DmChannelPayload_Snapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[87]
+	mi := &file_protocol_proto_msgTypes[89]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6777,7 +6903,7 @@ type DmChannelPayload_Inception struct {
 func (x *DmChannelPayload_Inception) Reset() {
 	*x = DmChannelPayload_Inception{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[88]
+		mi := &file_protocol_proto_msgTypes[90]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6790,7 +6916,7 @@ func (x *DmChannelPayload_Inception) String() string {
 func (*DmChannelPayload_Inception) ProtoMessage() {}
 
 func (x *DmChannelPayload_Inception) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[88]
+	mi := &file_protocol_proto_msgTypes[90]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6846,7 +6972,7 @@ type GdmChannelPayload_Snapshot struct {
 func (x *GdmChannelPayload_Snapshot) Reset() {
 	*x = GdmChannelPayload_Snapshot{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[89]
+		mi := &file_protocol_proto_msgTypes[91]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6859,7 +6985,7 @@ func (x *GdmChannelPayload_Snapshot) String() string {
 func (*GdmChannelPayload_Snapshot) ProtoMessage() {}
 
 func (x *GdmChannelPayload_Snapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[89]
+	mi := &file_protocol_proto_msgTypes[91]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6902,7 +7028,7 @@ type GdmChannelPayload_Inception struct {
 func (x *GdmChannelPayload_Inception) Reset() {
 	*x = GdmChannelPayload_Inception{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[90]
+		mi := &file_protocol_proto_msgTypes[92]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6915,7 +7041,7 @@ func (x *GdmChannelPayload_Inception) String() string {
 func (*GdmChannelPayload_Inception) ProtoMessage() {}
 
 func (x *GdmChannelPayload_Inception) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[90]
+	mi := &file_protocol_proto_msgTypes[92]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6970,7 +7096,7 @@ type UserPayload_Snapshot struct {
 func (x *UserPayload_Snapshot) Reset() {
 	*x = UserPayload_Snapshot{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[91]
+		mi := &file_protocol_proto_msgTypes[93]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6983,7 +7109,7 @@ func (x *UserPayload_Snapshot) String() string {
 func (*UserPayload_Snapshot) ProtoMessage() {}
 
 func (x *UserPayload_Snapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[91]
+	mi := &file_protocol_proto_msgTypes[93]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7039,7 +7165,7 @@ type UserPayload_Inception struct {
 func (x *UserPayload_Inception) Reset() {
 	*x = UserPayload_Inception{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[92]
+		mi := &file_protocol_proto_msgTypes[94]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7052,7 +7178,7 @@ func (x *UserPayload_Inception) String() string {
 func (*UserPayload_Inception) ProtoMessage() {}
 
 func (x *UserPayload_Inception) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[92]
+	mi := &file_protocol_proto_msgTypes[94]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7097,7 +7223,7 @@ type UserPayload_UserMembership struct {
 func (x *UserPayload_UserMembership) Reset() {
 	*x = UserPayload_UserMembership{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[93]
+		mi := &file_protocol_proto_msgTypes[95]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7110,7 +7236,7 @@ func (x *UserPayload_UserMembership) String() string {
 func (*UserPayload_UserMembership) ProtoMessage() {}
 
 func (x *UserPayload_UserMembership) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[93]
+	mi := &file_protocol_proto_msgTypes[95]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7169,7 +7295,7 @@ type UserPayload_UserMembershipAction struct {
 func (x *UserPayload_UserMembershipAction) Reset() {
 	*x = UserPayload_UserMembershipAction{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[94]
+		mi := &file_protocol_proto_msgTypes[96]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7182,7 +7308,7 @@ func (x *UserPayload_UserMembershipAction) String() string {
 func (*UserPayload_UserMembershipAction) ProtoMessage() {}
 
 func (x *UserPayload_UserMembershipAction) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[94]
+	mi := &file_protocol_proto_msgTypes[96]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7239,7 +7365,7 @@ type UserPayload_ReceivedBlockchainTransaction struct {
 func (x *UserPayload_ReceivedBlockchainTransaction) Reset() {
 	*x = UserPayload_ReceivedBlockchainTransaction{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[95]
+		mi := &file_protocol_proto_msgTypes[97]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7252,7 +7378,7 @@ func (x *UserPayload_ReceivedBlockchainTransaction) String() string {
 func (*UserPayload_ReceivedBlockchainTransaction) ProtoMessage() {}
 
 func (x *UserPayload_ReceivedBlockchainTransaction) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[95]
+	mi := &file_protocol_proto_msgTypes[97]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7295,7 +7421,7 @@ type UserInboxPayload_Snapshot struct {
 func (x *UserInboxPayload_Snapshot) Reset() {
 	*x = UserInboxPayload_Snapshot{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[98]
+		mi := &file_protocol_proto_msgTypes[100]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7308,7 +7434,7 @@ func (x *UserInboxPayload_Snapshot) String() string {
 func (*UserInboxPayload_Snapshot) ProtoMessage() {}
 
 func (x *UserInboxPayload_Snapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[98]
+	mi := &file_protocol_proto_msgTypes[100]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7350,7 +7476,7 @@ type UserInboxPayload_Inception struct {
 func (x *UserInboxPayload_Inception) Reset() {
 	*x = UserInboxPayload_Inception{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[99]
+		mi := &file_protocol_proto_msgTypes[101]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7363,7 +7489,7 @@ func (x *UserInboxPayload_Inception) String() string {
 func (*UserInboxPayload_Inception) ProtoMessage() {}
 
 func (x *UserInboxPayload_Inception) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[99]
+	mi := &file_protocol_proto_msgTypes[101]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7408,7 +7534,7 @@ type UserInboxPayload_GroupEncryptionSessions struct {
 func (x *UserInboxPayload_GroupEncryptionSessions) Reset() {
 	*x = UserInboxPayload_GroupEncryptionSessions{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[100]
+		mi := &file_protocol_proto_msgTypes[102]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7421,7 +7547,7 @@ func (x *UserInboxPayload_GroupEncryptionSessions) String() string {
 func (*UserInboxPayload_GroupEncryptionSessions) ProtoMessage() {}
 
 func (x *UserInboxPayload_GroupEncryptionSessions) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[100]
+	mi := &file_protocol_proto_msgTypes[102]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7477,7 +7603,7 @@ type UserInboxPayload_Ack struct {
 func (x *UserInboxPayload_Ack) Reset() {
 	*x = UserInboxPayload_Ack{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[101]
+		mi := &file_protocol_proto_msgTypes[103]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7490,7 +7616,7 @@ func (x *UserInboxPayload_Ack) String() string {
 func (*UserInboxPayload_Ack) ProtoMessage() {}
 
 func (x *UserInboxPayload_Ack) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[101]
+	mi := &file_protocol_proto_msgTypes[103]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7537,7 +7663,7 @@ type UserInboxPayload_Snapshot_DeviceSummary struct {
 func (x *UserInboxPayload_Snapshot_DeviceSummary) Reset() {
 	*x = UserInboxPayload_Snapshot_DeviceSummary{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[102]
+		mi := &file_protocol_proto_msgTypes[104]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7550,7 +7676,7 @@ func (x *UserInboxPayload_Snapshot_DeviceSummary) String() string {
 func (*UserInboxPayload_Snapshot_DeviceSummary) ProtoMessage() {}
 
 func (x *UserInboxPayload_Snapshot_DeviceSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[102]
+	mi := &file_protocol_proto_msgTypes[104]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7595,7 +7721,7 @@ type UserSettingsPayload_Snapshot struct {
 func (x *UserSettingsPayload_Snapshot) Reset() {
 	*x = UserSettingsPayload_Snapshot{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[105]
+		mi := &file_protocol_proto_msgTypes[107]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7608,7 +7734,7 @@ func (x *UserSettingsPayload_Snapshot) String() string {
 func (*UserSettingsPayload_Snapshot) ProtoMessage() {}
 
 func (x *UserSettingsPayload_Snapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[105]
+	mi := &file_protocol_proto_msgTypes[107]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7657,7 +7783,7 @@ type UserSettingsPayload_Inception struct {
 func (x *UserSettingsPayload_Inception) Reset() {
 	*x = UserSettingsPayload_Inception{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[106]
+		mi := &file_protocol_proto_msgTypes[108]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7670,7 +7796,7 @@ func (x *UserSettingsPayload_Inception) String() string {
 func (*UserSettingsPayload_Inception) ProtoMessage() {}
 
 func (x *UserSettingsPayload_Inception) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[106]
+	mi := &file_protocol_proto_msgTypes[108]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7711,7 +7837,7 @@ type UserSettingsPayload_MarkerContent struct {
 func (x *UserSettingsPayload_MarkerContent) Reset() {
 	*x = UserSettingsPayload_MarkerContent{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[107]
+		mi := &file_protocol_proto_msgTypes[109]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7724,7 +7850,7 @@ func (x *UserSettingsPayload_MarkerContent) String() string {
 func (*UserSettingsPayload_MarkerContent) ProtoMessage() {}
 
 func (x *UserSettingsPayload_MarkerContent) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[107]
+	mi := &file_protocol_proto_msgTypes[109]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7759,7 +7885,7 @@ type UserSettingsPayload_FullyReadMarkers struct {
 func (x *UserSettingsPayload_FullyReadMarkers) Reset() {
 	*x = UserSettingsPayload_FullyReadMarkers{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[108]
+		mi := &file_protocol_proto_msgTypes[110]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7772,7 +7898,7 @@ func (x *UserSettingsPayload_FullyReadMarkers) String() string {
 func (*UserSettingsPayload_FullyReadMarkers) ProtoMessage() {}
 
 func (x *UserSettingsPayload_FullyReadMarkers) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[108]
+	mi := &file_protocol_proto_msgTypes[110]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7815,7 +7941,7 @@ type UserSettingsPayload_UserBlock struct {
 func (x *UserSettingsPayload_UserBlock) Reset() {
 	*x = UserSettingsPayload_UserBlock{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[109]
+		mi := &file_protocol_proto_msgTypes[111]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7828,7 +7954,7 @@ func (x *UserSettingsPayload_UserBlock) String() string {
 func (*UserSettingsPayload_UserBlock) ProtoMessage() {}
 
 func (x *UserSettingsPayload_UserBlock) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[109]
+	mi := &file_protocol_proto_msgTypes[111]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7878,7 +8004,7 @@ type UserSettingsPayload_Snapshot_UserBlocks struct {
 func (x *UserSettingsPayload_Snapshot_UserBlocks) Reset() {
 	*x = UserSettingsPayload_Snapshot_UserBlocks{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[110]
+		mi := &file_protocol_proto_msgTypes[112]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7891,7 +8017,7 @@ func (x *UserSettingsPayload_Snapshot_UserBlocks) String() string {
 func (*UserSettingsPayload_Snapshot_UserBlocks) ProtoMessage() {}
 
 func (x *UserSettingsPayload_Snapshot_UserBlocks) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[110]
+	mi := &file_protocol_proto_msgTypes[112]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7933,7 +8059,7 @@ type UserSettingsPayload_Snapshot_UserBlocks_Block struct {
 func (x *UserSettingsPayload_Snapshot_UserBlocks_Block) Reset() {
 	*x = UserSettingsPayload_Snapshot_UserBlocks_Block{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[111]
+		mi := &file_protocol_proto_msgTypes[113]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7946,7 +8072,7 @@ func (x *UserSettingsPayload_Snapshot_UserBlocks_Block) String() string {
 func (*UserSettingsPayload_Snapshot_UserBlocks_Block) ProtoMessage() {}
 
 func (x *UserSettingsPayload_Snapshot_UserBlocks_Block) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[111]
+	mi := &file_protocol_proto_msgTypes[113]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7994,7 +8120,7 @@ type UserMetadataPayload_Snapshot struct {
 func (x *UserMetadataPayload_Snapshot) Reset() {
 	*x = UserMetadataPayload_Snapshot{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[112]
+		mi := &file_protocol_proto_msgTypes[114]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8007,7 +8133,7 @@ func (x *UserMetadataPayload_Snapshot) String() string {
 func (*UserMetadataPayload_Snapshot) ProtoMessage() {}
 
 func (x *UserMetadataPayload_Snapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[112]
+	mi := &file_protocol_proto_msgTypes[114]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8063,7 +8189,7 @@ type UserMetadataPayload_Inception struct {
 func (x *UserMetadataPayload_Inception) Reset() {
 	*x = UserMetadataPayload_Inception{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[113]
+		mi := &file_protocol_proto_msgTypes[115]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8076,7 +8202,7 @@ func (x *UserMetadataPayload_Inception) String() string {
 func (*UserMetadataPayload_Inception) ProtoMessage() {}
 
 func (x *UserMetadataPayload_Inception) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[113]
+	mi := &file_protocol_proto_msgTypes[115]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8118,7 +8244,7 @@ type UserMetadataPayload_EncryptionDevice struct {
 func (x *UserMetadataPayload_EncryptionDevice) Reset() {
 	*x = UserMetadataPayload_EncryptionDevice{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[114]
+		mi := &file_protocol_proto_msgTypes[116]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8131,7 +8257,7 @@ func (x *UserMetadataPayload_EncryptionDevice) String() string {
 func (*UserMetadataPayload_EncryptionDevice) ProtoMessage() {}
 
 func (x *UserMetadataPayload_EncryptionDevice) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[114]
+	mi := &file_protocol_proto_msgTypes[116]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8172,7 +8298,7 @@ type MediaPayload_Snapshot struct {
 func (x *MediaPayload_Snapshot) Reset() {
 	*x = MediaPayload_Snapshot{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[115]
+		mi := &file_protocol_proto_msgTypes[117]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8185,7 +8311,7 @@ func (x *MediaPayload_Snapshot) String() string {
 func (*MediaPayload_Snapshot) ProtoMessage() {}
 
 func (x *MediaPayload_Snapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[115]
+	mi := &file_protocol_proto_msgTypes[117]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8224,7 +8350,7 @@ type MediaPayload_Inception struct {
 func (x *MediaPayload_Inception) Reset() {
 	*x = MediaPayload_Inception{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[116]
+		mi := &file_protocol_proto_msgTypes[118]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8237,7 +8363,7 @@ func (x *MediaPayload_Inception) String() string {
 func (*MediaPayload_Inception) ProtoMessage() {}
 
 func (x *MediaPayload_Inception) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[116]
+	mi := &file_protocol_proto_msgTypes[118]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8307,7 +8433,7 @@ type MediaPayload_Chunk struct {
 func (x *MediaPayload_Chunk) Reset() {
 	*x = MediaPayload_Chunk{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[117]
+		mi := &file_protocol_proto_msgTypes[119]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8320,7 +8446,7 @@ func (x *MediaPayload_Chunk) String() string {
 func (*MediaPayload_Chunk) ProtoMessage() {}
 
 func (x *MediaPayload_Chunk) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[117]
+	mi := &file_protocol_proto_msgTypes[119]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8363,7 +8489,7 @@ type BlockchainTransaction_Tip struct {
 func (x *BlockchainTransaction_Tip) Reset() {
 	*x = BlockchainTransaction_Tip{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[118]
+		mi := &file_protocol_proto_msgTypes[120]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8376,7 +8502,7 @@ func (x *BlockchainTransaction_Tip) String() string {
 func (*BlockchainTransaction_Tip) ProtoMessage() {}
 
 func (x *BlockchainTransaction_Tip) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[118]
+	mi := &file_protocol_proto_msgTypes[120]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8423,7 +8549,7 @@ type BlockchainTransaction_Tip_Event struct {
 func (x *BlockchainTransaction_Tip_Event) Reset() {
 	*x = BlockchainTransaction_Tip_Event{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[119]
+		mi := &file_protocol_proto_msgTypes[121]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8436,7 +8562,7 @@ func (x *BlockchainTransaction_Tip_Event) String() string {
 func (*BlockchainTransaction_Tip_Event) ProtoMessage() {}
 
 func (x *BlockchainTransaction_Tip_Event) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[119]
+	mi := &file_protocol_proto_msgTypes[121]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8514,7 +8640,7 @@ type BlockchainTransactionReceipt_Log struct {
 func (x *BlockchainTransactionReceipt_Log) Reset() {
 	*x = BlockchainTransactionReceipt_Log{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[120]
+		mi := &file_protocol_proto_msgTypes[122]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8527,7 +8653,7 @@ func (x *BlockchainTransactionReceipt_Log) String() string {
 func (*BlockchainTransactionReceipt_Log) ProtoMessage() {}
 
 func (x *BlockchainTransactionReceipt_Log) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[120]
+	mi := &file_protocol_proto_msgTypes[122]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8578,7 +8704,7 @@ type EncryptedData_Mls struct {
 func (x *EncryptedData_Mls) Reset() {
 	*x = EncryptedData_Mls{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[121]
+		mi := &file_protocol_proto_msgTypes[123]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8591,7 +8717,7 @@ func (x *EncryptedData_Mls) String() string {
 func (*EncryptedData_Mls) ProtoMessage() {}
 
 func (x *EncryptedData_Mls) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[121]
+	mi := &file_protocol_proto_msgTypes[123]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8634,7 +8760,7 @@ type AddEventResponse_Error struct {
 func (x *AddEventResponse_Error) Reset() {
 	*x = AddEventResponse_Error{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protocol_proto_msgTypes[124]
+		mi := &file_protocol_proto_msgTypes[126]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8647,7 +8773,7 @@ func (x *AddEventResponse_Error) String() string {
 func (*AddEventResponse_Error) ProtoMessage() {}
 
 func (x *AddEventResponse_Error) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[124]
+	mi := &file_protocol_proto_msgTypes[126]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8678,6 +8804,69 @@ func (x *AddEventResponse_Error) GetMsg() string {
 }
 
 func (x *AddEventResponse_Error) GetFuncs() []string {
+	if x != nil {
+		return x.Funcs
+	}
+	return nil
+}
+
+type AddMediaEventResponse_Error struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Code  Err      `protobuf:"varint,1,opt,name=code,proto3,enum=river.Err" json:"code,omitempty"`
+	Msg   string   `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
+	Funcs []string `protobuf:"bytes,3,rep,name=funcs,proto3" json:"funcs,omitempty"`
+}
+
+func (x *AddMediaEventResponse_Error) Reset() {
+	*x = AddMediaEventResponse_Error{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_protocol_proto_msgTypes[127]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *AddMediaEventResponse_Error) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddMediaEventResponse_Error) ProtoMessage() {}
+
+func (x *AddMediaEventResponse_Error) ProtoReflect() protoreflect.Message {
+	mi := &file_protocol_proto_msgTypes[127]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddMediaEventResponse_Error.ProtoReflect.Descriptor instead.
+func (*AddMediaEventResponse_Error) Descriptor() ([]byte, []int) {
+	return file_protocol_proto_rawDescGZIP(), []int{41, 0}
+}
+
+func (x *AddMediaEventResponse_Error) GetCode() Err {
+	if x != nil {
+		return x.Code
+	}
+	return Err_ERR_UNSPECIFIED
+}
+
+func (x *AddMediaEventResponse_Error) GetMsg() string {
+	if x != nil {
+		return x.Msg
+	}
+	return ""
+}
+
+func (x *AddMediaEventResponse_Error) GetFuncs() []string {
 	if x != nil {
 		return x.Funcs
 	}
@@ -9853,278 +10042,309 @@ var file_protocol_proto_rawDesc = []byte{
 	0x20, 0x01, 0x28, 0x0e, 0x32, 0x0a, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x45, 0x72, 0x72,
 	0x52, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x6d, 0x73, 0x67, 0x18, 0x02, 0x20,
 	0x01, 0x28, 0x09, 0x52, 0x03, 0x6d, 0x73, 0x67, 0x12, 0x14, 0x0a, 0x05, 0x66, 0x75, 0x6e, 0x63,
-	0x73, 0x18, 0x03, 0x20, 0x03, 0x28, 0x09, 0x52, 0x05, 0x66, 0x75, 0x6e, 0x63, 0x73, 0x22, 0x42,
-	0x0a, 0x12, 0x53, 0x79, 0x6e, 0x63, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x73, 0x52, 0x65, 0x71,
-	0x75, 0x65, 0x73, 0x74, 0x12, 0x2c, 0x0a, 0x08, 0x73, 0x79, 0x6e, 0x63, 0x5f, 0x70, 0x6f, 0x73,
-	0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x11, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x53,
-	0x79, 0x6e, 0x63, 0x43, 0x6f, 0x6f, 0x6b, 0x69, 0x65, 0x52, 0x07, 0x73, 0x79, 0x6e, 0x63, 0x50,
-	0x6f, 0x73, 0x22, 0xc2, 0x01, 0x0a, 0x13, 0x53, 0x79, 0x6e, 0x63, 0x53, 0x74, 0x72, 0x65, 0x61,
-	0x6d, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x17, 0x0a, 0x07, 0x73, 0x79,
-	0x6e, 0x63, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x79, 0x6e,
-	0x63, 0x49, 0x64, 0x12, 0x26, 0x0a, 0x07, 0x73, 0x79, 0x6e, 0x63, 0x5f, 0x6f, 0x70, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x0e, 0x32, 0x0d, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x53, 0x79, 0x6e,
-	0x63, 0x4f, 0x70, 0x52, 0x06, 0x73, 0x79, 0x6e, 0x63, 0x4f, 0x70, 0x12, 0x2e, 0x0a, 0x06, 0x73,
-	0x74, 0x72, 0x65, 0x61, 0x6d, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x72, 0x69,
-	0x76, 0x65, 0x72, 0x2e, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x41, 0x6e, 0x64, 0x43, 0x6f, 0x6f,
-	0x6b, 0x69, 0x65, 0x52, 0x06, 0x73, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x12, 0x1d, 0x0a, 0x0a, 0x70,
-	0x6f, 0x6e, 0x67, 0x5f, 0x6e, 0x6f, 0x6e, 0x63, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x09, 0x70, 0x6f, 0x6e, 0x67, 0x4e, 0x6f, 0x6e, 0x63, 0x65, 0x12, 0x1b, 0x0a, 0x09, 0x73, 0x74,
-	0x72, 0x65, 0x61, 0x6d, 0x5f, 0x69, 0x64, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x08, 0x73,
-	0x74, 0x72, 0x65, 0x61, 0x6d, 0x49, 0x64, 0x22, 0x5f, 0x0a, 0x16, 0x41, 0x64, 0x64, 0x53, 0x74,
-	0x72, 0x65, 0x61, 0x6d, 0x54, 0x6f, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x12, 0x17, 0x0a, 0x07, 0x73, 0x79, 0x6e, 0x63, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x06, 0x73, 0x79, 0x6e, 0x63, 0x49, 0x64, 0x12, 0x2c, 0x0a, 0x08, 0x73, 0x79,
-	0x6e, 0x63, 0x5f, 0x70, 0x6f, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x11, 0x2e, 0x72,
-	0x69, 0x76, 0x65, 0x72, 0x2e, 0x53, 0x79, 0x6e, 0x63, 0x43, 0x6f, 0x6f, 0x6b, 0x69, 0x65, 0x52,
-	0x07, 0x73, 0x79, 0x6e, 0x63, 0x50, 0x6f, 0x73, 0x22, 0x19, 0x0a, 0x17, 0x41, 0x64, 0x64, 0x53,
-	0x74, 0x72, 0x65, 0x61, 0x6d, 0x54, 0x6f, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x22, 0x53, 0x0a, 0x1b, 0x52, 0x65, 0x6d, 0x6f, 0x76, 0x65, 0x53, 0x74, 0x72,
-	0x65, 0x61, 0x6d, 0x46, 0x72, 0x6f, 0x6d, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x18, 0x03, 0x20, 0x03, 0x28, 0x09, 0x52, 0x05, 0x66, 0x75, 0x6e, 0x63, 0x73, 0x22, 0xb6,
+	0x01, 0x0a, 0x14, 0x41, 0x64, 0x64, 0x4d, 0x65, 0x64, 0x69, 0x61, 0x45, 0x76, 0x65, 0x6e, 0x74,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1b, 0x0a, 0x09, 0x73, 0x74, 0x72, 0x65, 0x61,
+	0x6d, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x08, 0x73, 0x74, 0x72, 0x65,
+	0x61, 0x6d, 0x49, 0x64, 0x12, 0x25, 0x0a, 0x05, 0x65, 0x76, 0x65, 0x6e, 0x74, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x45, 0x6e, 0x76, 0x65,
+	0x6c, 0x6f, 0x70, 0x65, 0x52, 0x05, 0x65, 0x76, 0x65, 0x6e, 0x74, 0x12, 0x3e, 0x0a, 0x0f, 0x63,
+	0x72, 0x65, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x63, 0x6f, 0x6f, 0x6b, 0x69, 0x65, 0x18, 0x03,
+	0x20, 0x01, 0x28, 0x0b, 0x32, 0x15, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x43, 0x72, 0x65,
+	0x61, 0x74, 0x69, 0x6f, 0x6e, 0x43, 0x6f, 0x6f, 0x6b, 0x69, 0x65, 0x52, 0x0e, 0x63, 0x72, 0x65,
+	0x61, 0x74, 0x69, 0x6f, 0x6e, 0x43, 0x6f, 0x6f, 0x6b, 0x69, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x6f,
+	0x70, 0x74, 0x69, 0x6f, 0x6e, 0x61, 0x6c, 0x18, 0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x08, 0x6f,
+	0x70, 0x74, 0x69, 0x6f, 0x6e, 0x61, 0x6c, 0x22, 0xe2, 0x01, 0x0a, 0x15, 0x41, 0x64, 0x64, 0x4d,
+	0x65, 0x64, 0x69, 0x61, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x12, 0x38, 0x0a, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x22, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x41, 0x64, 0x64, 0x4d, 0x65, 0x64, 0x69,
+	0x61, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x2e, 0x45,
+	0x72, 0x72, 0x6f, 0x72, 0x52, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x12, 0x3e, 0x0a, 0x0f, 0x63,
+	0x72, 0x65, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x63, 0x6f, 0x6f, 0x6b, 0x69, 0x65, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x0b, 0x32, 0x15, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x43, 0x72, 0x65,
+	0x61, 0x74, 0x69, 0x6f, 0x6e, 0x43, 0x6f, 0x6f, 0x6b, 0x69, 0x65, 0x52, 0x0e, 0x63, 0x72, 0x65,
+	0x61, 0x74, 0x69, 0x6f, 0x6e, 0x43, 0x6f, 0x6f, 0x6b, 0x69, 0x65, 0x1a, 0x4f, 0x0a, 0x05, 0x45,
+	0x72, 0x72, 0x6f, 0x72, 0x12, 0x1e, 0x0a, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x0e, 0x32, 0x0a, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x45, 0x72, 0x72, 0x52, 0x04,
+	0x63, 0x6f, 0x64, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x6d, 0x73, 0x67, 0x18, 0x02, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x03, 0x6d, 0x73, 0x67, 0x12, 0x14, 0x0a, 0x05, 0x66, 0x75, 0x6e, 0x63, 0x73, 0x18,
+	0x03, 0x20, 0x03, 0x28, 0x09, 0x52, 0x05, 0x66, 0x75, 0x6e, 0x63, 0x73, 0x22, 0x42, 0x0a, 0x12,
+	0x53, 0x79, 0x6e, 0x63, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x12, 0x2c, 0x0a, 0x08, 0x73, 0x79, 0x6e, 0x63, 0x5f, 0x70, 0x6f, 0x73, 0x18, 0x01,
+	0x20, 0x03, 0x28, 0x0b, 0x32, 0x11, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x53, 0x79, 0x6e,
+	0x63, 0x43, 0x6f, 0x6f, 0x6b, 0x69, 0x65, 0x52, 0x07, 0x73, 0x79, 0x6e, 0x63, 0x50, 0x6f, 0x73,
+	0x22, 0xc2, 0x01, 0x0a, 0x13, 0x53, 0x79, 0x6e, 0x63, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x73,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x17, 0x0a, 0x07, 0x73, 0x79, 0x6e, 0x63,
+	0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x79, 0x6e, 0x63, 0x49,
+	0x64, 0x12, 0x26, 0x0a, 0x07, 0x73, 0x79, 0x6e, 0x63, 0x5f, 0x6f, 0x70, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x0e, 0x32, 0x0d, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x53, 0x79, 0x6e, 0x63, 0x4f,
+	0x70, 0x52, 0x06, 0x73, 0x79, 0x6e, 0x63, 0x4f, 0x70, 0x12, 0x2e, 0x0a, 0x06, 0x73, 0x74, 0x72,
+	0x65, 0x61, 0x6d, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x72, 0x69, 0x76, 0x65,
+	0x72, 0x2e, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x41, 0x6e, 0x64, 0x43, 0x6f, 0x6f, 0x6b, 0x69,
+	0x65, 0x52, 0x06, 0x73, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x12, 0x1d, 0x0a, 0x0a, 0x70, 0x6f, 0x6e,
+	0x67, 0x5f, 0x6e, 0x6f, 0x6e, 0x63, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x70,
+	0x6f, 0x6e, 0x67, 0x4e, 0x6f, 0x6e, 0x63, 0x65, 0x12, 0x1b, 0x0a, 0x09, 0x73, 0x74, 0x72, 0x65,
+	0x61, 0x6d, 0x5f, 0x69, 0x64, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x08, 0x73, 0x74, 0x72,
+	0x65, 0x61, 0x6d, 0x49, 0x64, 0x22, 0x5f, 0x0a, 0x16, 0x41, 0x64, 0x64, 0x53, 0x74, 0x72, 0x65,
+	0x61, 0x6d, 0x54, 0x6f, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
+	0x17, 0x0a, 0x07, 0x73, 0x79, 0x6e, 0x63, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x06, 0x73, 0x79, 0x6e, 0x63, 0x49, 0x64, 0x12, 0x2c, 0x0a, 0x08, 0x73, 0x79, 0x6e, 0x63,
+	0x5f, 0x70, 0x6f, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x11, 0x2e, 0x72, 0x69, 0x76,
+	0x65, 0x72, 0x2e, 0x53, 0x79, 0x6e, 0x63, 0x43, 0x6f, 0x6f, 0x6b, 0x69, 0x65, 0x52, 0x07, 0x73,
+	0x79, 0x6e, 0x63, 0x50, 0x6f, 0x73, 0x22, 0x19, 0x0a, 0x17, 0x41, 0x64, 0x64, 0x53, 0x74, 0x72,
+	0x65, 0x61, 0x6d, 0x54, 0x6f, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x22, 0x53, 0x0a, 0x1b, 0x52, 0x65, 0x6d, 0x6f, 0x76, 0x65, 0x53, 0x74, 0x72, 0x65, 0x61,
+	0x6d, 0x46, 0x72, 0x6f, 0x6d, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x12, 0x17, 0x0a, 0x07, 0x73, 0x79, 0x6e, 0x63, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x06, 0x73, 0x79, 0x6e, 0x63, 0x49, 0x64, 0x12, 0x1b, 0x0a, 0x09, 0x73, 0x74, 0x72,
+	0x65, 0x61, 0x6d, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x08, 0x73, 0x74,
+	0x72, 0x65, 0x61, 0x6d, 0x49, 0x64, 0x22, 0x1e, 0x0a, 0x1c, 0x52, 0x65, 0x6d, 0x6f, 0x76, 0x65,
+	0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x46, 0x72, 0x6f, 0x6d, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x87, 0x01, 0x0a, 0x11, 0x4d, 0x6f, 0x64, 0x69, 0x66,
+	0x79, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x17, 0x0a, 0x07,
+	0x73, 0x79, 0x6e, 0x63, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73,
+	0x79, 0x6e, 0x63, 0x49, 0x64, 0x12, 0x32, 0x0a, 0x0b, 0x61, 0x64, 0x64, 0x5f, 0x73, 0x74, 0x72,
+	0x65, 0x61, 0x6d, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x11, 0x2e, 0x72, 0x69, 0x76,
+	0x65, 0x72, 0x2e, 0x53, 0x79, 0x6e, 0x63, 0x43, 0x6f, 0x6f, 0x6b, 0x69, 0x65, 0x52, 0x0a, 0x61,
+	0x64, 0x64, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x73, 0x12, 0x25, 0x0a, 0x0e, 0x72, 0x65, 0x6d,
+	0x6f, 0x76, 0x65, 0x5f, 0x73, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x73, 0x18, 0x03, 0x20, 0x03, 0x28,
+	0x0c, 0x52, 0x0d, 0x72, 0x65, 0x6d, 0x6f, 0x76, 0x65, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x73,
+	0x22, 0x5f, 0x0a, 0x12, 0x53, 0x79, 0x6e, 0x63, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x4f, 0x70,
+	0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x1b, 0x0a, 0x09, 0x73, 0x74, 0x72, 0x65, 0x61, 0x6d,
+	0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x08, 0x73, 0x74, 0x72, 0x65, 0x61,
+	0x6d, 0x49, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28,
+	0x05, 0x52, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61,
+	0x67, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67,
+	0x65, 0x22, 0x7a, 0x0a, 0x12, 0x4d, 0x6f, 0x64, 0x69, 0x66, 0x79, 0x53, 0x79, 0x6e, 0x63, 0x52,
+	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2d, 0x0a, 0x04, 0x61, 0x64, 0x64, 0x73, 0x18,
+	0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x19, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x53, 0x79,
+	0x6e, 0x63, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x4f, 0x70, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73,
+	0x52, 0x04, 0x61, 0x64, 0x64, 0x73, 0x12, 0x35, 0x0a, 0x08, 0x72, 0x65, 0x6d, 0x6f, 0x76, 0x61,
+	0x6c, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x19, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72,
+	0x2e, 0x53, 0x79, 0x6e, 0x63, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x4f, 0x70, 0x53, 0x74, 0x61,
+	0x74, 0x75, 0x73, 0x52, 0x08, 0x72, 0x65, 0x6d, 0x6f, 0x76, 0x61, 0x6c, 0x73, 0x22, 0x2c, 0x0a,
+	0x11, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x71, 0x75, 0x65,
 	0x73, 0x74, 0x12, 0x17, 0x0a, 0x07, 0x73, 0x79, 0x6e, 0x63, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x79, 0x6e, 0x63, 0x49, 0x64, 0x12, 0x1b, 0x0a, 0x09, 0x73,
-	0x74, 0x72, 0x65, 0x61, 0x6d, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x08,
-	0x73, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x49, 0x64, 0x22, 0x1e, 0x0a, 0x1c, 0x52, 0x65, 0x6d, 0x6f,
-	0x76, 0x65, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x46, 0x72, 0x6f, 0x6d, 0x53, 0x79, 0x6e, 0x63,
-	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x87, 0x01, 0x0a, 0x11, 0x4d, 0x6f, 0x64,
-	0x69, 0x66, 0x79, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x17,
-	0x0a, 0x07, 0x73, 0x79, 0x6e, 0x63, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x06, 0x73, 0x79, 0x6e, 0x63, 0x49, 0x64, 0x12, 0x32, 0x0a, 0x0b, 0x61, 0x64, 0x64, 0x5f, 0x73,
-	0x74, 0x72, 0x65, 0x61, 0x6d, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x11, 0x2e, 0x72,
-	0x69, 0x76, 0x65, 0x72, 0x2e, 0x53, 0x79, 0x6e, 0x63, 0x43, 0x6f, 0x6f, 0x6b, 0x69, 0x65, 0x52,
-	0x0a, 0x61, 0x64, 0x64, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x73, 0x12, 0x25, 0x0a, 0x0e, 0x72,
-	0x65, 0x6d, 0x6f, 0x76, 0x65, 0x5f, 0x73, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x73, 0x18, 0x03, 0x20,
-	0x03, 0x28, 0x0c, 0x52, 0x0d, 0x72, 0x65, 0x6d, 0x6f, 0x76, 0x65, 0x53, 0x74, 0x72, 0x65, 0x61,
-	0x6d, 0x73, 0x22, 0x5f, 0x0a, 0x12, 0x53, 0x79, 0x6e, 0x63, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d,
-	0x4f, 0x70, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x1b, 0x0a, 0x09, 0x73, 0x74, 0x72, 0x65,
-	0x61, 0x6d, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x08, 0x73, 0x74, 0x72,
-	0x65, 0x61, 0x6d, 0x49, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x05, 0x52, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x6d, 0x65, 0x73,
-	0x73, 0x61, 0x67, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x6d, 0x65, 0x73, 0x73,
-	0x61, 0x67, 0x65, 0x22, 0x7a, 0x0a, 0x12, 0x4d, 0x6f, 0x64, 0x69, 0x66, 0x79, 0x53, 0x79, 0x6e,
-	0x63, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2d, 0x0a, 0x04, 0x61, 0x64, 0x64,
-	0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x19, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e,
-	0x53, 0x79, 0x6e, 0x63, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x4f, 0x70, 0x53, 0x74, 0x61, 0x74,
-	0x75, 0x73, 0x52, 0x04, 0x61, 0x64, 0x64, 0x73, 0x12, 0x35, 0x0a, 0x08, 0x72, 0x65, 0x6d, 0x6f,
-	0x76, 0x61, 0x6c, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x19, 0x2e, 0x72, 0x69, 0x76,
-	0x65, 0x72, 0x2e, 0x53, 0x79, 0x6e, 0x63, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x4f, 0x70, 0x53,
-	0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x08, 0x72, 0x65, 0x6d, 0x6f, 0x76, 0x61, 0x6c, 0x73, 0x22,
-	0x2c, 0x0a, 0x11, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x71,
+	0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x79, 0x6e, 0x63, 0x49, 0x64, 0x22, 0x14, 0x0a, 0x12, 0x43,
+	0x61, 0x6e, 0x63, 0x65, 0x6c, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x22, 0x40, 0x0a, 0x0f, 0x50, 0x69, 0x6e, 0x67, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x71,
 	0x75, 0x65, 0x73, 0x74, 0x12, 0x17, 0x0a, 0x07, 0x73, 0x79, 0x6e, 0x63, 0x5f, 0x69, 0x64, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x79, 0x6e, 0x63, 0x49, 0x64, 0x22, 0x14, 0x0a,
-	0x12, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x22, 0x40, 0x0a, 0x0f, 0x50, 0x69, 0x6e, 0x67, 0x53, 0x79, 0x6e, 0x63, 0x52,
-	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x17, 0x0a, 0x07, 0x73, 0x79, 0x6e, 0x63, 0x5f, 0x69,
-	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x79, 0x6e, 0x63, 0x49, 0x64, 0x12,
-	0x14, 0x0a, 0x05, 0x6e, 0x6f, 0x6e, 0x63, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05,
-	0x6e, 0x6f, 0x6e, 0x63, 0x65, 0x22, 0x12, 0x0a, 0x10, 0x50, 0x69, 0x6e, 0x67, 0x53, 0x79, 0x6e,
-	0x63, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x23, 0x0a, 0x0b, 0x49, 0x6e, 0x66,
-	0x6f, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x64, 0x65, 0x62, 0x75,
-	0x67, 0x18, 0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x05, 0x64, 0x65, 0x62, 0x75, 0x67, 0x22, 0x7f,
-	0x0a, 0x0c, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1a,
-	0x0a, 0x08, 0x67, 0x72, 0x61, 0x66, 0x66, 0x69, 0x74, 0x69, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x08, 0x67, 0x72, 0x61, 0x66, 0x66, 0x69, 0x74, 0x69, 0x12, 0x39, 0x0a, 0x0a, 0x73, 0x74,
-	0x61, 0x72, 0x74, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a,
-	0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66,
-	0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x09, 0x73, 0x74, 0x61, 0x72,
-	0x74, 0x54, 0x69, 0x6d, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e,
-	0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x2a,
-	0x6b, 0x0a, 0x06, 0x53, 0x79, 0x6e, 0x63, 0x4f, 0x70, 0x12, 0x14, 0x0a, 0x10, 0x53, 0x59, 0x4e,
-	0x43, 0x5f, 0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44, 0x10, 0x00, 0x12,
-	0x0c, 0x0a, 0x08, 0x53, 0x59, 0x4e, 0x43, 0x5f, 0x4e, 0x45, 0x57, 0x10, 0x01, 0x12, 0x0e, 0x0a,
-	0x0a, 0x53, 0x59, 0x4e, 0x43, 0x5f, 0x43, 0x4c, 0x4f, 0x53, 0x45, 0x10, 0x02, 0x12, 0x0f, 0x0a,
-	0x0b, 0x53, 0x59, 0x4e, 0x43, 0x5f, 0x55, 0x50, 0x44, 0x41, 0x54, 0x45, 0x10, 0x03, 0x12, 0x0d,
-	0x0a, 0x09, 0x53, 0x59, 0x4e, 0x43, 0x5f, 0x50, 0x4f, 0x4e, 0x47, 0x10, 0x04, 0x12, 0x0d, 0x0a,
-	0x09, 0x53, 0x59, 0x4e, 0x43, 0x5f, 0x44, 0x4f, 0x57, 0x4e, 0x10, 0x05, 0x2a, 0x4c, 0x0a, 0x0c,
-	0x4d, 0x65, 0x6d, 0x62, 0x65, 0x72, 0x73, 0x68, 0x69, 0x70, 0x4f, 0x70, 0x12, 0x12, 0x0a, 0x0e,
-	0x53, 0x4f, 0x5f, 0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44, 0x10, 0x00,
-	0x12, 0x0d, 0x0a, 0x09, 0x53, 0x4f, 0x5f, 0x49, 0x4e, 0x56, 0x49, 0x54, 0x45, 0x10, 0x01, 0x12,
-	0x0b, 0x0a, 0x07, 0x53, 0x4f, 0x5f, 0x4a, 0x4f, 0x49, 0x4e, 0x10, 0x02, 0x12, 0x0c, 0x0a, 0x08,
-	0x53, 0x4f, 0x5f, 0x4c, 0x45, 0x41, 0x56, 0x45, 0x10, 0x03, 0x2a, 0x4f, 0x0a, 0x09, 0x43, 0x68,
-	0x61, 0x6e, 0x6e, 0x65, 0x6c, 0x4f, 0x70, 0x12, 0x12, 0x0a, 0x0e, 0x43, 0x4f, 0x5f, 0x55, 0x4e,
-	0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44, 0x10, 0x00, 0x12, 0x0e, 0x0a, 0x0a, 0x43,
-	0x4f, 0x5f, 0x43, 0x52, 0x45, 0x41, 0x54, 0x45, 0x44, 0x10, 0x01, 0x12, 0x0e, 0x0a, 0x0a, 0x43,
-	0x4f, 0x5f, 0x44, 0x45, 0x4c, 0x45, 0x54, 0x45, 0x44, 0x10, 0x02, 0x12, 0x0e, 0x0a, 0x0a, 0x43,
-	0x4f, 0x5f, 0x55, 0x50, 0x44, 0x41, 0x54, 0x45, 0x44, 0x10, 0x04, 0x2a, 0x9d, 0x02, 0x0a, 0x16,
-	0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x61, 0x63, 0x74, 0x69,
-	0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x12, 0x28, 0x0a, 0x24, 0x4d, 0x45, 0x53, 0x53, 0x41, 0x47,
-	0x45, 0x5f, 0x49, 0x4e, 0x54, 0x45, 0x52, 0x41, 0x43, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x54, 0x59,
-	0x50, 0x45, 0x5f, 0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44, 0x10, 0x00,
-	0x12, 0x22, 0x0a, 0x1e, 0x4d, 0x45, 0x53, 0x53, 0x41, 0x47, 0x45, 0x5f, 0x49, 0x4e, 0x54, 0x45,
-	0x52, 0x41, 0x43, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x52, 0x45, 0x50,
-	0x4c, 0x59, 0x10, 0x01, 0x12, 0x25, 0x0a, 0x21, 0x4d, 0x45, 0x53, 0x53, 0x41, 0x47, 0x45, 0x5f,
+	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x79, 0x6e, 0x63, 0x49, 0x64, 0x12, 0x14, 0x0a,
+	0x05, 0x6e, 0x6f, 0x6e, 0x63, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x6e, 0x6f,
+	0x6e, 0x63, 0x65, 0x22, 0x12, 0x0a, 0x10, 0x50, 0x69, 0x6e, 0x67, 0x53, 0x79, 0x6e, 0x63, 0x52,
+	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x23, 0x0a, 0x0b, 0x49, 0x6e, 0x66, 0x6f, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x64, 0x65, 0x62, 0x75, 0x67, 0x18,
+	0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x05, 0x64, 0x65, 0x62, 0x75, 0x67, 0x22, 0x7f, 0x0a, 0x0c,
+	0x49, 0x6e, 0x66, 0x6f, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1a, 0x0a, 0x08,
+	0x67, 0x72, 0x61, 0x66, 0x66, 0x69, 0x74, 0x69, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08,
+	0x67, 0x72, 0x61, 0x66, 0x66, 0x69, 0x74, 0x69, 0x12, 0x39, 0x0a, 0x0a, 0x73, 0x74, 0x61, 0x72,
+	0x74, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67,
+	0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54,
+	0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x09, 0x73, 0x74, 0x61, 0x72, 0x74, 0x54,
+	0x69, 0x6d, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x03,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x2a, 0x6b, 0x0a,
+	0x06, 0x53, 0x79, 0x6e, 0x63, 0x4f, 0x70, 0x12, 0x14, 0x0a, 0x10, 0x53, 0x59, 0x4e, 0x43, 0x5f,
+	0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44, 0x10, 0x00, 0x12, 0x0c, 0x0a,
+	0x08, 0x53, 0x59, 0x4e, 0x43, 0x5f, 0x4e, 0x45, 0x57, 0x10, 0x01, 0x12, 0x0e, 0x0a, 0x0a, 0x53,
+	0x59, 0x4e, 0x43, 0x5f, 0x43, 0x4c, 0x4f, 0x53, 0x45, 0x10, 0x02, 0x12, 0x0f, 0x0a, 0x0b, 0x53,
+	0x59, 0x4e, 0x43, 0x5f, 0x55, 0x50, 0x44, 0x41, 0x54, 0x45, 0x10, 0x03, 0x12, 0x0d, 0x0a, 0x09,
+	0x53, 0x59, 0x4e, 0x43, 0x5f, 0x50, 0x4f, 0x4e, 0x47, 0x10, 0x04, 0x12, 0x0d, 0x0a, 0x09, 0x53,
+	0x59, 0x4e, 0x43, 0x5f, 0x44, 0x4f, 0x57, 0x4e, 0x10, 0x05, 0x2a, 0x4c, 0x0a, 0x0c, 0x4d, 0x65,
+	0x6d, 0x62, 0x65, 0x72, 0x73, 0x68, 0x69, 0x70, 0x4f, 0x70, 0x12, 0x12, 0x0a, 0x0e, 0x53, 0x4f,
+	0x5f, 0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44, 0x10, 0x00, 0x12, 0x0d,
+	0x0a, 0x09, 0x53, 0x4f, 0x5f, 0x49, 0x4e, 0x56, 0x49, 0x54, 0x45, 0x10, 0x01, 0x12, 0x0b, 0x0a,
+	0x07, 0x53, 0x4f, 0x5f, 0x4a, 0x4f, 0x49, 0x4e, 0x10, 0x02, 0x12, 0x0c, 0x0a, 0x08, 0x53, 0x4f,
+	0x5f, 0x4c, 0x45, 0x41, 0x56, 0x45, 0x10, 0x03, 0x2a, 0x4f, 0x0a, 0x09, 0x43, 0x68, 0x61, 0x6e,
+	0x6e, 0x65, 0x6c, 0x4f, 0x70, 0x12, 0x12, 0x0a, 0x0e, 0x43, 0x4f, 0x5f, 0x55, 0x4e, 0x53, 0x50,
+	0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44, 0x10, 0x00, 0x12, 0x0e, 0x0a, 0x0a, 0x43, 0x4f, 0x5f,
+	0x43, 0x52, 0x45, 0x41, 0x54, 0x45, 0x44, 0x10, 0x01, 0x12, 0x0e, 0x0a, 0x0a, 0x43, 0x4f, 0x5f,
+	0x44, 0x45, 0x4c, 0x45, 0x54, 0x45, 0x44, 0x10, 0x02, 0x12, 0x0e, 0x0a, 0x0a, 0x43, 0x4f, 0x5f,
+	0x55, 0x50, 0x44, 0x41, 0x54, 0x45, 0x44, 0x10, 0x04, 0x2a, 0x9d, 0x02, 0x0a, 0x16, 0x4d, 0x65,
+	0x73, 0x73, 0x61, 0x67, 0x65, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e,
+	0x54, 0x79, 0x70, 0x65, 0x12, 0x28, 0x0a, 0x24, 0x4d, 0x45, 0x53, 0x53, 0x41, 0x47, 0x45, 0x5f,
 	0x49, 0x4e, 0x54, 0x45, 0x52, 0x41, 0x43, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x54, 0x59, 0x50, 0x45,
-	0x5f, 0x52, 0x45, 0x41, 0x43, 0x54, 0x49, 0x4f, 0x4e, 0x10, 0x02, 0x12, 0x21, 0x0a, 0x1d, 0x4d,
-	0x45, 0x53, 0x53, 0x41, 0x47, 0x45, 0x5f, 0x49, 0x4e, 0x54, 0x45, 0x52, 0x41, 0x43, 0x54, 0x49,
-	0x4f, 0x4e, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x50, 0x4f, 0x53, 0x54, 0x10, 0x03, 0x12, 0x21,
-	0x0a, 0x1d, 0x4d, 0x45, 0x53, 0x53, 0x41, 0x47, 0x45, 0x5f, 0x49, 0x4e, 0x54, 0x45, 0x52, 0x41,
-	0x43, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x45, 0x44, 0x49, 0x54, 0x10,
-	0x04, 0x12, 0x26, 0x0a, 0x22, 0x4d, 0x45, 0x53, 0x53, 0x41, 0x47, 0x45, 0x5f, 0x49, 0x4e, 0x54,
-	0x45, 0x52, 0x41, 0x43, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x52, 0x45,
-	0x44, 0x41, 0x43, 0x54, 0x49, 0x4f, 0x4e, 0x10, 0x05, 0x12, 0x20, 0x0a, 0x1c, 0x4d, 0x45, 0x53,
+	0x5f, 0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44, 0x10, 0x00, 0x12, 0x22,
+	0x0a, 0x1e, 0x4d, 0x45, 0x53, 0x53, 0x41, 0x47, 0x45, 0x5f, 0x49, 0x4e, 0x54, 0x45, 0x52, 0x41,
+	0x43, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x52, 0x45, 0x50, 0x4c, 0x59,
+	0x10, 0x01, 0x12, 0x25, 0x0a, 0x21, 0x4d, 0x45, 0x53, 0x53, 0x41, 0x47, 0x45, 0x5f, 0x49, 0x4e,
+	0x54, 0x45, 0x52, 0x41, 0x43, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x52,
+	0x45, 0x41, 0x43, 0x54, 0x49, 0x4f, 0x4e, 0x10, 0x02, 0x12, 0x21, 0x0a, 0x1d, 0x4d, 0x45, 0x53,
 	0x53, 0x41, 0x47, 0x45, 0x5f, 0x49, 0x4e, 0x54, 0x45, 0x52, 0x41, 0x43, 0x54, 0x49, 0x4f, 0x4e,
-	0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x54, 0x49, 0x50, 0x10, 0x06, 0x2a, 0x59, 0x0a, 0x10, 0x47,
-	0x72, 0x6f, 0x75, 0x70, 0x4d, 0x65, 0x6e, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x12,
-	0x22, 0x0a, 0x1e, 0x47, 0x52, 0x4f, 0x55, 0x50, 0x5f, 0x4d, 0x45, 0x4e, 0x54, 0x49, 0x4f, 0x4e,
-	0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45,
-	0x44, 0x10, 0x00, 0x12, 0x21, 0x0a, 0x1d, 0x47, 0x52, 0x4f, 0x55, 0x50, 0x5f, 0x4d, 0x45, 0x4e,
-	0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x41, 0x54, 0x5f, 0x43, 0x48, 0x41,
-	0x4e, 0x4e, 0x45, 0x4c, 0x10, 0x01, 0x2a, 0xf4, 0x0a, 0x0a, 0x03, 0x45, 0x72, 0x72, 0x12, 0x13,
-	0x0a, 0x0f, 0x45, 0x52, 0x52, 0x5f, 0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45,
-	0x44, 0x10, 0x00, 0x12, 0x0c, 0x0a, 0x08, 0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c, 0x45, 0x44, 0x10,
-	0x01, 0x12, 0x0b, 0x0a, 0x07, 0x55, 0x4e, 0x4b, 0x4e, 0x4f, 0x57, 0x4e, 0x10, 0x02, 0x12, 0x14,
-	0x0a, 0x10, 0x49, 0x4e, 0x56, 0x41, 0x4c, 0x49, 0x44, 0x5f, 0x41, 0x52, 0x47, 0x55, 0x4d, 0x45,
-	0x4e, 0x54, 0x10, 0x03, 0x12, 0x15, 0x0a, 0x11, 0x44, 0x45, 0x41, 0x44, 0x4c, 0x49, 0x4e, 0x45,
-	0x5f, 0x45, 0x58, 0x43, 0x45, 0x45, 0x44, 0x45, 0x44, 0x10, 0x04, 0x12, 0x0d, 0x0a, 0x09, 0x4e,
-	0x4f, 0x54, 0x5f, 0x46, 0x4f, 0x55, 0x4e, 0x44, 0x10, 0x05, 0x12, 0x12, 0x0a, 0x0e, 0x41, 0x4c,
-	0x52, 0x45, 0x41, 0x44, 0x59, 0x5f, 0x45, 0x58, 0x49, 0x53, 0x54, 0x53, 0x10, 0x06, 0x12, 0x15,
-	0x0a, 0x11, 0x50, 0x45, 0x52, 0x4d, 0x49, 0x53, 0x53, 0x49, 0x4f, 0x4e, 0x5f, 0x44, 0x45, 0x4e,
-	0x49, 0x45, 0x44, 0x10, 0x07, 0x12, 0x16, 0x0a, 0x12, 0x52, 0x45, 0x53, 0x4f, 0x55, 0x52, 0x43,
-	0x45, 0x5f, 0x45, 0x58, 0x48, 0x41, 0x55, 0x53, 0x54, 0x45, 0x44, 0x10, 0x08, 0x12, 0x17, 0x0a,
-	0x13, 0x46, 0x41, 0x49, 0x4c, 0x45, 0x44, 0x5f, 0x50, 0x52, 0x45, 0x43, 0x4f, 0x4e, 0x44, 0x49,
-	0x54, 0x49, 0x4f, 0x4e, 0x10, 0x09, 0x12, 0x0b, 0x0a, 0x07, 0x41, 0x42, 0x4f, 0x52, 0x54, 0x45,
-	0x44, 0x10, 0x0a, 0x12, 0x10, 0x0a, 0x0c, 0x4f, 0x55, 0x54, 0x5f, 0x4f, 0x46, 0x5f, 0x52, 0x41,
-	0x4e, 0x47, 0x45, 0x10, 0x0b, 0x12, 0x11, 0x0a, 0x0d, 0x55, 0x4e, 0x49, 0x4d, 0x50, 0x4c, 0x45,
-	0x4d, 0x45, 0x4e, 0x54, 0x45, 0x44, 0x10, 0x0c, 0x12, 0x0c, 0x0a, 0x08, 0x49, 0x4e, 0x54, 0x45,
-	0x52, 0x4e, 0x41, 0x4c, 0x10, 0x0d, 0x12, 0x0f, 0x0a, 0x0b, 0x55, 0x4e, 0x41, 0x56, 0x41, 0x49,
-	0x4c, 0x41, 0x42, 0x4c, 0x45, 0x10, 0x0e, 0x12, 0x0d, 0x0a, 0x09, 0x44, 0x41, 0x54, 0x41, 0x5f,
-	0x4c, 0x4f, 0x53, 0x53, 0x10, 0x0f, 0x12, 0x13, 0x0a, 0x0f, 0x55, 0x4e, 0x41, 0x55, 0x54, 0x48,
-	0x45, 0x4e, 0x54, 0x49, 0x43, 0x41, 0x54, 0x45, 0x44, 0x10, 0x10, 0x12, 0x0f, 0x0a, 0x0b, 0x44,
-	0x45, 0x42, 0x55, 0x47, 0x5f, 0x45, 0x52, 0x52, 0x4f, 0x52, 0x10, 0x11, 0x12, 0x11, 0x0a, 0x0d,
-	0x42, 0x41, 0x44, 0x5f, 0x53, 0x54, 0x52, 0x45, 0x41, 0x4d, 0x5f, 0x49, 0x44, 0x10, 0x12, 0x12,
-	0x1e, 0x0a, 0x1a, 0x42, 0x41, 0x44, 0x5f, 0x53, 0x54, 0x52, 0x45, 0x41, 0x4d, 0x5f, 0x43, 0x52,
-	0x45, 0x41, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x50, 0x41, 0x52, 0x41, 0x4d, 0x53, 0x10, 0x13, 0x12,
-	0x19, 0x0a, 0x15, 0x49, 0x4e, 0x54, 0x45, 0x52, 0x4e, 0x41, 0x4c, 0x5f, 0x45, 0x52, 0x52, 0x4f,
-	0x52, 0x5f, 0x53, 0x57, 0x49, 0x54, 0x43, 0x48, 0x10, 0x14, 0x12, 0x10, 0x0a, 0x0c, 0x42, 0x41,
-	0x44, 0x5f, 0x45, 0x56, 0x45, 0x4e, 0x54, 0x5f, 0x49, 0x44, 0x10, 0x15, 0x12, 0x17, 0x0a, 0x13,
-	0x42, 0x41, 0x44, 0x5f, 0x45, 0x56, 0x45, 0x4e, 0x54, 0x5f, 0x53, 0x49, 0x47, 0x4e, 0x41, 0x54,
-	0x55, 0x52, 0x45, 0x10, 0x16, 0x12, 0x13, 0x0a, 0x0f, 0x42, 0x41, 0x44, 0x5f, 0x48, 0x41, 0x53,
-	0x48, 0x5f, 0x46, 0x4f, 0x52, 0x4d, 0x41, 0x54, 0x10, 0x17, 0x12, 0x1b, 0x0a, 0x17, 0x42, 0x41,
-	0x44, 0x5f, 0x50, 0x52, 0x45, 0x56, 0x5f, 0x4d, 0x49, 0x4e, 0x49, 0x42, 0x4c, 0x4f, 0x43, 0x4b,
-	0x5f, 0x48, 0x41, 0x53, 0x48, 0x10, 0x18, 0x12, 0x16, 0x0a, 0x12, 0x4e, 0x4f, 0x5f, 0x45, 0x56,
-	0x45, 0x4e, 0x54, 0x5f, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44, 0x10, 0x19, 0x12,
-	0x0d, 0x0a, 0x09, 0x42, 0x41, 0x44, 0x5f, 0x45, 0x56, 0x45, 0x4e, 0x54, 0x10, 0x1a, 0x12, 0x12,
-	0x0a, 0x0e, 0x55, 0x53, 0x45, 0x52, 0x5f, 0x43, 0x41, 0x4e, 0x54, 0x5f, 0x50, 0x4f, 0x53, 0x54,
-	0x10, 0x1b, 0x12, 0x15, 0x0a, 0x11, 0x53, 0x54, 0x52, 0x45, 0x41, 0x4d, 0x5f, 0x42, 0x41, 0x44,
-	0x5f, 0x48, 0x41, 0x53, 0x48, 0x45, 0x53, 0x10, 0x1c, 0x12, 0x10, 0x0a, 0x0c, 0x53, 0x54, 0x52,
-	0x45, 0x41, 0x4d, 0x5f, 0x45, 0x4d, 0x50, 0x54, 0x59, 0x10, 0x1d, 0x12, 0x14, 0x0a, 0x10, 0x53,
-	0x54, 0x52, 0x45, 0x41, 0x4d, 0x5f, 0x42, 0x41, 0x44, 0x5f, 0x45, 0x56, 0x45, 0x4e, 0x54, 0x10,
-	0x1e, 0x12, 0x14, 0x0a, 0x10, 0x42, 0x41, 0x44, 0x5f, 0x44, 0x45, 0x4c, 0x45, 0x47, 0x41, 0x54,
-	0x45, 0x5f, 0x53, 0x49, 0x47, 0x10, 0x1f, 0x12, 0x12, 0x0a, 0x0e, 0x42, 0x41, 0x44, 0x5f, 0x50,
-	0x55, 0x42, 0x4c, 0x49, 0x43, 0x5f, 0x4b, 0x45, 0x59, 0x10, 0x20, 0x12, 0x0f, 0x0a, 0x0b, 0x42,
-	0x41, 0x44, 0x5f, 0x50, 0x41, 0x59, 0x4c, 0x4f, 0x41, 0x44, 0x10, 0x21, 0x12, 0x12, 0x0a, 0x0e,
-	0x42, 0x41, 0x44, 0x5f, 0x48, 0x45, 0x58, 0x5f, 0x53, 0x54, 0x52, 0x49, 0x4e, 0x47, 0x10, 0x22,
-	0x12, 0x12, 0x0a, 0x0e, 0x42, 0x41, 0x44, 0x5f, 0x45, 0x56, 0x45, 0x4e, 0x54, 0x5f, 0x48, 0x41,
-	0x53, 0x48, 0x10, 0x23, 0x12, 0x13, 0x0a, 0x0f, 0x42, 0x41, 0x44, 0x5f, 0x53, 0x59, 0x4e, 0x43,
-	0x5f, 0x43, 0x4f, 0x4f, 0x4b, 0x49, 0x45, 0x10, 0x24, 0x12, 0x13, 0x0a, 0x0f, 0x44, 0x55, 0x50,
-	0x4c, 0x49, 0x43, 0x41, 0x54, 0x45, 0x5f, 0x45, 0x56, 0x45, 0x4e, 0x54, 0x10, 0x25, 0x12, 0x0d,
-	0x0a, 0x09, 0x42, 0x41, 0x44, 0x5f, 0x42, 0x4c, 0x4f, 0x43, 0x4b, 0x10, 0x26, 0x12, 0x1d, 0x0a,
-	0x19, 0x53, 0x54, 0x52, 0x45, 0x41, 0x4d, 0x5f, 0x4e, 0x4f, 0x5f, 0x49, 0x4e, 0x43, 0x45, 0x50,
-	0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x45, 0x56, 0x45, 0x4e, 0x54, 0x10, 0x27, 0x12, 0x14, 0x0a, 0x10,
-	0x42, 0x41, 0x44, 0x5f, 0x42, 0x4c, 0x4f, 0x43, 0x4b, 0x5f, 0x4e, 0x55, 0x4d, 0x42, 0x45, 0x52,
-	0x10, 0x28, 0x12, 0x15, 0x0a, 0x11, 0x42, 0x41, 0x44, 0x5f, 0x4d, 0x49, 0x4e, 0x49, 0x50, 0x4f,
-	0x4f, 0x4c, 0x5f, 0x53, 0x4c, 0x4f, 0x54, 0x10, 0x29, 0x12, 0x17, 0x0a, 0x13, 0x42, 0x41, 0x44,
-	0x5f, 0x43, 0x52, 0x45, 0x41, 0x54, 0x4f, 0x52, 0x5f, 0x41, 0x44, 0x44, 0x52, 0x45, 0x53, 0x53,
-	0x10, 0x2a, 0x12, 0x12, 0x0a, 0x0e, 0x53, 0x54, 0x41, 0x4c, 0x45, 0x5f, 0x44, 0x45, 0x4c, 0x45,
-	0x47, 0x41, 0x54, 0x45, 0x10, 0x2b, 0x12, 0x21, 0x0a, 0x1d, 0x42, 0x41, 0x44, 0x5f, 0x4c, 0x49,
-	0x4e, 0x4b, 0x5f, 0x57, 0x41, 0x4c, 0x4c, 0x45, 0x54, 0x5f, 0x42, 0x41, 0x44, 0x5f, 0x53, 0x49,
-	0x47, 0x4e, 0x41, 0x54, 0x55, 0x52, 0x45, 0x10, 0x2c, 0x12, 0x13, 0x0a, 0x0f, 0x42, 0x41, 0x44,
-	0x5f, 0x52, 0x4f, 0x4f, 0x54, 0x5f, 0x4b, 0x45, 0x59, 0x5f, 0x49, 0x44, 0x10, 0x2d, 0x12, 0x10,
-	0x0a, 0x0c, 0x55, 0x4e, 0x4b, 0x4e, 0x4f, 0x57, 0x4e, 0x5f, 0x4e, 0x4f, 0x44, 0x45, 0x10, 0x2e,
-	0x12, 0x18, 0x0a, 0x14, 0x44, 0x42, 0x5f, 0x4f, 0x50, 0x45, 0x52, 0x41, 0x54, 0x49, 0x4f, 0x4e,
-	0x5f, 0x46, 0x41, 0x49, 0x4c, 0x55, 0x52, 0x45, 0x10, 0x2f, 0x12, 0x1e, 0x0a, 0x1a, 0x4d, 0x49,
-	0x4e, 0x49, 0x42, 0x4c, 0x4f, 0x43, 0x4b, 0x53, 0x5f, 0x53, 0x54, 0x4f, 0x52, 0x41, 0x47, 0x45,
-	0x5f, 0x46, 0x41, 0x49, 0x4c, 0x55, 0x52, 0x45, 0x10, 0x30, 0x12, 0x0f, 0x0a, 0x0b, 0x42, 0x41,
-	0x44, 0x5f, 0x41, 0x44, 0x44, 0x52, 0x45, 0x53, 0x53, 0x10, 0x31, 0x12, 0x0f, 0x0a, 0x0b, 0x42,
-	0x55, 0x46, 0x46, 0x45, 0x52, 0x5f, 0x46, 0x55, 0x4c, 0x4c, 0x10, 0x32, 0x12, 0x0e, 0x0a, 0x0a,
-	0x42, 0x41, 0x44, 0x5f, 0x43, 0x4f, 0x4e, 0x46, 0x49, 0x47, 0x10, 0x33, 0x12, 0x10, 0x0a, 0x0c,
-	0x42, 0x41, 0x44, 0x5f, 0x43, 0x4f, 0x4e, 0x54, 0x52, 0x41, 0x43, 0x54, 0x10, 0x34, 0x12, 0x12,
-	0x0a, 0x0e, 0x43, 0x41, 0x4e, 0x4e, 0x4f, 0x54, 0x5f, 0x43, 0x4f, 0x4e, 0x4e, 0x45, 0x43, 0x54,
-	0x10, 0x35, 0x12, 0x1d, 0x0a, 0x19, 0x43, 0x41, 0x4e, 0x4e, 0x4f, 0x54, 0x5f, 0x47, 0x45, 0x54,
-	0x5f, 0x4c, 0x49, 0x4e, 0x4b, 0x45, 0x44, 0x5f, 0x57, 0x41, 0x4c, 0x4c, 0x45, 0x54, 0x53, 0x10,
-	0x36, 0x12, 0x1d, 0x0a, 0x19, 0x43, 0x41, 0x4e, 0x4e, 0x4f, 0x54, 0x5f, 0x43, 0x48, 0x45, 0x43,
-	0x4b, 0x5f, 0x45, 0x4e, 0x54, 0x49, 0x54, 0x4c, 0x45, 0x4d, 0x45, 0x4e, 0x54, 0x53, 0x10, 0x37,
-	0x12, 0x18, 0x0a, 0x14, 0x43, 0x41, 0x4e, 0x4e, 0x4f, 0x54, 0x5f, 0x43, 0x41, 0x4c, 0x4c, 0x5f,
-	0x43, 0x4f, 0x4e, 0x54, 0x52, 0x41, 0x43, 0x54, 0x10, 0x38, 0x12, 0x12, 0x0a, 0x0e, 0x53, 0x50,
-	0x41, 0x43, 0x45, 0x5f, 0x44, 0x49, 0x53, 0x41, 0x42, 0x4c, 0x45, 0x44, 0x10, 0x39, 0x12, 0x14,
-	0x0a, 0x10, 0x43, 0x48, 0x41, 0x4e, 0x4e, 0x45, 0x4c, 0x5f, 0x44, 0x49, 0x53, 0x41, 0x42, 0x4c,
-	0x45, 0x44, 0x10, 0x3a, 0x12, 0x15, 0x0a, 0x11, 0x57, 0x52, 0x4f, 0x4e, 0x47, 0x5f, 0x53, 0x54,
-	0x52, 0x45, 0x41, 0x4d, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x10, 0x3b, 0x12, 0x1b, 0x0a, 0x17, 0x4d,
-	0x49, 0x4e, 0x49, 0x50, 0x4f, 0x4f, 0x4c, 0x5f, 0x4d, 0x49, 0x53, 0x53, 0x49, 0x4e, 0x47, 0x5f,
-	0x45, 0x56, 0x45, 0x4e, 0x54, 0x53, 0x10, 0x3c, 0x12, 0x1e, 0x0a, 0x1a, 0x53, 0x54, 0x52, 0x45,
-	0x41, 0x4d, 0x5f, 0x4c, 0x41, 0x53, 0x54, 0x5f, 0x42, 0x4c, 0x4f, 0x43, 0x4b, 0x5f, 0x4d, 0x49,
-	0x53, 0x4d, 0x41, 0x54, 0x43, 0x48, 0x10, 0x3d, 0x12, 0x1c, 0x0a, 0x18, 0x44, 0x4f, 0x57, 0x4e,
-	0x53, 0x54, 0x52, 0x45, 0x41, 0x4d, 0x5f, 0x4e, 0x45, 0x54, 0x57, 0x4f, 0x52, 0x4b, 0x5f, 0x45,
-	0x52, 0x52, 0x4f, 0x52, 0x10, 0x3e, 0x12, 0x15, 0x0a, 0x11, 0x4d, 0x49, 0x4e, 0x49, 0x42, 0x4c,
-	0x4f, 0x43, 0x4b, 0x5f, 0x54, 0x4f, 0x4f, 0x5f, 0x4e, 0x45, 0x57, 0x10, 0x3f, 0x32, 0x91, 0x08,
-	0x0a, 0x0d, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12,
-	0x47, 0x0a, 0x0c, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x12,
-	0x1a, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x53, 0x74,
-	0x72, 0x65, 0x61, 0x6d, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1b, 0x2e, 0x72, 0x69,
-	0x76, 0x65, 0x72, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d,
-	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x56, 0x0a, 0x11, 0x43, 0x72, 0x65, 0x61,
-	0x74, 0x65, 0x4d, 0x65, 0x64, 0x69, 0x61, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x12, 0x1f, 0x2e,
-	0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x4d, 0x65, 0x64, 0x69,
-	0x61, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x20,
-	0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x4d, 0x65, 0x64,
-	0x69, 0x61, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x12, 0x3e, 0x0a, 0x09, 0x47, 0x65, 0x74, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x12, 0x17, 0x2e,
-	0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x47, 0x65, 0x74, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x52,
-	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x18, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x47,
-	0x65, 0x74, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x12, 0x46, 0x0a, 0x0b, 0x47, 0x65, 0x74, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x45, 0x78, 0x12,
-	0x19, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x47, 0x65, 0x74, 0x53, 0x74, 0x72, 0x65, 0x61,
-	0x6d, 0x45, 0x78, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1a, 0x2e, 0x72, 0x69, 0x76,
-	0x65, 0x72, 0x2e, 0x47, 0x65, 0x74, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x45, 0x78, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x30, 0x01, 0x12, 0x4a, 0x0a, 0x0d, 0x47, 0x65, 0x74, 0x4d,
-	0x69, 0x6e, 0x69, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x73, 0x12, 0x1b, 0x2e, 0x72, 0x69, 0x76, 0x65,
-	0x72, 0x2e, 0x47, 0x65, 0x74, 0x4d, 0x69, 0x6e, 0x69, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x73, 0x52,
-	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1c, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x47,
-	0x65, 0x74, 0x4d, 0x69, 0x6e, 0x69, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x73, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x5f, 0x0a, 0x14, 0x47, 0x65, 0x74, 0x4c, 0x61, 0x73, 0x74, 0x4d,
-	0x69, 0x6e, 0x69, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x48, 0x61, 0x73, 0x68, 0x12, 0x22, 0x2e, 0x72,
-	0x69, 0x76, 0x65, 0x72, 0x2e, 0x47, 0x65, 0x74, 0x4c, 0x61, 0x73, 0x74, 0x4d, 0x69, 0x6e, 0x69,
-	0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x48, 0x61, 0x73, 0x68, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x1a, 0x23, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x47, 0x65, 0x74, 0x4c, 0x61, 0x73, 0x74,
-	0x4d, 0x69, 0x6e, 0x69, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x48, 0x61, 0x73, 0x68, 0x52, 0x65, 0x73,
-	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x3b, 0x0a, 0x08, 0x41, 0x64, 0x64, 0x45, 0x76, 0x65, 0x6e,
-	0x74, 0x12, 0x16, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x41, 0x64, 0x64, 0x45, 0x76, 0x65,
-	0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x17, 0x2e, 0x72, 0x69, 0x76, 0x65,
-	0x72, 0x2e, 0x41, 0x64, 0x64, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x12, 0x46, 0x0a, 0x0b, 0x53, 0x79, 0x6e, 0x63, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d,
-	0x73, 0x12, 0x19, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x53, 0x79, 0x6e, 0x63, 0x53, 0x74,
-	0x72, 0x65, 0x61, 0x6d, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1a, 0x2e, 0x72,
-	0x69, 0x76, 0x65, 0x72, 0x2e, 0x53, 0x79, 0x6e, 0x63, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x73,
-	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x30, 0x01, 0x12, 0x50, 0x0a, 0x0f, 0x41, 0x64,
-	0x64, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x54, 0x6f, 0x53, 0x79, 0x6e, 0x63, 0x12, 0x1d, 0x2e,
-	0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x41, 0x64, 0x64, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x54,
-	0x6f, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1e, 0x2e, 0x72,
-	0x69, 0x76, 0x65, 0x72, 0x2e, 0x41, 0x64, 0x64, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x54, 0x6f,
-	0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x41, 0x0a, 0x0a,
-	0x4d, 0x6f, 0x64, 0x69, 0x66, 0x79, 0x53, 0x79, 0x6e, 0x63, 0x12, 0x18, 0x2e, 0x72, 0x69, 0x76,
-	0x65, 0x72, 0x2e, 0x4d, 0x6f, 0x64, 0x69, 0x66, 0x79, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x71,
-	0x75, 0x65, 0x73, 0x74, 0x1a, 0x19, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x4d, 0x6f, 0x64,
-	0x69, 0x66, 0x79, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
-	0x41, 0x0a, 0x0a, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x53, 0x79, 0x6e, 0x63, 0x12, 0x18, 0x2e,
-	0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x53, 0x79, 0x6e, 0x63,
-	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x19, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e,
-	0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x12, 0x5f, 0x0a, 0x14, 0x52, 0x65, 0x6d, 0x6f, 0x76, 0x65, 0x53, 0x74, 0x72, 0x65,
-	0x61, 0x6d, 0x46, 0x72, 0x6f, 0x6d, 0x53, 0x79, 0x6e, 0x63, 0x12, 0x22, 0x2e, 0x72, 0x69, 0x76,
-	0x65, 0x72, 0x2e, 0x52, 0x65, 0x6d, 0x6f, 0x76, 0x65, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x46,
-	0x72, 0x6f, 0x6d, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x23,
-	0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x52, 0x65, 0x6d, 0x6f, 0x76, 0x65, 0x53, 0x74, 0x72,
-	0x65, 0x61, 0x6d, 0x46, 0x72, 0x6f, 0x6d, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x12, 0x2f, 0x0a, 0x04, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x12, 0x2e, 0x72, 0x69,
-	0x76, 0x65, 0x72, 0x2e, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
-	0x13, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x3b, 0x0a, 0x08, 0x50, 0x69, 0x6e, 0x67, 0x53, 0x79, 0x6e, 0x63,
-	0x12, 0x16, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x50, 0x69, 0x6e, 0x67, 0x53, 0x79, 0x6e,
-	0x63, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x17, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72,
-	0x2e, 0x50, 0x69, 0x6e, 0x67, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x42, 0x31, 0x5a, 0x2f, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f,
-	0x72, 0x69, 0x76, 0x65, 0x72, 0x2d, 0x62, 0x75, 0x69, 0x6c, 0x64, 0x2f, 0x72, 0x69, 0x76, 0x65,
-	0x72, 0x2f, 0x63, 0x6f, 0x72, 0x65, 0x2f, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x63, 0x6f, 0x6c, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x50, 0x4f, 0x53, 0x54, 0x10, 0x03, 0x12, 0x21, 0x0a, 0x1d,
+	0x4d, 0x45, 0x53, 0x53, 0x41, 0x47, 0x45, 0x5f, 0x49, 0x4e, 0x54, 0x45, 0x52, 0x41, 0x43, 0x54,
+	0x49, 0x4f, 0x4e, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x45, 0x44, 0x49, 0x54, 0x10, 0x04, 0x12,
+	0x26, 0x0a, 0x22, 0x4d, 0x45, 0x53, 0x53, 0x41, 0x47, 0x45, 0x5f, 0x49, 0x4e, 0x54, 0x45, 0x52,
+	0x41, 0x43, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x52, 0x45, 0x44, 0x41,
+	0x43, 0x54, 0x49, 0x4f, 0x4e, 0x10, 0x05, 0x12, 0x20, 0x0a, 0x1c, 0x4d, 0x45, 0x53, 0x53, 0x41,
+	0x47, 0x45, 0x5f, 0x49, 0x4e, 0x54, 0x45, 0x52, 0x41, 0x43, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x54,
+	0x59, 0x50, 0x45, 0x5f, 0x54, 0x49, 0x50, 0x10, 0x06, 0x2a, 0x59, 0x0a, 0x10, 0x47, 0x72, 0x6f,
+	0x75, 0x70, 0x4d, 0x65, 0x6e, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x12, 0x22, 0x0a,
+	0x1e, 0x47, 0x52, 0x4f, 0x55, 0x50, 0x5f, 0x4d, 0x45, 0x4e, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x54,
+	0x59, 0x50, 0x45, 0x5f, 0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44, 0x10,
+	0x00, 0x12, 0x21, 0x0a, 0x1d, 0x47, 0x52, 0x4f, 0x55, 0x50, 0x5f, 0x4d, 0x45, 0x4e, 0x54, 0x49,
+	0x4f, 0x4e, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x41, 0x54, 0x5f, 0x43, 0x48, 0x41, 0x4e, 0x4e,
+	0x45, 0x4c, 0x10, 0x01, 0x2a, 0xf4, 0x0a, 0x0a, 0x03, 0x45, 0x72, 0x72, 0x12, 0x13, 0x0a, 0x0f,
+	0x45, 0x52, 0x52, 0x5f, 0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44, 0x10,
+	0x00, 0x12, 0x0c, 0x0a, 0x08, 0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c, 0x45, 0x44, 0x10, 0x01, 0x12,
+	0x0b, 0x0a, 0x07, 0x55, 0x4e, 0x4b, 0x4e, 0x4f, 0x57, 0x4e, 0x10, 0x02, 0x12, 0x14, 0x0a, 0x10,
+	0x49, 0x4e, 0x56, 0x41, 0x4c, 0x49, 0x44, 0x5f, 0x41, 0x52, 0x47, 0x55, 0x4d, 0x45, 0x4e, 0x54,
+	0x10, 0x03, 0x12, 0x15, 0x0a, 0x11, 0x44, 0x45, 0x41, 0x44, 0x4c, 0x49, 0x4e, 0x45, 0x5f, 0x45,
+	0x58, 0x43, 0x45, 0x45, 0x44, 0x45, 0x44, 0x10, 0x04, 0x12, 0x0d, 0x0a, 0x09, 0x4e, 0x4f, 0x54,
+	0x5f, 0x46, 0x4f, 0x55, 0x4e, 0x44, 0x10, 0x05, 0x12, 0x12, 0x0a, 0x0e, 0x41, 0x4c, 0x52, 0x45,
+	0x41, 0x44, 0x59, 0x5f, 0x45, 0x58, 0x49, 0x53, 0x54, 0x53, 0x10, 0x06, 0x12, 0x15, 0x0a, 0x11,
+	0x50, 0x45, 0x52, 0x4d, 0x49, 0x53, 0x53, 0x49, 0x4f, 0x4e, 0x5f, 0x44, 0x45, 0x4e, 0x49, 0x45,
+	0x44, 0x10, 0x07, 0x12, 0x16, 0x0a, 0x12, 0x52, 0x45, 0x53, 0x4f, 0x55, 0x52, 0x43, 0x45, 0x5f,
+	0x45, 0x58, 0x48, 0x41, 0x55, 0x53, 0x54, 0x45, 0x44, 0x10, 0x08, 0x12, 0x17, 0x0a, 0x13, 0x46,
+	0x41, 0x49, 0x4c, 0x45, 0x44, 0x5f, 0x50, 0x52, 0x45, 0x43, 0x4f, 0x4e, 0x44, 0x49, 0x54, 0x49,
+	0x4f, 0x4e, 0x10, 0x09, 0x12, 0x0b, 0x0a, 0x07, 0x41, 0x42, 0x4f, 0x52, 0x54, 0x45, 0x44, 0x10,
+	0x0a, 0x12, 0x10, 0x0a, 0x0c, 0x4f, 0x55, 0x54, 0x5f, 0x4f, 0x46, 0x5f, 0x52, 0x41, 0x4e, 0x47,
+	0x45, 0x10, 0x0b, 0x12, 0x11, 0x0a, 0x0d, 0x55, 0x4e, 0x49, 0x4d, 0x50, 0x4c, 0x45, 0x4d, 0x45,
+	0x4e, 0x54, 0x45, 0x44, 0x10, 0x0c, 0x12, 0x0c, 0x0a, 0x08, 0x49, 0x4e, 0x54, 0x45, 0x52, 0x4e,
+	0x41, 0x4c, 0x10, 0x0d, 0x12, 0x0f, 0x0a, 0x0b, 0x55, 0x4e, 0x41, 0x56, 0x41, 0x49, 0x4c, 0x41,
+	0x42, 0x4c, 0x45, 0x10, 0x0e, 0x12, 0x0d, 0x0a, 0x09, 0x44, 0x41, 0x54, 0x41, 0x5f, 0x4c, 0x4f,
+	0x53, 0x53, 0x10, 0x0f, 0x12, 0x13, 0x0a, 0x0f, 0x55, 0x4e, 0x41, 0x55, 0x54, 0x48, 0x45, 0x4e,
+	0x54, 0x49, 0x43, 0x41, 0x54, 0x45, 0x44, 0x10, 0x10, 0x12, 0x0f, 0x0a, 0x0b, 0x44, 0x45, 0x42,
+	0x55, 0x47, 0x5f, 0x45, 0x52, 0x52, 0x4f, 0x52, 0x10, 0x11, 0x12, 0x11, 0x0a, 0x0d, 0x42, 0x41,
+	0x44, 0x5f, 0x53, 0x54, 0x52, 0x45, 0x41, 0x4d, 0x5f, 0x49, 0x44, 0x10, 0x12, 0x12, 0x1e, 0x0a,
+	0x1a, 0x42, 0x41, 0x44, 0x5f, 0x53, 0x54, 0x52, 0x45, 0x41, 0x4d, 0x5f, 0x43, 0x52, 0x45, 0x41,
+	0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x50, 0x41, 0x52, 0x41, 0x4d, 0x53, 0x10, 0x13, 0x12, 0x19, 0x0a,
+	0x15, 0x49, 0x4e, 0x54, 0x45, 0x52, 0x4e, 0x41, 0x4c, 0x5f, 0x45, 0x52, 0x52, 0x4f, 0x52, 0x5f,
+	0x53, 0x57, 0x49, 0x54, 0x43, 0x48, 0x10, 0x14, 0x12, 0x10, 0x0a, 0x0c, 0x42, 0x41, 0x44, 0x5f,
+	0x45, 0x56, 0x45, 0x4e, 0x54, 0x5f, 0x49, 0x44, 0x10, 0x15, 0x12, 0x17, 0x0a, 0x13, 0x42, 0x41,
+	0x44, 0x5f, 0x45, 0x56, 0x45, 0x4e, 0x54, 0x5f, 0x53, 0x49, 0x47, 0x4e, 0x41, 0x54, 0x55, 0x52,
+	0x45, 0x10, 0x16, 0x12, 0x13, 0x0a, 0x0f, 0x42, 0x41, 0x44, 0x5f, 0x48, 0x41, 0x53, 0x48, 0x5f,
+	0x46, 0x4f, 0x52, 0x4d, 0x41, 0x54, 0x10, 0x17, 0x12, 0x1b, 0x0a, 0x17, 0x42, 0x41, 0x44, 0x5f,
+	0x50, 0x52, 0x45, 0x56, 0x5f, 0x4d, 0x49, 0x4e, 0x49, 0x42, 0x4c, 0x4f, 0x43, 0x4b, 0x5f, 0x48,
+	0x41, 0x53, 0x48, 0x10, 0x18, 0x12, 0x16, 0x0a, 0x12, 0x4e, 0x4f, 0x5f, 0x45, 0x56, 0x45, 0x4e,
+	0x54, 0x5f, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44, 0x10, 0x19, 0x12, 0x0d, 0x0a,
+	0x09, 0x42, 0x41, 0x44, 0x5f, 0x45, 0x56, 0x45, 0x4e, 0x54, 0x10, 0x1a, 0x12, 0x12, 0x0a, 0x0e,
+	0x55, 0x53, 0x45, 0x52, 0x5f, 0x43, 0x41, 0x4e, 0x54, 0x5f, 0x50, 0x4f, 0x53, 0x54, 0x10, 0x1b,
+	0x12, 0x15, 0x0a, 0x11, 0x53, 0x54, 0x52, 0x45, 0x41, 0x4d, 0x5f, 0x42, 0x41, 0x44, 0x5f, 0x48,
+	0x41, 0x53, 0x48, 0x45, 0x53, 0x10, 0x1c, 0x12, 0x10, 0x0a, 0x0c, 0x53, 0x54, 0x52, 0x45, 0x41,
+	0x4d, 0x5f, 0x45, 0x4d, 0x50, 0x54, 0x59, 0x10, 0x1d, 0x12, 0x14, 0x0a, 0x10, 0x53, 0x54, 0x52,
+	0x45, 0x41, 0x4d, 0x5f, 0x42, 0x41, 0x44, 0x5f, 0x45, 0x56, 0x45, 0x4e, 0x54, 0x10, 0x1e, 0x12,
+	0x14, 0x0a, 0x10, 0x42, 0x41, 0x44, 0x5f, 0x44, 0x45, 0x4c, 0x45, 0x47, 0x41, 0x54, 0x45, 0x5f,
+	0x53, 0x49, 0x47, 0x10, 0x1f, 0x12, 0x12, 0x0a, 0x0e, 0x42, 0x41, 0x44, 0x5f, 0x50, 0x55, 0x42,
+	0x4c, 0x49, 0x43, 0x5f, 0x4b, 0x45, 0x59, 0x10, 0x20, 0x12, 0x0f, 0x0a, 0x0b, 0x42, 0x41, 0x44,
+	0x5f, 0x50, 0x41, 0x59, 0x4c, 0x4f, 0x41, 0x44, 0x10, 0x21, 0x12, 0x12, 0x0a, 0x0e, 0x42, 0x41,
+	0x44, 0x5f, 0x48, 0x45, 0x58, 0x5f, 0x53, 0x54, 0x52, 0x49, 0x4e, 0x47, 0x10, 0x22, 0x12, 0x12,
+	0x0a, 0x0e, 0x42, 0x41, 0x44, 0x5f, 0x45, 0x56, 0x45, 0x4e, 0x54, 0x5f, 0x48, 0x41, 0x53, 0x48,
+	0x10, 0x23, 0x12, 0x13, 0x0a, 0x0f, 0x42, 0x41, 0x44, 0x5f, 0x53, 0x59, 0x4e, 0x43, 0x5f, 0x43,
+	0x4f, 0x4f, 0x4b, 0x49, 0x45, 0x10, 0x24, 0x12, 0x13, 0x0a, 0x0f, 0x44, 0x55, 0x50, 0x4c, 0x49,
+	0x43, 0x41, 0x54, 0x45, 0x5f, 0x45, 0x56, 0x45, 0x4e, 0x54, 0x10, 0x25, 0x12, 0x0d, 0x0a, 0x09,
+	0x42, 0x41, 0x44, 0x5f, 0x42, 0x4c, 0x4f, 0x43, 0x4b, 0x10, 0x26, 0x12, 0x1d, 0x0a, 0x19, 0x53,
+	0x54, 0x52, 0x45, 0x41, 0x4d, 0x5f, 0x4e, 0x4f, 0x5f, 0x49, 0x4e, 0x43, 0x45, 0x50, 0x54, 0x49,
+	0x4f, 0x4e, 0x5f, 0x45, 0x56, 0x45, 0x4e, 0x54, 0x10, 0x27, 0x12, 0x14, 0x0a, 0x10, 0x42, 0x41,
+	0x44, 0x5f, 0x42, 0x4c, 0x4f, 0x43, 0x4b, 0x5f, 0x4e, 0x55, 0x4d, 0x42, 0x45, 0x52, 0x10, 0x28,
+	0x12, 0x15, 0x0a, 0x11, 0x42, 0x41, 0x44, 0x5f, 0x4d, 0x49, 0x4e, 0x49, 0x50, 0x4f, 0x4f, 0x4c,
+	0x5f, 0x53, 0x4c, 0x4f, 0x54, 0x10, 0x29, 0x12, 0x17, 0x0a, 0x13, 0x42, 0x41, 0x44, 0x5f, 0x43,
+	0x52, 0x45, 0x41, 0x54, 0x4f, 0x52, 0x5f, 0x41, 0x44, 0x44, 0x52, 0x45, 0x53, 0x53, 0x10, 0x2a,
+	0x12, 0x12, 0x0a, 0x0e, 0x53, 0x54, 0x41, 0x4c, 0x45, 0x5f, 0x44, 0x45, 0x4c, 0x45, 0x47, 0x41,
+	0x54, 0x45, 0x10, 0x2b, 0x12, 0x21, 0x0a, 0x1d, 0x42, 0x41, 0x44, 0x5f, 0x4c, 0x49, 0x4e, 0x4b,
+	0x5f, 0x57, 0x41, 0x4c, 0x4c, 0x45, 0x54, 0x5f, 0x42, 0x41, 0x44, 0x5f, 0x53, 0x49, 0x47, 0x4e,
+	0x41, 0x54, 0x55, 0x52, 0x45, 0x10, 0x2c, 0x12, 0x13, 0x0a, 0x0f, 0x42, 0x41, 0x44, 0x5f, 0x52,
+	0x4f, 0x4f, 0x54, 0x5f, 0x4b, 0x45, 0x59, 0x5f, 0x49, 0x44, 0x10, 0x2d, 0x12, 0x10, 0x0a, 0x0c,
+	0x55, 0x4e, 0x4b, 0x4e, 0x4f, 0x57, 0x4e, 0x5f, 0x4e, 0x4f, 0x44, 0x45, 0x10, 0x2e, 0x12, 0x18,
+	0x0a, 0x14, 0x44, 0x42, 0x5f, 0x4f, 0x50, 0x45, 0x52, 0x41, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x46,
+	0x41, 0x49, 0x4c, 0x55, 0x52, 0x45, 0x10, 0x2f, 0x12, 0x1e, 0x0a, 0x1a, 0x4d, 0x49, 0x4e, 0x49,
+	0x42, 0x4c, 0x4f, 0x43, 0x4b, 0x53, 0x5f, 0x53, 0x54, 0x4f, 0x52, 0x41, 0x47, 0x45, 0x5f, 0x46,
+	0x41, 0x49, 0x4c, 0x55, 0x52, 0x45, 0x10, 0x30, 0x12, 0x0f, 0x0a, 0x0b, 0x42, 0x41, 0x44, 0x5f,
+	0x41, 0x44, 0x44, 0x52, 0x45, 0x53, 0x53, 0x10, 0x31, 0x12, 0x0f, 0x0a, 0x0b, 0x42, 0x55, 0x46,
+	0x46, 0x45, 0x52, 0x5f, 0x46, 0x55, 0x4c, 0x4c, 0x10, 0x32, 0x12, 0x0e, 0x0a, 0x0a, 0x42, 0x41,
+	0x44, 0x5f, 0x43, 0x4f, 0x4e, 0x46, 0x49, 0x47, 0x10, 0x33, 0x12, 0x10, 0x0a, 0x0c, 0x42, 0x41,
+	0x44, 0x5f, 0x43, 0x4f, 0x4e, 0x54, 0x52, 0x41, 0x43, 0x54, 0x10, 0x34, 0x12, 0x12, 0x0a, 0x0e,
+	0x43, 0x41, 0x4e, 0x4e, 0x4f, 0x54, 0x5f, 0x43, 0x4f, 0x4e, 0x4e, 0x45, 0x43, 0x54, 0x10, 0x35,
+	0x12, 0x1d, 0x0a, 0x19, 0x43, 0x41, 0x4e, 0x4e, 0x4f, 0x54, 0x5f, 0x47, 0x45, 0x54, 0x5f, 0x4c,
+	0x49, 0x4e, 0x4b, 0x45, 0x44, 0x5f, 0x57, 0x41, 0x4c, 0x4c, 0x45, 0x54, 0x53, 0x10, 0x36, 0x12,
+	0x1d, 0x0a, 0x19, 0x43, 0x41, 0x4e, 0x4e, 0x4f, 0x54, 0x5f, 0x43, 0x48, 0x45, 0x43, 0x4b, 0x5f,
+	0x45, 0x4e, 0x54, 0x49, 0x54, 0x4c, 0x45, 0x4d, 0x45, 0x4e, 0x54, 0x53, 0x10, 0x37, 0x12, 0x18,
+	0x0a, 0x14, 0x43, 0x41, 0x4e, 0x4e, 0x4f, 0x54, 0x5f, 0x43, 0x41, 0x4c, 0x4c, 0x5f, 0x43, 0x4f,
+	0x4e, 0x54, 0x52, 0x41, 0x43, 0x54, 0x10, 0x38, 0x12, 0x12, 0x0a, 0x0e, 0x53, 0x50, 0x41, 0x43,
+	0x45, 0x5f, 0x44, 0x49, 0x53, 0x41, 0x42, 0x4c, 0x45, 0x44, 0x10, 0x39, 0x12, 0x14, 0x0a, 0x10,
+	0x43, 0x48, 0x41, 0x4e, 0x4e, 0x45, 0x4c, 0x5f, 0x44, 0x49, 0x53, 0x41, 0x42, 0x4c, 0x45, 0x44,
+	0x10, 0x3a, 0x12, 0x15, 0x0a, 0x11, 0x57, 0x52, 0x4f, 0x4e, 0x47, 0x5f, 0x53, 0x54, 0x52, 0x45,
+	0x41, 0x4d, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x10, 0x3b, 0x12, 0x1b, 0x0a, 0x17, 0x4d, 0x49, 0x4e,
+	0x49, 0x50, 0x4f, 0x4f, 0x4c, 0x5f, 0x4d, 0x49, 0x53, 0x53, 0x49, 0x4e, 0x47, 0x5f, 0x45, 0x56,
+	0x45, 0x4e, 0x54, 0x53, 0x10, 0x3c, 0x12, 0x1e, 0x0a, 0x1a, 0x53, 0x54, 0x52, 0x45, 0x41, 0x4d,
+	0x5f, 0x4c, 0x41, 0x53, 0x54, 0x5f, 0x42, 0x4c, 0x4f, 0x43, 0x4b, 0x5f, 0x4d, 0x49, 0x53, 0x4d,
+	0x41, 0x54, 0x43, 0x48, 0x10, 0x3d, 0x12, 0x1c, 0x0a, 0x18, 0x44, 0x4f, 0x57, 0x4e, 0x53, 0x54,
+	0x52, 0x45, 0x41, 0x4d, 0x5f, 0x4e, 0x45, 0x54, 0x57, 0x4f, 0x52, 0x4b, 0x5f, 0x45, 0x52, 0x52,
+	0x4f, 0x52, 0x10, 0x3e, 0x12, 0x15, 0x0a, 0x11, 0x4d, 0x49, 0x4e, 0x49, 0x42, 0x4c, 0x4f, 0x43,
+	0x4b, 0x5f, 0x54, 0x4f, 0x4f, 0x5f, 0x4e, 0x45, 0x57, 0x10, 0x3f, 0x32, 0xdd, 0x08, 0x0a, 0x0d,
+	0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x47, 0x0a,
+	0x0c, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x12, 0x1a, 0x2e,
+	0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x53, 0x74, 0x72, 0x65,
+	0x61, 0x6d, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1b, 0x2e, 0x72, 0x69, 0x76, 0x65,
+	0x72, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x56, 0x0a, 0x11, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65,
+	0x4d, 0x65, 0x64, 0x69, 0x61, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x12, 0x1f, 0x2e, 0x72, 0x69,
+	0x76, 0x65, 0x72, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x4d, 0x65, 0x64, 0x69, 0x61, 0x53,
+	0x74, 0x72, 0x65, 0x61, 0x6d, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x20, 0x2e, 0x72,
+	0x69, 0x76, 0x65, 0x72, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x4d, 0x65, 0x64, 0x69, 0x61,
+	0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x3e,
+	0x0a, 0x09, 0x47, 0x65, 0x74, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x12, 0x17, 0x2e, 0x72, 0x69,
+	0x76, 0x65, 0x72, 0x2e, 0x47, 0x65, 0x74, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x1a, 0x18, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x47, 0x65, 0x74,
+	0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x46,
+	0x0a, 0x0b, 0x47, 0x65, 0x74, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x45, 0x78, 0x12, 0x19, 0x2e,
+	0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x47, 0x65, 0x74, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x45,
+	0x78, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1a, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72,
+	0x2e, 0x47, 0x65, 0x74, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x45, 0x78, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x30, 0x01, 0x12, 0x4a, 0x0a, 0x0d, 0x47, 0x65, 0x74, 0x4d, 0x69, 0x6e,
+	0x69, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x73, 0x12, 0x1b, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e,
+	0x47, 0x65, 0x74, 0x4d, 0x69, 0x6e, 0x69, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x73, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x1a, 0x1c, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x47, 0x65, 0x74,
+	0x4d, 0x69, 0x6e, 0x69, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x12, 0x5f, 0x0a, 0x14, 0x47, 0x65, 0x74, 0x4c, 0x61, 0x73, 0x74, 0x4d, 0x69, 0x6e,
+	0x69, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x48, 0x61, 0x73, 0x68, 0x12, 0x22, 0x2e, 0x72, 0x69, 0x76,
+	0x65, 0x72, 0x2e, 0x47, 0x65, 0x74, 0x4c, 0x61, 0x73, 0x74, 0x4d, 0x69, 0x6e, 0x69, 0x62, 0x6c,
+	0x6f, 0x63, 0x6b, 0x48, 0x61, 0x73, 0x68, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x23,
+	0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x47, 0x65, 0x74, 0x4c, 0x61, 0x73, 0x74, 0x4d, 0x69,
+	0x6e, 0x69, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x48, 0x61, 0x73, 0x68, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x12, 0x3b, 0x0a, 0x08, 0x41, 0x64, 0x64, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x12,
+	0x16, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x41, 0x64, 0x64, 0x45, 0x76, 0x65, 0x6e, 0x74,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x17, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e,
+	0x41, 0x64, 0x64, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x12, 0x4a, 0x0a, 0x0d, 0x41, 0x64, 0x64, 0x4d, 0x65, 0x64, 0x69, 0x61, 0x45, 0x76, 0x65, 0x6e,
+	0x74, 0x12, 0x1b, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x41, 0x64, 0x64, 0x4d, 0x65, 0x64,
+	0x69, 0x61, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1c,
+	0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x41, 0x64, 0x64, 0x4d, 0x65, 0x64, 0x69, 0x61, 0x45,
+	0x76, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x46, 0x0a, 0x0b,
+	0x53, 0x79, 0x6e, 0x63, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x73, 0x12, 0x19, 0x2e, 0x72, 0x69,
+	0x76, 0x65, 0x72, 0x2e, 0x53, 0x79, 0x6e, 0x63, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x73, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1a, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x53,
+	0x79, 0x6e, 0x63, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x30, 0x01, 0x12, 0x50, 0x0a, 0x0f, 0x41, 0x64, 0x64, 0x53, 0x74, 0x72, 0x65, 0x61,
+	0x6d, 0x54, 0x6f, 0x53, 0x79, 0x6e, 0x63, 0x12, 0x1d, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e,
+	0x41, 0x64, 0x64, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x54, 0x6f, 0x53, 0x79, 0x6e, 0x63, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1e, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x41,
+	0x64, 0x64, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x54, 0x6f, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x41, 0x0a, 0x0a, 0x4d, 0x6f, 0x64, 0x69, 0x66, 0x79,
+	0x53, 0x79, 0x6e, 0x63, 0x12, 0x18, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x4d, 0x6f, 0x64,
+	0x69, 0x66, 0x79, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x19,
+	0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x4d, 0x6f, 0x64, 0x69, 0x66, 0x79, 0x53, 0x79, 0x6e,
+	0x63, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x41, 0x0a, 0x0a, 0x43, 0x61, 0x6e,
+	0x63, 0x65, 0x6c, 0x53, 0x79, 0x6e, 0x63, 0x12, 0x18, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e,
+	0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x1a, 0x19, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c,
+	0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x5f, 0x0a, 0x14,
+	0x52, 0x65, 0x6d, 0x6f, 0x76, 0x65, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x46, 0x72, 0x6f, 0x6d,
+	0x53, 0x79, 0x6e, 0x63, 0x12, 0x22, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x52, 0x65, 0x6d,
+	0x6f, 0x76, 0x65, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x46, 0x72, 0x6f, 0x6d, 0x53, 0x79, 0x6e,
+	0x63, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x23, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72,
+	0x2e, 0x52, 0x65, 0x6d, 0x6f, 0x76, 0x65, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x46, 0x72, 0x6f,
+	0x6d, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2f, 0x0a,
+	0x04, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x12, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x49, 0x6e,
+	0x66, 0x6f, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x13, 0x2e, 0x72, 0x69, 0x76, 0x65,
+	0x72, 0x2e, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x3b,
+	0x0a, 0x08, 0x50, 0x69, 0x6e, 0x67, 0x53, 0x79, 0x6e, 0x63, 0x12, 0x16, 0x2e, 0x72, 0x69, 0x76,
+	0x65, 0x72, 0x2e, 0x50, 0x69, 0x6e, 0x67, 0x53, 0x79, 0x6e, 0x63, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x1a, 0x17, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x50, 0x69, 0x6e, 0x67, 0x53,
+	0x79, 0x6e, 0x63, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x31, 0x5a, 0x2f, 0x67,
+	0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2d,
+	0x62, 0x75, 0x69, 0x6c, 0x64, 0x2f, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2f, 0x63, 0x6f, 0x72, 0x65,
+	0x2f, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x62, 0x06,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -10140,7 +10360,7 @@ func file_protocol_proto_rawDescGZIP() []byte {
 }
 
 var file_protocol_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_protocol_proto_msgTypes = make([]protoimpl.MessageInfo, 125)
+var file_protocol_proto_msgTypes = make([]protoimpl.MessageInfo, 128)
 var file_protocol_proto_goTypes = []interface{}{
 	(SyncOp)(0),                                       // 0: river.SyncOp
 	(MembershipOp)(0),                                 // 1: river.MembershipOp
@@ -10188,93 +10408,96 @@ var file_protocol_proto_goTypes = []interface{}{
 	(*GetLastMiniblockHashResponse)(nil),              // 43: river.GetLastMiniblockHashResponse
 	(*AddEventRequest)(nil),                           // 44: river.AddEventRequest
 	(*AddEventResponse)(nil),                          // 45: river.AddEventResponse
-	(*SyncStreamsRequest)(nil),                        // 46: river.SyncStreamsRequest
-	(*SyncStreamsResponse)(nil),                       // 47: river.SyncStreamsResponse
-	(*AddStreamToSyncRequest)(nil),                    // 48: river.AddStreamToSyncRequest
-	(*AddStreamToSyncResponse)(nil),                   // 49: river.AddStreamToSyncResponse
-	(*RemoveStreamFromSyncRequest)(nil),               // 50: river.RemoveStreamFromSyncRequest
-	(*RemoveStreamFromSyncResponse)(nil),              // 51: river.RemoveStreamFromSyncResponse
-	(*ModifySyncRequest)(nil),                         // 52: river.ModifySyncRequest
-	(*SyncStreamOpStatus)(nil),                        // 53: river.SyncStreamOpStatus
-	(*ModifySyncResponse)(nil),                        // 54: river.ModifySyncResponse
-	(*CancelSyncRequest)(nil),                         // 55: river.CancelSyncRequest
-	(*CancelSyncResponse)(nil),                        // 56: river.CancelSyncResponse
-	(*PingSyncRequest)(nil),                           // 57: river.PingSyncRequest
-	(*PingSyncResponse)(nil),                          // 58: river.PingSyncResponse
-	(*InfoRequest)(nil),                               // 59: river.InfoRequest
-	(*InfoResponse)(nil),                              // 60: river.InfoResponse
-	(*MemberPayload_Snapshot)(nil),                    // 61: river.MemberPayload.Snapshot
-	(*MemberPayload_Membership)(nil),                  // 62: river.MemberPayload.Membership
-	(*MemberPayload_KeySolicitation)(nil),             // 63: river.MemberPayload.KeySolicitation
-	(*MemberPayload_KeyFulfillment)(nil),              // 64: river.MemberPayload.KeyFulfillment
-	(*MemberPayload_Nft)(nil),                         // 65: river.MemberPayload.Nft
-	(*MemberPayload_SnappedPin)(nil),                  // 66: river.MemberPayload.SnappedPin
-	(*MemberPayload_Pin)(nil),                         // 67: river.MemberPayload.Pin
-	(*MemberPayload_Unpin)(nil),                       // 68: river.MemberPayload.Unpin
-	(*MemberPayload_Mls)(nil),                         // 69: river.MemberPayload.Mls
-	(*MemberPayload_EncryptionAlgorithm)(nil),         // 70: river.MemberPayload.EncryptionAlgorithm
-	(*MemberPayload_MemberBlockchainTransaction)(nil), // 71: river.MemberPayload.MemberBlockchainTransaction
-	(*MemberPayload_Snapshot_Mls)(nil),                // 72: river.MemberPayload.Snapshot.Mls
-	(*MemberPayload_Snapshot_Member)(nil),             // 73: river.MemberPayload.Snapshot.Member
-	nil,                                               // 74: river.MemberPayload.Snapshot.TipsEntry
-	(*MemberPayload_Snapshot_Mls_Member)(nil),         // 75: river.MemberPayload.Snapshot.Mls.Member
-	nil, // 76: river.MemberPayload.Snapshot.Mls.MembersEntry
-	nil, // 77: river.MemberPayload.Snapshot.Mls.EpochSecretsEntry
-	(*MemberPayload_Mls_InitializeGroup)(nil),                 // 78: river.MemberPayload.Mls.InitializeGroup
-	(*MemberPayload_Mls_ExternalJoin)(nil),                    // 79: river.MemberPayload.Mls.ExternalJoin
-	(*MemberPayload_Mls_EpochSecrets)(nil),                    // 80: river.MemberPayload.Mls.EpochSecrets
-	(*MemberPayload_Mls_EpochSecrets_EpochSecret)(nil),        // 81: river.MemberPayload.Mls.EpochSecrets.EpochSecret
-	(*SpacePayload_Snapshot)(nil),                             // 82: river.SpacePayload.Snapshot
-	(*SpacePayload_SnappedSpaceImage)(nil),                    // 83: river.SpacePayload.SnappedSpaceImage
-	(*SpacePayload_Inception)(nil),                            // 84: river.SpacePayload.Inception
-	(*SpacePayload_ChannelSettings)(nil),                      // 85: river.SpacePayload.ChannelSettings
-	(*SpacePayload_ChannelMetadata)(nil),                      // 86: river.SpacePayload.ChannelMetadata
-	(*SpacePayload_ChannelUpdate)(nil),                        // 87: river.SpacePayload.ChannelUpdate
-	(*SpacePayload_UpdateChannelAutojoin)(nil),                // 88: river.SpacePayload.UpdateChannelAutojoin
-	(*SpacePayload_UpdateChannelHideUserJoinLeaveEvents)(nil), // 89: river.SpacePayload.UpdateChannelHideUserJoinLeaveEvents
-	(*ChannelPayload_Snapshot)(nil),                           // 90: river.ChannelPayload.Snapshot
-	(*ChannelPayload_Inception)(nil),                          // 91: river.ChannelPayload.Inception
-	(*ChannelPayload_Redaction)(nil),                          // 92: river.ChannelPayload.Redaction
-	(*DmChannelPayload_Snapshot)(nil),                         // 93: river.DmChannelPayload.Snapshot
-	(*DmChannelPayload_Inception)(nil),                        // 94: river.DmChannelPayload.Inception
-	(*GdmChannelPayload_Snapshot)(nil),                        // 95: river.GdmChannelPayload.Snapshot
-	(*GdmChannelPayload_Inception)(nil),                       // 96: river.GdmChannelPayload.Inception
-	(*UserPayload_Snapshot)(nil),                              // 97: river.UserPayload.Snapshot
-	(*UserPayload_Inception)(nil),                             // 98: river.UserPayload.Inception
-	(*UserPayload_UserMembership)(nil),                        // 99: river.UserPayload.UserMembership
-	(*UserPayload_UserMembershipAction)(nil),                  // 100: river.UserPayload.UserMembershipAction
-	(*UserPayload_ReceivedBlockchainTransaction)(nil),         // 101: river.UserPayload.ReceivedBlockchainTransaction
-	nil,                                // 102: river.UserPayload.Snapshot.TipsSentEntry
-	nil,                                // 103: river.UserPayload.Snapshot.TipsReceivedEntry
-	(*UserInboxPayload_Snapshot)(nil),  // 104: river.UserInboxPayload.Snapshot
-	(*UserInboxPayload_Inception)(nil), // 105: river.UserInboxPayload.Inception
-	(*UserInboxPayload_GroupEncryptionSessions)(nil), // 106: river.UserInboxPayload.GroupEncryptionSessions
-	(*UserInboxPayload_Ack)(nil),                     // 107: river.UserInboxPayload.Ack
-	(*UserInboxPayload_Snapshot_DeviceSummary)(nil),  // 108: river.UserInboxPayload.Snapshot.DeviceSummary
-	nil,                                   // 109: river.UserInboxPayload.Snapshot.DeviceSummaryEntry
-	nil,                                   // 110: river.UserInboxPayload.GroupEncryptionSessions.CiphertextsEntry
-	(*UserSettingsPayload_Snapshot)(nil),  // 111: river.UserSettingsPayload.Snapshot
-	(*UserSettingsPayload_Inception)(nil), // 112: river.UserSettingsPayload.Inception
-	(*UserSettingsPayload_MarkerContent)(nil),             // 113: river.UserSettingsPayload.MarkerContent
-	(*UserSettingsPayload_FullyReadMarkers)(nil),          // 114: river.UserSettingsPayload.FullyReadMarkers
-	(*UserSettingsPayload_UserBlock)(nil),                 // 115: river.UserSettingsPayload.UserBlock
-	(*UserSettingsPayload_Snapshot_UserBlocks)(nil),       // 116: river.UserSettingsPayload.Snapshot.UserBlocks
-	(*UserSettingsPayload_Snapshot_UserBlocks_Block)(nil), // 117: river.UserSettingsPayload.Snapshot.UserBlocks.Block
-	(*UserMetadataPayload_Snapshot)(nil),                  // 118: river.UserMetadataPayload.Snapshot
-	(*UserMetadataPayload_Inception)(nil),                 // 119: river.UserMetadataPayload.Inception
-	(*UserMetadataPayload_EncryptionDevice)(nil),          // 120: river.UserMetadataPayload.EncryptionDevice
-	(*MediaPayload_Snapshot)(nil),                         // 121: river.MediaPayload.Snapshot
-	(*MediaPayload_Inception)(nil),                        // 122: river.MediaPayload.Inception
-	(*MediaPayload_Chunk)(nil),                            // 123: river.MediaPayload.Chunk
-	(*BlockchainTransaction_Tip)(nil),                     // 124: river.BlockchainTransaction.Tip
-	(*BlockchainTransaction_Tip_Event)(nil),               // 125: river.BlockchainTransaction.Tip.Event
-	(*BlockchainTransactionReceipt_Log)(nil),              // 126: river.BlockchainTransactionReceipt.Log
-	(*EncryptedData_Mls)(nil),                             // 127: river.EncryptedData.Mls
-	nil,                                                   // 128: river.CreateStreamRequest.MetadataEntry
-	nil,                                                   // 129: river.CreateMediaStreamRequest.MetadataEntry
-	(*AddEventResponse_Error)(nil),                        // 130: river.AddEventResponse.Error
-	(*timestamppb.Timestamp)(nil),                         // 131: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                                 // 132: google.protobuf.Empty
+	(*AddMediaEventRequest)(nil),                      // 46: river.AddMediaEventRequest
+	(*AddMediaEventResponse)(nil),                     // 47: river.AddMediaEventResponse
+	(*SyncStreamsRequest)(nil),                        // 48: river.SyncStreamsRequest
+	(*SyncStreamsResponse)(nil),                       // 49: river.SyncStreamsResponse
+	(*AddStreamToSyncRequest)(nil),                    // 50: river.AddStreamToSyncRequest
+	(*AddStreamToSyncResponse)(nil),                   // 51: river.AddStreamToSyncResponse
+	(*RemoveStreamFromSyncRequest)(nil),               // 52: river.RemoveStreamFromSyncRequest
+	(*RemoveStreamFromSyncResponse)(nil),              // 53: river.RemoveStreamFromSyncResponse
+	(*ModifySyncRequest)(nil),                         // 54: river.ModifySyncRequest
+	(*SyncStreamOpStatus)(nil),                        // 55: river.SyncStreamOpStatus
+	(*ModifySyncResponse)(nil),                        // 56: river.ModifySyncResponse
+	(*CancelSyncRequest)(nil),                         // 57: river.CancelSyncRequest
+	(*CancelSyncResponse)(nil),                        // 58: river.CancelSyncResponse
+	(*PingSyncRequest)(nil),                           // 59: river.PingSyncRequest
+	(*PingSyncResponse)(nil),                          // 60: river.PingSyncResponse
+	(*InfoRequest)(nil),                               // 61: river.InfoRequest
+	(*InfoResponse)(nil),                              // 62: river.InfoResponse
+	(*MemberPayload_Snapshot)(nil),                    // 63: river.MemberPayload.Snapshot
+	(*MemberPayload_Membership)(nil),                  // 64: river.MemberPayload.Membership
+	(*MemberPayload_KeySolicitation)(nil),             // 65: river.MemberPayload.KeySolicitation
+	(*MemberPayload_KeyFulfillment)(nil),              // 66: river.MemberPayload.KeyFulfillment
+	(*MemberPayload_Nft)(nil),                         // 67: river.MemberPayload.Nft
+	(*MemberPayload_SnappedPin)(nil),                  // 68: river.MemberPayload.SnappedPin
+	(*MemberPayload_Pin)(nil),                         // 69: river.MemberPayload.Pin
+	(*MemberPayload_Unpin)(nil),                       // 70: river.MemberPayload.Unpin
+	(*MemberPayload_Mls)(nil),                         // 71: river.MemberPayload.Mls
+	(*MemberPayload_EncryptionAlgorithm)(nil),         // 72: river.MemberPayload.EncryptionAlgorithm
+	(*MemberPayload_MemberBlockchainTransaction)(nil), // 73: river.MemberPayload.MemberBlockchainTransaction
+	(*MemberPayload_Snapshot_Mls)(nil),                // 74: river.MemberPayload.Snapshot.Mls
+	(*MemberPayload_Snapshot_Member)(nil),             // 75: river.MemberPayload.Snapshot.Member
+	nil,                                               // 76: river.MemberPayload.Snapshot.TipsEntry
+	(*MemberPayload_Snapshot_Mls_Member)(nil),         // 77: river.MemberPayload.Snapshot.Mls.Member
+	nil, // 78: river.MemberPayload.Snapshot.Mls.MembersEntry
+	nil, // 79: river.MemberPayload.Snapshot.Mls.EpochSecretsEntry
+	(*MemberPayload_Mls_InitializeGroup)(nil),                 // 80: river.MemberPayload.Mls.InitializeGroup
+	(*MemberPayload_Mls_ExternalJoin)(nil),                    // 81: river.MemberPayload.Mls.ExternalJoin
+	(*MemberPayload_Mls_EpochSecrets)(nil),                    // 82: river.MemberPayload.Mls.EpochSecrets
+	(*MemberPayload_Mls_EpochSecrets_EpochSecret)(nil),        // 83: river.MemberPayload.Mls.EpochSecrets.EpochSecret
+	(*SpacePayload_Snapshot)(nil),                             // 84: river.SpacePayload.Snapshot
+	(*SpacePayload_SnappedSpaceImage)(nil),                    // 85: river.SpacePayload.SnappedSpaceImage
+	(*SpacePayload_Inception)(nil),                            // 86: river.SpacePayload.Inception
+	(*SpacePayload_ChannelSettings)(nil),                      // 87: river.SpacePayload.ChannelSettings
+	(*SpacePayload_ChannelMetadata)(nil),                      // 88: river.SpacePayload.ChannelMetadata
+	(*SpacePayload_ChannelUpdate)(nil),                        // 89: river.SpacePayload.ChannelUpdate
+	(*SpacePayload_UpdateChannelAutojoin)(nil),                // 90: river.SpacePayload.UpdateChannelAutojoin
+	(*SpacePayload_UpdateChannelHideUserJoinLeaveEvents)(nil), // 91: river.SpacePayload.UpdateChannelHideUserJoinLeaveEvents
+	(*ChannelPayload_Snapshot)(nil),                           // 92: river.ChannelPayload.Snapshot
+	(*ChannelPayload_Inception)(nil),                          // 93: river.ChannelPayload.Inception
+	(*ChannelPayload_Redaction)(nil),                          // 94: river.ChannelPayload.Redaction
+	(*DmChannelPayload_Snapshot)(nil),                         // 95: river.DmChannelPayload.Snapshot
+	(*DmChannelPayload_Inception)(nil),                        // 96: river.DmChannelPayload.Inception
+	(*GdmChannelPayload_Snapshot)(nil),                        // 97: river.GdmChannelPayload.Snapshot
+	(*GdmChannelPayload_Inception)(nil),                       // 98: river.GdmChannelPayload.Inception
+	(*UserPayload_Snapshot)(nil),                              // 99: river.UserPayload.Snapshot
+	(*UserPayload_Inception)(nil),                             // 100: river.UserPayload.Inception
+	(*UserPayload_UserMembership)(nil),                        // 101: river.UserPayload.UserMembership
+	(*UserPayload_UserMembershipAction)(nil),                  // 102: river.UserPayload.UserMembershipAction
+	(*UserPayload_ReceivedBlockchainTransaction)(nil),         // 103: river.UserPayload.ReceivedBlockchainTransaction
+	nil,                                // 104: river.UserPayload.Snapshot.TipsSentEntry
+	nil,                                // 105: river.UserPayload.Snapshot.TipsReceivedEntry
+	(*UserInboxPayload_Snapshot)(nil),  // 106: river.UserInboxPayload.Snapshot
+	(*UserInboxPayload_Inception)(nil), // 107: river.UserInboxPayload.Inception
+	(*UserInboxPayload_GroupEncryptionSessions)(nil), // 108: river.UserInboxPayload.GroupEncryptionSessions
+	(*UserInboxPayload_Ack)(nil),                     // 109: river.UserInboxPayload.Ack
+	(*UserInboxPayload_Snapshot_DeviceSummary)(nil),  // 110: river.UserInboxPayload.Snapshot.DeviceSummary
+	nil,                                   // 111: river.UserInboxPayload.Snapshot.DeviceSummaryEntry
+	nil,                                   // 112: river.UserInboxPayload.GroupEncryptionSessions.CiphertextsEntry
+	(*UserSettingsPayload_Snapshot)(nil),  // 113: river.UserSettingsPayload.Snapshot
+	(*UserSettingsPayload_Inception)(nil), // 114: river.UserSettingsPayload.Inception
+	(*UserSettingsPayload_MarkerContent)(nil),             // 115: river.UserSettingsPayload.MarkerContent
+	(*UserSettingsPayload_FullyReadMarkers)(nil),          // 116: river.UserSettingsPayload.FullyReadMarkers
+	(*UserSettingsPayload_UserBlock)(nil),                 // 117: river.UserSettingsPayload.UserBlock
+	(*UserSettingsPayload_Snapshot_UserBlocks)(nil),       // 118: river.UserSettingsPayload.Snapshot.UserBlocks
+	(*UserSettingsPayload_Snapshot_UserBlocks_Block)(nil), // 119: river.UserSettingsPayload.Snapshot.UserBlocks.Block
+	(*UserMetadataPayload_Snapshot)(nil),                  // 120: river.UserMetadataPayload.Snapshot
+	(*UserMetadataPayload_Inception)(nil),                 // 121: river.UserMetadataPayload.Inception
+	(*UserMetadataPayload_EncryptionDevice)(nil),          // 122: river.UserMetadataPayload.EncryptionDevice
+	(*MediaPayload_Snapshot)(nil),                         // 123: river.MediaPayload.Snapshot
+	(*MediaPayload_Inception)(nil),                        // 124: river.MediaPayload.Inception
+	(*MediaPayload_Chunk)(nil),                            // 125: river.MediaPayload.Chunk
+	(*BlockchainTransaction_Tip)(nil),                     // 126: river.BlockchainTransaction.Tip
+	(*BlockchainTransaction_Tip_Event)(nil),               // 127: river.BlockchainTransaction.Tip.Event
+	(*BlockchainTransactionReceipt_Log)(nil),              // 128: river.BlockchainTransactionReceipt.Log
+	(*EncryptedData_Mls)(nil),                             // 129: river.EncryptedData.Mls
+	nil,                                                   // 130: river.CreateStreamRequest.MetadataEntry
+	nil,                                                   // 131: river.CreateMediaStreamRequest.MetadataEntry
+	(*AddEventResponse_Error)(nil),                        // 132: river.AddEventResponse.Error
+	(*AddMediaEventResponse_Error)(nil),                   // 133: river.AddMediaEventResponse.Error
+	(*timestamppb.Timestamp)(nil),                         // 134: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                                 // 135: google.protobuf.Empty
 }
 var file_protocol_proto_depIdxs = []int32{
 	7,   // 0: river.Miniblock.events:type_name -> river.Envelope
@@ -10291,64 +10514,64 @@ var file_protocol_proto_depIdxs = []int32{
 	19,  // 11: river.StreamEvent.media_payload:type_name -> river.MediaPayload
 	13,  // 12: river.StreamEvent.dm_channel_payload:type_name -> river.DmChannelPayload
 	14,  // 13: river.StreamEvent.gdm_channel_payload:type_name -> river.GdmChannelPayload
-	131, // 14: river.MiniblockHeader.timestamp:type_name -> google.protobuf.Timestamp
+	134, // 14: river.MiniblockHeader.timestamp:type_name -> google.protobuf.Timestamp
 	20,  // 15: river.MiniblockHeader.snapshot:type_name -> river.Snapshot
-	132, // 16: river.MiniblockHeader.none:type_name -> google.protobuf.Empty
-	62,  // 17: river.MemberPayload.membership:type_name -> river.MemberPayload.Membership
-	63,  // 18: river.MemberPayload.key_solicitation:type_name -> river.MemberPayload.KeySolicitation
-	64,  // 19: river.MemberPayload.key_fulfillment:type_name -> river.MemberPayload.KeyFulfillment
+	135, // 16: river.MiniblockHeader.none:type_name -> google.protobuf.Empty
+	64,  // 17: river.MemberPayload.membership:type_name -> river.MemberPayload.Membership
+	65,  // 18: river.MemberPayload.key_solicitation:type_name -> river.MemberPayload.KeySolicitation
+	66,  // 19: river.MemberPayload.key_fulfillment:type_name -> river.MemberPayload.KeyFulfillment
 	25,  // 20: river.MemberPayload.username:type_name -> river.EncryptedData
 	25,  // 21: river.MemberPayload.display_name:type_name -> river.EncryptedData
-	65,  // 22: river.MemberPayload.nft:type_name -> river.MemberPayload.Nft
-	67,  // 23: river.MemberPayload.pin:type_name -> river.MemberPayload.Pin
-	68,  // 24: river.MemberPayload.unpin:type_name -> river.MemberPayload.Unpin
-	69,  // 25: river.MemberPayload.mls:type_name -> river.MemberPayload.Mls
-	71,  // 26: river.MemberPayload.member_blockchain_transaction:type_name -> river.MemberPayload.MemberBlockchainTransaction
-	70,  // 27: river.MemberPayload.encryption_algorithm:type_name -> river.MemberPayload.EncryptionAlgorithm
-	84,  // 28: river.SpacePayload.inception:type_name -> river.SpacePayload.Inception
-	87,  // 29: river.SpacePayload.channel:type_name -> river.SpacePayload.ChannelUpdate
+	67,  // 22: river.MemberPayload.nft:type_name -> river.MemberPayload.Nft
+	69,  // 23: river.MemberPayload.pin:type_name -> river.MemberPayload.Pin
+	70,  // 24: river.MemberPayload.unpin:type_name -> river.MemberPayload.Unpin
+	71,  // 25: river.MemberPayload.mls:type_name -> river.MemberPayload.Mls
+	73,  // 26: river.MemberPayload.member_blockchain_transaction:type_name -> river.MemberPayload.MemberBlockchainTransaction
+	72,  // 27: river.MemberPayload.encryption_algorithm:type_name -> river.MemberPayload.EncryptionAlgorithm
+	86,  // 28: river.SpacePayload.inception:type_name -> river.SpacePayload.Inception
+	89,  // 29: river.SpacePayload.channel:type_name -> river.SpacePayload.ChannelUpdate
 	25,  // 30: river.SpacePayload.space_image:type_name -> river.EncryptedData
-	88,  // 31: river.SpacePayload.update_channel_autojoin:type_name -> river.SpacePayload.UpdateChannelAutojoin
-	89,  // 32: river.SpacePayload.update_channel_hide_user_join_leave_events:type_name -> river.SpacePayload.UpdateChannelHideUserJoinLeaveEvents
-	91,  // 33: river.ChannelPayload.inception:type_name -> river.ChannelPayload.Inception
+	90,  // 31: river.SpacePayload.update_channel_autojoin:type_name -> river.SpacePayload.UpdateChannelAutojoin
+	91,  // 32: river.SpacePayload.update_channel_hide_user_join_leave_events:type_name -> river.SpacePayload.UpdateChannelHideUserJoinLeaveEvents
+	93,  // 33: river.ChannelPayload.inception:type_name -> river.ChannelPayload.Inception
 	25,  // 34: river.ChannelPayload.message:type_name -> river.EncryptedData
-	92,  // 35: river.ChannelPayload.redaction:type_name -> river.ChannelPayload.Redaction
-	94,  // 36: river.DmChannelPayload.inception:type_name -> river.DmChannelPayload.Inception
+	94,  // 35: river.ChannelPayload.redaction:type_name -> river.ChannelPayload.Redaction
+	96,  // 36: river.DmChannelPayload.inception:type_name -> river.DmChannelPayload.Inception
 	25,  // 37: river.DmChannelPayload.message:type_name -> river.EncryptedData
-	96,  // 38: river.GdmChannelPayload.inception:type_name -> river.GdmChannelPayload.Inception
+	98,  // 38: river.GdmChannelPayload.inception:type_name -> river.GdmChannelPayload.Inception
 	25,  // 39: river.GdmChannelPayload.message:type_name -> river.EncryptedData
 	25,  // 40: river.GdmChannelPayload.channel_properties:type_name -> river.EncryptedData
-	98,  // 41: river.UserPayload.inception:type_name -> river.UserPayload.Inception
-	99,  // 42: river.UserPayload.user_membership:type_name -> river.UserPayload.UserMembership
-	100, // 43: river.UserPayload.user_membership_action:type_name -> river.UserPayload.UserMembershipAction
+	100, // 41: river.UserPayload.inception:type_name -> river.UserPayload.Inception
+	101, // 42: river.UserPayload.user_membership:type_name -> river.UserPayload.UserMembership
+	102, // 43: river.UserPayload.user_membership_action:type_name -> river.UserPayload.UserMembershipAction
 	21,  // 44: river.UserPayload.blockchain_transaction:type_name -> river.BlockchainTransaction
-	101, // 45: river.UserPayload.received_blockchain_transaction:type_name -> river.UserPayload.ReceivedBlockchainTransaction
-	105, // 46: river.UserInboxPayload.inception:type_name -> river.UserInboxPayload.Inception
-	107, // 47: river.UserInboxPayload.ack:type_name -> river.UserInboxPayload.Ack
-	106, // 48: river.UserInboxPayload.group_encryption_sessions:type_name -> river.UserInboxPayload.GroupEncryptionSessions
-	112, // 49: river.UserSettingsPayload.inception:type_name -> river.UserSettingsPayload.Inception
-	114, // 50: river.UserSettingsPayload.fully_read_markers:type_name -> river.UserSettingsPayload.FullyReadMarkers
-	115, // 51: river.UserSettingsPayload.user_block:type_name -> river.UserSettingsPayload.UserBlock
-	119, // 52: river.UserMetadataPayload.inception:type_name -> river.UserMetadataPayload.Inception
-	120, // 53: river.UserMetadataPayload.encryption_device:type_name -> river.UserMetadataPayload.EncryptionDevice
+	103, // 45: river.UserPayload.received_blockchain_transaction:type_name -> river.UserPayload.ReceivedBlockchainTransaction
+	107, // 46: river.UserInboxPayload.inception:type_name -> river.UserInboxPayload.Inception
+	109, // 47: river.UserInboxPayload.ack:type_name -> river.UserInboxPayload.Ack
+	108, // 48: river.UserInboxPayload.group_encryption_sessions:type_name -> river.UserInboxPayload.GroupEncryptionSessions
+	114, // 49: river.UserSettingsPayload.inception:type_name -> river.UserSettingsPayload.Inception
+	116, // 50: river.UserSettingsPayload.fully_read_markers:type_name -> river.UserSettingsPayload.FullyReadMarkers
+	117, // 51: river.UserSettingsPayload.user_block:type_name -> river.UserSettingsPayload.UserBlock
+	121, // 52: river.UserMetadataPayload.inception:type_name -> river.UserMetadataPayload.Inception
+	122, // 53: river.UserMetadataPayload.encryption_device:type_name -> river.UserMetadataPayload.EncryptionDevice
 	25,  // 54: river.UserMetadataPayload.profile_image:type_name -> river.EncryptedData
 	25,  // 55: river.UserMetadataPayload.bio:type_name -> river.EncryptedData
-	122, // 56: river.MediaPayload.inception:type_name -> river.MediaPayload.Inception
-	123, // 57: river.MediaPayload.chunk:type_name -> river.MediaPayload.Chunk
-	61,  // 58: river.Snapshot.members:type_name -> river.MemberPayload.Snapshot
-	82,  // 59: river.Snapshot.space_content:type_name -> river.SpacePayload.Snapshot
-	90,  // 60: river.Snapshot.channel_content:type_name -> river.ChannelPayload.Snapshot
-	97,  // 61: river.Snapshot.user_content:type_name -> river.UserPayload.Snapshot
-	111, // 62: river.Snapshot.user_settings_content:type_name -> river.UserSettingsPayload.Snapshot
-	118, // 63: river.Snapshot.user_metadata_content:type_name -> river.UserMetadataPayload.Snapshot
-	121, // 64: river.Snapshot.media_content:type_name -> river.MediaPayload.Snapshot
-	93,  // 65: river.Snapshot.dm_channel_content:type_name -> river.DmChannelPayload.Snapshot
-	95,  // 66: river.Snapshot.gdm_channel_content:type_name -> river.GdmChannelPayload.Snapshot
-	104, // 67: river.Snapshot.user_inbox_content:type_name -> river.UserInboxPayload.Snapshot
+	124, // 56: river.MediaPayload.inception:type_name -> river.MediaPayload.Inception
+	125, // 57: river.MediaPayload.chunk:type_name -> river.MediaPayload.Chunk
+	63,  // 58: river.Snapshot.members:type_name -> river.MemberPayload.Snapshot
+	84,  // 59: river.Snapshot.space_content:type_name -> river.SpacePayload.Snapshot
+	92,  // 60: river.Snapshot.channel_content:type_name -> river.ChannelPayload.Snapshot
+	99,  // 61: river.Snapshot.user_content:type_name -> river.UserPayload.Snapshot
+	113, // 62: river.Snapshot.user_settings_content:type_name -> river.UserSettingsPayload.Snapshot
+	120, // 63: river.Snapshot.user_metadata_content:type_name -> river.UserMetadataPayload.Snapshot
+	123, // 64: river.Snapshot.media_content:type_name -> river.MediaPayload.Snapshot
+	95,  // 65: river.Snapshot.dm_channel_content:type_name -> river.DmChannelPayload.Snapshot
+	97,  // 66: river.Snapshot.gdm_channel_content:type_name -> river.GdmChannelPayload.Snapshot
+	106, // 67: river.Snapshot.user_inbox_content:type_name -> river.UserInboxPayload.Snapshot
 	22,  // 68: river.BlockchainTransaction.receipt:type_name -> river.BlockchainTransactionReceipt
-	124, // 69: river.BlockchainTransaction.tip:type_name -> river.BlockchainTransaction.Tip
-	126, // 70: river.BlockchainTransactionReceipt.logs:type_name -> river.BlockchainTransactionReceipt.Log
-	127, // 71: river.EncryptedData.mls:type_name -> river.EncryptedData.Mls
+	126, // 69: river.BlockchainTransaction.tip:type_name -> river.BlockchainTransaction.Tip
+	128, // 70: river.BlockchainTransactionReceipt.logs:type_name -> river.BlockchainTransactionReceipt.Log
+	129, // 71: river.EncryptedData.mls:type_name -> river.EncryptedData.Mls
 	25,  // 72: river.WrappedEncryptedData.data:type_name -> river.EncryptedData
 	7,   // 73: river.StreamAndCookie.events:type_name -> river.Envelope
 	27,  // 74: river.StreamAndCookie.next_sync_cookie:type_name -> river.SyncCookie
@@ -10359,124 +10582,131 @@ var file_protocol_proto_depIdxs = []int32{
 	6,   // 79: river.GetStreamExResponse.miniblock:type_name -> river.Miniblock
 	31,  // 80: river.GetStreamExResponse.minipool:type_name -> river.Minipool
 	7,   // 81: river.CreateStreamRequest.events:type_name -> river.Envelope
-	128, // 82: river.CreateStreamRequest.metadata:type_name -> river.CreateStreamRequest.MetadataEntry
+	130, // 82: river.CreateStreamRequest.metadata:type_name -> river.CreateStreamRequest.MetadataEntry
 	29,  // 83: river.CreateStreamResponse.stream:type_name -> river.StreamAndCookie
 	7,   // 84: river.CreateMediaStreamRequest.events:type_name -> river.Envelope
-	129, // 85: river.CreateMediaStreamRequest.metadata:type_name -> river.CreateMediaStreamRequest.MetadataEntry
+	131, // 85: river.CreateMediaStreamRequest.metadata:type_name -> river.CreateMediaStreamRequest.MetadataEntry
 	28,  // 86: river.CreateMediaStreamResponse.next_creation_cookie:type_name -> river.CreationCookie
 	29,  // 87: river.GetStreamResponse.stream:type_name -> river.StreamAndCookie
 	6,   // 88: river.GetMiniblocksResponse.miniblocks:type_name -> river.Miniblock
 	7,   // 89: river.AddEventRequest.event:type_name -> river.Envelope
-	130, // 90: river.AddEventResponse.error:type_name -> river.AddEventResponse.Error
-	27,  // 91: river.SyncStreamsRequest.sync_pos:type_name -> river.SyncCookie
-	0,   // 92: river.SyncStreamsResponse.sync_op:type_name -> river.SyncOp
-	29,  // 93: river.SyncStreamsResponse.stream:type_name -> river.StreamAndCookie
-	27,  // 94: river.AddStreamToSyncRequest.sync_pos:type_name -> river.SyncCookie
-	27,  // 95: river.ModifySyncRequest.add_streams:type_name -> river.SyncCookie
-	53,  // 96: river.ModifySyncResponse.adds:type_name -> river.SyncStreamOpStatus
-	53,  // 97: river.ModifySyncResponse.removals:type_name -> river.SyncStreamOpStatus
-	131, // 98: river.InfoResponse.start_time:type_name -> google.protobuf.Timestamp
-	73,  // 99: river.MemberPayload.Snapshot.joined:type_name -> river.MemberPayload.Snapshot.Member
-	66,  // 100: river.MemberPayload.Snapshot.pins:type_name -> river.MemberPayload.SnappedPin
-	72,  // 101: river.MemberPayload.Snapshot.mls:type_name -> river.MemberPayload.Snapshot.Mls
-	70,  // 102: river.MemberPayload.Snapshot.encryption_algorithm:type_name -> river.MemberPayload.EncryptionAlgorithm
-	74,  // 103: river.MemberPayload.Snapshot.tips:type_name -> river.MemberPayload.Snapshot.TipsEntry
-	1,   // 104: river.MemberPayload.Membership.op:type_name -> river.MembershipOp
-	67,  // 105: river.MemberPayload.SnappedPin.pin:type_name -> river.MemberPayload.Pin
-	8,   // 106: river.MemberPayload.Pin.event:type_name -> river.StreamEvent
-	78,  // 107: river.MemberPayload.Mls.initialize_group:type_name -> river.MemberPayload.Mls.InitializeGroup
-	79,  // 108: river.MemberPayload.Mls.external_join:type_name -> river.MemberPayload.Mls.ExternalJoin
-	80,  // 109: river.MemberPayload.Mls.epoch_secrets:type_name -> river.MemberPayload.Mls.EpochSecrets
-	21,  // 110: river.MemberPayload.MemberBlockchainTransaction.transaction:type_name -> river.BlockchainTransaction
-	76,  // 111: river.MemberPayload.Snapshot.Mls.members:type_name -> river.MemberPayload.Snapshot.Mls.MembersEntry
-	77,  // 112: river.MemberPayload.Snapshot.Mls.epoch_secrets:type_name -> river.MemberPayload.Snapshot.Mls.EpochSecretsEntry
-	63,  // 113: river.MemberPayload.Snapshot.Member.solicitations:type_name -> river.MemberPayload.KeySolicitation
-	26,  // 114: river.MemberPayload.Snapshot.Member.username:type_name -> river.WrappedEncryptedData
-	26,  // 115: river.MemberPayload.Snapshot.Member.display_name:type_name -> river.WrappedEncryptedData
-	65,  // 116: river.MemberPayload.Snapshot.Member.nft:type_name -> river.MemberPayload.Nft
-	75,  // 117: river.MemberPayload.Snapshot.Mls.MembersEntry.value:type_name -> river.MemberPayload.Snapshot.Mls.Member
-	81,  // 118: river.MemberPayload.Mls.EpochSecrets.secrets:type_name -> river.MemberPayload.Mls.EpochSecrets.EpochSecret
-	84,  // 119: river.SpacePayload.Snapshot.inception:type_name -> river.SpacePayload.Inception
-	86,  // 120: river.SpacePayload.Snapshot.channels:type_name -> river.SpacePayload.ChannelMetadata
-	83,  // 121: river.SpacePayload.Snapshot.space_image:type_name -> river.SpacePayload.SnappedSpaceImage
-	25,  // 122: river.SpacePayload.SnappedSpaceImage.data:type_name -> river.EncryptedData
-	24,  // 123: river.SpacePayload.Inception.settings:type_name -> river.StreamSettings
-	2,   // 124: river.SpacePayload.ChannelMetadata.op:type_name -> river.ChannelOp
-	23,  // 125: river.SpacePayload.ChannelMetadata.origin_event:type_name -> river.EventRef
-	85,  // 126: river.SpacePayload.ChannelMetadata.settings:type_name -> river.SpacePayload.ChannelSettings
-	2,   // 127: river.SpacePayload.ChannelUpdate.op:type_name -> river.ChannelOp
-	23,  // 128: river.SpacePayload.ChannelUpdate.origin_event:type_name -> river.EventRef
-	85,  // 129: river.SpacePayload.ChannelUpdate.settings:type_name -> river.SpacePayload.ChannelSettings
-	91,  // 130: river.ChannelPayload.Snapshot.inception:type_name -> river.ChannelPayload.Inception
-	24,  // 131: river.ChannelPayload.Inception.settings:type_name -> river.StreamSettings
-	85,  // 132: river.ChannelPayload.Inception.channel_settings:type_name -> river.SpacePayload.ChannelSettings
-	94,  // 133: river.DmChannelPayload.Snapshot.inception:type_name -> river.DmChannelPayload.Inception
-	24,  // 134: river.DmChannelPayload.Inception.settings:type_name -> river.StreamSettings
-	96,  // 135: river.GdmChannelPayload.Snapshot.inception:type_name -> river.GdmChannelPayload.Inception
-	26,  // 136: river.GdmChannelPayload.Snapshot.channel_properties:type_name -> river.WrappedEncryptedData
-	25,  // 137: river.GdmChannelPayload.Inception.channel_properties:type_name -> river.EncryptedData
-	24,  // 138: river.GdmChannelPayload.Inception.settings:type_name -> river.StreamSettings
-	98,  // 139: river.UserPayload.Snapshot.inception:type_name -> river.UserPayload.Inception
-	99,  // 140: river.UserPayload.Snapshot.memberships:type_name -> river.UserPayload.UserMembership
-	102, // 141: river.UserPayload.Snapshot.tips_sent:type_name -> river.UserPayload.Snapshot.TipsSentEntry
-	103, // 142: river.UserPayload.Snapshot.tips_received:type_name -> river.UserPayload.Snapshot.TipsReceivedEntry
-	24,  // 143: river.UserPayload.Inception.settings:type_name -> river.StreamSettings
-	1,   // 144: river.UserPayload.UserMembership.op:type_name -> river.MembershipOp
-	1,   // 145: river.UserPayload.UserMembershipAction.op:type_name -> river.MembershipOp
-	21,  // 146: river.UserPayload.ReceivedBlockchainTransaction.transaction:type_name -> river.BlockchainTransaction
-	105, // 147: river.UserInboxPayload.Snapshot.inception:type_name -> river.UserInboxPayload.Inception
-	109, // 148: river.UserInboxPayload.Snapshot.device_summary:type_name -> river.UserInboxPayload.Snapshot.DeviceSummaryEntry
-	24,  // 149: river.UserInboxPayload.Inception.settings:type_name -> river.StreamSettings
-	110, // 150: river.UserInboxPayload.GroupEncryptionSessions.ciphertexts:type_name -> river.UserInboxPayload.GroupEncryptionSessions.CiphertextsEntry
-	108, // 151: river.UserInboxPayload.Snapshot.DeviceSummaryEntry.value:type_name -> river.UserInboxPayload.Snapshot.DeviceSummary
-	112, // 152: river.UserSettingsPayload.Snapshot.inception:type_name -> river.UserSettingsPayload.Inception
-	114, // 153: river.UserSettingsPayload.Snapshot.fully_read_markers:type_name -> river.UserSettingsPayload.FullyReadMarkers
-	116, // 154: river.UserSettingsPayload.Snapshot.user_blocks_list:type_name -> river.UserSettingsPayload.Snapshot.UserBlocks
-	24,  // 155: river.UserSettingsPayload.Inception.settings:type_name -> river.StreamSettings
-	113, // 156: river.UserSettingsPayload.FullyReadMarkers.content:type_name -> river.UserSettingsPayload.MarkerContent
-	117, // 157: river.UserSettingsPayload.Snapshot.UserBlocks.blocks:type_name -> river.UserSettingsPayload.Snapshot.UserBlocks.Block
-	119, // 158: river.UserMetadataPayload.Snapshot.inception:type_name -> river.UserMetadataPayload.Inception
-	120, // 159: river.UserMetadataPayload.Snapshot.encryption_devices:type_name -> river.UserMetadataPayload.EncryptionDevice
-	26,  // 160: river.UserMetadataPayload.Snapshot.profile_image:type_name -> river.WrappedEncryptedData
-	26,  // 161: river.UserMetadataPayload.Snapshot.bio:type_name -> river.WrappedEncryptedData
-	24,  // 162: river.UserMetadataPayload.Inception.settings:type_name -> river.StreamSettings
-	122, // 163: river.MediaPayload.Snapshot.inception:type_name -> river.MediaPayload.Inception
-	24,  // 164: river.MediaPayload.Inception.settings:type_name -> river.StreamSettings
-	125, // 165: river.BlockchainTransaction.Tip.event:type_name -> river.BlockchainTransaction.Tip.Event
-	5,   // 166: river.AddEventResponse.Error.code:type_name -> river.Err
-	34,  // 167: river.StreamService.CreateStream:input_type -> river.CreateStreamRequest
-	36,  // 168: river.StreamService.CreateMediaStream:input_type -> river.CreateMediaStreamRequest
-	38,  // 169: river.StreamService.GetStream:input_type -> river.GetStreamRequest
-	30,  // 170: river.StreamService.GetStreamEx:input_type -> river.GetStreamExRequest
-	40,  // 171: river.StreamService.GetMiniblocks:input_type -> river.GetMiniblocksRequest
-	42,  // 172: river.StreamService.GetLastMiniblockHash:input_type -> river.GetLastMiniblockHashRequest
-	44,  // 173: river.StreamService.AddEvent:input_type -> river.AddEventRequest
-	46,  // 174: river.StreamService.SyncStreams:input_type -> river.SyncStreamsRequest
-	48,  // 175: river.StreamService.AddStreamToSync:input_type -> river.AddStreamToSyncRequest
-	52,  // 176: river.StreamService.ModifySync:input_type -> river.ModifySyncRequest
-	55,  // 177: river.StreamService.CancelSync:input_type -> river.CancelSyncRequest
-	50,  // 178: river.StreamService.RemoveStreamFromSync:input_type -> river.RemoveStreamFromSyncRequest
-	59,  // 179: river.StreamService.Info:input_type -> river.InfoRequest
-	57,  // 180: river.StreamService.PingSync:input_type -> river.PingSyncRequest
-	35,  // 181: river.StreamService.CreateStream:output_type -> river.CreateStreamResponse
-	37,  // 182: river.StreamService.CreateMediaStream:output_type -> river.CreateMediaStreamResponse
-	39,  // 183: river.StreamService.GetStream:output_type -> river.GetStreamResponse
-	33,  // 184: river.StreamService.GetStreamEx:output_type -> river.GetStreamExResponse
-	41,  // 185: river.StreamService.GetMiniblocks:output_type -> river.GetMiniblocksResponse
-	43,  // 186: river.StreamService.GetLastMiniblockHash:output_type -> river.GetLastMiniblockHashResponse
-	45,  // 187: river.StreamService.AddEvent:output_type -> river.AddEventResponse
-	47,  // 188: river.StreamService.SyncStreams:output_type -> river.SyncStreamsResponse
-	49,  // 189: river.StreamService.AddStreamToSync:output_type -> river.AddStreamToSyncResponse
-	54,  // 190: river.StreamService.ModifySync:output_type -> river.ModifySyncResponse
-	56,  // 191: river.StreamService.CancelSync:output_type -> river.CancelSyncResponse
-	51,  // 192: river.StreamService.RemoveStreamFromSync:output_type -> river.RemoveStreamFromSyncResponse
-	60,  // 193: river.StreamService.Info:output_type -> river.InfoResponse
-	58,  // 194: river.StreamService.PingSync:output_type -> river.PingSyncResponse
-	181, // [181:195] is the sub-list for method output_type
-	167, // [167:181] is the sub-list for method input_type
-	167, // [167:167] is the sub-list for extension type_name
-	167, // [167:167] is the sub-list for extension extendee
-	0,   // [0:167] is the sub-list for field type_name
+	132, // 90: river.AddEventResponse.error:type_name -> river.AddEventResponse.Error
+	7,   // 91: river.AddMediaEventRequest.event:type_name -> river.Envelope
+	28,  // 92: river.AddMediaEventRequest.creation_cookie:type_name -> river.CreationCookie
+	133, // 93: river.AddMediaEventResponse.error:type_name -> river.AddMediaEventResponse.Error
+	28,  // 94: river.AddMediaEventResponse.creation_cookie:type_name -> river.CreationCookie
+	27,  // 95: river.SyncStreamsRequest.sync_pos:type_name -> river.SyncCookie
+	0,   // 96: river.SyncStreamsResponse.sync_op:type_name -> river.SyncOp
+	29,  // 97: river.SyncStreamsResponse.stream:type_name -> river.StreamAndCookie
+	27,  // 98: river.AddStreamToSyncRequest.sync_pos:type_name -> river.SyncCookie
+	27,  // 99: river.ModifySyncRequest.add_streams:type_name -> river.SyncCookie
+	55,  // 100: river.ModifySyncResponse.adds:type_name -> river.SyncStreamOpStatus
+	55,  // 101: river.ModifySyncResponse.removals:type_name -> river.SyncStreamOpStatus
+	134, // 102: river.InfoResponse.start_time:type_name -> google.protobuf.Timestamp
+	75,  // 103: river.MemberPayload.Snapshot.joined:type_name -> river.MemberPayload.Snapshot.Member
+	68,  // 104: river.MemberPayload.Snapshot.pins:type_name -> river.MemberPayload.SnappedPin
+	74,  // 105: river.MemberPayload.Snapshot.mls:type_name -> river.MemberPayload.Snapshot.Mls
+	72,  // 106: river.MemberPayload.Snapshot.encryption_algorithm:type_name -> river.MemberPayload.EncryptionAlgorithm
+	76,  // 107: river.MemberPayload.Snapshot.tips:type_name -> river.MemberPayload.Snapshot.TipsEntry
+	1,   // 108: river.MemberPayload.Membership.op:type_name -> river.MembershipOp
+	69,  // 109: river.MemberPayload.SnappedPin.pin:type_name -> river.MemberPayload.Pin
+	8,   // 110: river.MemberPayload.Pin.event:type_name -> river.StreamEvent
+	80,  // 111: river.MemberPayload.Mls.initialize_group:type_name -> river.MemberPayload.Mls.InitializeGroup
+	81,  // 112: river.MemberPayload.Mls.external_join:type_name -> river.MemberPayload.Mls.ExternalJoin
+	82,  // 113: river.MemberPayload.Mls.epoch_secrets:type_name -> river.MemberPayload.Mls.EpochSecrets
+	21,  // 114: river.MemberPayload.MemberBlockchainTransaction.transaction:type_name -> river.BlockchainTransaction
+	78,  // 115: river.MemberPayload.Snapshot.Mls.members:type_name -> river.MemberPayload.Snapshot.Mls.MembersEntry
+	79,  // 116: river.MemberPayload.Snapshot.Mls.epoch_secrets:type_name -> river.MemberPayload.Snapshot.Mls.EpochSecretsEntry
+	65,  // 117: river.MemberPayload.Snapshot.Member.solicitations:type_name -> river.MemberPayload.KeySolicitation
+	26,  // 118: river.MemberPayload.Snapshot.Member.username:type_name -> river.WrappedEncryptedData
+	26,  // 119: river.MemberPayload.Snapshot.Member.display_name:type_name -> river.WrappedEncryptedData
+	67,  // 120: river.MemberPayload.Snapshot.Member.nft:type_name -> river.MemberPayload.Nft
+	77,  // 121: river.MemberPayload.Snapshot.Mls.MembersEntry.value:type_name -> river.MemberPayload.Snapshot.Mls.Member
+	83,  // 122: river.MemberPayload.Mls.EpochSecrets.secrets:type_name -> river.MemberPayload.Mls.EpochSecrets.EpochSecret
+	86,  // 123: river.SpacePayload.Snapshot.inception:type_name -> river.SpacePayload.Inception
+	88,  // 124: river.SpacePayload.Snapshot.channels:type_name -> river.SpacePayload.ChannelMetadata
+	85,  // 125: river.SpacePayload.Snapshot.space_image:type_name -> river.SpacePayload.SnappedSpaceImage
+	25,  // 126: river.SpacePayload.SnappedSpaceImage.data:type_name -> river.EncryptedData
+	24,  // 127: river.SpacePayload.Inception.settings:type_name -> river.StreamSettings
+	2,   // 128: river.SpacePayload.ChannelMetadata.op:type_name -> river.ChannelOp
+	23,  // 129: river.SpacePayload.ChannelMetadata.origin_event:type_name -> river.EventRef
+	87,  // 130: river.SpacePayload.ChannelMetadata.settings:type_name -> river.SpacePayload.ChannelSettings
+	2,   // 131: river.SpacePayload.ChannelUpdate.op:type_name -> river.ChannelOp
+	23,  // 132: river.SpacePayload.ChannelUpdate.origin_event:type_name -> river.EventRef
+	87,  // 133: river.SpacePayload.ChannelUpdate.settings:type_name -> river.SpacePayload.ChannelSettings
+	93,  // 134: river.ChannelPayload.Snapshot.inception:type_name -> river.ChannelPayload.Inception
+	24,  // 135: river.ChannelPayload.Inception.settings:type_name -> river.StreamSettings
+	87,  // 136: river.ChannelPayload.Inception.channel_settings:type_name -> river.SpacePayload.ChannelSettings
+	96,  // 137: river.DmChannelPayload.Snapshot.inception:type_name -> river.DmChannelPayload.Inception
+	24,  // 138: river.DmChannelPayload.Inception.settings:type_name -> river.StreamSettings
+	98,  // 139: river.GdmChannelPayload.Snapshot.inception:type_name -> river.GdmChannelPayload.Inception
+	26,  // 140: river.GdmChannelPayload.Snapshot.channel_properties:type_name -> river.WrappedEncryptedData
+	25,  // 141: river.GdmChannelPayload.Inception.channel_properties:type_name -> river.EncryptedData
+	24,  // 142: river.GdmChannelPayload.Inception.settings:type_name -> river.StreamSettings
+	100, // 143: river.UserPayload.Snapshot.inception:type_name -> river.UserPayload.Inception
+	101, // 144: river.UserPayload.Snapshot.memberships:type_name -> river.UserPayload.UserMembership
+	104, // 145: river.UserPayload.Snapshot.tips_sent:type_name -> river.UserPayload.Snapshot.TipsSentEntry
+	105, // 146: river.UserPayload.Snapshot.tips_received:type_name -> river.UserPayload.Snapshot.TipsReceivedEntry
+	24,  // 147: river.UserPayload.Inception.settings:type_name -> river.StreamSettings
+	1,   // 148: river.UserPayload.UserMembership.op:type_name -> river.MembershipOp
+	1,   // 149: river.UserPayload.UserMembershipAction.op:type_name -> river.MembershipOp
+	21,  // 150: river.UserPayload.ReceivedBlockchainTransaction.transaction:type_name -> river.BlockchainTransaction
+	107, // 151: river.UserInboxPayload.Snapshot.inception:type_name -> river.UserInboxPayload.Inception
+	111, // 152: river.UserInboxPayload.Snapshot.device_summary:type_name -> river.UserInboxPayload.Snapshot.DeviceSummaryEntry
+	24,  // 153: river.UserInboxPayload.Inception.settings:type_name -> river.StreamSettings
+	112, // 154: river.UserInboxPayload.GroupEncryptionSessions.ciphertexts:type_name -> river.UserInboxPayload.GroupEncryptionSessions.CiphertextsEntry
+	110, // 155: river.UserInboxPayload.Snapshot.DeviceSummaryEntry.value:type_name -> river.UserInboxPayload.Snapshot.DeviceSummary
+	114, // 156: river.UserSettingsPayload.Snapshot.inception:type_name -> river.UserSettingsPayload.Inception
+	116, // 157: river.UserSettingsPayload.Snapshot.fully_read_markers:type_name -> river.UserSettingsPayload.FullyReadMarkers
+	118, // 158: river.UserSettingsPayload.Snapshot.user_blocks_list:type_name -> river.UserSettingsPayload.Snapshot.UserBlocks
+	24,  // 159: river.UserSettingsPayload.Inception.settings:type_name -> river.StreamSettings
+	115, // 160: river.UserSettingsPayload.FullyReadMarkers.content:type_name -> river.UserSettingsPayload.MarkerContent
+	119, // 161: river.UserSettingsPayload.Snapshot.UserBlocks.blocks:type_name -> river.UserSettingsPayload.Snapshot.UserBlocks.Block
+	121, // 162: river.UserMetadataPayload.Snapshot.inception:type_name -> river.UserMetadataPayload.Inception
+	122, // 163: river.UserMetadataPayload.Snapshot.encryption_devices:type_name -> river.UserMetadataPayload.EncryptionDevice
+	26,  // 164: river.UserMetadataPayload.Snapshot.profile_image:type_name -> river.WrappedEncryptedData
+	26,  // 165: river.UserMetadataPayload.Snapshot.bio:type_name -> river.WrappedEncryptedData
+	24,  // 166: river.UserMetadataPayload.Inception.settings:type_name -> river.StreamSettings
+	124, // 167: river.MediaPayload.Snapshot.inception:type_name -> river.MediaPayload.Inception
+	24,  // 168: river.MediaPayload.Inception.settings:type_name -> river.StreamSettings
+	127, // 169: river.BlockchainTransaction.Tip.event:type_name -> river.BlockchainTransaction.Tip.Event
+	5,   // 170: river.AddEventResponse.Error.code:type_name -> river.Err
+	5,   // 171: river.AddMediaEventResponse.Error.code:type_name -> river.Err
+	34,  // 172: river.StreamService.CreateStream:input_type -> river.CreateStreamRequest
+	36,  // 173: river.StreamService.CreateMediaStream:input_type -> river.CreateMediaStreamRequest
+	38,  // 174: river.StreamService.GetStream:input_type -> river.GetStreamRequest
+	30,  // 175: river.StreamService.GetStreamEx:input_type -> river.GetStreamExRequest
+	40,  // 176: river.StreamService.GetMiniblocks:input_type -> river.GetMiniblocksRequest
+	42,  // 177: river.StreamService.GetLastMiniblockHash:input_type -> river.GetLastMiniblockHashRequest
+	44,  // 178: river.StreamService.AddEvent:input_type -> river.AddEventRequest
+	46,  // 179: river.StreamService.AddMediaEvent:input_type -> river.AddMediaEventRequest
+	48,  // 180: river.StreamService.SyncStreams:input_type -> river.SyncStreamsRequest
+	50,  // 181: river.StreamService.AddStreamToSync:input_type -> river.AddStreamToSyncRequest
+	54,  // 182: river.StreamService.ModifySync:input_type -> river.ModifySyncRequest
+	57,  // 183: river.StreamService.CancelSync:input_type -> river.CancelSyncRequest
+	52,  // 184: river.StreamService.RemoveStreamFromSync:input_type -> river.RemoveStreamFromSyncRequest
+	61,  // 185: river.StreamService.Info:input_type -> river.InfoRequest
+	59,  // 186: river.StreamService.PingSync:input_type -> river.PingSyncRequest
+	35,  // 187: river.StreamService.CreateStream:output_type -> river.CreateStreamResponse
+	37,  // 188: river.StreamService.CreateMediaStream:output_type -> river.CreateMediaStreamResponse
+	39,  // 189: river.StreamService.GetStream:output_type -> river.GetStreamResponse
+	33,  // 190: river.StreamService.GetStreamEx:output_type -> river.GetStreamExResponse
+	41,  // 191: river.StreamService.GetMiniblocks:output_type -> river.GetMiniblocksResponse
+	43,  // 192: river.StreamService.GetLastMiniblockHash:output_type -> river.GetLastMiniblockHashResponse
+	45,  // 193: river.StreamService.AddEvent:output_type -> river.AddEventResponse
+	47,  // 194: river.StreamService.AddMediaEvent:output_type -> river.AddMediaEventResponse
+	49,  // 195: river.StreamService.SyncStreams:output_type -> river.SyncStreamsResponse
+	51,  // 196: river.StreamService.AddStreamToSync:output_type -> river.AddStreamToSyncResponse
+	56,  // 197: river.StreamService.ModifySync:output_type -> river.ModifySyncResponse
+	58,  // 198: river.StreamService.CancelSync:output_type -> river.CancelSyncResponse
+	53,  // 199: river.StreamService.RemoveStreamFromSync:output_type -> river.RemoveStreamFromSyncResponse
+	62,  // 200: river.StreamService.Info:output_type -> river.InfoResponse
+	60,  // 201: river.StreamService.PingSync:output_type -> river.PingSyncResponse
+	187, // [187:202] is the sub-list for method output_type
+	172, // [172:187] is the sub-list for method input_type
+	172, // [172:172] is the sub-list for extension type_name
+	172, // [172:172] is the sub-list for extension extendee
+	0,   // [0:172] is the sub-list for field type_name
 }
 
 func init() { file_protocol_proto_init() }
@@ -10966,7 +11196,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[40].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SyncStreamsRequest); i {
+			switch v := v.(*AddMediaEventRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -10978,7 +11208,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[41].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SyncStreamsResponse); i {
+			switch v := v.(*AddMediaEventResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -10990,7 +11220,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[42].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*AddStreamToSyncRequest); i {
+			switch v := v.(*SyncStreamsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11002,7 +11232,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[43].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*AddStreamToSyncResponse); i {
+			switch v := v.(*SyncStreamsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11014,7 +11244,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[44].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RemoveStreamFromSyncRequest); i {
+			switch v := v.(*AddStreamToSyncRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11026,7 +11256,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[45].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RemoveStreamFromSyncResponse); i {
+			switch v := v.(*AddStreamToSyncResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11038,7 +11268,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[46].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ModifySyncRequest); i {
+			switch v := v.(*RemoveStreamFromSyncRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11050,7 +11280,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[47].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SyncStreamOpStatus); i {
+			switch v := v.(*RemoveStreamFromSyncResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11062,7 +11292,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[48].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ModifySyncResponse); i {
+			switch v := v.(*ModifySyncRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11074,7 +11304,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[49].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CancelSyncRequest); i {
+			switch v := v.(*SyncStreamOpStatus); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11086,7 +11316,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[50].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CancelSyncResponse); i {
+			switch v := v.(*ModifySyncResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11098,7 +11328,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[51].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PingSyncRequest); i {
+			switch v := v.(*CancelSyncRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11110,7 +11340,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[52].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PingSyncResponse); i {
+			switch v := v.(*CancelSyncResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11122,7 +11352,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[53].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*InfoRequest); i {
+			switch v := v.(*PingSyncRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11134,7 +11364,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[54].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*InfoResponse); i {
+			switch v := v.(*PingSyncResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11146,7 +11376,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[55].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MemberPayload_Snapshot); i {
+			switch v := v.(*InfoRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11158,7 +11388,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[56].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MemberPayload_Membership); i {
+			switch v := v.(*InfoResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11170,7 +11400,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[57].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MemberPayload_KeySolicitation); i {
+			switch v := v.(*MemberPayload_Snapshot); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11182,7 +11412,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[58].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MemberPayload_KeyFulfillment); i {
+			switch v := v.(*MemberPayload_Membership); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11194,7 +11424,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[59].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MemberPayload_Nft); i {
+			switch v := v.(*MemberPayload_KeySolicitation); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11206,7 +11436,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[60].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MemberPayload_SnappedPin); i {
+			switch v := v.(*MemberPayload_KeyFulfillment); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11218,7 +11448,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[61].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MemberPayload_Pin); i {
+			switch v := v.(*MemberPayload_Nft); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11230,7 +11460,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[62].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MemberPayload_Unpin); i {
+			switch v := v.(*MemberPayload_SnappedPin); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11242,7 +11472,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[63].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MemberPayload_Mls); i {
+			switch v := v.(*MemberPayload_Pin); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11254,7 +11484,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[64].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MemberPayload_EncryptionAlgorithm); i {
+			switch v := v.(*MemberPayload_Unpin); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11266,7 +11496,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[65].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MemberPayload_MemberBlockchainTransaction); i {
+			switch v := v.(*MemberPayload_Mls); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11278,7 +11508,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[66].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MemberPayload_Snapshot_Mls); i {
+			switch v := v.(*MemberPayload_EncryptionAlgorithm); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11290,7 +11520,19 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[67].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MemberPayload_Snapshot_Member); i {
+			switch v := v.(*MemberPayload_MemberBlockchainTransaction); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_protocol_proto_msgTypes[68].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*MemberPayload_Snapshot_Mls); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11302,6 +11544,18 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[69].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*MemberPayload_Snapshot_Member); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_protocol_proto_msgTypes[71].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*MemberPayload_Snapshot_Mls_Member); i {
 			case 0:
 				return &v.state
@@ -11313,7 +11567,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[72].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[74].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*MemberPayload_Mls_InitializeGroup); i {
 			case 0:
 				return &v.state
@@ -11325,7 +11579,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[73].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[75].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*MemberPayload_Mls_ExternalJoin); i {
 			case 0:
 				return &v.state
@@ -11337,7 +11591,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[74].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[76].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*MemberPayload_Mls_EpochSecrets); i {
 			case 0:
 				return &v.state
@@ -11349,7 +11603,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[75].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[77].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*MemberPayload_Mls_EpochSecrets_EpochSecret); i {
 			case 0:
 				return &v.state
@@ -11361,7 +11615,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[76].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[78].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*SpacePayload_Snapshot); i {
 			case 0:
 				return &v.state
@@ -11373,7 +11627,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[77].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[79].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*SpacePayload_SnappedSpaceImage); i {
 			case 0:
 				return &v.state
@@ -11385,7 +11639,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[78].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[80].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*SpacePayload_Inception); i {
 			case 0:
 				return &v.state
@@ -11397,7 +11651,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[79].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[81].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*SpacePayload_ChannelSettings); i {
 			case 0:
 				return &v.state
@@ -11409,7 +11663,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[80].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[82].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*SpacePayload_ChannelMetadata); i {
 			case 0:
 				return &v.state
@@ -11421,7 +11675,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[81].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[83].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*SpacePayload_ChannelUpdate); i {
 			case 0:
 				return &v.state
@@ -11433,7 +11687,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[82].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[84].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*SpacePayload_UpdateChannelAutojoin); i {
 			case 0:
 				return &v.state
@@ -11445,7 +11699,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[83].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[85].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*SpacePayload_UpdateChannelHideUserJoinLeaveEvents); i {
 			case 0:
 				return &v.state
@@ -11457,7 +11711,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[84].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[86].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ChannelPayload_Snapshot); i {
 			case 0:
 				return &v.state
@@ -11469,7 +11723,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[85].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[87].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ChannelPayload_Inception); i {
 			case 0:
 				return &v.state
@@ -11481,7 +11735,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[86].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[88].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ChannelPayload_Redaction); i {
 			case 0:
 				return &v.state
@@ -11493,7 +11747,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[87].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[89].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DmChannelPayload_Snapshot); i {
 			case 0:
 				return &v.state
@@ -11505,7 +11759,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[88].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[90].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DmChannelPayload_Inception); i {
 			case 0:
 				return &v.state
@@ -11517,7 +11771,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[89].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[91].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GdmChannelPayload_Snapshot); i {
 			case 0:
 				return &v.state
@@ -11529,7 +11783,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[90].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[92].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GdmChannelPayload_Inception); i {
 			case 0:
 				return &v.state
@@ -11541,7 +11795,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[91].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[93].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserPayload_Snapshot); i {
 			case 0:
 				return &v.state
@@ -11553,7 +11807,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[92].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[94].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserPayload_Inception); i {
 			case 0:
 				return &v.state
@@ -11565,7 +11819,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[93].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[95].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserPayload_UserMembership); i {
 			case 0:
 				return &v.state
@@ -11577,7 +11831,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[94].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[96].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserPayload_UserMembershipAction); i {
 			case 0:
 				return &v.state
@@ -11589,7 +11843,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[95].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[97].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserPayload_ReceivedBlockchainTransaction); i {
 			case 0:
 				return &v.state
@@ -11601,7 +11855,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[98].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[100].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserInboxPayload_Snapshot); i {
 			case 0:
 				return &v.state
@@ -11613,7 +11867,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[99].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[101].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserInboxPayload_Inception); i {
 			case 0:
 				return &v.state
@@ -11625,7 +11879,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[100].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[102].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserInboxPayload_GroupEncryptionSessions); i {
 			case 0:
 				return &v.state
@@ -11637,7 +11891,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[101].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[103].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserInboxPayload_Ack); i {
 			case 0:
 				return &v.state
@@ -11649,7 +11903,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[102].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[104].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserInboxPayload_Snapshot_DeviceSummary); i {
 			case 0:
 				return &v.state
@@ -11661,7 +11915,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[105].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[107].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserSettingsPayload_Snapshot); i {
 			case 0:
 				return &v.state
@@ -11673,7 +11927,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[106].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[108].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserSettingsPayload_Inception); i {
 			case 0:
 				return &v.state
@@ -11685,7 +11939,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[107].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[109].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserSettingsPayload_MarkerContent); i {
 			case 0:
 				return &v.state
@@ -11697,7 +11951,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[108].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[110].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserSettingsPayload_FullyReadMarkers); i {
 			case 0:
 				return &v.state
@@ -11709,7 +11963,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[109].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[111].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserSettingsPayload_UserBlock); i {
 			case 0:
 				return &v.state
@@ -11721,7 +11975,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[110].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[112].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserSettingsPayload_Snapshot_UserBlocks); i {
 			case 0:
 				return &v.state
@@ -11733,7 +11987,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[111].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[113].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserSettingsPayload_Snapshot_UserBlocks_Block); i {
 			case 0:
 				return &v.state
@@ -11745,7 +11999,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[112].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[114].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserMetadataPayload_Snapshot); i {
 			case 0:
 				return &v.state
@@ -11757,7 +12011,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[113].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[115].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserMetadataPayload_Inception); i {
 			case 0:
 				return &v.state
@@ -11769,7 +12023,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[114].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[116].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UserMetadataPayload_EncryptionDevice); i {
 			case 0:
 				return &v.state
@@ -11781,7 +12035,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[115].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[117].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*MediaPayload_Snapshot); i {
 			case 0:
 				return &v.state
@@ -11793,7 +12047,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[116].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[118].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*MediaPayload_Inception); i {
 			case 0:
 				return &v.state
@@ -11805,7 +12059,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[117].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[119].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*MediaPayload_Chunk); i {
 			case 0:
 				return &v.state
@@ -11817,7 +12071,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[118].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[120].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*BlockchainTransaction_Tip); i {
 			case 0:
 				return &v.state
@@ -11829,7 +12083,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[119].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[121].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*BlockchainTransaction_Tip_Event); i {
 			case 0:
 				return &v.state
@@ -11841,7 +12095,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[120].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[122].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*BlockchainTransactionReceipt_Log); i {
 			case 0:
 				return &v.state
@@ -11853,7 +12107,7 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[121].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[123].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*EncryptedData_Mls); i {
 			case 0:
 				return &v.state
@@ -11865,8 +12119,20 @@ func file_protocol_proto_init() {
 				return nil
 			}
 		}
-		file_protocol_proto_msgTypes[124].Exporter = func(v interface{}, i int) interface{} {
+		file_protocol_proto_msgTypes[126].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*AddEventResponse_Error); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_protocol_proto_msgTypes[127].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*AddMediaEventResponse_Error); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11976,23 +12242,23 @@ func file_protocol_proto_init() {
 		(*GetStreamExResponse_Miniblock)(nil),
 		(*GetStreamExResponse_Minipool)(nil),
 	}
-	file_protocol_proto_msgTypes[56].OneofWrappers = []interface{}{}
-	file_protocol_proto_msgTypes[63].OneofWrappers = []interface{}{
+	file_protocol_proto_msgTypes[58].OneofWrappers = []interface{}{}
+	file_protocol_proto_msgTypes[65].OneofWrappers = []interface{}{
 		(*MemberPayload_Mls_InitializeGroup_)(nil),
 		(*MemberPayload_Mls_ExternalJoin_)(nil),
 		(*MemberPayload_Mls_EpochSecrets_)(nil),
 	}
-	file_protocol_proto_msgTypes[64].OneofWrappers = []interface{}{}
-	file_protocol_proto_msgTypes[93].OneofWrappers = []interface{}{}
-	file_protocol_proto_msgTypes[94].OneofWrappers = []interface{}{}
-	file_protocol_proto_msgTypes[116].OneofWrappers = []interface{}{}
+	file_protocol_proto_msgTypes[66].OneofWrappers = []interface{}{}
+	file_protocol_proto_msgTypes[95].OneofWrappers = []interface{}{}
+	file_protocol_proto_msgTypes[96].OneofWrappers = []interface{}{}
+	file_protocol_proto_msgTypes[118].OneofWrappers = []interface{}{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_protocol_proto_rawDesc,
 			NumEnums:      6,
-			NumMessages:   125,
+			NumMessages:   128,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
