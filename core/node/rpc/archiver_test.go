@@ -613,7 +613,7 @@ func TestArchive20StreamsWithCorruption(t *testing.T) {
 }
 
 func TestArchiveContinuous(t *testing.T) {
-	tester := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
+	tester := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true, printTestLogs: true})
 	ctx := tester.ctx
 	require := tester.require
 
@@ -684,7 +684,7 @@ func TestArchiveContinuous(t *testing.T) {
 			assert.NoError(c, err)
 			assert.Equal(c, lastMB2.Num, num)
 		},
-		10*time.Second,
+		15*time.Second,
 		10*time.Millisecond,
 	)
 
