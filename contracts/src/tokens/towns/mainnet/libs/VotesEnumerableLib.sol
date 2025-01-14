@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 // libraries
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
 library VotesEnumerableLib {
   using EnumerableSetLib for EnumerableSetLib.AddressSet;
@@ -59,10 +60,7 @@ library VotesEnumerableLib {
     }
 
     // Calculate actual page size (handle last page case)
-    uint256 pageSize = size;
-    if (cursor + size > length) {
-      pageSize = length - cursor;
-    }
+    uint256 pageSize = FixedPointMathLib.min(size, length - cursor);
 
     // Initialize return array
     delegators = new address[](pageSize);
@@ -73,10 +71,7 @@ library VotesEnumerableLib {
     }
 
     // Set next cursor
-    next = cursor + pageSize;
-    if (next >= length) {
-      next = 0;
-    }
+    next = (cursor + pageSize) % length;
 
     return (delegators, next);
   }

@@ -67,6 +67,7 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
     vm.assume(caller != delegatee);
     vm.assume(towns.delegates(caller) == address(0));
     vm.assume(delegatee != _ZERO_SENTINEL);
+    vm.assume(caller != _ZERO_SENTINEL);
 
     vm.prank(caller);
     towns.delegate(delegatee);
