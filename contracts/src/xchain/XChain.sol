@@ -50,10 +50,10 @@ contract XChain is IEntitlementGated, IEntitlementCheckerBase, Facet {
       return;
     }
 
-    if (
-      check.votesCount[requestId].passed > check.votesCount[requestId].failed ||
-      check.votesCount[requestId].failed > check.votesCount[requestId].passed
-    ) {
+    uint256 passed = check.votesCount[requestId].passed;
+    uint256 failed = check.votesCount[requestId].failed;
+
+    if (passed > failed || failed > passed) {
       check.voteCompleted[requestId] = true;
     }
 
@@ -62,8 +62,7 @@ contract XChain is IEntitlementGated, IEntitlementCheckerBase, Facet {
         transactionId
       ];
 
-      NodeVoteStatus finalStatusForRole = check.votesCount[requestId].passed >
-        check.votesCount[requestId].failed
+      NodeVoteStatus finalStatusForRole = passed > failed
         ? NodeVoteStatus.PASSED
         : NodeVoteStatus.FAILED;
 

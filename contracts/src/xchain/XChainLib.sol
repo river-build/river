@@ -2,7 +2,6 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {IEntitlementGated} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
 import {IEntitlementChecker} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
 
 // libraries
