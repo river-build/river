@@ -518,7 +518,7 @@ describe('mlsTests', () => {
         const commitOutput = await bobMlsGroup.addMember(kp)
 
         // at this point, the commit is still pending
-        await bobMlsGroup.clearPendingCommit()
+        bobMlsGroup.clearPendingCommit()
 
         const groupInfoMessage = commitOutput.externalCommitGroupInfo
         const commit = commitOutput.commitMessage.toBytes()
@@ -542,7 +542,7 @@ describe('mlsTests', () => {
         const commitOutput = await bobMlsGroup.addMember(kp)
 
         // at this point, the commit is still pending
-        await bobMlsGroup.clearPendingCommit()
+        bobMlsGroup.clearPendingCommit()
 
         const groupInfoMessage = commitOutput.externalCommitGroupInfo
         const commit = commitOutput.commitMessage.toBytes()
@@ -589,7 +589,7 @@ describe('mlsTests', () => {
         const commitOutput = await bobMlsGroup.addMember(kp)
 
         // at this point, the commit is still pending
-        await bobMlsGroup.clearPendingCommit()
+        bobMlsGroup.clearPendingCommit()
 
         const groupInfoMessage = commitOutput.externalCommitGroupInfo
         const commit = commitOutput.commitMessage.toBytes()
