@@ -1,5 +1,4 @@
 import { EncryptedData } from '@river-build/proto'
-import { PlainMessage } from '@bufbuild/protobuf'
 import { EncryptionAlgorithm, IEncryptionParams } from './base'
 import { GroupEncryptionAlgorithmId } from './olmLib'
 import { dlog } from '@river-build/dlog'

@@ -9,14 +9,13 @@ import {
 } from './encryptionTypes'
 import { EncryptionDelegate } from './encryptionDelegate'
 import { GroupEncryptionAlgorithmId, GroupEncryptionSession } from './olmLib'
-import { bigIntToBytes, bin_fromHexString, bin_toHexString, dlog } from '@river-build/dlog'
+import { bin_fromHexString, bin_toHexString, dlog } from '@river-build/dlog'
 import type {
     ExtendedInboundGroupSessionData,
     GroupSessionRecord,
     HybridGroupSessionRecord,
 } from './storeTypes'
 import { HybridGroupSessionKey } from '@river-build/proto'
-import { createHash } from 'crypto'
 import { exportAesGsmKeyBytes, generateNewAesGcmKey } from './cryptoAesGcm'
 
 const log = dlog('csb:encryption:encryptionDevice')
