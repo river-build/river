@@ -74,11 +74,15 @@ contract TownsBaseTest is TestUtils, EIP712Utils, ILockBase {
     address bob
   ) public {
     vm.assume(bob != address(0));
+    vm.assume(bob != address(towns));
+
     amount = bound(amount, 1, type(uint208).max);
 
     alicePrivateKey = boundPrivateKey(alicePrivateKey);
 
     address alice = vm.addr(alicePrivateKey);
+
+    vm.assume(towns.delegates(alice) == address(0));
 
     vm.prank(bridge);
     towns.mint(alice, amount);
@@ -108,8 +112,10 @@ contract TownsBaseTest is TestUtils, EIP712Utils, ILockBase {
     uint256 amount,
     address bob
   ) external {
-    alicePrivateKey = boundPrivateKey(alicePrivateKey);
     vm.assume(bob != address(0));
+    vm.assume(bob != PERMIT2);
+
+    alicePrivateKey = boundPrivateKey(alicePrivateKey);
     amount = bound(amount, 1, type(uint208).max);
 
     address alice = vm.addr(alicePrivateKey);
