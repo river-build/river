@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"connectrpc.com/connect"
-	"github.com/ethereum/go-ethereum/common"
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
@@ -18,8 +17,9 @@ func (s *Service) localAddMediaEvent(
 	req *connect.Request[AddMediaEventRequest],
 ) (*connect.Response[AddMediaEventResponse], error) {
 	log := dlog.FromCtx(ctx)
+	creationCookie := req.Msg.GetCreationCookie()
 
-	streamId, err := StreamIdFromBytes(req.Msg.StreamId)
+	streamId, err := StreamIdFromBytes(creationCookie.StreamId)
 	if err != nil {
 		return nil, AsRiverError(err).Func("localAddMediaEvent")
 	}
@@ -29,25 +29,10 @@ func (s *Service) localAddMediaEvent(
 		return nil, AsRiverError(err).Func("localAddMediaEvent")
 	}
 
-	creationCookie := req.Msg.GetCreationCookie()
-
 	log.Debug("localAddMediaEvent", "parsedEvent", parsedEvent, "creationCookie", creationCookie)
 
 	mb, err := s.addParsedMediaEvent(ctx, streamId, parsedEvent, creationCookie)
 	if err != nil {
-		if req.Msg.Optional {
-			// aellis 5/2024 - we only want to wrap errors from canAddEvent,
-			// currently this is catching all errors, which is not ideal
-			riverError := AsRiverError(err).Func("localAddMediaEvent")
-			return connect.NewResponse(&AddMediaEventResponse{
-				Error: &AddMediaEventResponse_Error{
-					Code:  riverError.Code,
-					Msg:   riverError.Error(),
-					Funcs: riverError.Funcs,
-				},
-			}), nil
-		}
-
 		return nil, AsRiverError(err).Func("localAddMediaEvent")
 	}
 
@@ -73,32 +58,4 @@ func (s *Service) addParsedMediaEvent(
 	}
 
 	return stream.AddMediaEvent(ctx, parsedEvent, creationCookie)
-}
-
-func (s *Service) AddMediaEventPayload(ctx context.Context, streamId StreamId, payload IsStreamEvent_Payload) error {
-	hashRequest := &GetLastMiniblockHashRequest{
-		StreamId: streamId[:],
-	}
-	hashResponse, err := s.GetLastMiniblockHash(ctx, connect.NewRequest(hashRequest))
-	if err != nil {
-		return err
-	}
-	envelope, err := MakeEnvelopeWithPayload(s.wallet, payload, &MiniblockRef{
-		Hash: common.BytesToHash(hashResponse.Msg.Hash),
-		Num:  hashResponse.Msg.MiniblockNum,
-	})
-	if err != nil {
-		return err
-	}
-
-	req := &AddMediaEventRequest{
-		StreamId: streamId[:],
-		Event:    envelope,
-	}
-
-	_, err = s.AddMediaEvent(ctx, connect.NewRequest(req))
-	if err != nil {
-		return err
-	}
-	return nil
 }
