@@ -332,25 +332,29 @@ export class SpaceDapp implements ISpaceDapp {
         txnOpts?: TransactionOpts,
     ): Promise<ContractTransaction> {
         return wrapTransaction(() => {
-            const createSpaceFunction = this.spaceRegistrar.CreateSpace.write(signer)[
-                'createSpaceWithPrepay(((string,string,string,string),((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],bytes,bool),string[]),(string),(uint256)))'
-            ] as (arg: any) => Promise<ContractTransaction>
+            const createSpaceFunction =
+                this.spaceRegistrar.CreateSpace.write(signer)[
+                    'createSpaceWithPrepay(((string,string,string,string),((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],bytes,bool),string[]),(string),(uint256)))'
+                ]
 
-            return createSpaceFunction({
-                channel: {
-                    metadata: params.channelName || '',
+            return createSpaceFunction(
+                {
+                    channel: {
+                        metadata: params.channelName || '',
+                    },
+                    membership: params.membership,
+                    metadata: {
+                        name: params.spaceName,
+                        uri: params.uri,
+                        longDescription: params.longDescription || '',
+                        shortDescription: params.shortDescription || '',
+                    },
+                    prepay: {
+                        supply: params.prepaySupply ?? 0,
+                    },
                 },
-                membership: params.membership,
-                metadata: {
-                    name: params.spaceName,
-                    uri: params.uri,
-                    longDescription: params.longDescription || '',
-                    shortDescription: params.shortDescription || '',
-                },
-                prepay: {
-                    supply: params.prepaySupply ?? 0,
-                },
-            })
+                { gasLimit: 50_000 },
+            )
         }, txnOpts)
     }
 
