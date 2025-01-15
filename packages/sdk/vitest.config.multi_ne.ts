@@ -1,8 +1,8 @@
 import { defineConfig, mergeConfig } from 'vitest/config'
-import { rootConfig } from '../../vitest.config.mjs'
+import { sdkRootConfig } from './vitest.sdk.rootConfig'
 
 export default mergeConfig(
-    rootConfig,
+    sdkRootConfig,
     defineConfig({
         test: {
             environment: 'happy-dom',

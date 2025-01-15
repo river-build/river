@@ -1,7 +1,6 @@
 import path from "path";
 import os from "os";
 import { defineConfig } from "vitest/config";
-import wasm from "vite-plugin-wasm";
 
 export const rootConfig = defineConfig({
   test: {
@@ -25,14 +24,8 @@ export const rootConfig = defineConfig({
       RIVER_CHAIN_RPC_URL: process.env.RIVER_CHAIN_RPC_URL,
       RIVER_REGISTRY_ADDRESS: process.env.RIVER_REGISTRY_ADDRESS,
     },
-    server: {
-      deps: {
-        inline: ["@river-build/mls-rs-wasm"],
-      },
-    },
     testTimeout: 20_000,
   },
-  plugins: [wasm()],
 });
 
 export default rootConfig;
