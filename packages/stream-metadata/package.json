@@ -50,6 +50,7 @@
 		"@river-build/encryption": "workspace:^",
 		"@river-build/eslint-config": "workspace:^",
 		"@river-build/prettier-config": "workspace:^",
+		"@river-build/mls-rs-wasm-node": "^0.0.16",
 		"@types/node": "^20.5.0",
 		"@types/uuid": "^10.0.0",
 		"@typescript-eslint/parser": "^7.14.1",
