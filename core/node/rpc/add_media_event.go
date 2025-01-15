@@ -53,7 +53,7 @@ func (s *Service) addParsedMediaEvent(
 	creationCookie *CreationCookie,
 ) (*Miniblock, error) {
 	stream := &replicatedStream{
-		streamId: streamId.String(),
+		streamId: streamId,
 		service:  s,
 	}
 
