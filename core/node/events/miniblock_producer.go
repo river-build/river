@@ -29,9 +29,8 @@ type RemoteMiniblockProvider interface {
 	GetMbProposal(
 		ctx context.Context,
 		node common.Address,
-		streamId StreamId,
-		forceSnapshot bool,
-	) (*MiniblockProposal, error)
+		request *ProposeMiniblockRequest,
+	) (*ProposeMiniblockResponse, error)
 
 	// SaveMbCandidate sends the given mb to the given node and node must save it.
 	SaveMbCandidate(
@@ -327,26 +326,26 @@ func combineProposals(
 	ctx context.Context,
 	remoteQuorumNum int,
 	local *MiniblockProposal,
-	remote []*MiniblockProposal,
+	remote []*ProposeMiniblockResponse,
 ) (*MiniblockProposal, error) {
 	log := dlog.FromCtx(ctx)
 	// Filter remotes that don't match local prerequisites.
-	remote = slices.DeleteFunc(remote, func(p *MiniblockProposal) bool {
-		if p.NewMiniblockNum != local.NewMiniblockNum {
+	remote = slices.DeleteFunc(remote, func(p *ProposeMiniblockResponse) bool {
+		if p.Proposal.NewMiniblockNum != local.NewMiniblockNum {
 			log.Info(
 				"combineProposals: ignoring remote proposal: mb number mismatch",
 				"remoteNum",
-				p.NewMiniblockNum,
+				p.Proposal.NewMiniblockNum,
 				"localNum",
 				local.NewMiniblockNum,
 			)
 			return true
 		}
-		if !bytes.Equal(p.PrevMiniblockHash, local.PrevMiniblockHash) {
+		if !bytes.Equal(p.Proposal.PrevMiniblockHash, local.PrevMiniblockHash) {
 			log.Info(
 				"combineProposals: ignoring remote proposal: prev hash mismatch",
 				"remoteHash",
-				p.PrevMiniblockHash,
+				p.Proposal.PrevMiniblockHash,
 				"localHash",
 				local.PrevMiniblockHash,
 			)
@@ -367,12 +366,12 @@ func combineProposals(
 		)
 	}
 
-	all := append(remote, local)
+	all := append(remote, &ProposeMiniblockResponse{Proposal: local})
 
 	// Count ShouldSnapshot.
 	shouldSnapshotNum := 0
 	for _, p := range all {
-		if p.ShouldSnapshot {
+		if p.Proposal.ShouldSnapshot {
 			shouldSnapshotNum++
 		}
 	}
@@ -382,7 +381,7 @@ func combineProposals(
 	// Count event hashes.
 	eventCounts := make(map[common.Hash]int)
 	for _, p := range all {
-		for _, h := range p.Hashes {
+		for _, h := range p.Proposal.Hashes {
 			eventCounts[common.BytesToHash(h)]++
 		}
 	}
@@ -408,23 +407,28 @@ func gatherRemoteProposals(
 	nodes []common.Address,
 	streamId StreamId,
 	forceSnapshot bool,
-) ([]*MiniblockProposal, error) {
+) ([]*ProposeMiniblockResponse, error) {
 	// TODO: better timeout?
 	// TODO: once quorum is achieved, it could be beneficial to return reasonably early.
 	ctx, cancel := context.WithTimeout(ctx, params.RiverChain.Config.BlockTime())
 	defer cancel()
 
-	proposals := make([]*MiniblockProposal, 0, len(nodes))
+	proposals := make([]*ProposeMiniblockResponse, 0, len(nodes))
 	errs := make([]error, 0)
 	var mu sync.Mutex
 
 	var wg sync.WaitGroup
 	wg.Add(len(nodes))
 
+	request := &ProposeMiniblockRequest{
+		StreamId:           streamId[:],
+		DebugForceSnapshot: forceSnapshot,
+	}
+
 	for i, node := range nodes {
 		go func(i int, node common.Address) {
 			defer wg.Done()
-			proposal, err := params.RemoteMiniblockProvider.GetMbProposal(ctx, node, streamId, forceSnapshot)
+			proposal, err := params.RemoteMiniblockProvider.GetMbProposal(ctx, node, request)
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {

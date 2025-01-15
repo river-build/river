@@ -47,6 +47,7 @@ message ProposeMiniblockRequest {
 
 message ProposeMiniblockResponse {
     MiniblockProposal proposal = 1;
+    repeated Envelope missing_events = 2;
 }
 
 message SaveMiniblockCandidateRequest {

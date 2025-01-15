@@ -294,12 +294,11 @@ func (ctc *cacheTestContext) makeMiniblock(inst int, streamId StreamId, forceSna
 func (ctc *cacheTestContext) GetMbProposal(
 	ctx context.Context,
 	node common.Address,
-	streamId StreamId,
-	forceSnapshot bool,
-) (*MiniblockProposal, error) {
+	request *ProposeMiniblockRequest,
+) (*ProposeMiniblockResponse, error) {
 	inst := ctc.instancesByAddr[node]
 
-	stream, err := inst.cache.getStreamImpl(ctx, streamId, true)
+	stream, err := inst.cache.getStreamImpl(ctx, StreamId(request.StreamId), true)
 	if err != nil {
 		return nil, err
 	}
@@ -312,11 +311,11 @@ func (ctc *cacheTestContext) GetMbProposal(
 		return nil, RiverError(Err_INTERNAL, "GetMbProposal: stream is not local")
 	}
 
-	proposal, err := view.ProposeNextMiniblock(ctx, inst.params.ChainConfig.Get(), forceSnapshot)
+	proposal, err := view.ProposeNextMiniblock(ctx, inst.params.ChainConfig.Get(), request.DebugForceSnapshot)
 	if err != nil {
 		return nil, err
 	}
-	return proposal, nil
+	return &ProposeMiniblockResponse{Proposal: proposal}, nil
 }
 
 func (ctc *cacheTestContext) SaveMbCandidate(
