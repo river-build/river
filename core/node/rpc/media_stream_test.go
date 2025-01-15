@@ -90,10 +90,35 @@ func TestCreateMediaStream(t *testing.T) {
 		creationCookie = aeResp.Msg.CreationCookie
 	}
 
-	// No events in storage since the stream still ephemeral.
-	// The first miniblock is the stream creation miniblock, the rest 10 are media chunks.
-	// TODO: Make sure the stream is sealed in the next PR
-	tt.compareStreamDataInStorage(t, mediaStreamId, 11, 0)
+	// Get Miniblocks for the given media stream
+	resp, err := alice.client.GetMiniblocks(alice.ctx, connect.NewRequest(&protocol.GetMiniblocksRequest{
+		StreamId:      mediaStreamId[:],
+		FromInclusive: 0,
+		ToExclusive:   chunks * 2, // adding a threshold to make sure there are no unexpected events
+	}))
+	tt.require.NoError(err)
+	tt.require.NotNil(resp)
+	tt.require.Len(resp.Msg.GetMiniblocks(), chunks+1) // The first miniblock is the stream creation one
+
+	mbs := resp.Msg.GetMiniblocks()
+
+	// The first miniblock is the stream creation one
+	tt.require.Len(mbs[0].GetEvents(), 1)
+	pe, err := events.ParseEvent(mbs[0].GetEvents()[0])
+	tt.require.NoError(err)
+	mp, ok := pe.Event.GetPayload().(*protocol.StreamEvent_MediaPayload)
+	tt.require.True(ok)
+	tt.require.Equal(int32(chunks), mp.MediaPayload.GetInception().GetChunkCount())
+
+	// The rest of the miniblocks are the media chunks
+	for i, mb := range mbs[1:] {
+		tt.require.Len(mb.GetEvents(), 1)
+		pe, err = events.ParseEvent(mb.GetEvents()[0])
+		tt.require.NoError(err)
+		mp, ok = pe.Event.GetPayload().(*protocol.StreamEvent_MediaPayload)
+		tt.require.True(ok)
+		tt.require.Equal(mediaChunks[i], mp.MediaPayload.GetChunk().Data)
+	}
 }
 
 // TestCreateMediaStream_Legacy tests creating a media stream using endpoints for a non-media streams

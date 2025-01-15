@@ -86,7 +86,12 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 			return err
 		}
 
-		return r.service.storage.WriteEphemeralMiniblock(ctx, r.streamId, &storage.WriteMiniblockData{
+		envelopeBytes, err := proto.Marshal(event.Envelope)
+		if err != nil {
+			return err
+		}
+
+		return r.service.storage.WriteEphemeralMiniblock(ctx, r.streamId, envelopeBytes, &storage.WriteMiniblockData{
 			Number:   cc.MiniblockNum,
 			Hash:     common.BytesToHash(ephemeralMb.Header.Hash),
 			Snapshot: false,
@@ -115,6 +120,44 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 
 	if err = sender.Wait(); err != nil {
 		return nil, err
+	}
+
+	// Load all miniblocks from storage to check if all chunks were uploaded.
+	// TODO: Introduce cache here
+	miniblocks := make([]*MiniblockInfo, 0)
+	if err = r.service.storage.ReadMiniblocksByStream(ctx, r.streamId, func(blockdata []byte, seqNum int) error {
+		miniblock, err := NewMiniblockInfoFromBytes(blockdata, int64(seqNum))
+		if err != nil {
+			return err
+		}
+		miniblocks = append(miniblocks, miniblock)
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	// Must be more than 0.
+	// If the last media chunk was successfully uploaded, the stream must be registered onchain with a sealed state.
+	if len(miniblocks) > 0 {
+		// The miniblock with 0 number must be the genesis miniblock.
+		// The genesis miniblock must have the media inception event.
+		mediaInception := miniblocks[0].Events()[0].Event.GetMediaPayload().GetInception()
+
+		// The number of expected blocks should be <num chunks> + 1 (genesis block).
+		if mediaInception.GetChunkCount() <= int32(len(miniblocks)-1) {
+			if err = r.service.streamRegistry.AddStream(
+				ctx,
+				r.streamId,
+				cc.NodeAddresses(), // TODO: The receiver node must be replaced with the initially selected addresses
+				miniblocks[0].Ref.Hash,
+				miniblocks[len(miniblocks)-1].Ref.Hash,
+				// miniblocks[len(miniblocks)-1].Ref.Num,
+				0,
+				true,
+			); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	return ephemeralMb, nil

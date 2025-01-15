@@ -23,6 +23,17 @@ type StreamRegistry interface {
 		genesisMiniblock []byte,
 	) ([]common.Address, error)
 
+	// AddStream creates a stream with the given streamId and params.
+	AddStream(
+		ctx context.Context,
+		streamId StreamId,
+		addrs []common.Address,
+		genesisMiniblockHash common.Hash,
+		lastMiniblockHash common.Hash,
+		lastMiniblockNum int64,
+		isSealed bool,
+	) error
+
 	// ChooseStreamNodes returns a list of nodes that should store the stream.
 	ChooseStreamNodes(streamId StreamId) ([]common.Address, error)
 }
@@ -65,6 +76,26 @@ func (sr *streamRegistryImpl) AllocateStream(
 	}
 
 	return addrs, nil
+}
+
+func (sr *streamRegistryImpl) AddStream(
+	ctx context.Context,
+	streamId StreamId,
+	addrs []common.Address,
+	genesisMiniblockHash common.Hash,
+	lastMiniblockHash common.Hash,
+	lastMiniblockNum int64,
+	isSealed bool,
+) error {
+	return sr.contract.AddStream(
+		ctx,
+		streamId,
+		addrs,
+		genesisMiniblockHash,
+		lastMiniblockHash,
+		lastMiniblockNum,
+		isSealed,
+	)
 }
 
 func (sr *streamRegistryImpl) ChooseStreamNodes(streamId StreamId) ([]common.Address, error) {

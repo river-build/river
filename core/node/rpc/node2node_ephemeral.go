@@ -96,7 +96,12 @@ func (s *Service) saveEphemeralMiniblock(
 		return nil, err
 	}
 
-	err = s.storage.WriteEphemeralMiniblock(ctx, streamId, &storage.WriteMiniblockData{
+	envelopeBytes, err := proto.Marshal(req.Miniblock.Events[0])
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.storage.WriteEphemeralMiniblock(ctx, streamId, envelopeBytes, &storage.WriteMiniblockData{
 		Number:   mbInfo.Ref.Num,
 		Hash:     mbInfo.Ref.Hash,
 		Snapshot: mbInfo.IsSnapshot(),
