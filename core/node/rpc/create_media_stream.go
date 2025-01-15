@@ -168,16 +168,12 @@ func (s *Service) createReplicatedMediaStream(
 	remotes, isLocal := nodes.GetRemotesAndIsLocal()
 	sender := NewQuorumPool("method", "createReplicatedMediaStream", "streamId", streamId)
 
-	// Remove the last node from the list if the current node were not selected.
-	// The media stream receiver node is some sort of constant leader for the given media stream.
-	if !isLocal && len(remotes) > 0 {
-		remotes = remotes[:len(remotes)-1]
-	}
-
 	// Create ephemeral stream within the local node
-	sender.GoLocal(ctx, func(ctx context.Context) error {
-		return s.storage.CreateEphemeralStreamStorage(ctx, streamId, mbBytes)
-	})
+	if isLocal {
+		sender.GoLocal(ctx, func(ctx context.Context) error {
+			return s.storage.CreateEphemeralStreamStorage(ctx, streamId, mbBytes)
+		})
+	}
 
 	// Create ephemeral stream in replicas
 	sender.GoRemotes(ctx, remotes, func(ctx context.Context, node common.Address) error {
