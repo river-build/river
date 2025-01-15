@@ -41,6 +41,8 @@ message NewEventInPoolResponse {
 message ProposeMiniblockRequest {
     bytes stream_id = 1;
     bool debug_force_snapshot = 2;
+    int64 new_miniblock_num = 3;
+    repeated bytes local_event_hashes = 4;
 }
 
 message ProposeMiniblockResponse {
