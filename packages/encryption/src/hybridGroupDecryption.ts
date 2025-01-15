@@ -1,7 +1,7 @@
 import { DecryptionAlgorithm, DecryptionError, IDecryptionParams } from './base'
 import { GroupEncryptionAlgorithmId, GroupEncryptionSession } from './olmLib'
 import { EncryptedData, HybridGroupSessionKey } from '@river-build/proto'
-import { bin_toHexString, dlog } from '@river-build/dlog'
+import { dlog } from '@river-build/dlog'
 import { decryptAesGcm, importAesGsmKeyBytes } from './cryptoAesGcm'
 
 const log = dlog('csb:encryption:groupDecryption')
