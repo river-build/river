@@ -1,7 +1,7 @@
 import path from "path";
 import os from "os";
 import { defineConfig } from "vitest/config";
-import wasm from 'vite-plugin-wasm'
+import wasm from "vite-plugin-wasm";
 
 export const rootConfig = defineConfig({
   test: {
@@ -27,7 +27,7 @@ export const rootConfig = defineConfig({
     },
     server: {
       deps: {
-          inline: ['@river-build/mls-rs-wasm'],
+        inline: ["@river-build/mls-rs-wasm"],
       },
     },
     testTimeout: 20_000,
