@@ -76,6 +76,49 @@
         "inputs": [
           {
             "internalType": "address",
+            "name": "walletAddress",
+            "type": "address",
+            "indexed": false
+          },
+          {
+            "internalType": "address",
+            "name": "spaceAddress",
+            "type": "address",
+            "indexed": false
+          },
+          {
+            "internalType": "address",
+            "name": "resolverAddress",
+            "type": "address",
+            "indexed": false
+          },
+          {
+            "internalType": "bytes32",
+            "name": "transactionId",
+            "type": "bytes32",
+            "indexed": false
+          },
+          {
+            "internalType": "uint256",
+            "name": "roleId",
+            "type": "uint256",
+            "indexed": false
+          },
+          {
+            "internalType": "address[]",
+            "name": "selectedNodes",
+            "type": "address[]",
+            "indexed": false
+          }
+        ],
+        "type": "event",
+        "name": "EntitlementCheckRequestedV2",
+        "anonymous": false
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
             "name": "nodeAddress",
             "type": "address",
             "indexed": true
@@ -230,6 +273,28 @@
         "inputs": [
           {
             "internalType": "address",
+            "name": "walletAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "transactionId",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "uint256",
+            "name": "requestId",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "payable",
+        "type": "function",
+        "name": "requestEntitlementCheckV2"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
             "name": "node",
             "type": "address"
           }
@@ -278,10 +343,10 @@
   },
   "sources": {
     "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol": {
-      "keccak256": "0xbeb7bfa236f19172b29eac53be03a3b377de3524b2d836192b0c64ebe708c204",
+      "keccak256": "0x0d41ad479e18ed91cdfd04a44e1cf3f64ca82e0ec91f8c3557339a0dfdf2d4c7",
       "urls": [
-        "bzz-raw://3d5a103a2b7b6be1ffa6662db6081763bcd210216fefc25307b835c555e0cf4d",
-        "dweb:/ipfs/QmUCvhZdZpVnyJuZVgd2qGduTf11384TmmBJb2RaEBHxhh"
+        "bzz-raw://f204765ac52c227e5c7530d9ac829a76bed1e8ee2aa132472b0a9d870177a83b",
+        "dweb:/ipfs/QmWNitZhNG5fijDzVERLFtzU24DJTvnyYPZ2gkJE8o57B6"
       ],
       "license": "MIT"
     }

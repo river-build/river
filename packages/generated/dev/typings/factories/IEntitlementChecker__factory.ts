@@ -142,6 +142,29 @@ const _abi = [
   },
   {
     type: "function",
+    name: "requestEntitlementCheckV2",
+    inputs: [
+      {
+        name: "walletAddress",
+        type: "address",
+        internalType: "address",
+      },
+      {
+        name: "transactionId",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+      {
+        name: "requestId",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+    outputs: [],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
     name: "unregisterNode",
     inputs: [
       {
@@ -165,6 +188,49 @@ const _abi = [
       },
       {
         name: "contractAddress",
+        type: "address",
+        indexed: false,
+        internalType: "address",
+      },
+      {
+        name: "transactionId",
+        type: "bytes32",
+        indexed: false,
+        internalType: "bytes32",
+      },
+      {
+        name: "roleId",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
+      {
+        name: "selectedNodes",
+        type: "address[]",
+        indexed: false,
+        internalType: "address[]",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "EntitlementCheckRequestedV2",
+    inputs: [
+      {
+        name: "walletAddress",
+        type: "address",
+        indexed: false,
+        internalType: "address",
+      },
+      {
+        name: "spaceAddress",
+        type: "address",
+        indexed: false,
+        internalType: "address",
+      },
+      {
+        name: "resolverAddress",
         type: "address",
         indexed: false,
         internalType: "address",
