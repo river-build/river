@@ -26,7 +26,7 @@ export class HybridGroupDecryption extends DecryptionAlgorithm {
     public async decrypt(streamId: string, content: EncryptedData): Promise<string> {
         if (
             !content.senderKey ||
-            !content.sessionIdBytes ||
+            !content.sessionId ||
             !content.ciphertextBytes ||
             !content.ivBytes
         ) {
@@ -36,10 +36,9 @@ export class HybridGroupDecryption extends DecryptionAlgorithm {
             )
         }
 
-        const sessionId = bin_toHexString(content.sessionIdBytes)
         const session: HybridGroupSessionKey = await this.device.getHybridGroupSessionKey(
             streamId,
-            sessionId,
+            content.sessionId,
         )
 
         const key = await importAesGsmKeyBytes(session.key)

@@ -1,7 +1,7 @@
 import { EncryptedData, HybridGroupSessionKey } from '@river-build/proto'
 import { EncryptionAlgorithm, IEncryptionParams } from './base'
 import { GroupEncryptionAlgorithmId } from './olmLib'
-import { dlog } from '@river-build/dlog'
+import { bin_toHexString, dlog } from '@river-build/dlog'
 import { encryptAesGcm, importAesGsmKeyBytes } from './cryptoAesGcm'
 
 const log = dlog('csb:encryption:groupEncryption')
@@ -109,7 +109,7 @@ export class HybridGroupEncryption extends EncryptionAlgorithm {
         return new EncryptedData({
             algorithm: this.algorithm,
             senderKey: this.device.deviceCurve25519Key!,
-            sessionIdBytes: sessionKey.sessionId,
+            sessionId: bin_toHexString(sessionKey.sessionId),
             ciphertextBytes: ciphertext,
             ivBytes: iv,
         })

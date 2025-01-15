@@ -768,8 +768,9 @@ message EncryptedData {
     // Used if algorithm is set to 'gaes'
     bytes iv_bytes = 9;
 
+    // TODO: fix code to work with binary session_id and enable this field
     // Used if algorithm is set to 'gaes'
-    bytes session_id_bytes = 10;
+    // bytes session_id_bytes = 10;
 }
 
 message WrappedEncryptedData {
