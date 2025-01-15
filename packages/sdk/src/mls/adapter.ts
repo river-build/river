@@ -4,11 +4,14 @@ import { Client } from '../client'
 import { Message } from '@bufbuild/protobuf'
 import { EncryptedData } from '@river-build/proto'
 import { DLogger, dlog } from '@river-build/dlog'
+import { isMobileSafari } from '../utils'
+import { IQueueService } from './queue'
 
 const defaultLogger = dlog('csb:mls:adapter')
 
 export class MlsAdapter {
     private client: Client
+    private queueService?: IQueueService
     private log!: {
         error: DLogger
         debug: DLogger
@@ -31,10 +34,24 @@ export class MlsAdapter {
 
     public start(): void {
         this.log.debug('start')
+        this.queueService?.start()
+        if (isMobileSafari() && this.queueService) {
+            document.addEventListener(
+                'visibilitychange',
+                this.queueService.onMobileSafariPageVisibilityChanged,
+            )
+        }
     }
 
     public async stop(): Promise<void> {
         this.log.debug('stop')
+        await this.queueService?.stop()
+        if (isMobileSafari() && this.queueService) {
+            document.removeEventListener(
+                'visibilitychange',
+                this.queueService.onMobileSafariPageVisibilityChanged,
+            )
+        }
     }
 
     public async encryptGroupEventEpochSecret(
