@@ -73,7 +73,8 @@ export function mlsCommitsFromStreamView(streamView: IStreamStateView): Uint8Arr
     const commits: Uint8Array[] = []
     const firstMiniblockNum = streamView.miniblockInfo?.min ?? 0n
     for (let i = 0; i < streamView.timeline.length; i++) {
-        if (streamView.timeline[i].miniblockNum == firstMiniblockNum) {
+        // the events in the first miniblock (with snapshot) are already accounted for
+        if (streamView.timeline[i].miniblockNum === firstMiniblockNum) {
             continue
         }
         const commit = commitFromEvent(streamView.timeline[i])
@@ -83,5 +84,3 @@ export function mlsCommitsFromStreamView(streamView: IStreamStateView): Uint8Arr
     }
     return commits
 }
-
-// export function mlsCommitsFromMiniblockHeader(miniblockHeader: MiniblockHeader) {}

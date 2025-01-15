@@ -13,11 +13,6 @@ export default mergeConfig(
             hookTimeout: 120_000,
             testTimeout: 120_000,
             setupFiles: './vitest.setup.ts',
-            server: {
-                deps: {
-                    inline: ['@river-build/mls-rs-wasm'],
-                },
-            },
         },
     }),
 )
