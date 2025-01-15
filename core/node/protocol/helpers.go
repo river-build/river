@@ -26,3 +26,18 @@ func (cc *CreationCookie) NodeAddresses() []common.Address {
 
 	return addresses
 }
+
+// IsLocal returns true if the given address is in the CreationCookie.Nodes list.
+func (cc *CreationCookie) IsLocal(addr common.Address) bool {
+	if cc == nil {
+		return false
+	}
+
+	for _, a := range cc.NodeAddresses() {
+		if a.Cmp(addr) == 0 {
+			return true
+		}
+	}
+
+	return false
+}
