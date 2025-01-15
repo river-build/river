@@ -1,6 +1,7 @@
 import path from "path";
 import os from "os";
 import { defineConfig } from "vitest/config";
+import wasm from 'vite-plugin-wasm'
 
 export const rootConfig = defineConfig({
   test: {
@@ -26,6 +27,7 @@ export const rootConfig = defineConfig({
     },
     testTimeout: 20_000,
   },
+  plugins: [wasm()],
 });
 
 export default rootConfig;

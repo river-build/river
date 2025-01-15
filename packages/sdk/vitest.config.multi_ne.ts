@@ -1,6 +1,5 @@
 import { defineConfig, mergeConfig } from 'vitest/config'
 import { rootConfig } from '../../vitest.config.mjs'
-import wasm from 'vite-plugin-wasm'
 
 export default mergeConfig(
     rootConfig,
@@ -20,6 +19,5 @@ export default mergeConfig(
                 },
             },
         },
-        plugins: [wasm()],
     }),
 )
