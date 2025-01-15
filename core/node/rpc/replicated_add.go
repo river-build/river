@@ -5,6 +5,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
+	"google.golang.org/protobuf/proto"
 
 	. "github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/nodes"
@@ -67,8 +68,8 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 	}
 
 	header, err := MakeEnvelopeWithPayload(r.service.wallet, Make_MiniblockHeader(&MiniblockHeader{
-		MiniblockNum:             event.MiniblockRef.Num,
-		PrevMiniblockHash:        event.Event.PrevMiniblockHash,
+		MiniblockNum:             cc.MiniblockNum,
+		PrevMiniblockHash:        cc.PrevMiniblockHash,
 		Timestamp:                NextMiniblockTimestamp(nil),
 		EventHashes:              [][]byte{event.Hash[:]},
 		Snapshot:                 nil,
@@ -89,20 +90,15 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 
 	// Save the ephemeral miniblock locally
 	sender.GoLocal(ctx, func(ctx context.Context) error {
-		mbInfo, err := NewMiniblockInfoFromProto(ephemeralMb, NewParsedMiniblockInfoOpts())
-		if err != nil {
-			return err
-		}
-
-		mbBytes, err := mbInfo.ToBytes()
+		mbBytes, err := proto.Marshal(ephemeralMb)
 		if err != nil {
 			return err
 		}
 
 		return r.service.storage.WriteEphemeralMiniblock(ctx, streamId, &storage.WriteMiniblockData{
-			Number:   mbInfo.Ref.Num,
-			Hash:     mbInfo.Ref.Hash,
-			Snapshot: mbInfo.IsSnapshot(),
+			Number:   cc.MiniblockNum,
+			Hash:     common.BytesToHash(ephemeralMb.Header.Hash),
+			Snapshot: false,
 			Data:     mbBytes,
 		})
 	})
