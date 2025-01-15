@@ -181,7 +181,7 @@ func (s *PostgresEventStore) txRunner(
 				Tags(tags...)
 		}
 
-		log.Debug("pg.txRunner: transaction succeeded")
+		log.Debugw("pg.txRunner: transaction succeeded")
 		s.txCounter.IncPass(name)
 		s.txTracker.track("DONE", name, tags...)
 		return nil
@@ -331,7 +331,7 @@ func (s *PostgresEventStore) init(
 	}
 
 	if s.isolationLevel != pgx.Serializable {
-		log.Info("PostgresEventStore: using isolation level", "level", s.isolationLevel)
+		log.Infow("PostgresEventStore: using isolation level", "level", s.isolationLevel)
 	}
 
 	if s.config.DebugTransactions {
@@ -380,10 +380,10 @@ func (s *PostgresEventStore) createSchemaTx(ctx context.Context, tx pgx.Tx) erro
 		if err != nil {
 			return err
 		}
-		log.Info("DB Schema created", "schema", s.schemaName)
+		log.Infow("DB Schema created", "schema", s.schemaName)
 	} else {
 		if config.UseDetailedLog(ctx) {
-			log.Info("DB Schema already exists", "schema", s.schemaName)
+			log.Infow("DB Schema already exists", "schema", s.schemaName)
 		}
 	}
 	return nil
@@ -444,7 +444,7 @@ func (s *PostgresEventStore) initStorage(ctx context.Context) error {
 	// Optionally run a transaction before the migrations are applied
 	if s.preMigrationTx != nil {
 		log := dlog.FromCtx(ctx)
-		log.Info("Running pre-migration transaction")
+		log.Infow("Running pre-migration transaction")
 		if err := s.txRunner(
 			ctx,
 			"preMigrationTx",

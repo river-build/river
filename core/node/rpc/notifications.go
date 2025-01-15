@@ -42,7 +42,7 @@ func (s *Service) startNotificationMode(notifier push.MessageNotifier, opts *Ser
 
 	if notifier == nil {
 		if s.config.Notifications.Simulate {
-			dlog.FromCtx(s.serverCtx).Info("Simulate sending notifications (dev mode)")
+			dlog.FromCtx(s.serverCtx).Infow("Simulate sending notifications (dev mode)")
 			notifier = push.NewMessageNotificationsSimulator(s.metrics)
 		} else {
 			notifier, err = push.NewMessageNotifier(&s.config.Notifications, s.metrics)
@@ -117,7 +117,7 @@ func (s *Service) startNotificationMode(notifier push.MessageNotifier, opts *Ser
 
 	// build the url by converting the integer to a string
 	url := s.config.UrlSchema() + "://localhost:" + strconv.Itoa(port)
-	s.defaultLogger.Info("Server started", "port", port, "https", !s.config.DisableHttps, "url", url)
+	s.defaultLogger.Infow("Server started", "port", port, "https", !s.config.DisableHttps, "url", url)
 
 	return nil
 }
@@ -164,11 +164,11 @@ func RunNotificationService(ctx context.Context, cfg *config.Config) error {
 	signal.Notify(osSignal, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-osSignal
-		log.Info("Got OS signal", "signal", sig.String())
+		log.Infow("Got OS signal", "signal", sig.String())
 		service.exitSignal <- nil
 	}()
 
 	err = <-service.exitSignal
-	// log.Info("Notification stats", "stats", service.Archiver.GetStats())
+	// log.Infow("Notification stats", "stats", service.Archiver.GetStats())
 	return err
 }

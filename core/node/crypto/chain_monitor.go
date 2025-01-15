@@ -299,18 +299,18 @@ func (cm *chainMonitor) runWithBlockPeriod(
 	cm.setFromBlock(initialBlock.AsBigInt(), true)
 	cm.mu.Unlock()
 
-	log.Debug("chain monitor started", "blockPeriod", blockPeriod, "fromBlock", initialBlock)
+	log.Debugw("chain monitor started", "blockPeriod", blockPeriod, "fromBlock", initialBlock)
 
 	for {
 		pollIntervalCounter.Inc()
 
 		select {
 		case <-ctx.Done():
-			log.Debug("initiate chain monitor shutdown")
+			log.Debugw("initiate chain monitor shutdown")
 			ctx2, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Minute)
 			cm.builder.stoppedCallbacks.onChainMonitorStopped(ctx2)
 			cancel()
-			log.Debug("chain monitor stopped")
+			log.Debugw("chain monitor stopped")
 			return
 
 		case <-time.After(pollInterval):
@@ -364,7 +364,7 @@ func (cm *chainMonitor) runWithBlockPeriod(
 			// chain monitor isn't able to keep up or the rpc node is having issues and importing chain segments
 			// instead of single blocks.
 			if fromBlock < toBlock.Uint64() && blockPeriod >= time.Second {
-				log.Info("process chain segment", "from", fromBlock, "to", toBlock.Uint64())
+				log.Infow("process chain segment", "from", fromBlock, "to", toBlock.Uint64())
 			}
 
 			cm.mu.Lock()

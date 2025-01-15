@@ -89,7 +89,7 @@ func TestLoggingText(t *testing.T) {
 	streamId, err := StreamIdFromBytes(padBytesId([]byte{STREAM_SPACE_BIN, 0x22, 0x33}))
 	require.NoError(err)
 
-	log.Info("test", "streamId", streamId)
+	log.Infow("test", "streamId", streamId)
 	require.Contains(buffer.String(), "1022330000000000000000000000000000000000000000000000000000000000")
 }
 
@@ -102,7 +102,7 @@ func TestLoggingJson(t *testing.T) {
 	streamId, err := StreamIdFromBytes(padBytesId([]byte{STREAM_SPACE_BIN, 0x22, 0x33}))
 	require.NoError(err)
 
-	log.Info("test", "streamId", streamId)
+	log.Infow("test", "streamId", streamId)
 	require.Contains(buffer.String(), "1022330000000000000000000000000000000000000000000000000000000000")
 }
 

@@ -118,7 +118,7 @@ func LoadNodeRegistry(
 	}
 
 	if config.UseDetailedLog(ctx) {
-		log.Info(
+		log.Infow(
 			"Node Registry Loaded from contract",
 			"blockNum",
 			appliedBlockNum,
@@ -166,7 +166,7 @@ func (n *nodeRegistryImpl) OnNodeAdded(ctx context.Context, event types.Log) {
 	if _, exists := n.nodes[e.NodeAddress]; !exists {
 		// TODO: add operator to NodeAdded event
 		nodeRecord := n.addNode(e.NodeAddress, e.Url, e.Status, e.Operator)
-		log.Info(
+		log.Infow(
 			"NodeRegistry: NodeAdded",
 			"node",
 			nodeRecord.address,
@@ -195,7 +195,7 @@ func (n *nodeRegistryImpl) OnNodeRemoved(ctx context.Context, event types.Log) {
 
 	if _, exists := n.nodes[e.NodeAddress]; exists {
 		delete(n.nodes, e.NodeAddress)
-		log.Info("NodeRegistry: NodeRemoved", "blockNum", event.BlockNumber, "node", e.NodeAddress)
+		log.Infow("NodeRegistry: NodeRemoved", "blockNum", event.BlockNumber, "node", e.NodeAddress)
 	} else {
 		log.Error("NodeRegistry: Got NodeRemoved for node that does not exist in NodeRegistry",
 			"blockNum", event.BlockNumber, "node", e.NodeAddress, "nodes", n.nodes)
@@ -220,7 +220,7 @@ func (n *nodeRegistryImpl) OnNodeStatusUpdated(ctx context.Context, event types.
 		newNode := *nn
 		newNode.status = e.Status
 		n.nodes[e.NodeAddress] = &newNode
-		log.Info("NodeRegistry: NodeStatusUpdated", "blockNum", event.BlockNumber, "node", nn)
+		log.Infow("NodeRegistry: NodeStatusUpdated", "blockNum", event.BlockNumber, "node", nn)
 	} else {
 		log.Error("NodeRegistry: Got NodeStatusUpdated for node that does not exist in NodeRegistry", "blockNum", event.BlockNumber, "node", e.NodeAddress, "nodes", n.nodes)
 	}
@@ -248,7 +248,7 @@ func (n *nodeRegistryImpl) OnNodeUrlUpdated(ctx context.Context, event types.Log
 			newNode.nodeToNodeClient = NewNodeToNodeClient(n.httpClient, e.Url, n.connectOpts...)
 		}
 		n.nodes[e.NodeAddress] = &newNode
-		log.Info("NodeRegistry: NodeUrlUpdated", "blockNum", event.BlockNumber, "node", nn)
+		log.Infow("NodeRegistry: NodeUrlUpdated", "blockNum", event.BlockNumber, "node", nn)
 	} else {
 		log.Error("NodeRegistry: Got NodeUrlUpdated for node that does not exist in NodeRegistry",
 			"blockNum", event.BlockNumber, "node", e.NodeAddress, "nodes", n.nodes)

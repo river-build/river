@@ -140,11 +140,11 @@ func (s *remoteSyncer) Run() {
 
 	// stream interrupted while client didn't cancel sync -> remote is unavailable
 	if s.syncStreamCtx.Err() == nil {
-		log.Info("remote node disconnected", "remote", s.remoteAddr)
+		log.Infow("remote node disconnected", "remote", s.remoteAddr)
 
 		s.streams.Range(func(key, value any) bool {
 			streamID := key.(StreamId)
-			log.Debug("stream down", "syncId", s.forwarderSyncID, "remote", s.remoteAddr, "stream", streamID)
+			log.Debugw("stream down", "syncId", s.forwarderSyncID, "remote", s.remoteAddr, "stream", streamID)
 
 			msg := &SyncStreamsResponse{SyncOp: SyncOp_SYNC_DOWN, StreamId: streamID[:]}
 

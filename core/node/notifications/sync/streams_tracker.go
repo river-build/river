@@ -127,7 +127,7 @@ func (tracker *StreamsTracker) Run(ctx context.Context) error {
 		func(stream *registries.GetStreamResult) bool {
 			// print progress report every 50k streams that are added to track
 			if streamsLoaded > 0 && streamsLoaded%50_000 == 0 && streamsLoadedProgress != streamsLoaded {
-				log.Info("Progress stream loading", "tracked", streamsLoaded, "total", totalStreams)
+				log.Infow("Progress stream loading", "tracked", streamsLoaded, "total", totalStreams)
 				streamsLoadedProgress = streamsLoaded
 			}
 
@@ -180,7 +180,7 @@ func (tracker *StreamsTracker) Run(ctx context.Context) error {
 		return err
 	}
 
-	log.Info("Loaded streams from streams registry",
+	log.Infow("Loaded streams from streams registry",
 		"count", streamsLoaded,
 		"total", totalStreams,
 		"took", time.Since(start).String())
@@ -188,7 +188,7 @@ func (tracker *StreamsTracker) Run(ctx context.Context) error {
 	// wait till service stopped
 	<-ctx.Done()
 
-	log.Info("stream tracker stopped")
+	log.Infow("stream tracker stopped")
 
 	return nil
 }

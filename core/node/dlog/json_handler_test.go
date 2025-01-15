@@ -18,7 +18,7 @@ func TestJsonLoggerLogsSaneProtoBinaryStrings(t *testing.T) {
 	// Create a new dlog logger that logs to a temp file in JSON format
 	logger, buffer := testutils.DlogJsonLogger()
 
-	logger.Info("Logging envelope", "envelope", envelope)
+	logger.Infow("Logging envelope", "envelope", envelope)
 
 	logOutput := buffer.String()
 	logOutput = testutils.RemoveJsonTimestamp(string(logOutput))

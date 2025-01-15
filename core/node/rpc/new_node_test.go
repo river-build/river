@@ -91,7 +91,7 @@ func TestAddingNewNodes(t *testing.T) {
 			oldNodeCount++
 		}
 	}
-	log.Info("Node count new streams through old client", "oldNodeCount", oldNodeCount, "newNodeCount", newNodeCount)
+	log.Infow("Node count new streams through old client", "oldNodeCount", oldNodeCount, "newNodeCount", newNodeCount)
 	require.NotZero(newNodeCount)
 	require.NotZero(oldNodeCount)
 
@@ -111,7 +111,7 @@ func TestAddingNewNodes(t *testing.T) {
 			oldNodeCount++
 		}
 	}
-	log.Info("Node count old streams through new client", "oldNodeCount", oldNodeCount, "newNodeCount", newNodeCount)
+	log.Infow("Node count old streams through new client", "oldNodeCount", oldNodeCount, "newNodeCount", newNodeCount)
 	require.NotZero(oldNodeCount)
 	require.Zero(newNodeCount)
 }

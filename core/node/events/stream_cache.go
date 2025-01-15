@@ -244,7 +244,7 @@ func (s *streamCacheImpl) runCacheCleanup(ctx context.Context) {
 		case <-time.After(pollInterval):
 			s.CacheCleanup(ctx, expirationEnabled, s.params.ChainConfig.Get().StreamCacheExpiration)
 		case <-ctx.Done():
-			log.Debug("stream cache cache cleanup shutdown")
+			log.Debugw("stream cache cache cleanup shutdown")
 			return
 		}
 	}
@@ -274,7 +274,7 @@ func (s *streamCacheImpl) CacheCleanup(ctx context.Context, enabled bool, expira
 			// TODO: add purge from cache for non-local streams.
 			if stream.tryCleanup(expiration) {
 				result.UnloadedStreams++
-				log.Debug("stream view is unloaded from cache", "streamId", stream.streamId)
+				log.Debugw("stream view is unloaded from cache", "streamId", stream.streamId)
 			}
 		}
 		return true

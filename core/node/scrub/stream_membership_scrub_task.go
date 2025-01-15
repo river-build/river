@@ -143,7 +143,7 @@ func (tp *streamMembershipScrubTaskProcessorImpl) processMemberImpl(
 			return err
 		}
 
-		log.Debug("Entitlement loss detected; adding LEAVE event for user",
+		log.Debugw("Entitlement loss detected; adding LEAVE event for user",
 			"user",
 			member,
 			"userStreamId",

@@ -341,7 +341,7 @@ func (s *Service) handleDebugStorage(w http.ResponseWriter, r *http.Request) {
 
 	err := render.ExecuteAndWrite(&render.StorageData{Status: status}, w)
 	if !s.config.Log.Simplify {
-		log.Info("Node storage status", "data", status)
+		log.Infow("Node storage status", "data", status)
 	}
 	if err != nil {
 		log.Error("Error getting data or rendering template for debug/storage", "err", err)
@@ -371,7 +371,7 @@ func (s *Service) handleDebugMulti(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		err = render.ExecuteAndWrite(&render.DebugMultiData{Status: status}, w)
 		if !s.config.Log.Simplify {
-			log.Info("River Network Status", "data", status)
+			log.Infow("River Network Status", "data", status)
 		}
 	}
 	if err != nil {
@@ -404,7 +404,7 @@ func (s *Service) handleDebugMultiJson(w http.ResponseWriter, r *http.Request) {
 		// Write status as json
 		err = json.NewEncoder(w).Encode(status)
 		if !s.config.Log.Simplify {
-			log.Info("River Network Status", "data", status)
+			log.Infow("River Network Status", "data", status)
 		}
 	}
 	if err != nil {

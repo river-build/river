@@ -220,13 +220,13 @@ func (cs *clientSimulator) Start(ctx context.Context) {
 
 func (cs *clientSimulator) executeCheck(ctx context.Context, ruleData *deploy.IRuleEntitlementBaseRuleData) error {
 	log := dlog.FromCtx(ctx).With("application", "clientSimulator")
-	log.Info("ClientSimulator executing check", "ruleData", ruleData, "cfg", cs.cfg)
+	log.Infow("ClientSimulator executing check", "ruleData", ruleData, "cfg", cs.cfg)
 
 	pendingTx, err := cs.baseChain.TxPool.Submit(
 		ctx,
 		"RequestEntitlementCheck",
 		func(opts *bind.TransactOpts) (*types.Transaction, error) {
-			log.Info("Calling RequestEntitlementCheck", "opts", opts, "ruleData", ruleData)
+			log.Infow("Calling RequestEntitlementCheck", "opts", opts, "ruleData", ruleData)
 			gated, err := deploy.NewMockEntitlementGated(
 				cs.cfg.GetTestEntitlementContractAddress(),
 				cs.baseChain.Client,
@@ -235,13 +235,13 @@ func (cs *clientSimulator) executeCheck(ctx context.Context, ruleData *deploy.IR
 				log.Error("Failed to get NewMockEntitlementGated", "err", err)
 				return nil, err
 			}
-			log.Info("NewMockEntitlementGated", "gated", gated.RequestEntitlementCheck, "err", err)
+			log.Infow("NewMockEntitlementGated", "gated", gated.RequestEntitlementCheck, "err", err)
 			tx, err := gated.RequestEntitlementCheck(opts, big.NewInt(0), *ruleData)
-			log.Info("RequestEntitlementCheck called", "tx", tx, "err", err)
+			log.Infow("RequestEntitlementCheck called", "tx", tx, "err", err)
 			return tx, err
 		})
 
-	log.Info("Submitted entitlement check...")
+	log.Infow("Submitted entitlement check...")
 
 	customErr, stringErr, err := cs.decoder.DecodeEVMError(err)
 	switch {
@@ -261,7 +261,7 @@ func (cs *clientSimulator) executeCheck(ctx context.Context, ruleData *deploy.IR
 		return err
 	}
 
-	log.Info("Entitlement check mined", "receipt", receipt)
+	log.Infow("Entitlement check mined", "receipt", receipt)
 	if receipt.Status == types.ReceiptStatusFailed {
 		log.Error("Failed to execute check - could not execute transaction")
 		return fmt.Errorf("failed to execute check - could not execute transaction")
@@ -271,13 +271,13 @@ func (cs *clientSimulator) executeCheck(ctx context.Context, ruleData *deploy.IR
 
 func (cs *clientSimulator) executeV2Check(ctx context.Context, ruleData *deploy.IRuleEntitlementBaseRuleDataV2) error {
 	log := dlog.FromCtx(ctx).With("application", "clientSimulator")
-	log.Info("ClientSimulator executing v2 check", "ruleData", ruleData, "cfg", cs.cfg)
+	log.Infow("ClientSimulator executing v2 check", "ruleData", ruleData, "cfg", cs.cfg)
 
 	pendingTx, err := cs.baseChain.TxPool.Submit(
 		ctx,
 		"RequestEntitlementCheckV2",
 		func(opts *bind.TransactOpts) (*types.Transaction, error) {
-			log.Info("Calling RequestEntitlementCheck", "opts", opts, "ruleData", ruleData)
+			log.Infow("Calling RequestEntitlementCheck", "opts", opts, "ruleData", ruleData)
 			gated, err := deploy.NewMockEntitlementGated(
 				cs.cfg.GetTestEntitlementContractAddress(),
 				cs.baseChain.Client,
@@ -286,13 +286,13 @@ func (cs *clientSimulator) executeV2Check(ctx context.Context, ruleData *deploy.
 				log.Error("Failed to get NewMockEntitlementGated", "err", err)
 				return nil, err
 			}
-			log.Info("NewMockEntitlementGated", "gated", gated.RequestEntitlementCheck, "err", err)
+			log.Infow("NewMockEntitlementGated", "gated", gated.RequestEntitlementCheck, "err", err)
 			tx, err := gated.RequestEntitlementCheckV2(opts, []*big.Int{big.NewInt(0)}, *ruleData)
-			log.Info("RequestEntitlementCheckV2 called", "tx", tx, "err", err)
+			log.Infow("RequestEntitlementCheckV2 called", "tx", tx, "err", err)
 			return tx, err
 		})
 
-	log.Info("Submitted entitlement check...")
+	log.Infow("Submitted entitlement check...")
 
 	customErr, stringErr, err := cs.decoder.DecodeEVMError(err)
 	switch {
@@ -312,7 +312,7 @@ func (cs *clientSimulator) executeV2Check(ctx context.Context, ruleData *deploy.
 		return err
 	}
 
-	log.Info("Entitlement check mined", "receipt", receipt)
+	log.Infow("Entitlement check mined", "receipt", receipt)
 	if receipt.Status == types.ReceiptStatusFailed {
 		log.Error("Failed to execute check - could not execute transaction")
 		return fmt.Errorf("failed to execute check - could not execute transaction")
@@ -329,7 +329,7 @@ func (cs *clientSimulator) waitForNextRequest(ctx context.Context) ([32]byte, er
 	for {
 		select {
 		case transactionId := <-cs.checkRequests:
-			log.Info("Detected entitlement check request", "TransactionId", transactionId)
+			log.Infow("Detected entitlement check request", "TransactionId", transactionId)
 			return transactionId, nil
 
 		case <-ctx.Done():
@@ -358,7 +358,7 @@ func (cs *clientSimulator) waitForPostResult(ctx context.Context, txnId [32]byte
 				)
 				return false, fmt.Errorf("received result for unexpected transaction")
 			}
-			log.Info(
+			log.Infow(
 				"Detected entitlement check result",
 				"TransactionId",
 				result.transactionId,
@@ -382,7 +382,7 @@ func (cs *clientSimulator) onEntitlementCheckResultPosted(
 	entitlementCheckResultPosted := base.IEntitlementGatedEntitlementCheckResultPosted{}
 	log := dlog.FromCtx(ctx).With("application", "clientSimulator").With("function", "onEntitlementCheckResultPosted")
 
-	log.Info(
+	log.Infow(
 		"Unpacking EntitlementCheckResultPosted event",
 		"event",
 		event,
@@ -395,7 +395,7 @@ func (cs *clientSimulator) onEntitlementCheckResultPosted(
 		return
 	}
 
-	log.Info("Received EntitlementCheckResultPosted event",
+	log.Infow("Received EntitlementCheckResultPosted event",
 		"TransactionId", entitlementCheckResultPosted.TransactionId,
 		"Result", entitlementCheckResultPosted.Result,
 	)
@@ -414,7 +414,7 @@ func (cs *clientSimulator) onEntitlementCheckRequested(
 	entitlementCheckRequest := base.IEntitlementCheckerEntitlementCheckRequested{}
 	log := dlog.FromCtx(ctx).With("application", "clientSimulator").With("function", "onEntitlementCheckRequested")
 
-	log.Info(
+	log.Infow(
 		"Unpacking EntitlementCheckRequested event",
 		"event",
 		event,
@@ -427,7 +427,7 @@ func (cs *clientSimulator) onEntitlementCheckRequested(
 		return
 	}
 
-	log.Info("Received EntitlementCheckRequested event",
+	log.Infow("Received EntitlementCheckRequested event",
 		"TransactionId", entitlementCheckRequest.TransactionId,
 		"selectedNodes", entitlementCheckRequest.SelectedNodes,
 	)
@@ -508,24 +508,24 @@ func convertRuleDataV2FromBaseToDeploy(
 
 func (cs *clientSimulator) awaitNextResult(ctx context.Context) (bool, error) {
 	log := dlog.FromCtx(ctx).With("application", "clientSimulator").With("function", "waitForNextRequest")
-	log.Info("ClientSimulator waiting for request to publish")
+	log.Infow("ClientSimulator waiting for request to publish")
 	txId, err := cs.waitForNextRequest(ctx)
 	if err != nil {
 		log.Error("Failed to wait for request", "err", err)
 		return false, err
 	} else {
-		log.Info("ClientSimulator logged entitlement check request",
+		log.Infow("ClientSimulator logged entitlement check request",
 			"TransactionId", txId,
 		)
 	}
 
-	log.Info("ClientSimulator waiting for result")
+	log.Infow("ClientSimulator waiting for result")
 	result, err := cs.waitForPostResult(ctx, txId)
 	if err != nil {
 		log.Error("Failed to wait for result", "err", err)
 		return false, err
 	}
-	log.Info("ClientSimulator logged entitlement check result", "Result", result)
+	log.Infow("ClientSimulator logged entitlement check result", "Result", result)
 	return result, nil
 }
 
@@ -537,7 +537,7 @@ func (cs *clientSimulator) EvaluateRuleDataV2(
 	ruleData := convertRuleDataV2FromBaseToDeploy(baseRuleData)
 
 	log := dlog.FromCtx(ctx).With("application", "clientSimulator")
-	log.Info("ClientSimulator evaluating rule data v2", "ruleData", ruleData)
+	log.Infow("ClientSimulator evaluating rule data v2", "ruleData", ruleData)
 
 	err := cs.executeV2Check(ctx, &ruleData)
 	if err != nil {
@@ -555,7 +555,7 @@ func (cs *clientSimulator) EvaluateRuleData(
 	ruleData := convertRuleDataFromBaseToDeploy(baseRuleData)
 
 	log := dlog.FromCtx(ctx).With("application", "clientSimulator")
-	log.Info("ClientSimulator evaluating rule data", "ruleData", ruleData)
+	log.Infow("ClientSimulator evaluating rule data", "ruleData", ruleData)
 
 	err := cs.executeCheck(ctx, &ruleData)
 	if err != nil {
@@ -570,7 +570,7 @@ func RunClientSimulator(ctx context.Context, cfg *config.Config, wallet *node_cr
 	defer cancel()
 
 	log := dlog.FromCtx(ctx).With("application", "clientSimulator")
-	log.Info("--- ClientSimulator starting", "simType", simType)
+	log.Infow("--- ClientSimulator starting", "simType", simType)
 
 	cs, err := New(ctx, cfg, nil, wallet)
 	if err != nil {

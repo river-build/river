@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"go.uber.org/zap/zapcore"
 
 	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/protocol"
@@ -150,7 +151,7 @@ type Config struct {
 
 	// Disable base chain contract usage.
 	DisableBaseChain bool
-	
+
 	// Enable MemberPayload_Mls.
 	EnableMls bool
 
@@ -192,8 +193,15 @@ type Config struct {
 
 type TLSConfig struct {
 	Cert   string // Path to certificate file or BASE64 encoded certificate
-	Key    string `dlog:"omit" json:"-" yaml:"-"` // Path to key file or BASE64 encoded key. Sensitive data, omitted from logging.
+	Key    string `json:"-" yaml:"-"` // Path to key file or BASE64 encoded key. Sensitive data, omit when possible.
 	TestCA string // Path to CA certificate file or BASE64 encoded CA certificate
+}
+
+// Explicitly define MarshalLogObject method to exclude sensitive fields from logging.
+func (c TLSConfig) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("Cert", c.Cert)
+	enc.AddString("TestCA", c.TestCA)
+	return nil
 }
 
 type NetworkConfig struct {
@@ -213,11 +221,11 @@ func (nc *NetworkConfig) GetHttpRequestTimeout() time.Duration {
 }
 
 type DatabaseConfig struct {
-	Url      string `dlog:"omit" json:"-" yaml:"-"` // Sensitive data, omitted from logging.
+	Url      string `json:"-" yaml:"-"` // Sensitive data, omit when possible
 	Host     string
 	Port     int
 	User     string
-	Password string `dlog:"omit" json:"-" yaml:"-"` // Sensitive data, omitted from logging.
+	Password string `json:"-" yaml:"-"` // Sensitive data, omit when possible
 	Database string
 	Extra    string
 
@@ -240,6 +248,45 @@ type DatabaseConfig struct {
 
 	// DebugTransactions enables tracking of few last transactions in the database.
 	DebugTransactions bool
+}
+
+// Explicitly define MarshalLogObject method to exclude sensitive fields from logging.
+func (d DatabaseConfig) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	if d.Host != "" {
+		enc.AddString("Host", d.Host)
+	}
+
+	if d.Port != 0 {
+		enc.AddInt("Port", d.Port)
+	}
+
+	if d.User != "" {
+		enc.AddString("User", d.User)
+	}
+
+	if d.Database != "" {
+		enc.AddString("Database", d.Database)
+	}
+
+	if d.Extra != "" {
+		enc.AddString("Extra", d.Extra)
+	}
+
+	if d.StartupDelay != 0 {
+		enc.AddDuration("StartupDelay", d.StartupDelay)
+	}
+
+	if d.IsolationLevel != "" {
+		enc.AddString("IsolationLevel", d.IsolationLevel)
+	}
+
+	if d.NumPartitions != 0 {
+		enc.AddInt("NumPartitions", d.NumPartitions)
+	}
+
+	enc.AddBool("DebugTransactions", d.DebugTransactions)
+
+	return nil
 }
 
 func (c DatabaseConfig) GetUrl() string {

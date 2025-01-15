@@ -174,7 +174,7 @@ func CanCreateStream(
 	}
 
 	builder := r.canCreateStream()
-	r.log().Debug("CanCreateStream", "builder", builder)
+	r.log().Debugw("CanCreateStream", "builder", builder)
 	return builder.run()
 }
 

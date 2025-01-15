@@ -1,7 +1,6 @@
 package crypto
 
 import (
-	"log/slog"
 	"math"
 	"testing"
 	"time"
@@ -11,6 +10,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	"github.com/river-build/river/core/contracts/river"
 	"github.com/river-build/river/core/node/base/test"
@@ -302,12 +302,9 @@ type CfgInner struct {
 }
 
 // Disable color output for console testing.
-func noColorLogger() *slog.Logger {
-	return slog.New(
-		dlog.NewPrettyTextHandler(dlog.DefaultLogOut, &dlog.PrettyHandlerOptions{
-			Colors: dlog.ColorMap_Disabled,
-		}),
-	)
+func noColorLogger() *zap.SugaredLogger {
+	logger, _ := zap.NewDevelopment()
+	return logger.Sugar()
 }
 
 func TestDecoder(t *testing.T) {

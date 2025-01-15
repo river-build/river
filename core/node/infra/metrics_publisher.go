@@ -82,11 +82,11 @@ func (m *MetricsPublisher) StartMetricsServer(ctx context.Context, config config
 func (m *MetricsPublisher) serveHttp(ctx context.Context) {
 	log := dlog.FromCtx(ctx)
 
-	log.Info("Starting metrics HTTP server", "url", fmt.Sprintf("http://%s/metrics", m.httpServer.Addr))
+	log.Infow("Starting metrics HTTP server", "url", fmt.Sprintf("http://%s/metrics", m.httpServer.Addr))
 	err := m.httpServer.ListenAndServe()
 	if err != nil {
 		if err == http.ErrServerClosed {
-			log.Info("Metrics HTTP server closed")
+			log.Infow("Metrics HTTP server closed")
 		} else {
 			log.Error("Metrics HTTP server error", "err", err)
 		}
@@ -101,6 +101,6 @@ func (m *MetricsPublisher) waitForClose(ctx context.Context) {
 	if err != nil {
 		log.Error("Error closing metrics HTTP server", "err", err)
 	} else {
-		log.Info("Closing metrics HTTP server")
+		log.Infow("Closing metrics HTTP server")
 	}
 }

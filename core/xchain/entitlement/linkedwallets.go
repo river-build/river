@@ -44,7 +44,7 @@ func GetLinkedWallets(
 
 	var zero common.Address
 	if rootKey == zero {
-		log.Debug("Wallet not linked to any root key, trying as root key", "wallet", wallet.Hex())
+		log.Debugw("Wallet not linked to any root key, trying as root key", "wallet", wallet.Hex())
 		rootKey = wallet
 	}
 
@@ -66,7 +66,7 @@ func GetLinkedWallets(
 	}
 
 	if len(wallets) == 0 {
-		log.Debug("No linked wallets found", "rootKey", rootKey.Hex())
+		log.Debugw("No linked wallets found", "rootKey", rootKey.Hex())
 		return []common.Address{wallet}, nil
 	}
 
@@ -83,7 +83,7 @@ func GetLinkedWallets(
 		wallets = append(wallets, rootKey)
 	}
 
-	log.Debug("Linked wallets", "rootKey", rootKey.Hex(), "wallets", wallets)
+	log.Debugw("Linked wallets", "rootKey", rootKey.Hex(), "wallets", wallets)
 
 	return wallets, nil
 }

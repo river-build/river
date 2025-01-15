@@ -34,7 +34,7 @@ func (s *Service) localAddEvent(
 		return nil, AsRiverError(err).Func("localAddEvent")
 	}
 
-	log.Debug("localAddEvent", "parsedEvent", parsedEvent)
+	log.Debugw("localAddEvent", "parsedEvent", parsedEvent)
 
 	err = s.addParsedEvent(ctx, streamId, parsedEvent, localStream, streamView)
 	if err != nil && req.Msg.Optional {

@@ -131,10 +131,10 @@ var rootCmd = &cobra.Command{
 			}
 
 			compiledFacetsPath = os.Getenv("COMPILED_FACETS_PATH")
-			log.Debug().Str("compiledFacetsPath", compiledFacetsPath).Msg("Compiled facets path from environment")
+			log.Debugw().Str("compiledFacetsPath", compiledFacetsPath).Msg("Compiled facets path from environment")
 			if compiledFacetsPath == "" {
 				compiledFacetsPath = cmd.Flag("compiled-facets").Value.String()
-				log.Debug().Str("compiledFacetsPath", compiledFacetsPath).Msg("Compiled facets path from flag")
+				log.Debugw().Str("compiledFacetsPath", compiledFacetsPath).Msg("Compiled facets path from flag")
 			}
 			if compiledFacetsPath == "" {
 				log.Fatal().
@@ -180,7 +180,7 @@ var rootCmd = &cobra.Command{
 		}
 		if sourceDiff {
 
-			log.Info().
+			log.Infow().
 				Str("facetSourcePath", facetSourcePath).
 				Str("compiledFacetsPath", compiledFacetsPath).
 				Msg("Running diff for facet path recursively only compiled facet contracts")
@@ -201,7 +201,7 @@ var rootCmd = &cobra.Command{
 				}
 			}
 
-			log.Info().Str("sourceEnvironment", sourceEnvironment).Str("targetEnvironment", targetEnvironment).Msg("Environment")
+			log.Infow().Str("sourceEnvironment", sourceEnvironment).Str("targetEnvironment", targetEnvironment).Msg("Environment")
 
 			if baseRpcUrl == "" {
 				baseRpcUrl = os.Getenv("BASE_RPC_URL")
@@ -222,7 +222,7 @@ var rootCmd = &cobra.Command{
 				log.Fatal().Msg("BaseScan API key not provided. Set it using BASESCAN_API_KEY environment variable")
 			}
 
-			log.Info().Str("sourceEnvironment", sourceEnvironment).Str("targetEnvironment", targetEnvironment).Msg("Running diff for environment")
+			log.Infow().Str("sourceEnvironment", sourceEnvironment).Str("targetEnvironment", targetEnvironment).Msg("Running diff for environment")
 
 			if err := executeEnvrionmentDiff(verbose, struct {
 				BaseConfig  utils.BaseConfig
@@ -252,7 +252,7 @@ func executeSourceDiff(
 			Msg("Error getting facet files")
 		return err
 	}
-	log.Debug().Int("facetFilesCount", len(facetFiles)).Msg("Facet files length")
+	log.Debugw().Int("facetFilesCount", len(facetFiles)).Msg("Facet files length")
 
 	compiledHashes, err := utils.GetCompiledFacetHashes(compiledFacetsPath, facetFiles)
 	if err != nil {
@@ -264,9 +264,9 @@ func executeSourceDiff(
 	}
 
 	if verbose {
-		log.Info().Int("compiledHashesCount", len(compiledHashes)).Msg("Compiled Facet Hashes")
+		log.Infow().Int("compiledHashesCount", len(compiledHashes)).Msg("Compiled Facet Hashes")
 		for facet, hash := range compiledHashes {
-			log.Info().Str("facet", string(facet)).Str("hash", hash).Msg("Compiled Facet Hash")
+			log.Infow().Str("facet", string(facet)).Str("hash", hash).Msg("Compiled Facet Hash")
 		}
 	}
 	// read all addresses of facets from alpha deployed diamond contracts
@@ -350,7 +350,7 @@ func executeSourceDiff(
 	)
 	if err != nil {
 		if verbose {
-			log.Info().
+			log.Infow().
 				Str("compiledFacetsPath", compiledFacetsPath).
 				Interface("compiledHashes", compiledHashes).
 				Interface("alphaFacets", alphaFacets).
@@ -430,7 +430,7 @@ func executeEnvrionmentDiff(
 
 	for diamondName, diamondAddress := range baseSourceDiamonds {
 		if verbose {
-			log.Info().
+			log.Infow().
 				Str("diamondName", fmt.Sprintf("%s", diamondName)).
 				Str("diamondAddress", diamondAddress).
 				Msg("source Diamond Address")
@@ -456,7 +456,7 @@ func executeEnvrionmentDiff(
 
 	for diamondName, diamondAddress := range riverSourceDiamonds {
 		if verbose {
-			log.Info().
+			log.Infow().
 				Str("diamondName", fmt.Sprintf("%s", diamondName)).
 				Str("diamondAddress", diamondAddress).
 				Msg("source Diamond Address")
@@ -503,7 +503,7 @@ func executeEnvrionmentDiff(
 
 	for diamondName, diamondAddress := range riverTargetDiamonds {
 		if verbose {
-			log.Info().
+			log.Infow().
 				Str("diamondName", fmt.Sprintf("%s", diamondName)).
 				Str("diamondAddress", diamondAddress).
 				Msg("target Diamond Address")
@@ -529,9 +529,9 @@ func executeEnvrionmentDiff(
 
 	if verbose {
 		for diamondName, facets := range sourceFacets {
-			log.Info().Str("diamondName", diamondName).Msg("source Facets for Diamond contract")
+			log.Infow().Str("diamondName", diamondName).Msg("source Facets for Diamond contract")
 			for _, facet := range facets {
-				log.Info().
+				log.Infow().
 					Str("facetAddress", facet.FacetAddress.Hex()).
 					Str("contractName", facet.ContractName).
 					Interface("selectors", facet.SelectorsHex).
@@ -539,9 +539,9 @@ func executeEnvrionmentDiff(
 			}
 		}
 		for diamondName, facets := range targetFacets {
-			log.Info().Str("diamondName", diamondName).Msg("Target Facets for Diamond contract")
+			log.Infow().Str("diamondName", diamondName).Msg("Target Facets for Diamond contract")
 			for _, facet := range facets {
-				log.Info().
+				log.Infow().
 					Str("facetAddress", facet.FacetAddress.Hex()).
 					Str("contractName", facet.ContractName).
 					Interface("selectors", facet.SelectorsHex).
@@ -554,13 +554,13 @@ func executeEnvrionmentDiff(
 	differences := utils.CompareFacets(sourceFacets, targetFacets)
 	if verbose {
 		for diamondName, facets := range differences {
-			log.Info().Str("diamondName", diamondName).Msg("Differences for Diamond contract")
+			log.Infow().Str("diamondName", diamondName).Msg("Differences for Diamond contract")
 			for _, facet := range facets {
-				log.Info().
+				log.Infow().
 					Str("facetAddress", facet.SourceContractAddress.Hex()).
 					Str("sourceContractName", facet.SourceContractName).
 					Msg("Source Facet")
-				log.Info().
+				log.Infow().
 					Interface("selectorDiff", facet.SelectorsDiff).
 					Msg("Selector Diff")
 
@@ -569,7 +569,7 @@ func executeEnvrionmentDiff(
 	}
 
 	// create report
-	log.Info().Str("reportOutDir", reportOutDir).Msg("Generating YAML report")
+	log.Infow().Str("reportOutDir", reportOutDir).Msg("Generating YAML report")
 	err = utils.GenerateYAMLReport(sourceEnvironment, targetEnvironment, differences, reportOutDir)
 	if err != nil {
 		log.Error().Err(err).Msg("Error generating YAML report")

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
-	"log/slog"
 	"math/big"
 	"strings"
 	"sync"
@@ -20,6 +19,7 @@ import (
 	"github.com/puzpuzpuz/xsync/v3"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
@@ -249,7 +249,7 @@ func (pool *pendingTransactionPool) run(ctx context.Context) {
 }
 
 func (pool *pendingTransactionPool) closeTx(
-	log *slog.Logger,
+	log *zap.SugaredLogger,
 	ptx *txPoolPendingTransaction,
 	receipt *types.Receipt,
 	txHash common.Hash,
@@ -270,7 +270,7 @@ func (pool *pendingTransactionPool) closeTx(
 			status = "succeeded"
 		}
 
-		log.Debug(
+		log.Debugw(
 			"TxPool: Transaction DONE",
 			"txHash", txHash,
 			"chain", pool.chainID,
@@ -287,7 +287,7 @@ func (pool *pendingTransactionPool) closeTx(
 		)
 	} else {
 		status = "canceled"
-		log.Debug(
+		log.Debugw(
 			"TxPool: Transaction DONE",
 			"txHash", txHash,
 			"chain", pool.chainID,
@@ -364,7 +364,7 @@ func (pool *pendingTransactionPool) checkPendingTransactions(ctx context.Context
 				close(ptx.listener) // this will return an error that the receipt wasn't available when waiting for it
 			}
 		} else if ptx.txOpts.Context != nil && ptx.txOpts.Context.Err() != nil {
-			log.Debug("replacement transaction canceled", "txHash", ptx.tx.Hash(), "err", ptx.txOpts.Context.Err())
+			log.Debugw("replacement transaction canceled", "txHash", ptx.tx.Hash(), "err", ptx.txOpts.Context.Err())
 			pool.closeTx(log, ptx, nil, common.Hash{})
 		} else if pool.replacePolicy.Eligible(head, ptx.lastSubmit, ptx.tx) { // determine if tx is eligible for resubmit
 			ptx.txOpts.GasPrice, ptx.txOpts.GasFeeCap, ptx.txOpts.GasTipCap = pool.pricePolicy.Reprice(head, ptx.tx)
@@ -378,7 +378,7 @@ func (pool *pendingTransactionPool) checkPendingTransactions(ctx context.Context
 			}
 
 			if err := pool.client.SendTransaction(ctx, tx); err == nil {
-				log.Debug(
+				log.Debugw(
 					"TxPool: Transaction REPLACED",
 					"old", ptx.tx.Hash(),
 					"txHash", tx.Hash(),
@@ -406,7 +406,7 @@ func (pool *pendingTransactionPool) checkPendingTransactions(ctx context.Context
 				pool.transactionGasCap.With(prometheus.Labels{"replacement": "false"}).Set(gasCap)
 				pool.transactionGasTip.With(prometheus.Labels{"replacement": "false"}).Set(tipCap)
 			} else if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-				log.Debug("replacement transaction canceled", "txHash", tx.Hash(), "err", err)
+				log.Debugw("replacement transaction canceled", "txHash", tx.Hash(), "err", err)
 				pool.closeTx(log, ptx, nil, common.Hash{})
 			} else {
 				log.Error("unable to replace transaction", "txHash", tx.Hash(), "err", err)
@@ -597,7 +597,7 @@ func (r *transactionPool) sendReplacementTransactions(ctx context.Context) {
 			return
 		}
 
-		log.Info("Try to replace pending transaction")
+		log.Infow("Try to replace pending transaction")
 
 		pendingTx := &txPoolPendingTransaction{
 			txHashes:    []common.Hash{tx.Hash()},
@@ -628,7 +628,7 @@ func (r *transactionPool) sendReplacementTransactions(ctx context.Context) {
 		return
 	}
 
-	log.Info("Replaced transaction during boot", "count", pendingNonce-nonce, "took", time.Since(start))
+	log.Infow("Replaced transaction during boot", "count", pendingNonce-nonce, "took", time.Since(start))
 }
 
 // Wait until the receipt is available for tx or until ctx expired.
@@ -684,7 +684,7 @@ func (r *transactionPool) EstimateGas(ctx context.Context, createTx CreateTransa
 	tx, err := createTx(opts)
 	log := dlog.FromCtx(ctx)
 	if err != nil {
-		log.Debug("Estimating gas for transaction failed", "err", err)
+		log.Debugw("Estimating gas for transaction failed", "err", err)
 		return 0, err
 	}
 	return tx.Gas(), nil
@@ -781,7 +781,7 @@ func (r *transactionPool) submitLocked(
 	r.transactionSubmitted.With(prometheus.Labels{"method_name": methodName}).Add(1)
 
 	log := dlog.FromCtx(ctx)
-	log.Info(
+	log.Infow(
 		"TxPool: Transaction SENT",
 		"txHash", tx.Hash(),
 		"chain", r.chainID,

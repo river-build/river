@@ -73,7 +73,7 @@ func runServices(ctx context.Context, cfg *config.Config, stream bool, xchain bo
 	}
 
 	if err == nil {
-		log.Info("Got OS signal", "signal", signal.String())
+		log.Infow("Got OS signal", "signal", signal.String())
 	} else {
 		log.Error("Exiting with error", "error", err)
 	}

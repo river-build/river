@@ -247,7 +247,7 @@ func (e *Evaluator) evaluateEthBalanceOperation(
 	total := big.NewInt(0)
 
 	for _, chainID := range e.ethChainIds {
-		log.Info("Evaluating ETH balance on chain", "chainID", chainID, "wallets", linkedWallets)
+		log.Infow("Evaluating ETH balance on chain", "chainID", chainID, "wallets", linkedWallets)
 		client, err := e.clients.Get(chainID)
 		if err != nil {
 			log.Error("Provider for Chain ID not found", "chainID", chainID)
@@ -270,7 +270,7 @@ func (e *Evaluator) evaluateEthBalanceOperation(
 			}
 			total.Add(total, balance)
 
-			log.Info("Accumulated ETH balance for chain",
+			log.Infow("Accumulated ETH balance for chain",
 				"balance", balance.String(),
 				"total", total.String(),
 				"threshold", params.Threshold.String(),
@@ -330,7 +330,7 @@ func (e *Evaluator) evaluateErc20Operation(
 		}
 		total.Add(total, balance)
 
-		log.Debug("Retrieved ERC20 token balance",
+		log.Debugw("Retrieved ERC20 token balance",
 			"balance", balance.String(),
 			"total", total.String(),
 			"threshold", params.Threshold.String(),

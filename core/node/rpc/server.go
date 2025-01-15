@@ -57,7 +57,7 @@ func (s *Service) httpServerClose() {
 		ctx, cancel := context.WithTimeout(s.serverCtx, timeout)
 		defer cancel()
 		if !s.config.Log.Simplify {
-			s.defaultLogger.Info("Shutting down http server", "timeout", timeout)
+			s.defaultLogger.Infow("Shutting down http server", "timeout", timeout)
 		}
 		err := s.httpServer.Shutdown(ctx)
 		if err != nil {
@@ -71,19 +71,19 @@ func (s *Service) httpServerClose() {
 			}
 		} else {
 			if !s.config.Log.Simplify {
-				s.defaultLogger.Info("http server shutdown")
+				s.defaultLogger.Infow("http server shutdown")
 			}
 		}
 	} else {
 		if !s.config.Log.Simplify {
-			s.defaultLogger.Info("shutting down http server immediately")
+			s.defaultLogger.Infow("shutting down http server immediately")
 		}
 		err := s.httpServer.Close()
 		if err != nil {
 			s.defaultLogger.Error("failed to close http server", "error", err)
 		}
 		if !s.config.Log.Simplify {
-			s.defaultLogger.Info("http server closed")
+			s.defaultLogger.Infow("http server closed")
 		}
 	}
 }
@@ -98,7 +98,7 @@ func (s *Service) Close() {
 	}
 
 	if !s.config.Log.Simplify {
-		s.defaultLogger.Info("Server closed")
+		s.defaultLogger.Infow("Server closed")
 	}
 }
 
@@ -193,7 +193,7 @@ func (s *Service) start(opts *ServerStartOpts) error {
 		addr = "localhost" + addr[4:]
 	}
 	addr = s.config.UrlSchema() + "://" + addr
-	s.defaultLogger.Info("Server started", "addr", addr+"/debug/multi")
+	s.defaultLogger.Infow("Server started", "addr", addr+"/debug/multi")
 	return nil
 }
 
@@ -237,7 +237,7 @@ func (s *Service) initInstance(mode string, opts *ServerStartOpts) {
 	s.config.Notifications.Authentication.SessionToken.Key.Key = "<hidden>"
 
 	// TODO: refactor to load wallet before so node address is logged here as well
-	s.defaultLogger.Info(
+	s.defaultLogger.Infow(
 		"Server config",
 		"config", s.config,
 		"version", version.GetFullVersion(),
@@ -475,7 +475,7 @@ func (s *Service) runHttpServer() error {
 		}
 
 		if !cfg.Log.Simplify {
-			log.Info("Listening", "addr", address)
+			log.Infow("Listening", "addr", address)
 		}
 	} else {
 		if cfg.Port != 0 {
@@ -551,7 +551,7 @@ func (s *Service) serve() {
 	if err != nil && err != http.ErrServerClosed {
 		s.defaultLogger.Error("Serve failed", "err", err)
 	} else {
-		s.defaultLogger.Info("Serve stopped")
+		s.defaultLogger.Infow("Serve stopped")
 	}
 }
 
@@ -589,7 +589,7 @@ func (s *Service) initStore() error {
 		}
 
 		if !s.config.Log.Simplify {
-			log.Info(
+			log.Infow(
 				"Created postgres event store",
 				"schema",
 				s.storagePoolInfo.Schema,
@@ -628,7 +628,7 @@ func (s *Service) initNotificationsStore() error {
 		s.onClose(pgstore.Close)
 
 		if !s.config.Log.Simplify {
-			log.Info(
+			log.Infow(
 				"Created postgres notifications store",
 				"schema",
 				s.storagePoolInfo.Schema,

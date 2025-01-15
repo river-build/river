@@ -49,7 +49,7 @@ func (s *Service) createStream(ctx context.Context, req *CreateStreamRequest) (*
 		return nil, err
 	}
 
-	log.Debug("createStream", "parsedEvents", parsedEvents)
+	log.Debugw("createStream", "parsedEvents", parsedEvents)
 
 	csRules, err := rules.CanCreateStream(
 		ctx,

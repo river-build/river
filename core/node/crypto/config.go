@@ -393,7 +393,7 @@ func (occ *onChainConfiguration) processRawSettings(
 
 	occ.cfg.Store(&settings)
 
-	log.Info("OnChainConfig: applied", "settings", settings[len(settings)-1], "currentBlock", blockNum)
+	log.Infow("OnChainConfig: applied", "settings", settings[len(settings)-1], "currentBlock", blockNum)
 }
 
 func NewOnChainConfig(
@@ -461,7 +461,7 @@ func makeOnChainConfig(
 	keyHashToName := make(map[common.Hash]string)
 	for key, value := range defaultsMap {
 		hash := HashSettingName(key)
-		log.Debug("OnChainConfig monitoring key", "key", key, "hash", hash, "default", value)
+		log.Debugw("OnChainConfig monitoring key", "key", key, "hash", hash, "default", value)
 		keyHashToName[hash] = key
 	}
 

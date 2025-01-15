@@ -425,13 +425,13 @@ func (ca *chainAuth) areLinkedWalletsEntitled(
 ) (bool, error) {
 	log := dlog.FromCtx(ctx)
 	if args.kind == chainAuthKindSpace {
-		log.Debug("isWalletEntitled", "kind", "space", "args", args)
+		log.Debugw("isWalletEntitled", "kind", "space", "args", args)
 		return ca.isEntitledToSpace(ctx, cfg, args)
 	} else if args.kind == chainAuthKindChannel {
-		log.Debug("isWalletEntitled", "kind", "channel", "args", args)
+		log.Debugw("isWalletEntitled", "kind", "channel", "args", args)
 		return ca.isEntitledToChannel(ctx, cfg, args)
 	} else if args.kind == chainAuthKindIsSpaceMember {
-		log.Debug("isWalletEntitled", "kind", "isSpaceMember", "args", args)
+		log.Debugw("isWalletEntitled", "kind", "isSpaceMember", "args", args)
 		return true, nil // is space member is checked by the calling code in checkEntitlement
 	} else {
 		return false, RiverError(Err_INTERNAL, "Unknown chain auth kind").Func("isWalletEntitled")
@@ -534,7 +534,7 @@ func (ca *chainAuth) getSpaceEntitlementsForPermissionUncached(
 		args.permission,
 	)
 
-	log.Debug("getSpaceEntitlementsForPermissionUncached", "args", args, "entitlementData", entitlementData)
+	log.Debugw("getSpaceEntitlementsForPermissionUncached", "args", args, "entitlementData", entitlementData)
 	if err != nil {
 		return &entitlementCacheResult{
 				allowed: false,
@@ -561,7 +561,7 @@ func (ca *chainAuth) getChannelEntitlementsForPermissionUncached(
 		args.permission,
 	)
 
-	log.Debug("getChannelEntitlementsForPermissionUncached", "args", args, "entitlementData", entitlementData)
+	log.Debugw("getChannelEntitlementsForPermissionUncached", "args", args, "entitlementData", entitlementData)
 	if err != nil {
 		return &entitlementCacheResult{
 				allowed: false,
@@ -579,7 +579,7 @@ func (ca *chainAuth) isEntitledToChannelUncached(
 	args *ChainAuthArgs,
 ) (CacheResult, error) {
 	log := dlog.FromCtx(ctx)
-	log.Debug("isEntitledToChannelUncached", "args", args)
+	log.Debugw("isEntitledToChannelUncached", "args", args)
 
 	result, cacheHit, err := ca.entitlementManagerCache.executeUsingCache(
 		ctx,
@@ -635,13 +635,13 @@ func (ca *chainAuth) evaluateEntitlementData(
 	args *ChainAuthArgs,
 ) (bool, error) {
 	log := dlog.FromCtx(ctx).With("function", "evaluateEntitlementData")
-	log.Debug("evaluateEntitlementData", "args", args)
+	log.Debugw("evaluateEntitlementData", "args", args)
 
 	wallets := deserializeWallets(args.linkedWallets)
 	for _, ent := range entitlements {
 		if ent.EntitlementType == types.ModuleTypeRuleEntitlement {
 			re := ent.RuleEntitlement
-			log.Debug(ent.EntitlementType, "re", re)
+			log.Debugw(ent.EntitlementType, "re", re)
 
 			// Convert the rule data to the latest version
 			reV2, err := types.ConvertV1RuleDataToV2(ctx, re)
@@ -654,35 +654,35 @@ func (ca *chainAuth) evaluateEntitlementData(
 				return false, err
 			}
 			if result {
-				log.Debug("rule entitlement is true", "spaceId", args.spaceId)
+				log.Debugw("rule entitlement is true", "spaceId", args.spaceId)
 				return true, nil
 			} else {
-				log.Debug("rule entitlement is false", "spaceId", args.spaceId)
+				log.Debugw("rule entitlement is false", "spaceId", args.spaceId)
 			}
 		} else if ent.EntitlementType == types.ModuleTypeRuleEntitlementV2 {
 			re := ent.RuleEntitlementV2
-			log.Debug(ent.EntitlementType, "re", re)
+			log.Debugw(ent.EntitlementType, "re", re)
 			result, err := ca.evaluator.EvaluateRuleData(ctx, wallets, re)
 			if err != nil {
 				return false, err
 			}
 			if result {
-				log.Debug("rule entitlement v2 is true", "spaceId", args.spaceId)
+				log.Debugw("rule entitlement v2 is true", "spaceId", args.spaceId)
 				return true, nil
 			} else {
-				log.Debug("rule entitlement v2 is false", "spaceId", args.spaceId)
+				log.Debugw("rule entitlement v2 is false", "spaceId", args.spaceId)
 			}
 
 		} else if ent.EntitlementType == types.ModuleTypeUserEntitlement {
-			log.Debug("UserEntitlement", "userEntitlement", ent.UserEntitlement)
+			log.Debugw("UserEntitlement", "userEntitlement", ent.UserEntitlement)
 			for _, user := range ent.UserEntitlement {
 				if user == everyone {
-					log.Debug("user entitlement: everyone is entitled to space", "spaceId", args.spaceId)
+					log.Debugw("user entitlement: everyone is entitled to space", "spaceId", args.spaceId)
 					return true, nil
 				} else {
 					for _, wallet := range wallets {
 						if wallet == user {
-							log.Debug("user entitlement: wallet is entitled to space", "spaceId", args.spaceId, "wallet", wallet)
+							log.Debugw("user entitlement: wallet is entitled to space", "spaceId", args.spaceId, "wallet", wallet)
 							return true, nil
 						}
 					}
@@ -713,7 +713,7 @@ func (ca *chainAuth) evaluateWithEntitlements(
 	wallets := deserializeWallets(args.linkedWallets)
 	for _, wallet := range wallets {
 		if wallet == owner {
-			log.Debug(
+			log.Debugw(
 				"owner is entitled to space",
 				"spaceId",
 				args.spaceId,
@@ -760,7 +760,7 @@ func (ca *chainAuth) isEntitledToSpaceUncached(
 	args *ChainAuthArgs,
 ) (CacheResult, error) {
 	log := dlog.FromCtx(ctx)
-	log.Debug("isEntitledToSpaceUncached", "args", args)
+	log.Debugw("isEntitledToSpaceUncached", "args", args)
 	result, cacheHit, err := ca.entitlementManagerCache.executeUsingCache(
 		ctx,
 		cfg,
@@ -927,7 +927,7 @@ func (ca *chainAuth) checkMembership(
 		// However, these can also be informative. Anything that is not a context cancellation is
 		// an actual error. However, the entitlement check may still be successful if at least one
 		// linked wallet resulted in a positive membership check.
-		log.Info(
+		log.Infow(
 			"Error checking membership (due to early termination?)",
 			"err",
 			err,
@@ -1093,7 +1093,7 @@ func (ca *chainAuth) checkEntitlement(
 		} else {
 			// It is expected that some membership checks will fail when the user is legitimately
 			// not entitled, so this log statement is for debugging only.
-			log.Debug(
+			log.Debugw(
 				"User is not a member of the space",
 				"userId",
 				args.principal,

@@ -205,7 +205,7 @@ func (c *RiverRegistryContract) AllocateStream(
 			tx, err := c.StreamRegistry.AllocateStream(
 				opts, streamId, addresses, genesisMiniblockHash, genesisMiniblock)
 			if err == nil {
-				log.Debug(
+				log.Debugw(
 					"RiverRegistryContract: prepared transaction",
 					"name", "AllocateStream",
 					"streamId", streamId,
@@ -417,7 +417,7 @@ func (c *RiverRegistryContract) forAllStreamsSingle(
 			now := time.Now()
 			if now.Sub(lastReport) > progressReportInterval {
 				elapsed := time.Since(startTime)
-				log.Info(
+				log.Infow(
 					"RiverRegistryContract: GetPaginatedStreams in progress",
 					"pagesCompleted",
 					i,
@@ -455,7 +455,7 @@ func (c *RiverRegistryContract) forAllStreamsSingle(
 	}
 
 	elapsed := time.Since(startTime)
-	log.Info(
+	log.Infow(
 		"RiverRegistryContract: GetPaginatedStreams completed",
 		"elapsed",
 		elapsed,
@@ -497,11 +497,11 @@ func (c *RiverRegistryContract) forAllStreamsParallel(
 	numStreams := numStreamsBigInt.Int64()
 
 	if numStreams <= 0 {
-		log.Info("RiverRegistryContract: GetPaginatedStreams no streams found", "blockNum", blockNum)
+		log.Infow("RiverRegistryContract: GetPaginatedStreams no streams found", "blockNum", blockNum)
 		return nil
 	}
 
-	log.Info(
+	log.Infow(
 		"RiverRegistryContract: GetPaginatedStreams starting parallel read",
 		"numStreams",
 		numStreams,
@@ -545,7 +545,7 @@ OuterLoop:
 		now := time.Now()
 		if now.Sub(lastReport) > progressReportInterval {
 			elapsed := time.Since(startTime)
-			log.Info(
+			log.Infow(
 				"RiverRegistryContract: GetPaginatedStreams in progress",
 				"streamsRead",
 				totalStreams,
@@ -590,7 +590,7 @@ OuterLoop:
 	}
 
 	elapsed := time.Since(startTime)
-	log.Info(
+	log.Infow(
 		"RiverRegistryContract: GetPaginatedStreams completed",
 		"elapsed",
 		elapsed,
@@ -660,7 +660,7 @@ func (c *RiverRegistryContract) SetStreamLastMiniblockBatch(
 					isSealed          = args[3].(bool)
 				)
 
-				log.Debug(
+				log.Debugw(
 					"RiverRegistryContract: set stream last miniblock",
 					"name", "SetStreamLastMiniblockBatch",
 					"streamId", streamID,

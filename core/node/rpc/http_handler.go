@@ -44,7 +44,7 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r = r.WithContext(dlog.CtxWithLog(r.Context(), log))
 
 	if r.Proto != "HTTP/2.0" {
-		log.Debug("Non HTTP/2.0 request received", "method", r.Method, "path", r.URL.Path, "protocol", r.Proto)
+		log.Debugw("Non HTTP/2.0 request received", "method", r.Method, "path", r.URL.Path, "protocol", r.Proto)
 	}
 
 	w.Header().Add("X-Http-Version", r.Proto)

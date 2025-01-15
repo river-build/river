@@ -6,12 +6,13 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/crypto"
 	"log/slog"
 	"net/http"
 	"slices"
 	"time"
+
+	"github.com/river-build/river/core/node/base"
+	"github.com/river-build/river/core/node/crypto"
 
 	"github.com/SherClockHolmes/webpush-go"
 	mapset "github.com/deckarep/golang-set/v2"
@@ -166,14 +167,14 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 		}
 
 		if !pref.HasSubscriptions() {
-			p.log.Debug("User hasn't subscribed for notifications",
+			p.log.Debugw("User hasn't subscribed for notifications",
 				"user", participant, "event", event.Hash)
 			return false
 		}
 
 		blocked := p.cache.IsBlocked(participant, sender)
 		if blocked {
-			p.log.Debug("Message creator was blocked", "user", participant, "blocked_user", sender)
+			p.log.Debugw("Message creator was blocked", "user", participant, "blocked_user", sender)
 			return false
 		}
 
@@ -220,7 +221,7 @@ func (p *MessageToNotificationsProcessor) onDMChannelPayload(
 		return true
 	}
 
-	p.log.Debug("User has doesn't want to receive notification for DM message",
+	p.log.Debugw("User has doesn't want to receive notification for DM message",
 		"user", participant,
 		"channel", streamID,
 		"event", event.Hash)
@@ -266,7 +267,7 @@ func (p *MessageToNotificationsProcessor) onGDMChannelPayload(
 		return true
 	}
 
-	p.log.Debug("User don't want to receive notification for GDM message",
+	p.log.Debugw("User don't want to receive notification for GDM message",
 		"user", participant,
 		"channel", streamID,
 		"event", event.Hash,
@@ -299,7 +300,7 @@ func (p *MessageToNotificationsProcessor) onSpaceChannelPayload(
 		return true
 	}
 
-	p.log.Debug("User don't want to receive notification for space channel message",
+	p.log.Debugw("User don't want to receive notification for space channel message",
 		"user", participant,
 		"space", spaceID,
 		"channel", channelID,
@@ -457,7 +458,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 
 			subscriptionExpired, err := p.sendWebPushNotification(ctx, channelID, sub.Sub, event, webPayload)
 			if err == nil {
-				p.log.Debug("Successfully sent web push notification",
+				p.log.Debugw("Successfully sent web push notification",
 					"user", user,
 					"event", event.Hash,
 					"channelID", channelID,
@@ -474,7 +475,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 					p.log.Error("Unable to remove expired webpush subscription",
 						"user", userPref.UserID, "err", err)
 				} else {
-					p.log.Info("Removed expired webpush subscription", "user", userPref.UserID)
+					p.log.Infow("Removed expired webpush subscription", "user", userPref.UserID)
 				}
 			}
 		}
@@ -492,7 +493,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 					continue
 				}
 
-				p.log.Info("Removed APN subscription due to no activity",
+				p.log.Infow("Removed APN subscription due to no activity",
 					"user", user,
 					"event", event.Hash,
 					"channelID", channelID,
@@ -540,7 +541,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 			}
 
 			if err == nil {
-				p.log.Debug("Successfully sent APN notification",
+				p.log.Debugw("Successfully sent APN notification",
 					"user", user,
 					"event", event.Hash,
 					"channelID", channelID,
@@ -563,7 +564,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 					p.log.Error("Unable to remove expired APN subscription",
 						"user", userPref.UserID, "err", err)
 				} else {
-					p.log.Info("Removed expired APN subscription", "user", userPref.UserID)
+					p.log.Infow("Removed expired APN subscription", "user", userPref.UserID)
 				}
 			}
 		}
@@ -604,7 +605,7 @@ func (p *MessageToNotificationsProcessor) sendAPNNotification(
 		Sound("default")
 
 	if p.log.Enabled(ctx, slog.LevelDebug) {
-		p.log.Debug("APN Notification",
+		p.log.Debugw("APN Notification",
 			"to", common.BytesToAddress(event.Event.GetCreatorAddress()),
 			"notification", notificationPayload)
 	}

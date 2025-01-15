@@ -210,7 +210,7 @@ func (n *MessageNotifications) SendWebPushNotification(
 	n.webPushSent.With(prometheus.Labels{"status": fmt.Sprintf("%d", res.StatusCode)}).Inc()
 
 	if res.StatusCode == http.StatusCreated {
-		dlog.FromCtx(ctx).Info("Web push notification sent", "event", eventHash)
+		dlog.FromCtx(ctx).Infow("Web push notification sent", "event", eventHash)
 		return false, nil
 	}
 
@@ -272,7 +272,7 @@ func (n *MessageNotifications) SendApplePushNotification(
 		if sub.Environment == protocol.APNEnvironment_APN_ENVIRONMENT_SANDBOX {
 			log = log.With("uniqueApnsID", res.ApnsUniqueID)
 		}
-		log.Info("APN notification sent")
+		log.Infow("APN notification sent")
 
 		return false, res.StatusCode, nil
 	}
@@ -298,7 +298,7 @@ func (n *MessageNotificationsSimulator) SendWebPushNotification(
 	payload []byte,
 ) (bool, error) {
 	log := dlog.FromCtx(ctx)
-	log.Info("SendWebPushNotification",
+	log.Infow("SendWebPushNotification",
 		"keys.p256dh", subscription.Keys.P256dh,
 		"keys.auth", subscription.Keys.Auth,
 		"payload", payload)
@@ -318,7 +318,7 @@ func (n *MessageNotificationsSimulator) SendApplePushNotification(
 	payload *payload2.Payload,
 ) (bool, int, error) {
 	log := dlog.FromCtx(ctx)
-	log.Debug("SendApplePushNotification",
+	log.Debugw("SendApplePushNotification",
 		"deviceToken", sub.DeviceToken,
 		"env", fmt.Sprintf("%d", sub.Environment),
 		"payload", payload,

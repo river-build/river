@@ -61,7 +61,7 @@ func (s *Service) startArchiveMode(opts *ServerStartOpts, once bool) error {
 	port := tcpAddr.Port
 	// construct the URL by converting the integer to a string
 	url := s.config.UrlSchema() + "://localhost:" + strconv.Itoa(port) + "/debug/multi"
-	s.defaultLogger.Info("Server started", "port", port, "https", !s.config.DisableHttps, "url", url)
+	s.defaultLogger.Infow("Server started", "port", port, "https", !s.config.DisableHttps, "url", url)
 	return nil
 }
 
@@ -113,7 +113,7 @@ func RunArchive(ctx context.Context, cfg *config.Config, once bool) error {
 	signal.Notify(osSignal, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-osSignal
-		log.Info("Got OS signal", "signal", sig.String())
+		log.Infow("Got OS signal", "signal", sig.String())
 		service.exitSignal <- nil
 	}()
 
@@ -126,6 +126,6 @@ func RunArchive(ctx context.Context, cfg *config.Config, once bool) error {
 	}
 
 	err = <-service.exitSignal
-	log.Info("Archiver stats", "stats", service.Archiver.GetStats())
+	log.Infow("Archiver stats", "stats", service.Archiver.GetStats())
 	return err
 }

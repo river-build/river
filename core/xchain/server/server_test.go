@@ -88,7 +88,7 @@ func newServiceTester(numNodes int, require *require.Assertions) *serviceTester 
 	ctx = dlog.CtxWithLog(ctx, noColorLogger())
 
 	log := dlog.FromCtx(ctx)
-	log.Info("Creating service tester")
+	log.Infow("Creating service tester")
 
 	st := &serviceTester{
 		ctx:     ctx,
@@ -119,7 +119,7 @@ func (st *serviceTester) deployXchainTestContracts() {
 		approvedNodeOperators = append(approvedNodeOperators, w.Address)
 	}
 
-	log.Info("Deploying contracts")
+	log.Infow("Deploying contracts")
 	client := st.btc.DeployerBlockchain.Client
 
 	chainId, err := client.ChainID(st.ctx)
@@ -167,7 +167,7 @@ func (st *serviceTester) deployXchainTestContracts() {
 	st.btc.Commit(st.ctx)
 
 	log = dlog.FromCtx(st.ctx)
-	log.Info(
+	log.Infow(
 		"Contracts deployed",
 		"entitlementChecker",
 		st.entitlementCheckerAddress.Hex(),

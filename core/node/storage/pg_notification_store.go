@@ -869,7 +869,7 @@ func (s *PostgresNotificationStore) removeAPNSubscription(
 		deviceToken,
 	)
 
-	dlog.FromCtx(ctx).Info("remove APN subscription",
+	dlog.FromCtx(ctx).Infow("remove APN subscription",
 		"userID", userID, "records", result.RowsAffected(), "err", err)
 
 	return err

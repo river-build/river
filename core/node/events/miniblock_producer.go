@@ -198,7 +198,7 @@ func (p *miniblockProducer) scheduleCandidates(ctx context.Context, blockNum cry
 
 	for _, stream := range candidates {
 		if !p.isLocalLeaderOnCurrentBlock(stream, blockNum) {
-			log.Debug(
+			log.Debugw(
 				"MiniblockProducer: OnNewBlock: Not a leader for stream",
 				"streamId",
 				stream.streamId,
@@ -210,13 +210,13 @@ func (p *miniblockProducer) scheduleCandidates(ctx context.Context, blockNum cry
 		j := p.trySchedule(ctx, stream)
 		if j != nil {
 			scheduled = append(scheduled, j)
-			log.Debug(
+			log.Debugw(
 				"MiniblockProducer: OnNewBlock: Scheduled miniblock production",
 				"streamId",
 				stream.streamId,
 			)
 		} else {
-			log.Debug(
+			log.Debugw(
 				"MiniblockProducer: OnNewBlock: Miniblock production already scheduled",
 				"streamId",
 				stream.streamId,
@@ -333,7 +333,7 @@ func combineProposals(
 	// Filter remotes that don't match local prerequisites.
 	remote = slices.DeleteFunc(remote, func(p *MiniblockProposal) bool {
 		if p.NewMiniblockNum != local.NewMiniblockNum {
-			log.Info(
+			log.Infow(
 				"combineProposals: ignoring remote proposal: mb number mismatch",
 				"remoteNum",
 				p.NewMiniblockNum,
@@ -343,7 +343,7 @@ func combineProposals(
 			return true
 		}
 		if !bytes.Equal(p.PrevMiniblockHash, local.PrevMiniblockHash) {
-			log.Info(
+			log.Infow(
 				"combineProposals: ignoring remote proposal: prev hash mismatch",
 				"remoteHash",
 				p.PrevMiniblockHash,
@@ -644,7 +644,7 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 		} else {
 			success = append(success, job.stream.streamId)
 
-			log.Debug("submitProposalBatch: skip miniblock registration",
+			log.Debugw("submitProposalBatch: skip miniblock registration",
 				"streamId", job.stream.streamId, "blocknum", job.candidate.Ref.Num)
 		}
 	}
@@ -676,7 +676,7 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 		}
 	}
 
-	log.Info("processMiniblockProposalBatch: Submitted SetStreamLastMiniblockBatch",
+	log.Infow("processMiniblockProposalBatch: Submitted SetStreamLastMiniblockBatch",
 		"total", len(proposals),
 		"actualSubmitted", len(filteredProposals),
 		"success", len(success),

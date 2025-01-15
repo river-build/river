@@ -105,7 +105,7 @@ func (s *Service) Start(ctx context.Context) {
 
 	go func() {
 		for {
-			log.Info("Start notification streams tracker")
+			log.Infow("Start notification streams tracker")
 
 			if err := s.streamsTracker.Run(ctx); err != nil {
 				log.Error("tracking streams failed", "err", err)
@@ -439,7 +439,7 @@ func (s *Service) UnsubscribeAPN(
 		return nil, RiverError(Err_INVALID_ARGUMENT, "Invalid user id")
 	}
 
-	dlog.FromCtx(ctx).Info("remove APN subscription", "userID", userID)
+	dlog.FromCtx(ctx).Infow("remove APN subscription", "userID", userID)
 
 	if err := s.userPreferences.RemoveAPNSubscription(ctx, deviceToken, userID); err != nil {
 		return nil, err

@@ -34,7 +34,7 @@ func (s *Service) SyncStreams(
 	ctx, log := utils.CtxAndLogForRequest(ctx, req)
 	startTime := time.Now()
 	syncId := GenNanoid()
-	log.Debug("SyncStreams START", "syncId", syncId)
+	log.Debugw("SyncStreams START", "syncId", syncId)
 
 	var err error
 	runWithLabels(ctx, syncId, func(ctx context.Context) {
@@ -52,7 +52,7 @@ func (s *Service) SyncStreams(
 			LogLevel(log, level).
 			AsConnectError()
 	} else {
-		log.Debug("SyncStreams DONE", "syncId", syncId, "duration", time.Since(startTime))
+		log.Debugw("SyncStreams DONE", "syncId", syncId, "duration", time.Since(startTime))
 	}
 	return err
 }

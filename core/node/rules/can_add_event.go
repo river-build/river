@@ -218,7 +218,7 @@ func CanAddEvent(
 		streamView:            streamView,
 	}
 	builder := ru.canAddEvent()
-	ru.log().Debug("CanAddEvent", "builder", builder)
+	ru.log().Debugw("CanAddEvent", "builder", builder)
 	return builder.run()
 }
 

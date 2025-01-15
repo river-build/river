@@ -249,7 +249,7 @@ func (sc *SpaceContractV3) GetChannelEntitlementsForPermission(
 		return nil, EMPTY_ADDRESS, err
 	}
 
-	log.Debug(
+	log.Debugw(
 		"Got channel entitlement data",
 		"entitlement_data",
 		entitlementData,
@@ -307,7 +307,7 @@ func (sc *SpaceContractV3) GetSpaceEntitlementsForPermission(
 		&bind.CallOpts{Context: ctx},
 		permission.String(),
 	)
-	log.Debug(
+	log.Debugw(
 		"Got entitlement data",
 		"err",
 		err,
@@ -327,7 +327,7 @@ func (sc *SpaceContractV3) GetSpaceEntitlementsForPermission(
 		return nil, EMPTY_ADDRESS, err
 	}
 
-	log.Debug(
+	log.Debugw(
 		"Returning entitlements",
 		"entitlements",
 		entitlements,

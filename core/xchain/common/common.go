@@ -68,7 +68,7 @@ func WaitUntilWalletFunded(ctx context.Context, wsEndpoint string, walletAddress
 	}
 	defer subscription.Unsubscribe()
 
-	log.Info("Subscription created. Waiting for the wallet to be funded...")
+	log.Infow("Subscription created. Waiting for the wallet to be funded...")
 
 	for {
 		select {
@@ -85,7 +85,7 @@ func WaitUntilWalletFunded(ctx context.Context, wsEndpoint string, walletAddress
 			}
 
 			if balance.Cmp(big.NewInt(requiredBalance)) >= 0 {
-				log.Info("Wallet is funded. Current balance", "balance", balance)
+				log.Infow("Wallet is funded. Current balance", "balance", balance)
 				return nil
 			} else {
 				log.Warn("Wallet is not funded yet. Current balance", "balance", balance, "requiredBalance", requiredBalance, "walletAddress", walletAddress.Hex())
@@ -93,7 +93,7 @@ func WaitUntilWalletFunded(ctx context.Context, wsEndpoint string, walletAddress
 
 		case <-ctx.Done():
 			// Handle context cancellation
-			log.Info("Context cancelled, stopping WaitUntilWalletFunded subscription")
+			log.Infow("Context cancelled, stopping WaitUntilWalletFunded subscription")
 			return ctx.Err()
 		}
 	}

@@ -19,7 +19,7 @@ func (e *Evaluator) EvaluateRuleData(
 	ruleData *base.IRuleEntitlementBaseRuleDataV2,
 ) (bool, error) {
 	log := dlog.FromCtx(ctx)
-	log.Info("Evaluating rule data", "ruleData", ruleData)
+	log.Infow("Evaluating rule data", "ruleData", ruleData)
 	opTree, err := types.GetOperationTree(ctx, ruleData)
 	if err != nil {
 		return false, err

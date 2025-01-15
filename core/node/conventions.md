@@ -24,7 +24,7 @@ func loadNodeRegistry(ctx context.Context, nodeRegistryPath string, localNode *n
 		return nodes.MakeSingleNodeRegistry(ctx, localNode), nil
 	}
 
-	log.Info("Loading node registry", "path", nodeRegistryPath)
+	log.Infof("Loading node registry", "path", nodeRegistryPath)
 	return nodes.LoadNodeRegistry(ctx, nodeRegistryPath, localNode)
 }
 ```

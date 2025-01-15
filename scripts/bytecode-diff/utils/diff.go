@@ -44,7 +44,7 @@ func CompareFacets(source, target map[string][]Facet) map[string][]FacetDiff {
 		for _, o := range sourceFacets {
 			// if source facet is not verified, add it to differences
 			if o.ContractName == "" {
-				Log.Info().Msgf("source facet is not verified: %+v", o)
+				Log.Infow().Msgf("source facet is not verified: %+v", o)
 				diamondDifferences = append(diamondDifferences, FacetDiff{
 					SourceContractAddress:   o.FacetAddress,
 					SelectorsDiff:           o.SelectorsHex,

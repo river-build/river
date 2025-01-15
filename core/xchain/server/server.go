@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"log/slog"
 	"math/big"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"go.uber.org/zap"
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/base"
@@ -173,7 +173,7 @@ func New(
 		)
 	)
 
-	log.Info("Starting xchain node", "cfg", cfg, "onChainConfig", chainConfig.Get())
+	log.Infow("Starting xchain node", "cfg", cfg, "onChainConfig", chainConfig.Get())
 
 	if baseChain == nil {
 		baseChain, err = crypto.NewBlockchain(ctx, &cfg.BaseChain, wallet, metrics, nil)
@@ -196,7 +196,7 @@ func New(
 		}
 	}
 
-	log.Info("Start processing entitlement check requests", "startBlock", baseChainStartBlock)
+	log.Infow("Start processing entitlement check requests", "startBlock", baseChainStartBlock)
 
 	decoder, err := crypto.NewEVMErrorDecoder(
 		base.IEntitlementCheckerMetaData,
@@ -275,7 +275,7 @@ func (x *xchain) Stop() {
 	}
 }
 
-func (x *xchain) Log(ctx context.Context) *slog.Logger {
+func (x *xchain) Log(ctx context.Context) *zap.SugaredLogger {
 	return dlog.FromCtx(ctx).
 		With("worker_id", x.workerID).
 		With("application", "xchain").
@@ -308,7 +308,7 @@ func (x *xchain) Run(ctx context.Context) {
 	)
 	x.cancel = cancel
 
-	log.Info(
+	log.Infow(
 		"Starting xchain node",
 		"entitlementAddress", entitlementAddress.Hex(),
 		"nodeAddress", x.baseChain.Wallet.Address.Hex(),
@@ -353,7 +353,7 @@ func (x *xchain) onEntitlementCheckRequested(
 		return
 	}
 
-	log.Info("Received EntitlementCheckRequested",
+	log.Infow("Received EntitlementCheckRequested",
 		"xchain.req.txid", hex.EncodeToString(entitlementCheckRequest.TransactionId[:]))
 
 	// process the entitlement request and post the result to entitlementCheckResults
@@ -366,7 +366,7 @@ func (x *xchain) onEntitlementCheckRequested(
 	}
 	if outcome != nil { // request was not intended for this xchain instance.
 		x.entitlementCheckRequested.IncPass()
-		log.Info(
+		log.Infow(
 			"Queueing check result for post",
 			"transactionId",
 			outcome.TransactionID.Hex(),
@@ -390,7 +390,7 @@ func (x *xchain) handleEntitlementCheckRequest(
 
 	for _, selectedNodeAddress := range request.SelectedNodes {
 		if selectedNodeAddress == x.baseChain.Wallet.Address {
-			log.Info("Processing EntitlementCheckRequested")
+			log.Infow("Processing EntitlementCheckRequested")
 			outcome, err := x.process(ctx, request, x.baseChain.Client, request.CallerAddress)
 			if err != nil {
 				return nil, err
@@ -403,7 +403,7 @@ func (x *xchain) handleEntitlementCheckRequest(
 			}, nil
 		}
 	}
-	log.Debug(
+	log.Debugw(
 		"EntitlementCheckRequested not for this xchain instance",
 		"selectedNodes", request.SelectedNodes,
 		"nodeAddress", x.baseChain.Wallet.Address.Hex(),
@@ -468,7 +468,7 @@ func (x *xchain) writeEntitlementCheckResults(ctx context.Context, checkResults 
 				if ce != nil && (ce.DecodedError.Sig == "EntitlementGated_TransactionNotRegistered()" ||
 					ce.DecodedError.Sig == "EntitlementGated_NodeAlreadyVoted()" ||
 					ce.DecodedError.Sig == "EntitlementGated_TransactionCheckAlreadyCompleted()") {
-					log.Debug("Unable to submit entitlement check outcome",
+					log.Debugw("Unable to submit entitlement check outcome",
 						"err", ce.DecodedError.Name,
 						"txid", receipt.TransactionID.Hex())
 					continue
@@ -508,7 +508,7 @@ func (x *xchain) writeEntitlementCheckResults(ctx context.Context, checkResults 
 				"gatedContract", task.outcome.Event.ContractAddress)
 			x.entitlementCheckProcessed.IncFail()
 		} else {
-			log.Info("entitlement check response posted",
+			log.Infow("entitlement check response posted",
 				"gasUsed", receipt.GasUsed,
 				"gasEstimate", task.gasEstimate,
 				"tx.hash", task.ptx.TransactionHash(),
@@ -521,7 +521,7 @@ func (x *xchain) writeEntitlementCheckResults(ctx context.Context, checkResults 
 	}
 }
 
-func (x *xchain) handleContractError(log *slog.Logger, err error, msg string) error {
+func (x *xchain) handleContractError(log *zap.SugaredLogger, err error, msg string) error {
 	ce, se, err := x.evmErrDecoder.DecodeEVMError(err)
 	switch {
 	case ce != nil:
@@ -539,7 +539,7 @@ func (x *xchain) handleContractError(log *slog.Logger, err error, msg string) er
 
 func (x *xchain) getLinkedWallets(ctx context.Context, wallet common.Address) ([]common.Address, error) {
 	log := x.Log(ctx)
-	log.Debug("GetLinkedWallets", "wallet", wallet.Hex(), "walletLinkContract", x.config.GetWalletLinkContractAddress())
+	log.Debugw("GetLinkedWallets", "wallet", wallet.Hex(), "walletLinkContract", x.config.GetWalletLinkContractAddress())
 	iWalletLink, err := base.NewWalletLink(
 		x.config.GetWalletLinkContractAddress(),
 		x.baseChain.Client,
@@ -633,7 +633,7 @@ func (x *xchain) process(
 		With("caller_address", callerAddress.Hex())
 
 	log = log.With("function", "process", "req.txid", hex.EncodeToString(request.TransactionId[:]))
-	log.Info("Process EntitlementCheckRequested")
+	log.Infow("Process EntitlementCheckRequested")
 
 	wallets, err := x.getLinkedWallets(ctx, callerAddress)
 	if err != nil {

@@ -30,7 +30,7 @@ func (s *Service) Info(
 ) (*connect.Response[InfoResponse], error) {
 	ctx, log := utils.CtxAndLogForRequest(ctx, req)
 
-	log.Debug("Info ENTER", "request", req.Msg)
+	log.Debugw("Info ENTER", "request", req.Msg)
 
 	res, err := s.info(ctx, log, req)
 	if err != nil {
@@ -38,7 +38,7 @@ func (s *Service) Info(
 		return nil, err
 	}
 
-	log.Debug("Info LEAVE", "response", res.Msg)
+	log.Debugw("Info LEAVE", "response", res.Msg)
 	return res, nil
 }
 
@@ -65,7 +65,7 @@ func (s *Service) info(
 
 		if s.config.EnableTestAPIs {
 			if debug == "ping" {
-				log.Info("PINGED")
+				log.Infow("PINGED")
 				return connect.NewResponse(&InfoResponse{
 					Graffiti: "pong",
 				}), nil
@@ -73,30 +73,30 @@ func (s *Service) info(
 				log.Error("panic requested through Info request")
 				panic("panic requested through Info request")
 			} else if debug == "flush_cache" {
-				log.Info("FLUSHING CACHE")
+				log.Infow("FLUSHING CACHE")
 				s.cache.ForceFlushAll(ctx)
 				return connect.NewResponse(&InfoResponse{
 					Graffiti: "cache flushed",
 				}), nil
 			} else if debug == "exit" {
-				log.Info("GOT REQUEST TO EXIT NODE")
+				log.Infow("GOT REQUEST TO EXIT NODE")
 				s.exitSignal <- errors.New("info_debug_exit")
 				return connect.NewResponse(&InfoResponse{
 					Graffiti: "exiting...",
 				}), nil
 			} else if debug == "sleep" {
 				sleepDuration := 30 * time.Second
-				log.Info("SLEEPING FOR", "sleepDuration", sleepDuration)
+				log.Infow("SLEEPING FOR", "sleepDuration", sleepDuration)
 				select {
 				case <-time.After(sleepDuration):
 					// Sleep completed
-					log.Info("Sleep completed")
+					log.Infow("Sleep completed")
 					return connect.NewResponse(&InfoResponse{
 						Graffiti: fmt.Sprintf("slept for %v", sleepDuration),
 					}), nil
 				case <-ctx.Done():
 					// Context was canceled
-					log.Info("Sleep canceled due to context cancellation")
+					log.Infow("Sleep canceled due to context cancellation")
 					return connect.NewResponse(&InfoResponse{
 						Graffiti: "Context canceled",
 					}), nil
@@ -165,7 +165,7 @@ func (s *Service) debugInfoMakeMiniblock(
 			return nil, err
 		}
 	}
-	log.Info(
+	log.Infow(
 		"Info Debug request to make miniblock",
 		"stream_id",
 		streamId,

@@ -288,7 +288,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 		return nil
 	}
 
-	log.Debug(
+	log.Debugw(
 		"Archiving stream",
 		"streamId",
 		stream.streamId,
@@ -348,7 +348,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 			// a failure, but not an error.
 			stream.IncrementConsecutiveFailures()
 
-			log.Debug(
+			log.Debugw(
 				"ArchiveStream: GetMiniblocks did not return data, remote storage is not up-to-date with contract yet",
 				"streamId",
 				stream.streamId,
@@ -397,7 +397,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 			serialized = append(serialized, bb)
 		}
 
-		log.Debug("Writing miniblocks to storage", "streamId", stream.streamId, "numBlocks", len(serialized))
+		log.Debugw("Writing miniblocks to storage", "streamId", stream.streamId, "numBlocks", len(serialized))
 
 		err = a.storage.WriteArchiveMiniblocks(ctx, stream.streamId, mbsInDb, serialized)
 		if err != nil {
@@ -450,7 +450,7 @@ func (a *Archiver) startImpl(ctx context.Context, once bool, metrics infra.Metri
 	if once {
 		a.tasksWG = &sync.WaitGroup{}
 	} else if metrics != nil {
-		dlog.FromCtx(ctx).Info("Setting up metrics")
+		dlog.FromCtx(ctx).Infow("Setting up metrics")
 		a.setupStatisticsMetrics(metrics)
 	}
 
@@ -467,7 +467,7 @@ func (a *Archiver) startImpl(ctx context.Context, once bool, metrics infra.Metri
 	}
 
 	log := dlog.FromCtx(ctx)
-	log.Info(
+	log.Infow(
 		"Reading stream registry for contract state of streams",
 		"blockNum",
 		blockNum,
@@ -497,7 +497,7 @@ func (a *Archiver) startImpl(ctx context.Context, once bool, metrics infra.Metri
 	}
 
 	if !once {
-		log.Info("Listening to stream events", "blockNum", blockNum+1)
+		log.Infow("Listening to stream events", "blockNum", blockNum+1)
 		err := a.contract.OnStreamEvent(
 			ctx,
 			blockNum+1,

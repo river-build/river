@@ -47,7 +47,7 @@ func (s *Service) startInfoMode(opts *ServerStartOpts) error {
 	port := tcpAddr.Port
 	// build the url by converting the integer to a string
 	url := s.config.UrlSchema() + "://localhost:" + strconv.Itoa(port) + "/debug/multi"
-	s.defaultLogger.Info("Server started", "port", port, "https", !s.config.DisableHttps, "url", url)
+	s.defaultLogger.Infow("Server started", "port", port, "https", !s.config.DisableHttps, "url", url)
 	return nil
 }
 
@@ -92,7 +92,7 @@ func RunInfoMode(ctx context.Context, cfg *config.Config) error {
 	signal.Notify(osSignal, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-osSignal
-		log.Info("Got OS signal", "signal", sig.String())
+		log.Infow("Got OS signal", "signal", sig.String())
 		service.exitSignal <- nil
 	}()
 

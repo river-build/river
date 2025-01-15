@@ -103,7 +103,7 @@ func GetFacetFiles(facetSourcePath string, verbose bool) ([]FacetFile, error) {
 		if strings.Contains(path, "facets") {
 			if !info.IsDir() && strings.HasSuffix(info.Name(), ".sol") && !strings.HasPrefix(info.Name(), "I") {
 				if verbose {
-					Log.Info().Msgf("Found facet file: %s", info.Name())
+					Log.Infow().Msgf("Found facet file: %s", info.Name())
 				}
 				facetFiles = append(facetFiles, FacetFile{
 					Path:     path,
@@ -339,7 +339,7 @@ func writeYamlReport(
 	}
 
 	if verbose {
-		Log.Info().Msgf("YAML file created: %s", fullPath)
+		Log.Infow().Msgf("YAML file created: %s", fullPath)
 	}
 
 	return nil
@@ -384,7 +384,7 @@ func writeYamlReportToS3(
 	}
 
 	if verbose {
-		Log.Info().Msgf("YAML file uploaded to S3: s3://%s/%s", bucket, key)
+		Log.Infow().Msgf("YAML file uploaded to S3: s3://%s/%s", bucket, key)
 	}
 
 	return nil
@@ -654,7 +654,7 @@ func GenerateYAMLReport(
 		return err
 	}
 
-	Log.Info().Msgf("Report generated: %s", filename)
+	Log.Infow().Msgf("Report generated: %s", filename)
 	return nil
 }
 
