@@ -10,6 +10,7 @@ import {IERC6372} from "@openzeppelin/contracts/interfaces/IERC6372.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import {IOptimismMintableERC20, ILegacyMintableERC20} from "contracts/src/tokens/river/base/IOptimismMintableERC20.sol";
 import {ISemver} from "contracts/src/tokens/river/base/ISemver.sol";
+import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 
 // libraries
 
@@ -19,17 +20,25 @@ import {UUPSUpgradeable} from "solady/utils/UUPSUpgradeable.sol";
 import {IntrospectionBase} from "@river-build/diamond/src/facets/introspection/IntrospectionBase.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {ERC20Votes} from "solady/tokens/ERC20Votes.sol";
+import {LockBase} from "contracts/src/tokens/lock/LockBase.sol";
 
 contract Towns is
   IOptimismMintableERC20,
   ILegacyMintableERC20,
   ISemver,
   IntrospectionBase,
+  LockBase,
   Initializable,
   ERC20Votes,
   UUPSUpgradeable,
   Ownable
 {
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                          Errors                            */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+  error Towns__DelegateeSameAsCurrent();
+  error Towns__TransferLockEnabled();
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                  Constants & Immutables                    */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -74,6 +83,9 @@ contract Towns is
   function initialize(address _owner) external initializer {
     // set the owner
     _initializeOwner(_owner);
+
+    // initialize the lock
+    __LockBase_init(30 days);
 
     // add interface
     _addInterface(type(IERC20).interfaceId);
@@ -127,6 +139,19 @@ contract Towns is
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           Lock                               */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+  function isLockEnabled(address account) external view virtual returns (bool) {
+    return _lockEnabled(account);
+  }
+
+  function lockCooldown(
+    address account
+  ) external view virtual returns (uint256) {
+    return _lockCooldown(account);
+  }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                         Overrides                          */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
@@ -172,6 +197,35 @@ contract Towns is
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                     Internal Overrides                     */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+  function _beforeTokenTransfer(
+    address from,
+    address to,
+    uint256 amount
+  ) internal override {
+    if (from != address(0) && _lockEnabled(from)) {
+      // allow transferring at minting time
+      CustomRevert.revertWith(Towns__TransferLockEnabled.selector);
+    }
+
+    super._beforeTokenTransfer(from, to, amount);
+  }
+
+  function _delegate(address account, address delegatee) internal override {
+    address currentDelegatee = delegates(account);
+
+    // revert if the delegatee is the same as the current delegatee
+    if (currentDelegatee == delegatee)
+      CustomRevert.revertWith(Towns__DelegateeSameAsCurrent.selector);
+
+    // if the delegatee is the zero address, initialize disable lock
+    if (delegatee == address(0)) {
+      _disableLock(account);
+    } else {
+      _enableLock(account);
+    }
+
+    super._delegate(account, delegatee);
+  }
 
   function _authorizeUpgrade(
     address newImplementation
@@ -190,5 +244,9 @@ contract Towns is
     returns (bool)
   {
     return true;
+  }
+
+  function _canLock() internal pure override returns (bool) {
+    return false;
   }
 }
