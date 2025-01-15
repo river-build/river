@@ -1,6 +1,6 @@
 /// Adapter to hook MLS Coordinator to the client
 
-import { Client } from '../../client'
+import { Client } from '../client'
 import { Message } from '@bufbuild/protobuf'
 import { EncryptedData } from '@river-build/proto'
 import { DLogger, dlog } from '@river-build/dlog'
