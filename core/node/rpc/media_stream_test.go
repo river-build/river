@@ -80,12 +80,10 @@ func TestCreateMediaStream(t *testing.T) {
 
 		// Add media chunk event
 		aeResp, err := alice.client.AddMediaEvent(alice.ctx, connect.NewRequest(&protocol.AddMediaEventRequest{
-			StreamId:       mediaStreamId[:],
 			Event:          envelope,
 			CreationCookie: creationCookie,
 		}))
 		tt.require.NoError(err)
-		tt.require.Nil(aeResp.Msg.Error)
 
 		mb.Hash = common.BytesToHash(aeResp.Msg.CreationCookie.PrevMiniblockHash)
 		mb.Num++
