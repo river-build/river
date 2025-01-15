@@ -157,7 +157,6 @@ export const TEST_ENCRYPTED_MESSAGE_PROPS: PlainMessage<EncryptedData> = {
     senderKey: '',
     ciphertextBytes: new Uint8Array(0),
     ivBytes: new Uint8Array(0),
-    sessionIdBytes: new Uint8Array(0),
 }
 
 export const getXchainConfigForTesting = (): XchainConfig => {
