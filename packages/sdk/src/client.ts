@@ -2517,7 +2517,9 @@ export class Client
         )
     }
 
-    async getMlsCommits(streamId: string, fromEpoch: bigint) {
+    // helper to return all commits from a specific epoch and forward
+    // may contain a few additional commits < than the requested epoch
+    async getMlsCommits(streamId: string, fromSnapshotContainingEpoch: bigint) {
         let streamView = this.stream(streamId)?.view
         let commits: Uint8Array[] = []
         if (!streamView || !streamView.isInitialized) {
@@ -2533,7 +2535,7 @@ export class Client
                 try {
                     const message = MlsMessage.fromBytes(commit)
                     if (message.epoch) {
-                        return message.epoch <= fromEpoch
+                        return message.epoch <= fromSnapshotContainingEpoch
                     }
                 } catch {
                     // ignore
