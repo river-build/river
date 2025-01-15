@@ -6739,6 +6739,7 @@ __metadata:
     "@river-build/encryption": "workspace:^"
     "@river-build/eslint-config": "workspace:^"
     "@river-build/generated": "workspace:^"
+    "@river-build/mls-rs-wasm-node": ^0.0.16
     "@river-build/prettier-config": "workspace:^"
     "@river-build/proto": "workspace:^"
     "@river-build/sdk": "workspace:^"
@@ -25894,6 +25895,8 @@ __metadata:
   resolution: "river-build@workspace:."
   dependencies:
     "@arethetypeswrong/cli": ^0.15.3
+    "@river-build/mls-rs-wasm": ^0.0.16
+    "@river-build/mls-rs-wasm-node": ^0.0.16
     "@typechain/ethers-v5": ^10.1.1
     "@types/node": ^20.5.0
     eslint: ^8.53.0
