@@ -139,6 +139,8 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 	// Must be more than 0.
 	// If the last media chunk was successfully uploaded, the stream must be registered onchain with a sealed state.
 	if len(miniblocks) > 0 {
+		// TODO: Check correctness of the chain
+
 		// The miniblock with 0 number must be the genesis miniblock.
 		// The genesis miniblock must have the media inception event.
 		mediaInception := miniblocks[0].Events()[0].Event.GetMediaPayload().GetInception()
@@ -148,13 +150,17 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 			if err = r.service.streamRegistry.AddStream(
 				ctx,
 				r.streamId,
-				cc.NodeAddresses(), // TODO: The receiver node must be replaced with the initially selected addresses
+				cc.NodeAddresses(),
 				miniblocks[0].Ref.Hash,
 				miniblocks[len(miniblocks)-1].Ref.Hash,
 				// miniblocks[len(miniblocks)-1].Ref.Num,
 				0,
 				true,
 			); err != nil {
+				return nil, err
+			}
+
+			if err = r.service.storage.NormalizeEphemeralStream(ctx, r.streamId); err != nil {
 				return nil, err
 			}
 		}

@@ -2179,6 +2179,51 @@ func (s *PostgresStreamStore) getLastMiniblockNumberTx(
 	return maxSeqNum, nil
 }
 
+func (s *PostgresStreamStore) NormalizeEphemeralStream(
+	ctx context.Context,
+	streamId StreamId,
+) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	return s.txRunner(
+		ctx,
+		"NormalizeEphemeralStream",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			return s.normalizeEphemeralStreamTx(
+				ctx,
+				tx,
+				streamId,
+			)
+		},
+		nil,
+		"streamId", streamId,
+	)
+}
+
+func (s *PostgresStreamStore) normalizeEphemeralStreamTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	streamId StreamId,
+) error {
+	_, err := s.lockEphemeralStream(ctx, tx, streamId, true)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(
+		ctx,
+		`UPDATE es SET ephemeral = false WHERE stream_id = $1`,
+		streamId,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func getCurrentNodeProcessInfo(currentSchemaName string) string {
 	currentHostname, err := os.Hostname()
 	if err != nil {
