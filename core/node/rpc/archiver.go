@@ -318,7 +318,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 			}),
 		)
 		if err != nil && AsRiverError(err).Code != Err_NOT_FOUND {
-			log.Warn(
+			log.Warnw(
 				"Error when calling GetMiniblocks on server",
 				"error",
 				err,
@@ -529,7 +529,7 @@ func (a *Archiver) onStreamPlacementUpdated(
 	id := StreamId(event.StreamId)
 	record, loaded := a.streams.Load(id)
 	if !loaded {
-		dlog.FromCtx(ctx).Error("onStreamPlacementUpdated: Stream not found in map", "streamId", id)
+		dlog.FromCtx(ctx).Errorw("onStreamPlacementUpdated: Stream not found in map", "streamId", id)
 		return
 	}
 	stream := record.(*ArchiveStream)
@@ -545,7 +545,7 @@ func (a *Archiver) onStreamLastMiniblockUpdated(
 	id := StreamId(event.StreamId)
 	record, loaded := a.streams.Load(id)
 	if !loaded {
-		dlog.FromCtx(ctx).Error("onStreamLastMiniblockUpdated: Stream not found in map", "streamId", id)
+		dlog.FromCtx(ctx).Errorw("onStreamLastMiniblockUpdated: Stream not found in map", "streamId", id)
 		return
 	}
 	stream := record.(*ArchiveStream)
@@ -592,12 +592,12 @@ func (a *Archiver) worker(ctx context.Context) {
 		case streamId := <-a.tasks:
 			record, loaded := a.streams.Load(streamId)
 			if !loaded {
-				log.Error("archiver.worker: Stream not found in map", "streamId", streamId)
+				log.Errorw("archiver.worker: Stream not found in map", "streamId", streamId)
 				continue
 			}
 			err := a.ArchiveStream(ctx, record.(*ArchiveStream))
 			if err != nil {
-				log.Error("archiver.worker: Failed to archive stream", "error", err, "streamId", streamId)
+				log.Errorw("archiver.worker: Failed to archive stream", "error", err, "streamId", streamId)
 				a.failedOpsCount.Add(1)
 				record.(*ArchiveStream).IncrementConsecutiveFailures()
 			} else {

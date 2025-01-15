@@ -379,12 +379,12 @@ func (occ *onChainConfiguration) processRawSettings(
 			DecodeHook: decodeHook,
 		})
 		if err != nil {
-			log.Error("SHOULD NOT HAPPEN: failed to create decoder", "err", err)
+			log.Errorw("SHOULD NOT HAPPEN: failed to create decoder", "err", err)
 			continue
 		}
 		err = decoder.Decode(input)
 		if err != nil {
-			log.Error("SHOULD NOT HAPPEN: failed to decode settings", "err", err)
+			log.Errorw("SHOULD NOT HAPPEN: failed to decode settings", "err", err)
 			continue
 		}
 
@@ -490,7 +490,7 @@ func (occ *onChainConfiguration) onBlock(_ context.Context, blockNumber BlockNum
 func (occ *onChainConfiguration) onConfigChanged(ctx context.Context, event types.Log) {
 	var e river.RiverConfigV1ConfigurationChanged
 	if err := occ.contract.BoundContract().UnpackLog(&e, "ConfigurationChanged", event); err != nil {
-		dlog.FromCtx(ctx).Error("OnChainConfiguration: unable to decode ConfigurationChanged event")
+		dlog.FromCtx(ctx).Errorw("OnChainConfiguration: unable to decode ConfigurationChanged event")
 		return
 	}
 	occ.applyEvent(ctx, &e)
@@ -612,7 +612,7 @@ func abiBytesToTypeDecoder(ctx context.Context) mapstructure.DecodeHookFuncValue
 					if (ms || sec) && ok {
 						vv, err := ABIDecodeInt64(bb)
 						if err != nil {
-							log.Error("failed to decode int64", "key", key, "err", err, "bytes", bb)
+							log.Errorw("failed to decode int64", "key", key, "err", err, "bytes", bb)
 							badKeys = append(badKeys, key)
 							continue
 						}
@@ -635,27 +635,27 @@ func abiBytesToTypeDecoder(ctx context.Context) mapstructure.DecodeHookFuncValue
 				if err == nil {
 					return v, nil
 				}
-				log.Error("failed to decode int64", "err", err, "bytes", from.Bytes())
+				log.Errorw("failed to decode int64", "err", err, "bytes", from.Bytes())
 			} else if to.Kind() == reflect.Uint64 || to.Kind() == reflect.Uint {
 				v, err := ABIDecodeUint64(from.Bytes())
 				if err == nil {
 					return v, nil
 				}
-				log.Error("failed to decode uint64", "err", err, "bytes", from.Bytes())
+				log.Errorw("failed to decode uint64", "err", err, "bytes", from.Bytes())
 			} else if to.Kind() == reflect.String {
 				v, err := ABIDecodeString(from.Bytes())
 				if err == nil {
 					return v, nil
 				}
-				log.Error("failed to decode string", "err", err, "bytes", from.Bytes())
+				log.Errorw("failed to decode string", "err", err, "bytes", from.Bytes())
 			} else if to.Kind() == reflect.Slice && to.Type().Elem().Kind() == reflect.Uint64 {
 				v, err := ABIDecodeUint64Array(from.Bytes())
 				if err == nil {
 					return v, nil
 				}
-				log.Error("failed to decode []uint64", "err", err, "bytes", from.Bytes())
+				log.Errorw("failed to decode []uint64", "err", err, "bytes", from.Bytes())
 			} else {
-				log.Error("unsupported type for setting decoding", "type", to.Kind(), "bytes", from.Bytes())
+				log.Errorw("unsupported type for setting decoding", "type", to.Kind(), "bytes", from.Bytes())
 			}
 			// Failed to decode, return unchanged value.
 			return to.Interface(), nil

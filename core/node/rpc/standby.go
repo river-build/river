@@ -61,20 +61,20 @@ func (s *Service) standbyFetchStatus(req *http.Request, client *http.Client) boo
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(req.WithContext(ctx))
 	if err != nil {
-		log.Warn("Standby: failed to fetch status, retrying...", "error", err)
+		log.Warnw("Standby: failed to fetch status, retrying...", "error", err)
 		return false
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Warn("Standby: status code is not 200, retrying...", "status_code", resp.StatusCode)
+		log.Warnw("Standby: status code is not 200, retrying...", "status_code", resp.StatusCode)
 		return false
 	}
 
 	var status statusinfo.StatusResponse
 	err = json.NewDecoder(resp.Body).Decode(&status)
 	if err != nil {
-		log.Warn("Standby: failed to decode JSON, retrying...", "error", err)
+		log.Warnw("Standby: failed to decode JSON, retrying...", "error", err)
 		return false
 	}
 

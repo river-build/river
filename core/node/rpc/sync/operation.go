@@ -120,7 +120,7 @@ func (syncOp *StreamSyncOperation) Run(
 
 			msg.SyncId = syncOp.SyncID
 			if err = res.Send(msg); err != nil {
-				log.Error("Unable to send sync stream update to client", "err", err)
+				log.Errorw("Unable to send sync stream update to client", "err", err)
 				return err
 			}
 
@@ -287,7 +287,7 @@ func (syncOp *StreamSyncOperation) process(cmd *subCommand) error {
 		}
 	case <-time.After(10 * time.Second):
 		err := RiverError(Err_DEADLINE_EXCEEDED, "sync operation command queue full").Tags("syncId", syncOp.SyncID)
-		dlog.FromCtx(syncOp.ctx).Error("Sync operation command queue full", "err", err)
+		dlog.FromCtx(syncOp.ctx).Errorw("Sync operation command queue full", "err", err)
 		return err
 	case <-syncOp.ctx.Done():
 		return RiverError(Err_CANCELED, "sync operation cancelled").Tags("syncId", syncOp.SyncID)

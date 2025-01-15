@@ -54,7 +54,7 @@ func (s *localSyncer) Run() {
 	for _, cookie := range s.cookies {
 		streamID, _ := StreamIdFromBytes(cookie.GetStreamId())
 		if err := s.addStream(s.syncStreamCtx, streamID, cookie); err != nil {
-			log.Error("Unable to add local sync stream", "stream", streamID, "err", err)
+			log.Errorw("Unable to add local sync stream", "stream", streamID, "err", err)
 		}
 	}
 

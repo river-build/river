@@ -617,7 +617,7 @@ func (p *miniblockProducer) jobStart(ctx context.Context, j *mbJob, forceSnapsho
 
 func (p *miniblockProducer) jobDone(ctx context.Context, j *mbJob) {
 	if !p.jobs.CompareAndDelete(j.stream.streamId, j) {
-		dlog.FromCtx(ctx).Error("MiniblockProducer: jobDone: job not found in jobs map", "streamId", j.stream.streamId)
+		dlog.FromCtx(ctx).Errorw("MiniblockProducer: jobDone: job not found in jobs map", "streamId", j.stream.streamId)
 	}
 }
 
@@ -669,10 +669,10 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 		if err == nil {
 			success = append(success, successRegistered...)
 			if len(failed) > 0 {
-				log.Error("processMiniblockProposalBatch: Failed to register some miniblocks", "failed", failed)
+				log.Errorw("processMiniblockProposalBatch: Failed to register some miniblocks", "failed", failed)
 			}
 		} else {
-			log.Error("processMiniblockProposalBatch: Error registering miniblock batch", "err", err)
+			log.Errorw("processMiniblockProposalBatch: Error registering miniblock batch", "err", err)
 		}
 	}
 
@@ -688,7 +688,7 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 		if slices.Contains(success, job.stream.streamId) {
 			err := job.stream.ApplyMiniblock(ctx, job.candidate)
 			if err != nil {
-				log.Error(
+				log.Errorw(
 					"processMiniblockProposalBatch: Error applying miniblock",
 					"streamId",
 					job.stream.streamId,

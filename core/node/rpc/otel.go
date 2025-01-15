@@ -90,7 +90,7 @@ func (s *Service) initTracing() {
 	}
 
 	if len(exporters) == 0 {
-		s.defaultLogger.Warn("Tracing is enabled, but no exporters are configured, skipping tracing setup")
+		s.defaultLogger.Warnw("Tracing is enabled, but no exporters are configured, skipping tracing setup")
 		return
 	}
 

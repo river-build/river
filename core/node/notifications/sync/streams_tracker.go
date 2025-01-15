@@ -144,7 +144,7 @@ func (tracker *StreamsTracker) Run(ctx context.Context) error {
 			})
 
 			if len(stream.Nodes) == 0 {
-				log.Warn("Ignore stream, no valid node found", "stream", stream.StreamId)
+				log.Warnw("Ignore stream, no valid node found", "stream", stream.StreamId)
 				return true
 			}
 

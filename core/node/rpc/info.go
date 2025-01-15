@@ -34,7 +34,7 @@ func (s *Service) Info(
 
 	res, err := s.info(ctx, log, req)
 	if err != nil {
-		log.Warn("Info ERROR", "error", err)
+		log.Warnw("Info ERROR", "error", err)
 		return nil, err
 	}
 
@@ -70,7 +70,7 @@ func (s *Service) info(
 					Graffiti: "pong",
 				}), nil
 			} else if debug == "panic" {
-				log.Error("panic requested through Info request")
+				log.Errorw("panic requested through Info request")
 				panic("panic requested through Info request")
 			} else if debug == "flush_cache" {
 				log.Infow("FLUSHING CACHE")

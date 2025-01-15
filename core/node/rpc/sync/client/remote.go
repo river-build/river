@@ -64,7 +64,7 @@ func newRemoteSyncer(
 	log := dlog.FromCtx(ctx)
 
 	if responseStream.Msg().GetSyncOp() != SyncOp_SYNC_NEW || responseStream.Msg().GetSyncId() == "" {
-		log.Error("Received unexpected sync stream message",
+		log.Errorw("Received unexpected sync stream message",
 			"syncOp", responseStream.Msg().SyncOp,
 			"syncId", responseStream.Msg().SyncId)
 		syncStreamCancel()
@@ -117,7 +117,7 @@ func (s *remoteSyncer) Run() {
 		if res.GetSyncOp() == SyncOp_SYNC_UPDATE {
 			if err := s.sendSyncStreamResponseToClient(res); err != nil {
 				if !errors.Is(err, context.Canceled) {
-					log.Error("Cancel remote sync with client", "remote", s.remoteAddr, "err", err)
+					log.Errorw("Cancel remote sync with client", "remote", s.remoteAddr, "err", err)
 					s.cancelGlobalSyncOp(err)
 				}
 				return
@@ -127,7 +127,7 @@ func (s *remoteSyncer) Run() {
 				s.unsubStream(streamID)
 				if err := s.sendSyncStreamResponseToClient(res); err != nil {
 					if !errors.Is(err, context.Canceled) {
-						log.Error("Cancel remote sync with client", "remote", s.remoteAddr, "err", err)
+						log.Errorw("Cancel remote sync with client", "remote", s.remoteAddr, "err", err)
 						s.cancelGlobalSyncOp(err)
 					}
 					return
@@ -150,7 +150,7 @@ func (s *remoteSyncer) Run() {
 
 			// TODO: slow down a bit to give client time to read stream down updates
 			if err := s.sendSyncStreamResponseToClient(msg); err != nil {
-				log.Error("Cancel remote sync with client", "remote", s.remoteAddr, "err", err)
+				log.Errorw("Cancel remote sync with client", "remote", s.remoteAddr, "err", err)
 				s.cancelGlobalSyncOp(err)
 				return false
 			}
@@ -195,7 +195,7 @@ func (s *remoteSyncer) connectionAlive(latestMsgReceived *atomic.Value) {
 			now := time.Now()
 			lastMsgRecv := latestMsgReceived.Load().(time.Time)
 			if lastMsgRecv.Add(recentActivityDeadline).Before(now) { // no recent activity -> conn dead
-				log.Warn("remote sync node time out", "remote", s.remoteAddr)
+				log.Warnw("remote sync node time out", "remote", s.remoteAddr)
 				s.syncStreamCancel()
 				return
 			}
@@ -210,7 +210,7 @@ func (s *remoteSyncer) connectionAlive(latestMsgReceived *atomic.Value) {
 				Nonce:  fmt.Sprintf("%d", now.Unix()),
 			})); err != nil {
 				if !errors.Is(err, context.Canceled) {
-					log.Error("ping sync failed", "remote", s.remoteAddr, "err", err)
+					log.Errorw("ping sync failed", "remote", s.remoteAddr, "err", err)
 				}
 				s.syncStreamCancel()
 				return

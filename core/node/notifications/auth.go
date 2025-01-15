@@ -163,7 +163,7 @@ func (s *Service) FinishAuthentication(
 
 	sessionToken, err := token.SignedString(s.sessionTokenSigningKey)
 	if err != nil {
-		dlog.FromCtx(ctx).Error("Unable to sign session token", "err", err)
+		dlog.FromCtx(ctx).Errorw("Unable to sign session token", "err", err)
 		return nil, AsRiverError(err, Err_INTERNAL).Tag("user", userID)
 	}
 

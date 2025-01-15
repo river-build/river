@@ -63,7 +63,7 @@ func (s *PostgresStreamStore) createSettingsTableTxnWithPartitions(partitions in
 				num_partitions INT DEFAULT 256 NOT NULL);`,
 		)
 		if err != nil {
-			log.Error("Error creating settings table", "error", err)
+			log.Errorw("Error creating settings table", "error", err)
 			return err
 		}
 
@@ -75,7 +75,7 @@ func (s *PostgresStreamStore) createSettingsTableTxnWithPartitions(partitions in
 			partitions,
 		)
 		if err != nil {
-			log.Error("Error setting partition count", "error", err)
+			log.Errorw("Error setting partition count", "error", err)
 			return err
 		}
 
@@ -95,7 +95,7 @@ func (s *PostgresStreamStore) createSettingsTableTxnWithPartitions(partitions in
 		log.Infow("Creating stream storage schema with partition count", "numPartitions", numPartitions)
 
 		if tags.RowsAffected() < 1 {
-			log.Warn(
+			log.Warnw(
 				"Ignoring numPartitions config, previous setting detected",
 				"numPartitionsConfig",
 				partitions,
@@ -173,7 +173,7 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 				return
 			}
 
-			log.Warn("Error pinging pgx connection maintaining the session lock, closing connection", "error", err)
+			log.Warnw("Error pinging pgx connection maintaining the session lock, closing connection", "error", err)
 
 			// Close the connection to encourage the db server to immediately clean up the
 			// session so we can go ahead and re-take the lock from a new session.
@@ -1483,7 +1483,7 @@ func (s *PostgresStreamStore) Close(ctx context.Context) {
 	err := s.CleanupStreamStorage(ctx)
 	if err != nil {
 		log := dlog.FromCtx(ctx)
-		log.Error("Error when deleting singlenodekey entry", "error", err)
+		log.Errorw("Error when deleting singlenodekey entry", "error", err)
 	}
 
 	// Cancel the go process that maintains the connection holding the session-wide schema lock
@@ -1734,7 +1734,7 @@ func (s *PostgresStreamStore) acquireConnection(ctx context.Context) (*pgxpool.C
 		}
 	}
 
-	log.Error("Failed to acquire pgx connection", "error", err)
+	log.Errorw("Failed to acquire pgx connection", "error", err)
 
 	// Assume final error is representative and return it.
 	return nil, AsRiverError(

@@ -32,7 +32,7 @@ func GetLinkedWallets(
 	}
 
 	if err != nil {
-		log.Error("Failed to GetRootKeyForWallet", "err", err, "wallet", wallet.Hex())
+		log.Errorw("Failed to GetRootKeyForWallet", "err", err, "wallet", wallet.Hex())
 		if getRootKeyForWalletCalls != nil {
 			getRootKeyForWalletCalls.IncFail()
 		}

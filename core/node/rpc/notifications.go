@@ -155,7 +155,7 @@ func RunNotificationService(ctx context.Context, cfg *config.Config) error {
 
 	service, err := StartServerInNotificationMode(ctx, cfg, nil, nil)
 	if err != nil {
-		log.Error("Failed to start server", "error", err)
+		log.Errorw("Failed to start server", "error", err)
 		return err
 	}
 	defer service.Close()

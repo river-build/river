@@ -36,7 +36,7 @@ func runServices(ctx context.Context, cfg *config.Config, stream bool, xchain bo
 	if stream {
 		streamService, err = rpc.StartServer(ctx, cancel, cfg, nil)
 		if err != nil {
-			log.Error("Failed to start server", "error", err)
+			log.Errorw("Failed to start server", "error", err)
 			return err
 		}
 		defer streamService.Close()
@@ -75,7 +75,7 @@ func runServices(ctx context.Context, cfg *config.Config, stream bool, xchain bo
 	if err == nil {
 		log.Infow("Got OS signal", "signal", signal.String())
 	} else {
-		log.Error("Exiting with error", "error", err)
+		log.Errorw("Exiting with error", "error", err)
 	}
 
 	if xchainService != nil {

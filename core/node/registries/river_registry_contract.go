@@ -649,7 +649,7 @@ func (c *RiverRegistryContract) SetStreamLastMiniblockBatch(
 			case "StreamLastMiniblockUpdated":
 				args, err := event.Inputs.Unpack(l.Data)
 				if err != nil || len(args) != 4 {
-					log.Error("Unable to unpack StreamLastMiniblockUpdated event", "err", err)
+					log.Errorw("Unable to unpack StreamLastMiniblockUpdated event", "err", err)
 					continue
 				}
 
@@ -675,7 +675,7 @@ func (c *RiverRegistryContract) SetStreamLastMiniblockBatch(
 			case "StreamLastMiniblockUpdateFailed":
 				args, err := event.Inputs.Unpack(l.Data)
 				if err != nil || len(args) != 4 {
-					log.Error("Unable to unpack StreamLastMiniblockUpdateFailed event", "err", err)
+					log.Errorw("Unable to unpack StreamLastMiniblockUpdateFailed event", "err", err)
 					continue
 				}
 
@@ -686,7 +686,7 @@ func (c *RiverRegistryContract) SetStreamLastMiniblockBatch(
 					reason            = args[3].(string)
 				)
 
-				log.Error(
+				log.Errorw(
 					"RiverRegistryContract: set stream last miniblock failed",
 					"name", "SetStreamLastMiniblockBatch",
 					"streamId", streamID,
@@ -699,7 +699,7 @@ func (c *RiverRegistryContract) SetStreamLastMiniblockBatch(
 				failed = append(failed, streamID)
 
 			default:
-				log.Error("Unexpected event on RiverRegistry::SetStreamLastMiniblockBatch", "event", event.Name)
+				log.Errorw("Unexpected event on RiverRegistry::SetStreamLastMiniblockBatch", "event", event.Name)
 			}
 		}
 
@@ -813,7 +813,7 @@ func (c *RiverRegistryContract) OnStreamEvent(
 		func(ctx context.Context, log types.Log) {
 			parsed, err := c.ParseEvent(ctx, c.StreamRegistry.BoundContract(), c.StreamEventInfo, &log)
 			if err != nil {
-				dlog.FromCtx(ctx).Error("Failed to parse event", "err", err, "log", log)
+				dlog.FromCtx(ctx).Errorw("Failed to parse event", "err", err, "log", log)
 				return
 			}
 			switch e := parsed.(type) {
@@ -824,7 +824,7 @@ func (c *RiverRegistryContract) OnStreamEvent(
 			case *river.StreamRegistryV1StreamPlacementUpdated:
 				placementUpdated(ctx, e)
 			default:
-				dlog.FromCtx(ctx).Error("Unknown event type", "event", e)
+				dlog.FromCtx(ctx).Errorw("Unknown event type", "event", e)
 			}
 		})
 	return nil

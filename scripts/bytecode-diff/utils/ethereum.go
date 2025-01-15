@@ -201,7 +201,7 @@ func CreateEthereumClients(
 		}{baseClient, riverClient}
 
 		if verbose {
-			Log.Infow().Msgf("Successfully connected to Ethereum client for %s", env)
+			Log.Info().Msgf("Successfully connected to Ethereum client for %s", env)
 		}
 	}
 
@@ -271,7 +271,7 @@ func (b *BaseChainScan) GetContractName(baseURL, address, apiKey string) (string
 		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	Log.Debugw().Msgf("Raw Basescan JSON response: %s", string(body))
+	Log.Debug().Msgf("Raw Basescan JSON response: %s", string(body))
 
 	var result struct {
 		Status  string `json:"status"`
@@ -351,7 +351,7 @@ func (b *RiverChainScan) GetContractName(riverscanURL, address, apiKey string) (
 		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	Log.Debugw().Msgf("Raw Riverscan JSON response: %s", string(body))
+	Log.Debug().Msgf("Raw Riverscan JSON response: %s", string(body))
 
 	var result struct {
 		Items []struct {

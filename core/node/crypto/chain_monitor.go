@@ -225,7 +225,7 @@ func (cm *chainMonitor) Start(
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 	if cm.started {
-		dlog.FromCtx(ctx).Error("chain monitor already started")
+		dlog.FromCtx(ctx).Errorw("chain monitor already started")
 		return
 	}
 	cm.started = true
@@ -322,7 +322,7 @@ func (cm *chainMonitor) runWithBlockPeriod(
 
 			head, err := client.HeaderByNumber(ctx, nil)
 			if err != nil {
-				log.Warn("chain monitor is unable to retrieve chain head", "error", err)
+				log.Warnw("chain monitor is unable to retrieve chain head", "error", err)
 				pollInterval = poll.Interval(time.Since(start), gotNewBlock, false, true)
 				continue
 			}
@@ -381,7 +381,7 @@ func (cm *chainMonitor) runWithBlockPeriod(
 				len(cm.builder.blockWithLogsCallbacks) > 0 { // collect events in new blocks
 				collectedLogs, err = client.FilterLogs(ctx, query)
 				if err != nil {
-					log.Warn("unable to retrieve logs", "error", err, "from", query.FromBlock, "to", query.ToBlock)
+					log.Warnw("unable to retrieve logs", "error", err, "from", query.FromBlock, "to", query.ToBlock)
 					pollInterval = poll.Interval(time.Since(start), gotNewBlock, false, true)
 					cm.mu.Unlock()
 					continue

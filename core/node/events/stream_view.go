@@ -323,7 +323,7 @@ func (r *streamViewImpl) makeMiniblockHeader(
 				offset := block.Header().EventNumOffset
 				err := Update_Snapshot(snapshot, e, miniblockNum, offset+int64(j))
 				if err != nil {
-					log.Error("Failed to update snapshot",
+					log.Errorw("Failed to update snapshot",
 						"error", err,
 						"streamId", r.streamId,
 						"event", e.ShortDebugStr(),
@@ -336,7 +336,7 @@ func (r *streamViewImpl) makeMiniblockHeader(
 		for i, e := range events {
 			err := Update_Snapshot(snapshot, e, nextMiniblockNum, eventNumOffset+int64(i))
 			if err != nil {
-				log.Error("Failed to update snapshot",
+				log.Errorw("Failed to update snapshot",
 					"error", err,
 					"streamId", r.streamId,
 					"event", e.ShortDebugStr(),
@@ -353,7 +353,7 @@ func (r *streamViewImpl) makeMiniblockHeader(
 			resp, err := mls_service.SnapshotExternalGroupRequest(mlsSnapshotRequest)
 			if err != nil {
 				// what to do here...?
-				log.Error("Failed to update MLS snapshot",
+				log.Errorw("Failed to update MLS snapshot",
 					"error", err,
 					"streamId", r.streamId,
 				)

@@ -86,12 +86,12 @@ func newEntitlementCache(ctx context.Context, cfg *config.ChainConfig) (*entitle
 	// Need to figure out how to determine the size of the cache
 	positiveCache, err := lru.NewARC[ChainAuthArgs, entitlementCacheValue](positiveCacheSize)
 	if err != nil {
-		log.Error("error creating auth_impl positive cache", "error", err)
+		log.Errorw("error creating auth_impl positive cache", "error", err)
 		return nil, WrapRiverError(protocol.Err_CANNOT_CONNECT, err)
 	}
 	negativeCache, err := lru.NewARC[ChainAuthArgs, entitlementCacheValue](negativeCacheSize)
 	if err != nil {
-		log.Error("error creating auth_impl negative cache", "error", err)
+		log.Errorw("error creating auth_impl negative cache", "error", err)
 		return nil, WrapRiverError(protocol.Err_CANNOT_CONNECT, err)
 	}
 
@@ -130,14 +130,14 @@ func newLinkedWalletCache(ctx context.Context, cfg *config.ChainConfig) (*entitl
 
 	positiveCache, err := lru.NewARC[ChainAuthArgs, entitlementCacheValue](positiveCacheSize)
 	if err != nil {
-		log.Error("error creating auth_impl entitlement manager positive cache", "error", err)
+		log.Errorw("error creating auth_impl entitlement manager positive cache", "error", err)
 		return nil, WrapRiverError(protocol.Err_CANNOT_CONNECT, err)
 	}
 
 	// We don't use this, but make it anyway to initialize the entitlementCache.
 	negativeCache, err := lru.NewARC[ChainAuthArgs, entitlementCacheValue](negativeCacheSize)
 	if err != nil {
-		log.Error("error creating auth_impl entitlement manager negative cache", "error", err)
+		log.Errorw("error creating auth_impl entitlement manager negative cache", "error", err)
 		return nil, WrapRiverError(protocol.Err_CANNOT_CONNECT, err)
 	}
 
@@ -171,12 +171,12 @@ func newEntitlementManagerCache(ctx context.Context, cfg *config.ChainConfig) (*
 	// Need to figure out how to determine the size of the cache
 	positiveCache, err := lru.NewARC[ChainAuthArgs, entitlementCacheValue](positiveCacheSize)
 	if err != nil {
-		log.Error("error creating auth_impl entitlement manager positive cache", "error", err)
+		log.Errorw("error creating auth_impl entitlement manager positive cache", "error", err)
 		return nil, WrapRiverError(protocol.Err_CANNOT_CONNECT, err)
 	}
 	negativeCache, err := lru.NewARC[ChainAuthArgs, entitlementCacheValue](negativeCacheSize)
 	if err != nil {
-		log.Error("error creating auth_impl entitlement manager negative cache", "error", err)
+		log.Errorw("error creating auth_impl entitlement manager negative cache", "error", err)
 		return nil, WrapRiverError(protocol.Err_CANNOT_CONNECT, err)
 	}
 

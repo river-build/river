@@ -147,7 +147,7 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 		}
 
 		if err != nil {
-			p.log.Warn("Unable to retrieve user preference to determine if notification must be send",
+			p.log.Warnw("Unable to retrieve user preference to determine if notification must be send",
 				"channel", channelID,
 				"event", event.Hash,
 				"err", err,
@@ -197,7 +197,7 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 				}
 				recipients.Add(participant)
 			} else {
-				p.log.Error("Space channel misses spaceID", "channel", channelID)
+				p.log.Errorw("Space channel misses spaceID", "channel", channelID)
 			}
 		}
 
@@ -409,7 +409,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 ) {
 	eventBytes, err := proto.Marshal(event.Event)
 	if err != nil {
-		p.log.Error("Unable to marshal event", "error", err)
+		p.log.Errorw("Unable to marshal event", "error", err)
 		return
 	}
 
@@ -445,7 +445,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 
 		for _, sub := range userPref.Subscriptions.WebPush {
 			if time.Since(sub.LastSeen) >= p.subscriptionExpiration {
-				p.log.Warn("Ignore WebPush subscription due to no activity",
+				p.log.Warnw("Ignore WebPush subscription due to no activity",
 					"user", user,
 					"event", event.Hash,
 					"channelID", channelID,
@@ -464,7 +464,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 					"channelID", channelID,
 				)
 			} else if !subscriptionExpired {
-				p.log.Error("Unable to send web push notification",
+				p.log.Errorw("Unable to send web push notification",
 					"user",
 					user, "err", err,
 					"event", event.Hash,
@@ -472,7 +472,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 				)
 			} else {
 				if err := p.cache.RemoveExpiredWebPushSubscription(ctx, userPref.UserID, sub.Sub); err != nil {
-					p.log.Error("Unable to remove expired webpush subscription",
+					p.log.Errorw("Unable to remove expired webpush subscription",
 						"user", userPref.UserID, "err", err)
 				} else {
 					p.log.Infow("Removed expired webpush subscription", "user", userPref.UserID)
@@ -488,7 +488,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 		for _, sub := range userPref.Subscriptions.APNPush {
 			if time.Since(sub.LastSeen) >= p.subscriptionExpiration {
 				if err := p.cache.RemoveAPNSubscription(ctx, sub.DeviceToken, userPref.UserID); err != nil {
-					p.log.Error("Unable to remove expired APN subscription",
+					p.log.Errorw("Unable to remove expired APN subscription",
 						"user", userPref.UserID, "err", err)
 					continue
 				}
@@ -512,20 +512,20 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 
 			switch sub.PushVersion {
 			case NotificationPushVersion_NOTIFICATION_PUSH_VERSION_UNSPECIFIED:
-				p.log.Error("Unspecified APN push version in subscription", "deviceToken", sub.DeviceToken)
+				p.log.Errorw("Unspecified APN push version in subscription", "deviceToken", sub.DeviceToken)
 				continue
 			case NotificationPushVersion_NOTIFICATION_PUSH_VERSION_1:
 				apnPayload, err = p.apnPayloadV1(channelID, spaceID, event, kind, receivers)
 			case NotificationPushVersion_NOTIFICATION_PUSH_VERSION_2:
 				apnPayload, err = p.apnPayloadV2(channelID, spaceID, event, kind, eventHash, receivers)
 			default:
-				p.log.Warn("Ignore APN subscription due to unsupported push payload format",
+				p.log.Warnw("Ignore APN subscription due to unsupported push payload format",
 					"pushVersion", sub.PushVersion)
 				continue
 			}
 
 			if err != nil {
-				p.log.Error("Unable to prepare APN payload", "err", err)
+				p.log.Errorw("Unable to prepare APN payload", "err", err)
 				continue
 			}
 
@@ -550,7 +550,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 					"version", sub.PushVersion,
 				)
 			} else if !subscriptionExpired {
-				p.log.Error("Unable to send APN notification",
+				p.log.Errorw("Unable to send APN notification",
 					"user", user,
 					"user", user,
 					"event", event.Hash,
@@ -561,7 +561,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 					"err", err)
 			} else {
 				if err := p.cache.RemoveAPNSubscription(ctx, sub.DeviceToken, userPref.UserID); err != nil {
-					p.log.Error("Unable to remove expired APN subscription",
+					p.log.Errorw("Unable to remove expired APN subscription",
 						"user", userPref.UserID, "err", err)
 				} else {
 					p.log.Infow("Removed expired APN subscription", "user", userPref.UserID)

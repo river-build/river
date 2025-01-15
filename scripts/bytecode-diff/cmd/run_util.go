@@ -162,12 +162,12 @@ var AddHashesCmd = &cobra.Command{
 				if err != nil {
 					log.Error().Err(err).Str("file", htmlOutputPath).Msg("Failed to write HTML file")
 				} else {
-					log.Infow().Str("file", htmlOutputPath).Msg("Successfully wrote HTML file with bytecode hashes")
+					log.Info().Str("file", htmlOutputPath).Msg("Successfully wrote HTML file with bytecode hashes")
 				}
 			}
 		}
 
-		log.Infow().Str("file", outputPath).Msg("Successfully wrote updated YAML file with bytecode hashes")
+		log.Info().Str("file", outputPath).Msg("Successfully wrote updated YAML file with bytecode hashes")
 	},
 }
 

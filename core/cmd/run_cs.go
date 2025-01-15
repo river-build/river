@@ -51,7 +51,7 @@ func runClientSimulator() error {
 
 	wallet, err := util.LoadWallet(bc)
 	if err != nil {
-		log.Error("error finding wallet")
+		log.Errorw("error finding wallet")
 		return err
 	}
 

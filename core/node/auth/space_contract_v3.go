@@ -183,7 +183,7 @@ func (sc *SpaceContractV3) marshalEntitlements(
 	for i, rawEntitlement := range entitlementData {
 		entitlement, err := types.MarshalEntitlement(ctx, rawEntitlement)
 		if err != nil {
-			log.Warn("Failed to marshal entitlement", "index", i, "error", err)
+			log.Warnw("Failed to marshal entitlement", "index", i, "error", err)
 			return nil, AsRiverError(err)
 		}
 		entitlements[i] = entitlement
@@ -199,7 +199,7 @@ func (sc *SpaceContractV3) IsBanned(
 	log := dlog.FromCtx(ctx).With("function", "SpaceContractV3.IsBanned")
 	space, err := sc.getSpace(ctx, spaceId)
 	if err != nil {
-		log.Warn("Failed to get space", "space_id", spaceId, "error", err)
+		log.Warnw("Failed to get space", "space_id", spaceId, "error", err)
 		return false, err
 	}
 	return space.banning.IsBanned(ctx, linkedWallets)
@@ -223,20 +223,20 @@ func (sc *SpaceContractV3) GetChannelEntitlementsForPermission(
 	// get the channel entitlements and check if user is entitled.
 	space, err := sc.getSpace(ctx, spaceId)
 	if err != nil {
-		log.Warn("Failed to get space", "space_id", spaceId, "error", err)
+		log.Warnw("Failed to get space", "space_id", spaceId, "error", err)
 		return nil, EMPTY_ADDRESS, err
 	}
 
 	// get owner address - owner has all permissions
 	spaceAsIerc5313, err := ierc5313.NewIerc5313(space.address, sc.backend)
 	if err != nil {
-		log.Warn("Failed to get spaceAsIerc5313", "space_id", spaceId, "error", err)
+		log.Warnw("Failed to get spaceAsIerc5313", "space_id", spaceId, "error", err)
 		return nil, EMPTY_ADDRESS, err
 	}
 
 	owner, err := spaceAsIerc5313.Owner(nil)
 	if err != nil {
-		log.Warn("Failed to get owner", "space_id", spaceId, "error", err)
+		log.Warnw("Failed to get owner", "space_id", spaceId, "error", err)
 		return nil, EMPTY_ADDRESS, err
 	}
 
@@ -287,19 +287,19 @@ func (sc *SpaceContractV3) GetSpaceEntitlementsForPermission(
 	// get the space entitlements and check if user is entitled.
 	space, err := sc.getSpace(ctx, spaceId)
 	if err != nil {
-		log.Warn("Failed to get space", "space_id", spaceId, "error", err)
+		log.Warnw("Failed to get space", "space_id", spaceId, "error", err)
 		return nil, EMPTY_ADDRESS, err
 	}
 
 	spaceAsIerc5313, err := ierc5313.NewIerc5313(space.address, sc.backend)
 	if err != nil {
-		log.Warn("Failed to get spaceAsIerc5313", "space_id", spaceId, "error", err)
+		log.Warnw("Failed to get spaceAsIerc5313", "space_id", spaceId, "error", err)
 		return nil, EMPTY_ADDRESS, err
 	}
 
 	owner, err := spaceAsIerc5313.Owner(nil)
 	if err != nil {
-		log.Warn("Failed to get owner", "space_id", spaceId, "error", err)
+		log.Warnw("Failed to get owner", "space_id", spaceId, "error", err)
 		return nil, EMPTY_ADDRESS, err
 	}
 

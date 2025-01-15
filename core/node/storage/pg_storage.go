@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
-	"log/slog"
 	"strings"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
@@ -140,7 +140,7 @@ func (s *PostgresEventStore) txRunner(
 			if pgErr, ok := err.(*pgconn.PgError); ok {
 				if pgErr.Code == pgerrcode.SerializationFailure || pgErr.Code == pgerrcode.DeadlockDetected {
 					s.txTracker.track("RETRY", name, tags...)
-					log.Warn(
+					log.Warnw(
 						"pg.txRunner: retrying transaction due to serialization failure",
 						"pgErr", pgErr,
 						"txTracker", s.txTracker.dump(),
@@ -154,15 +154,15 @@ func (s *PostgresEventStore) txRunner(
 					s.txCounter.WithLabelValues(name, "retry").Inc()
 					continue
 				}
-				log.Warn("pg.txRunner: transaction failed", "pgErr", pgErr)
+				log.Warnw("pg.txRunner: transaction failed", "pgErr", pgErr)
 			} else {
-				level := slog.LevelWarn
+				level := zapcore.WarnLevel
 				if opts != nil && opts.skipLoggingNotFound && AsRiverError(err).Code == Err_NOT_FOUND {
 					// Count "not found" as succeess if error is potentially expected
 					pass = true
-					level = slog.LevelDebug
+					level = zapcore.DebugLevel
 				}
-				log.Log(ctx, level, "pg.txRunner: transaction failed", "err", err)
+				log.Logw(level, "pg.txRunner: transaction failed", "err", err)
 			}
 
 			if pass {

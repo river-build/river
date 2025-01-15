@@ -2,10 +2,10 @@ package utils
 
 import (
 	"context"
-	"log/slog"
 	"time"
 
 	"connectrpc.com/connect"
+	"go.uber.org/zap"
 
 	"github.com/river-build/river/core/node/dlog"
 )
@@ -21,7 +21,7 @@ type RequestWithStreamId interface {
 
 // CtxAndLogForRequest returns a new context and logger for the given request.
 // If the request is made in the context of a stream it will try to add the stream id to the logger.
-func CtxAndLogForRequest[T any](ctx context.Context, req *connect.Request[T]) (context.Context, *slog.Logger) {
+func CtxAndLogForRequest[T any](ctx context.Context, req *connect.Request[T]) (context.Context, *zap.SugaredLogger) {
 	log := dlog.FromCtx(ctx)
 
 	// Add streamId to log context if present in request

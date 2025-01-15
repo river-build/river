@@ -134,7 +134,7 @@ func NewSyncers(
 		} else {
 			client, err := nodeRegistry.GetStreamServiceClientForAddress(nodeAddress)
 			if err != nil {
-				log.Warn("Unable to find client for remote stream sync",
+				log.Warnw("Unable to find client for remote stream sync",
 					"err", err, "remoteNode", nodeAddress)
 				go unavailableRemote(cookieSet)
 				continue
@@ -143,7 +143,7 @@ func NewSyncers(
 			syncer, err := newRemoteSyncer(
 				ctx, globalSyncOpCtxCancel, syncID, nodeAddress, client, cookieSet.AsSlice(), ss.rmStream, messages)
 			if err != nil {
-				log.Warn("Unable to connect to remote stream when starting stream sync",
+				log.Warnw("Unable to connect to remote stream when starting stream sync",
 					"err", err, "remoteNode", nodeAddress)
 				go unavailableRemote(cookieSet)
 				continue

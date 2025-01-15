@@ -32,7 +32,7 @@ func (q *QuorumPool) GoLocal(ctx context.Context, f func(ctx context.Context) er
 		if err != nil {
 			tags := []any{"error", err}
 			tags = append(tags, q.tags...)
-			dlog.FromCtx(ctx).Warn("QuorumPool: GoLocal: Error", tags...)
+			dlog.FromCtx(ctx).Warnw("QuorumPool: GoLocal: Error", tags...)
 		}
 	}()
 }
@@ -73,7 +73,7 @@ func (q *QuorumPool) executeRemote(
 	if err != nil && !errors.Is(err, context.Canceled) {
 		tags := []any{"error", err, "node", node}
 		tags = append(tags, q.tags...)
-		dlog.FromCtx(ctx).Warn("QuorumPool: GoRemotes: Error", tags...)
+		dlog.FromCtx(ctx).Warnw("QuorumPool: GoRemotes: Error", tags...)
 	}
 }
 

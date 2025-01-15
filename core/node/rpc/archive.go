@@ -104,7 +104,7 @@ func RunArchive(ctx context.Context, cfg *config.Config, once bool) error {
 
 	service, err := StartServerInArchiveMode(ctx, cfg, nil, once)
 	if err != nil {
-		log.Error("Failed to start server", "error", err)
+		log.Errorw("Failed to start server", "error", err)
 		return err
 	}
 	defer service.Close()

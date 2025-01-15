@@ -83,7 +83,7 @@ func RunInfoMode(ctx context.Context, cfg *config.Config) error {
 
 	service, error := StartServerInInfoMode(ctx, cfg, nil)
 	if error != nil {
-		log.Error("Failed to start server", "error", error)
+		log.Errorw("Failed to start server", "error", error)
 		return error
 	}
 	defer service.Close()

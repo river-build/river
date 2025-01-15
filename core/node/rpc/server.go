@@ -64,7 +64,7 @@ func (s *Service) httpServerClose() {
 			if err != context.DeadlineExceeded {
 				s.defaultLogger.Error("failed to shutdown http server", "error", err)
 			}
-			s.defaultLogger.Warn("forcing http server close")
+			s.defaultLogger.Warnw("forcing http server close")
 			err = s.httpServer.Close()
 			if err != nil {
 				s.defaultLogger.Error("failed to close http server", "error", err)
@@ -313,7 +313,7 @@ func (s *Service) initBaseChain() error {
 		s.chainAuth = chainAuth
 		return nil
 	} else {
-		s.defaultLogger.Warn("Using fake auth for testing")
+		s.defaultLogger.Warnw("Using fake auth for testing")
 		s.chainAuth = auth.NewFakeChainAuth()
 		return nil
 	}
@@ -479,7 +479,7 @@ func (s *Service) runHttpServer() error {
 		}
 	} else {
 		if cfg.Port != 0 {
-			log.Warn("Port is ignored when listener is provided")
+			log.Warnw("Port is ignored when listener is provided")
 		}
 	}
 	s.onClose(s.listener.Close)
@@ -522,7 +522,7 @@ func (s *Service) runHttpServer() error {
 
 	if cfg.DisableHttps {
 		handler = h2c.NewHandler(handler, http2Server)
-		log.Warn("Starting H2C server without TLS")
+		log.Warnw("Starting H2C server without TLS")
 	}
 
 	s.httpServer = &http.Server{

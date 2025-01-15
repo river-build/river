@@ -156,7 +156,7 @@ func (n *nodeRegistryImpl) OnNodeAdded(ctx context.Context, event types.Log) {
 
 	var e river.NodeRegistryV1NodeAdded
 	if err := n.contract.NodeRegistry.BoundContract().UnpackLog(&e, "NodeAdded", event); err != nil {
-		log.Error("OnNodeAdded: unable to decode NodeAdded event")
+		log.Errorw("OnNodeAdded: unable to decode NodeAdded event")
 		return
 	}
 
@@ -176,7 +176,7 @@ func (n *nodeRegistryImpl) OnNodeAdded(ctx context.Context, event types.Log) {
 			e.Operator,
 		)
 	} else {
-		log.Error("NodeRegistry: Got NodeAdded for node that already exists in NodeRegistry", "blockNum", event.BlockNumber, "node", e.NodeAddress, "operator", e.Operator, "nodes", n.nodes)
+		log.Errorw("NodeRegistry: Got NodeAdded for node that already exists in NodeRegistry", "blockNum", event.BlockNumber, "node", e.NodeAddress, "operator", e.Operator, "nodes", n.nodes)
 	}
 }
 
@@ -186,7 +186,7 @@ func (n *nodeRegistryImpl) OnNodeRemoved(ctx context.Context, event types.Log) {
 
 	var e river.NodeRegistryV1NodeRemoved
 	if err := n.contract.NodeRegistry.BoundContract().UnpackLog(&e, "NodeRemoved", event); err != nil {
-		log.Error("OnNodeRemoved: unable to decode NodeRemoved event")
+		log.Errorw("OnNodeRemoved: unable to decode NodeRemoved event")
 		return
 	}
 
@@ -197,7 +197,7 @@ func (n *nodeRegistryImpl) OnNodeRemoved(ctx context.Context, event types.Log) {
 		delete(n.nodes, e.NodeAddress)
 		log.Infow("NodeRegistry: NodeRemoved", "blockNum", event.BlockNumber, "node", e.NodeAddress)
 	} else {
-		log.Error("NodeRegistry: Got NodeRemoved for node that does not exist in NodeRegistry",
+		log.Errorw("NodeRegistry: Got NodeRemoved for node that does not exist in NodeRegistry",
 			"blockNum", event.BlockNumber, "node", e.NodeAddress, "nodes", n.nodes)
 	}
 }
@@ -208,7 +208,7 @@ func (n *nodeRegistryImpl) OnNodeStatusUpdated(ctx context.Context, event types.
 
 	var e river.NodeRegistryV1NodeStatusUpdated
 	if err := n.contract.NodeRegistry.BoundContract().UnpackLog(&e, "NodeStatusUpdated", event); err != nil {
-		log.Error("OnNodeStatusUpdated: unable to decode NodeStatusUpdated event")
+		log.Errorw("OnNodeStatusUpdated: unable to decode NodeStatusUpdated event")
 		return
 	}
 
@@ -222,7 +222,7 @@ func (n *nodeRegistryImpl) OnNodeStatusUpdated(ctx context.Context, event types.
 		n.nodes[e.NodeAddress] = &newNode
 		log.Infow("NodeRegistry: NodeStatusUpdated", "blockNum", event.BlockNumber, "node", nn)
 	} else {
-		log.Error("NodeRegistry: Got NodeStatusUpdated for node that does not exist in NodeRegistry", "blockNum", event.BlockNumber, "node", e.NodeAddress, "nodes", n.nodes)
+		log.Errorw("NodeRegistry: Got NodeStatusUpdated for node that does not exist in NodeRegistry", "blockNum", event.BlockNumber, "node", e.NodeAddress, "nodes", n.nodes)
 	}
 }
 
@@ -232,7 +232,7 @@ func (n *nodeRegistryImpl) OnNodeUrlUpdated(ctx context.Context, event types.Log
 
 	var e river.NodeRegistryV1NodeUrlUpdated
 	if err := n.contract.NodeRegistry.BoundContract().UnpackLog(&e, "NodeUrlUpdated", event); err != nil {
-		log.Error("OnNodeUrlUpdated: unable to decode NodeUrlUpdated event")
+		log.Errorw("OnNodeUrlUpdated: unable to decode NodeUrlUpdated event")
 		return
 	}
 
@@ -250,7 +250,7 @@ func (n *nodeRegistryImpl) OnNodeUrlUpdated(ctx context.Context, event types.Log
 		n.nodes[e.NodeAddress] = &newNode
 		log.Infow("NodeRegistry: NodeUrlUpdated", "blockNum", event.BlockNumber, "node", nn)
 	} else {
-		log.Error("NodeRegistry: Got NodeUrlUpdated for node that does not exist in NodeRegistry",
+		log.Errorw("NodeRegistry: Got NodeUrlUpdated for node that does not exist in NodeRegistry",
 			"blockNum", event.BlockNumber, "node", e.NodeAddress, "nodes", n.nodes)
 	}
 }

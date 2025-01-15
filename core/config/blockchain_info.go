@@ -26,7 +26,7 @@ func GetEtherBasedBlockchains(
 		if info, ok := defaultBlockchainInfo[chainId]; ok && info.IsEtherBased {
 			etherBasedChains = append(etherBasedChains, chainId)
 		} else if !ok {
-			log.Error("Missing BlockchainInfo for chain", "chainId", chainId)
+			log.Errorw("Missing BlockchainInfo for chain", "chainId", chainId)
 		}
 	}
 	return etherBasedChains

@@ -373,7 +373,7 @@ func (s *streamImpl) promoteCandidateLocked(ctx context.Context, mb *MiniblockRe
 		// Log error if hash doesn't match.
 		appliedMb, _ := s.view().blockWithNum(mb.Num)
 		if appliedMb != nil && appliedMb.Ref.Hash != mb.Hash {
-			dlog.FromCtx(ctx).Error("PromoteCandidate: Miniblock is already applied",
+			dlog.FromCtx(ctx).Errorw("PromoteCandidate: Miniblock is already applied",
 				"streamId", s.streamId,
 				"blockNum", mb.Num,
 				"blockHash", mb.Hash,
@@ -832,7 +832,7 @@ func (s *streamImpl) Sub(ctx context.Context, cookie *SyncCookie, receiver SyncR
 		miniblockIndex, err := s.view().indexOfMiniblockWithNum(cookie.MinipoolGen)
 		if err != nil {
 			// The user's sync cookie is out of date. Send a sync reset and return an up-to-date StreamAndCookie.
-			log.Warn("Stream.Sub: out of date cookie.MiniblockNum. Sending sync reset.",
+			log.Warnw("Stream.Sub: out of date cookie.MiniblockNum. Sending sync reset.",
 				"stream", s.streamId, "error", err.Error())
 
 			receiver.OnUpdate(
@@ -1097,15 +1097,15 @@ func (s *streamImpl) applyStreamEvents(
 				Num:  int64(event.LastMiniblockNum),
 			})
 			if err != nil {
-				dlog.FromCtx(ctx).Error("onStreamLastMiniblockUpdated: failed to promote candidate", "err", err)
+				dlog.FromCtx(ctx).Errorw("onStreamLastMiniblockUpdated: failed to promote candidate", "err", err)
 			}
 		case *river.StreamPlacementUpdated:
 			err := s.nodesLocked.Update(event, s.params.Wallet.Address)
 			if err != nil {
-				dlog.FromCtx(ctx).Error("applyStreamEvents: failed to update nodes", "err", err, "streamId", s.streamId)
+				dlog.FromCtx(ctx).Errorw("applyStreamEvents: failed to update nodes", "err", err, "streamId", s.streamId)
 			}
 		default:
-			dlog.FromCtx(ctx).Error("applyStreamEvents: unknown event", "event", event, "streamId", s.streamId)
+			dlog.FromCtx(ctx).Errorw("applyStreamEvents: unknown event", "event", event, "streamId", s.streamId)
 		}
 	}
 

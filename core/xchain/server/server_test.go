@@ -200,7 +200,7 @@ func (st *serviceTester) Close() {
 			node.svr.Stop()
 		} else {
 			log := dlog.FromCtx(st.ctx)
-			log.Warn("Skipping srv Stop, node wasn't started")
+			log.Warnw("Skipping srv Stop, node wasn't started")
 		}
 	}
 	if st.stopBlockAutoMining != nil {

@@ -181,7 +181,7 @@ func (s *streamCacheImpl) onBlockWithLogs(ctx context.Context, blockNum crypto.B
 	streamEvents, errs := s.params.Registry.FilterStreamEvents(ctx, logs)
 	// Process parsed stream events even if some failed to parse
 	for _, err := range errs {
-		dlog.FromCtx(ctx).Error("Failed to parse stream event", "err", err)
+		dlog.FromCtx(ctx).Errorw("Failed to parse stream event", "err", err)
 	}
 
 	// TODO: parallel processing?
@@ -219,7 +219,7 @@ func (s *streamCacheImpl) onStreamAllocated(
 		stream.nodesLocked.Reset(event.Nodes, s.params.Wallet.Address)
 		stream, created, err := s.createStreamStorage(ctx, stream, event.GenesisMiniblock)
 		if err != nil {
-			dlog.FromCtx(ctx).Error("Failed to allocate stream", "err", err, "streamId", stream.streamId)
+			dlog.FromCtx(ctx).Errorw("Failed to allocate stream", "err", err, "streamId", stream.streamId)
 		}
 		if created && len(otherEvents) > 0 {
 			stream.applyStreamEvents(ctx, otherEvents, blockNum)

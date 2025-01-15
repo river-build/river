@@ -163,7 +163,7 @@ func LoadWallet(ctx context.Context, filename string) (*Wallet, error) {
 
 	key, err := crypto.LoadECDSA(filename)
 	if err != nil {
-		log.Error("Failed to load wallet.", "error", err)
+		log.Errorw("Failed to load wallet.", "error", err)
 		return nil, AsRiverError(err, Err_BAD_CONFIG).
 			Message("Failed to load wallet from file").
 			Tag("filename", filename).

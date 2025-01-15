@@ -320,7 +320,7 @@ func (pool *pendingTransactionPool) checkPendingTransactions(ctx context.Context
 	// have a receipt available.
 	nonce, err := pool.client.NonceAt(ctx, pool.wallet.Address, head.Number)
 	if err != nil {
-		log.Warn("unable to get tx pool nonce", "err", err)
+		log.Warnw("unable to get tx pool nonce", "err", err)
 		return
 	}
 
@@ -343,7 +343,7 @@ func (pool *pendingTransactionPool) checkPendingTransactions(ctx context.Context
 					continue
 				}
 				if err != nil {
-					log.Warn("unable to get transaction receipt", "txHash", txHash.Hex(), "err", err)
+					log.Warnw("unable to get transaction receipt", "txHash", txHash.Hex(), "err", err)
 					return true
 				}
 			}
@@ -373,7 +373,7 @@ func (pool *pendingTransactionPool) checkPendingTransactions(ctx context.Context
 
 			tx, err := ptx.resubmit(ptx.txOpts)
 			if err != nil {
-				log.Warn("unable to create replacement transaction", "txHash", ptx.tx.Hash(), "err", err)
+				log.Warnw("unable to create replacement transaction", "txHash", ptx.tx.Hash(), "err", err)
 				return true
 			}
 
@@ -409,7 +409,7 @@ func (pool *pendingTransactionPool) checkPendingTransactions(ctx context.Context
 				log.Debugw("replacement transaction canceled", "txHash", tx.Hash(), "err", err)
 				pool.closeTx(log, ptx, nil, common.Hash{})
 			} else {
-				log.Error("unable to replace transaction", "txHash", tx.Hash(), "err", err)
+				log.Errorw("unable to replace transaction", "txHash", tx.Hash(), "err", err)
 			}
 		}
 
@@ -526,12 +526,12 @@ func (r *transactionPool) sendReplacementTransactions(ctx context.Context) {
 
 	nonce, err := r.client.NonceAt(ctx, r.wallet.Address, nil)
 	if err != nil {
-		log.Error("Unable to obtain nonce for replacement transactions", "err", err)
+		log.Errorw("Unable to obtain nonce for replacement transactions", "err", err)
 	}
 
 	pendingNonce, err := r.client.PendingNonceAt(ctx, r.wallet.Address)
 	if err != nil {
-		log.Error("Unable to obtain pending nonce for replacement transactions", "err", err)
+		log.Errorw("Unable to obtain pending nonce for replacement transactions", "err", err)
 	}
 
 	if nonce >= pendingNonce {
@@ -577,7 +577,7 @@ func (r *transactionPool) sendReplacementTransactions(ctx context.Context) {
 		lastPendingTx *txPoolPendingTransaction
 	)
 
-	log.Warn("Try to replace pending transactions from previous run",
+	log.Warnw("Try to replace pending transactions from previous run",
 		"wallet", r.wallet.Address, "from", nonce, "to", pendingNonce)
 
 	for nonce < pendingNonce {
@@ -588,12 +588,12 @@ func (r *transactionPool) sendReplacementTransactions(ctx context.Context) {
 		// send a replacement tx that is guaranteed to fail
 		tx, err := createTx(opts)
 		if err != nil {
-			log.Error("Unable to create replacement transaction", "err", err)
+			log.Errorw("Unable to create replacement transaction", "err", err)
 			return
 		}
 
 		if err := r.client.SendTransaction(ctx, tx); err != nil {
-			log.Error("Unable to submit replacement transaction", "err", err)
+			log.Errorw("Unable to submit replacement transaction", "err", err)
 			return
 		}
 
@@ -624,7 +624,7 @@ func (r *transactionPool) sendReplacementTransactions(ctx context.Context) {
 
 	// wait for pending tx to be included
 	if _, err := lastPendingTx.Wait(ctx); err != nil {
-		log.Error("Replacement transaction failed", "err", err)
+		log.Errorw("Replacement transaction failed", "err", err)
 		return
 	}
 
@@ -806,7 +806,7 @@ func (r *transactionPool) Balance(ctx context.Context, _ *types.Header) {
 	balance, err := r.client.BalanceAt(ctx, r.wallet.Address, nil)
 	if err != nil {
 		log := dlog.FromCtx(ctx).With("chain", r.chainID)
-		log.Error("Unable to retrieve wallet balance", "err", err)
+		log.Errorw("Unable to retrieve wallet balance", "err", err)
 		return
 	}
 

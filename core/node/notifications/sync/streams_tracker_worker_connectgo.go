@@ -91,7 +91,7 @@ func (s *StreamTrackerConnectGo) Run(
 		// backoff, remote service client could not be created
 		if client == nil {
 			syncCancel()
-			log.Error("unable to obtain stream service client", "err", err)
+			log.Errorw("unable to obtain stream service client", "err", err)
 			if s.waitMaxOrUntilCancel(rootCtx, time.Minute, 2*time.Minute) {
 				return
 			}
@@ -105,7 +105,7 @@ func (s *StreamTrackerConnectGo) Run(
 			metrics.SyncSessionInFlight.Dec()
 			syncCancel()
 			if !errors.Is(err, context.Canceled) {
-				log.Error("unable to acquire worker pool task", "err", err)
+				log.Errorw("unable to acquire worker pool task", "err", err)
 			}
 			if s.waitMaxOrUntilCancel(rootCtx, 10*time.Second, 30*time.Second) {
 				return
@@ -169,7 +169,7 @@ func (s *StreamTrackerConnectGo) Run(
 			if firstMsg.GetSyncOp() != protocol.SyncOp_SYNC_NEW {
 				syncCancel()
 				if !errors.Is(err, context.Canceled) {
-					log.Error("Stream sync session didn't start with SyncOp_SYNC_NEW")
+					log.Errorw("Stream sync session didn't start with SyncOp_SYNC_NEW")
 				}
 				if s.waitMaxOrUntilCancel(rootCtx, 10*time.Second, 30*time.Second) {
 					return
@@ -195,7 +195,7 @@ func (s *StreamTrackerConnectGo) Run(
 		if syncID == "" {
 			syncCancel()
 			remotes.AdvanceStickyPeer(remoteAddr)
-			log.Error("Received empty syncID")
+			log.Errorw("Received empty syncID")
 			if s.waitMaxOrUntilCancel(rootCtx, time.Minute, 2*time.Minute) {
 				return
 			}
@@ -238,13 +238,13 @@ func (s *StreamTrackerConnectGo) Run(
 
 				streamID, err := shared.StreamIdFromBytes(update.GetStream().GetNextSyncCookie().GetStreamId())
 				if err != nil {
-					log.Error("Received corrupt update, invalid stream ID")
+					log.Errorw("Received corrupt update, invalid stream ID")
 					syncCancel()
 					continue
 				}
 
 				if streamID != stream.StreamId {
-					log.Error("Received update for unexpected stream", "want", stream.StreamId, "got", streamID)
+					log.Errorw("Received update for unexpected stream", "want", stream.StreamId, "got", streamID)
 					syncCancel()
 					continue
 				}
@@ -254,7 +254,7 @@ func (s *StreamTrackerConnectGo) Run(
 						syncCtx, streamID, onChainConfig, update.GetStream(), listener, userPreferences)
 					if err != nil {
 						syncCancel()
-						log.Error("Unable to instantiate tracked stream", "err", err)
+						log.Errorw("Unable to instantiate tracked stream", "err", err)
 						continue
 					}
 
@@ -266,19 +266,19 @@ func (s *StreamTrackerConnectGo) Run(
 				// first received update must be a sync reset that instantiates the trackedStream
 				if trackedStream == nil {
 					syncCancel()
-					log.Error("Received unexpected non sync-reset update")
+					log.Errorw("Received unexpected non sync-reset update")
 					continue
 				}
 
 				for _, block := range update.GetStream().GetMiniblocks() {
 					if err := trackedStream.ApplyBlock(block, onChainConfig.Get()); err != nil {
-						log.Error("Unable to apply block", "stream", streamID, "err", err)
+						log.Errorw("Unable to apply block", "stream", streamID, "err", err)
 					}
 				}
 
 				for _, event := range update.GetStream().GetEvents() {
 					if err := trackedStream.ApplyEvent(syncCtx, event); err != nil {
-						log.Error("Unable to apply event", "stream", streamID, "err", err)
+						log.Errorw("Unable to apply event", "stream", streamID, "err", err)
 					}
 				}
 
@@ -290,10 +290,10 @@ func (s *StreamTrackerConnectGo) Run(
 				log.Debugw("Got stream close")
 				syncCancel()
 			case protocol.SyncOp_SYNC_UNSPECIFIED:
-				log.Warn("Got stream unspecified")
+				log.Warnw("Got stream unspecified")
 				syncCancel()
 			case protocol.SyncOp_SYNC_NEW:
-				log.Warn("Got stream new")
+				log.Warnw("Got stream new")
 				syncCancel()
 			case protocol.SyncOp_SYNC_PONG:
 				// lastReceivedPong is used in the liveness check to check that pong reply is received
@@ -368,7 +368,7 @@ func (s *StreamTrackerConnectGo) liveness(
 			// first update must be a sync update reset, if not received the sync session
 			// is considered dead -> cancel it.
 			if !gotSyncResetUpdate.Load() {
-				log.Warn("Sync reset not received for sync session within reasonable time")
+				log.Warnw("Sync reset not received for sync session within reasonable time")
 				// TODO: this loads the stream in the nodes cache and seem to be a workaround
 				// for an issue that no sync reset was received during the previous run.
 				err := workerPool.Acquire(syncCtx, 1)
@@ -382,7 +382,7 @@ func (s *StreamTrackerConnectGo) liveness(
 					reqCancel()
 
 					if err != nil {
-						log.Warn("Unable to retrieve stream")
+						log.Warnw("Unable to retrieve stream")
 					}
 				}
 
@@ -407,7 +407,7 @@ func (s *StreamTrackerConnectGo) liveness(
 			if err != nil {
 				metrics.SyncPing.With(prometheus.Labels{"status": "failure"}).Inc()
 				if !errors.Is(err, context.Canceled) {
-					log.Error("Unable to ping stream session", "err", err)
+					log.Errorw("Unable to ping stream session", "err", err)
 				}
 				return
 			}
@@ -432,7 +432,7 @@ func (s *StreamTrackerConnectGo) liveness(
 					// stream sync session considered dead
 					// cancel existing stream sync session and start a new sync session
 					if syncCtx.Err() == nil {
-						log.Warn("Stream sync session timeout")
+						log.Warnw("Stream sync session timeout")
 					}
 					return
 				case <-syncCtx.Done():

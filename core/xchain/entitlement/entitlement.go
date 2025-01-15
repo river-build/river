@@ -37,7 +37,7 @@ func isEntitlementEvaluationError(err error) bool {
 // logIfEntitlementError conditionally logs an error if it was not a context cancellation.
 func logIfEntitlementError(ctx context.Context, err error) {
 	if isEntitlementEvaluationError(err) {
-		dlog.FromCtx(ctx).Warn("Entitlement evaluation succeeded, but encountered error", "error", err)
+		dlog.FromCtx(ctx).Warnw("Entitlement evaluation succeeded, but encountered error", "error", err)
 	}
 }
 

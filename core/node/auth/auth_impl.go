@@ -689,7 +689,7 @@ func (ca *chainAuth) evaluateEntitlementData(
 				}
 			}
 		} else {
-			log.Warn("Invalid entitlement type", "entitlement", ent)
+			log.Warnw("Invalid entitlement type", "entitlement", ent)
 		}
 	}
 	return false, nil
@@ -733,7 +733,7 @@ func (ca *chainAuth) evaluateWithEntitlements(
 			Tag("userId", args.principal)
 	}
 	if banned {
-		log.Warn(
+		log.Warnw(
 			"Evaluating entitlements for a user who is banned from the space",
 			"userId",
 			args.principal,
@@ -835,7 +835,7 @@ func (ca *chainAuth) getLinkedWalletsUncached(
 
 	wallets, err := entitlement.GetLinkedWallets(ctx, args.principal, ca.walletLinkContract, nil, nil, nil)
 	if err != nil {
-		log.Error("Failed to get linked wallets", "err", err, "wallet", args.principal.Hex())
+		log.Errorw("Failed to get linked wallets", "err", err, "wallet", args.principal.Hex())
 		return nil, err
 	}
 
@@ -852,7 +852,7 @@ func (ca *chainAuth) getLinkedWallets(
 	log := dlog.FromCtx(ctx)
 
 	if ca.walletLinkContract == nil {
-		log.Warn("Wallet link contract is not setup properly, returning root key only")
+		log.Warnw("Wallet link contract is not setup properly, returning root key only")
 		return []common.Address{args.principal}, nil
 	}
 
@@ -874,7 +874,7 @@ func (ca *chainAuth) getLinkedWallets(
 		ca.getLinkedWalletsUncached,
 	)
 	if err != nil {
-		log.Error("Failed to get linked wallets", "err", err, "wallet", args.principal.Hex())
+		log.Errorw("Failed to get linked wallets", "err", err, "wallet", args.principal.Hex())
 		return nil, err
 	}
 
@@ -1078,7 +1078,7 @@ func (ca *chainAuth) checkEntitlement(
 				Tag("permission", args.permission).
 				Tag("wallets", args.linkedWallets).
 				Tag("spaceId", args.spaceId)
-			log.Error(
+			log.Errorw(
 				"User membership could not be evaluated",
 				"userId",
 				args.principal,

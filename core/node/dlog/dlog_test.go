@@ -70,7 +70,7 @@ func TestDlog(t *testing.T) {
 
 	data := makeTestData2()
 
-	log.Error("Error example", "int", 33, "data", data, "str", "hello", "bytes", []byte("world"))
+	log.Errorw("Error example", "int", 33, "data", data, "str", "hello", "bytes", []byte("world"))
 	fmt.Println()
 
 	log.Named("group").With("with1", 1, "with2", 2).Infow("TestZap", "data", data, "int", 22)

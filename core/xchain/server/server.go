@@ -349,7 +349,7 @@ func (x *xchain) onEntitlementCheckRequested(
 	// try to decode the EntitlementCheckRequested event
 	if err := x.checkerContract.UnpackLog(&entitlementCheckRequest, "EntitlementCheckRequested", event); err != nil {
 		x.entitlementCheckRequested.IncFail()
-		log.Error("Unable to decode EntitlementCheckRequested event", "err", err)
+		log.Errorw("Unable to decode EntitlementCheckRequested event", "err", err)
 		return
 	}
 
@@ -360,7 +360,7 @@ func (x *xchain) onEntitlementCheckRequested(
 	outcome, err := x.handleEntitlementCheckRequest(ctx, entitlementCheckRequest)
 	if err != nil {
 		x.entitlementCheckRequested.IncFail()
-		log.Error("Entitlement check failed to process",
+		log.Errorw("Entitlement check failed to process",
 			"err", err, "xchain.req.txid", hex.EncodeToString(entitlementCheckRequest.TransactionId[:]))
 		return
 	}
@@ -445,7 +445,7 @@ func (x *xchain) writeEntitlementCheckResults(ctx context.Context, checkResults 
 				}
 				gasEstimate, err := x.baseChain.TxPool.EstimateGas(ctx, createPostResultTx)
 				if err != nil {
-					log.Warn(
+					log.Warnw(
 						"Failed to estimate gas for PostEntitlementCheckResult (entitlement check complete?)",
 						"err",
 						err,
@@ -488,7 +488,7 @@ func (x *xchain) writeEntitlementCheckResults(ctx context.Context, checkResults 
 	for task := range pending {
 		receipt, err := task.ptx.Wait(ctx) // Base transaction receipt
 		if err != nil {
-			log.Warn("waiting for entitlement check response receipt failed",
+			log.Warnw("waiting for entitlement check response receipt failed",
 				"err", err, "tx.hash", task.ptx.TransactionHash())
 			x.entitlementCheckProcessed.IncFail()
 			continue
@@ -498,7 +498,7 @@ func (x *xchain) writeEntitlementCheckResults(ctx context.Context, checkResults 
 		if receipt.Status == types.ReceiptStatusFailed {
 			// it is possible that other xchain instances have already reached a quorum and our transaction was simply
 			// too late and failed because of that. Therefore this can be an expected error.
-			log.Warn("entitlement check response failed to post",
+			log.Warnw("entitlement check response failed to post",
 				"gasUsed", receipt.GasUsed,
 				"gasEstimate", task.gasEstimate,
 				"tx.hash", task.ptx.TransactionHash(),
@@ -525,13 +525,13 @@ func (x *xchain) handleContractError(log *zap.SugaredLogger, err error, msg stri
 	ce, se, err := x.evmErrDecoder.DecodeEVMError(err)
 	switch {
 	case ce != nil:
-		log.Error(msg, "err", ce)
+		log.Errorw(msg, "err", ce)
 		return ce
 	case se != nil:
-		log.Error(msg, "err", se)
+		log.Errorw(msg, "err", se)
 		return se
 	case err != nil:
-		log.Error(msg, "err", err)
+		log.Errorw(msg, "err", err)
 		return err
 	}
 	return nil
@@ -557,7 +557,7 @@ func (x *xchain) getLinkedWallets(ctx context.Context, wallet common.Address) ([
 		x.getWalletsByRootKeyCalls,
 	)
 	if err != nil {
-		log.Error(
+		log.Errorw(
 			"Failed to get linked wallets",
 			"err",
 			err,
@@ -606,7 +606,7 @@ func (x *xchain) getRuleData(
 	}
 
 	if entitlement.RuleEntitlement == nil {
-		log.Error("No decoded rule entitlements for role",
+		log.Errorw("No decoded rule entitlements for role",
 			"roleId", roleId,
 			"transactionId", hex.EncodeToString(transactionId[:]),
 			"contractAddress", contractAddress.Hex(),
@@ -649,7 +649,7 @@ func (x *xchain) process(
 	ctx = dlog.CtxWithLog(ctx, log)
 	result, err = x.evaluator.EvaluateRuleData(ctx, wallets, ruleData)
 	if err != nil {
-		log.Error("Failed to EvaluateRuleData", "err", err)
+		log.Errorw("Failed to EvaluateRuleData", "err", err)
 		return false, err
 	}
 

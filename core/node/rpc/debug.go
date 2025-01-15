@@ -48,7 +48,7 @@ func (h *debugHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	output, err := render.Execute(&reply)
 	if err != nil {
-		dlog.FromCtx(ctx).Error("unable to read memory stats", "err", err)
+		dlog.FromCtx(ctx).Errorw("unable to read memory stats", "err", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -128,7 +128,7 @@ func (h *stacksHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for traceScanner.Scan() {
 		stack, err := readGoRoutineStackFrame(traceScanner)
 		if err != nil {
-			dlog.FromCtx(ctx).Error("unable to read stack frame", "err", err)
+			dlog.FromCtx(ctx).Errorw("unable to read stack frame", "err", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
@@ -137,7 +137,7 @@ func (h *stacksHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	output, err := render.Execute(&reply)
 	if err != nil {
-		dlog.FromCtx(ctx).Error("unable to render stack data", "err", err)
+		dlog.FromCtx(ctx).Errorw("unable to render stack data", "err", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -164,7 +164,7 @@ func (s *streamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	streamIdStr := r.PathValue("streamIdStr")
 
 	if streamId, err = shared.StreamIdFromString(streamIdStr); err != nil {
-		log.Error(
+		log.Errorw(
 			"unable to convert url value to streamId",
 			"err",
 			err,
@@ -181,7 +181,7 @@ func (s *streamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 
 		} else {
-			log.Error("unable to read stream statistics from db", "err", err)
+			log.Errorw("unable to read stream statistics from db", "err", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
 		return
@@ -190,7 +190,7 @@ func (s *streamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	reply.Result = *result
 	output, err := render.Execute(&reply)
 	if err != nil {
-		dlog.FromCtx(ctx).Error("unable to render transaction pool data", "err", err)
+		dlog.FromCtx(ctx).Errorw("unable to render transaction pool data", "err", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -227,7 +227,7 @@ func (h *onChainConfigHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	settings := h.onChainConfig.All()
 	bb, err := json.MarshalIndent(settings, "", "  ")
 	if err != nil {
-		dlog.FromCtx(ctx).Error("unable to marshall on-chain-config data", "err", err)
+		dlog.FromCtx(ctx).Errorw("unable to marshall on-chain-config data", "err", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -235,7 +235,7 @@ func (h *onChainConfigHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 	output, err := render.Execute(&reply)
 	if err != nil {
-		dlog.FromCtx(ctx).Error("unable to render on-chain-config data", "err", err)
+		dlog.FromCtx(ctx).Errorw("unable to render on-chain-config data", "err", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -265,7 +265,7 @@ func (h *txpoolHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	output, err := render.Execute(&reply)
 	if err != nil {
-		dlog.FromCtx(ctx).Error("unable to render transaction pool data", "err", err)
+		dlog.FromCtx(ctx).Errorw("unable to render transaction pool data", "err", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -330,7 +330,7 @@ func (h *cacheHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	output, err := render.Execute(&reply)
 	if err != nil {
-		dlog.FromCtx(ctx).Error("unable to render cache data", "err", err)
+		dlog.FromCtx(ctx).Errorw("unable to render cache data", "err", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}

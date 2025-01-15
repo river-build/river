@@ -35,16 +35,16 @@ func TestRiverError(t *testing.T) {
 		"error", errors.New("test error"),
 	).Func("TestRiverError").Tag("int", 3)
 	testfmt.Println(t, e.Error())
-	log.Error("test error", "error", e)
+	log.Errorw("test error", "error", e)
 	_ = e.Log(log)
 
 	e = AsRiverError(errors.New("base error"))
 	testfmt.Println(t, e.Error())
-	log.Error("test error", "error", e)
+	log.Errorw("test error", "error", e)
 	_ = e.LogInfo(log)
 
 	e = AsRiverError(e).Func("TestRiverError").Func("TopLevelFunc").Tag("int", 1).LogWarn(log)
-	log.Warn("test error", "error", e)
+	log.Warnw("test error", "error", e)
 
 	_ = WrapRiverError(protocol.Err_OUT_OF_RANGE, errors.New("test error")).
 		Func("InnerFunc").Message("inner message").
