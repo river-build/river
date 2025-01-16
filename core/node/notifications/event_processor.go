@@ -536,6 +536,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 			if err != nil && statusCode == http.StatusRequestEntityTooLarge {
 				if _, exists := apnPayload["event"]; exists {
 					delete(apnPayload, "event")
+					p.log.Info("Payload too large, retry notification with event stripped", "event", event.Hash)
 					subscriptionExpired, _, err = p.sendAPNNotification(channelID, sub, event, apnPayload)
 				}
 			}
@@ -606,7 +607,7 @@ func (p *MessageToNotificationsProcessor) sendAPNNotification(
 
 	if p.log.Enabled(ctx, slog.LevelDebug) {
 		p.log.Debug("APN Notification",
-			"to", common.BytesToAddress(event.Event.GetCreatorAddress()),
+			"from", common.BytesToAddress(event.Event.GetCreatorAddress()),
 			"notification", notificationPayload)
 	}
 
