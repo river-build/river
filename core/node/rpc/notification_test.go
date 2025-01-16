@@ -1295,6 +1295,7 @@ func (tc *dmChannelNotificationsTestContext) subscribeApnPush(
 	request := connect.NewRequest(&SubscribeAPNRequest{
 		DeviceToken: user.Address[:], // (ab)used to determine who received a notification
 		Environment: APNEnvironment_APN_ENVIRONMENT_SANDBOX,
+		PushVersion: NotificationPushVersion_NOTIFICATION_PUSH_VERSION_2,
 	})
 	authorize(ctx, tc.req, tc.authClient, user, request)
 
