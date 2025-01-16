@@ -35,24 +35,22 @@ func (r *replicatedStream) AddEvent(ctx context.Context, event *ParsedEvent) err
 		return r.localStream.AddEvent(ctx, event)
 	})
 
-	if len(remotes) > 0 {
-		sender.GoRemotes(ctx, remotes, func(ctx context.Context, node common.Address) error {
-			stub, err := r.service.nodeRegistry.GetNodeToNodeClientForAddress(node)
-			if err != nil {
-				return err
-			}
-			_, err = stub.NewEventReceived(
-				ctx,
-				connect.NewRequest[NewEventReceivedRequest](
-					&NewEventReceivedRequest{
-						StreamId: r.streamId[:],
-						Event:    event.Envelope,
-					},
-				),
-			)
+	sender.GoRemotes(ctx, remotes, func(ctx context.Context, node common.Address) error {
+		stub, err := r.service.nodeRegistry.GetNodeToNodeClientForAddress(node)
+		if err != nil {
 			return err
-		})
-	}
+		}
+		_, err = stub.NewEventReceived(
+			ctx,
+			connect.NewRequest[NewEventReceivedRequest](
+				&NewEventReceivedRequest{
+					StreamId: r.streamId[:],
+					Event:    event.Envelope,
+				},
+			),
+		)
+		return err
+	})
 
 	return sender.Wait()
 }
