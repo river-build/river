@@ -278,6 +278,8 @@ contract RiverBaseTest is BaseSetup, EIP712Utils, ILockBase, IOwnableBase {
     vm.assume(alice != bob);
     vm.assume(alice != address(0));
     vm.assume(bob != address(0));
+    vm.assume(alice != ZERO_SENTINEL);
+    vm.assume(bob != ZERO_SENTINEL);
 
     amountA = bound(amountA, 1, type(uint208).max - 1);
     amountB = bound(amountB, 1, type(uint208).max - amountA);
