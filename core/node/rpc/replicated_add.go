@@ -84,12 +84,7 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 			return err
 		}
 
-		envelopeBytes, err := proto.Marshal(event.Envelope)
-		if err != nil {
-			return err
-		}
-
-		if err = r.service.storage.WriteEphemeralMiniblock(ctx, r.streamId, envelopeBytes, &storage.WriteMiniblockData{
+		if err = r.service.storage.WriteEphemeralMiniblock(ctx, r.streamId, &storage.WriteMiniblockData{
 			Number:   cc.MiniblockNum,
 			Hash:     common.BytesToHash(ephemeralMb.Header.Hash),
 			Snapshot: false,

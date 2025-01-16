@@ -1513,7 +1513,6 @@ func (s *PostgresStreamStore) writeMiniblocksTx(
 func (s *PostgresStreamStore) WriteEphemeralMiniblock(
 	ctx context.Context,
 	streamId StreamId,
-	envelope []byte,
 	miniblock *WriteMiniblockData,
 ) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -1528,7 +1527,6 @@ func (s *PostgresStreamStore) WriteEphemeralMiniblock(
 				ctx,
 				tx,
 				streamId,
-				envelope,
 				miniblock,
 			)
 		},
@@ -1541,7 +1539,6 @@ func (s *PostgresStreamStore) writeEphemeralMiniblockTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
-	envelope []byte,
 	miniblock *WriteMiniblockData,
 ) error {
 	_, err := s.lockEphemeralStream(ctx, tx, streamId, true)
@@ -1558,40 +1555,6 @@ func (s *PostgresStreamStore) writeEphemeralMiniblockTx(
 		streamId,
 		miniblock.Number,
 		miniblock.Data)
-	if err != nil {
-		return err
-	}
-
-	// TODO: Not sure if the logic below is correct. Clarify.
-
-	_, err = tx.Exec(
-		ctx,
-		s.sqlForStream(
-			`UPDATE {{minipools}} SET generation = $1 WHERE stream_id = $2`,
-			streamId,
-		),
-		miniblock.Number+1,
-		streamId,
-	)
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.Exec(
-		ctx,
-		s.sqlForStream(
-			"INSERT INTO {{minipools}} (stream_id, envelope, generation, slot_num) VALUES ($1, $2, $3, $4)",
-			streamId,
-		),
-		streamId,
-		envelope,
-		miniblock.Number+1,
-		miniblock.Number-1,
-	)
-	if err != nil {
-		return err
-	}
-
 	return err
 }
 
@@ -2254,6 +2217,20 @@ func (s *PostgresStreamStore) normalizeEphemeralStreamTx(
 	// The number of miniblocks must be <chunks-number>+1 where 1 is the genesis miniblock.
 	if inception.GetChunkCount() != int32(len(miniblocks[1:])) {
 		return common.Hash{}, common.Hash{}, RiverError(Err_INTERNAL, "The ephemenral stream can not be normalized due to missing miniblocks")
+	}
+
+	// Update generation in the minipools table
+	_, err = tx.Exec(
+		ctx,
+		s.sqlForStream(
+			"UPDATE {{minipools}} SET generation = $1 WHERE stream_id = $2",
+			streamId,
+		),
+		len(miniblocks),
+		streamId,
+	)
+	if err != nil {
+		return common.Hash{}, common.Hash{}, err
 	}
 
 	// Remove ephemeral flag from the given stream.
