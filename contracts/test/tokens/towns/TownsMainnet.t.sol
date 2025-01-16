@@ -16,8 +16,9 @@ import {TokenInflationLib} from "contracts/src/tokens/towns/mainnet/libs/TokenIn
 //contracts
 import {DeployTownsMainnet} from "contracts/scripts/deployments/utils/DeployTownsMainnet.s.sol";
 import {Towns} from "contracts/src/tokens/towns/mainnet/Towns.sol";
+import {EIP712Utils} from "contracts/test/utils/EIP712Utils.sol";
 
-contract TownsMainnetTests is TestUtils, ITownsBase {
+contract TownsMainnetTests is TestUtils, ITownsBase, EIP712Utils {
   DeployTownsMainnet internal deployTownsMainnet = new DeployTownsMainnet();
 
   /// @dev initial supply is 10 billion tokens
@@ -52,6 +53,8 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
 
   modifier givenCallerHasTokens(address caller, uint256 amount) {
     vm.assume(caller != address(0));
+    vm.assume(caller != ZERO_SENTINEL);
+
     amount = bound(amount, 1, INITIAL_SUPPLY);
     vm.prank(vault);
     towns.transfer(caller, amount);
@@ -70,6 +73,57 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
     towns.delegate(delegatee);
     assertEq(towns.delegates(caller), delegatee);
     _;
+  }
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           Permit                        */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+  function test_permit(
+    address alice,
+    address bob,
+    uint256 amount
+  ) external givenCallerHasTokens(alice, amount) {
+    vm.assume(bob != address(0));
+    vm.assume(bob != ZERO_SENTINEL);
+
+    assertEq(towns.allowance(alice, bob), 0);
+
+    vm.prank(alice);
+    towns.approve(bob, amount);
+    assertEq(towns.allowance(alice, bob), amount);
+  }
+
+  function test_permit_withSignature(
+    uint256 alicePrivateKey,
+    address bob,
+    uint256 amount
+  ) external {
+    vm.assume(bob != address(0));
+    vm.assume(bob != ZERO_SENTINEL);
+    amount = bound(amount, 1, INITIAL_SUPPLY);
+    alicePrivateKey = boundPrivateKey(alicePrivateKey);
+
+    address alice = vm.addr(alicePrivateKey);
+
+    vm.prank(vault);
+    towns.transfer(alice, amount);
+
+    uint256 deadline = block.timestamp + 1 days;
+
+    (uint8 v, bytes32 r, bytes32 s) = signPermit(
+      alicePrivateKey,
+      address(towns),
+      alice,
+      bob,
+      amount,
+      deadline
+    );
+
+    assertEq(towns.allowance(alice, bob), 0);
+
+    vm.prank(bob);
+    towns.permit(alice, bob, amount, deadline, v, r, s);
+
+    assertEq(towns.allowance(alice, bob), amount);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -163,6 +217,13 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
       currentInflationRate,
       TokenInflationLib.getCurrentInflationRateBPS(INITIAL_MINT_TIME)
     );
+  }
+
+  function test_setOverrideInflation() external {
+    vm.prank(manager);
+    towns.setOverrideInflation(true, 100);
+
+    assertEq(towns.currentInflationRate(), 100);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
