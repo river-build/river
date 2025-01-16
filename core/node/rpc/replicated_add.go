@@ -144,7 +144,17 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 			return nil
 		}
 
-		// TODO: Verify and normalize in remotes
+		// Seal ephemeral stream in remotes
+		if _, err = stub.SealEphemeralStream(
+			ctx,
+			connect.NewRequest[SealEphemeralStreamRequest](
+				&SealEphemeralStreamRequest{
+					StreamId: r.streamId[:],
+				},
+			),
+		); err != nil {
+			return err
+		}
 
 		return nil
 	})

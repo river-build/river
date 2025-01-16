@@ -92,34 +92,41 @@ func TestCreateMediaStream(t *testing.T) {
 		creationCookie = aeResp.Msg.CreationCookie
 	}
 
-	// Get Miniblocks for the given media stream
-	resp, err := alice.client.GetMiniblocks(alice.ctx, connect.NewRequest(&protocol.GetMiniblocksRequest{
-		StreamId:      mediaStreamId[:],
-		FromInclusive: 0,
-		ToExclusive:   chunks * 2, // adding a threshold to make sure there are no unexpected events
-	}))
-	tt.require.NoError(err)
-	tt.require.NotNil(resp)
-	tt.require.Len(resp.Msg.GetMiniblocks(), chunks+1) // The first miniblock is the stream creation one
+	// Make sure all replicas have the stream sealed
+	for i, client := range tt.newTestClients(5) {
+		t.Run(fmt.Sprintf("Stream sealed in node %d", i), func(t *testing.T) {
+			t.Parallel()
 
-	mbs := resp.Msg.GetMiniblocks()
+			// Get Miniblocks for the given media stream
+			resp, err := client.client.GetMiniblocks(alice.ctx, connect.NewRequest(&protocol.GetMiniblocksRequest{
+				StreamId:      mediaStreamId[:],
+				FromInclusive: 0,
+				ToExclusive:   chunks * 2, // adding a threshold to make sure there are no unexpected events
+			}))
+			tt.require.NoError(err)
+			tt.require.NotNil(resp)
+			tt.require.Len(resp.Msg.GetMiniblocks(), chunks+1) // The first miniblock is the stream creation one
 
-	// The first miniblock is the stream creation one
-	tt.require.Len(mbs[0].GetEvents(), 1)
-	pe, err := events.ParseEvent(mbs[0].GetEvents()[0])
-	tt.require.NoError(err)
-	mp, ok := pe.Event.GetPayload().(*protocol.StreamEvent_MediaPayload)
-	tt.require.True(ok)
-	tt.require.Equal(int32(chunks), mp.MediaPayload.GetInception().GetChunkCount())
+			mbs := resp.Msg.GetMiniblocks()
 
-	// The rest of the miniblocks are the media chunks
-	for i, mb := range mbs[1:] {
-		tt.require.Len(mb.GetEvents(), 1)
-		pe, err = events.ParseEvent(mb.GetEvents()[0])
-		tt.require.NoError(err)
-		mp, ok = pe.Event.GetPayload().(*protocol.StreamEvent_MediaPayload)
-		tt.require.True(ok)
-		tt.require.Equal(mediaChunks[i], mp.MediaPayload.GetChunk().Data)
+			// The first miniblock is the stream creation one
+			tt.require.Len(mbs[0].GetEvents(), 1)
+			pe, err := events.ParseEvent(mbs[0].GetEvents()[0])
+			tt.require.NoError(err)
+			mp, ok := pe.Event.GetPayload().(*protocol.StreamEvent_MediaPayload)
+			tt.require.True(ok)
+			tt.require.Equal(int32(chunks), mp.MediaPayload.GetInception().GetChunkCount())
+
+			// The rest of the miniblocks are the media chunks
+			for i, mb := range mbs[1:] {
+				tt.require.Len(mb.GetEvents(), 1)
+				pe, err = events.ParseEvent(mb.GetEvents()[0])
+				tt.require.NoError(err)
+				mp, ok = pe.Event.GetPayload().(*protocol.StreamEvent_MediaPayload)
+				tt.require.True(ok)
+				tt.require.Equal(mediaChunks[i], mp.MediaPayload.GetChunk().Data)
+			}
+		})
 	}
 }
 

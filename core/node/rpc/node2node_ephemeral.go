@@ -131,6 +131,15 @@ func (s *Service) SealEphemeralStream(
 }
 
 func (s *Service) sealEphemeralStream(ctx context.Context, req *SealEphemeralStreamRequest) (*SealEphemeralStreamResponse, error) {
-	// TODO: Implement in next PR
+	streamId, err := StreamIdFromBytes(req.GetStreamId())
+	if err != nil {
+		return nil, AsRiverError(err).Func("sealEphemeralStream")
+	}
+
+	// Normalize stream locally
+	if _, _, err = s.storage.NormalizeEphemeralStream(ctx, streamId); err != nil {
+		return nil, err
+	}
+
 	return &SealEphemeralStreamResponse{}, nil
 }
