@@ -526,10 +526,7 @@ export abstract class BaseDecryptionExtensions {
         const neededKeyIndexs = []
         for (let i = 0; i < session.sessionIds.length; i++) {
             const sessionId = session.sessionIds[i]
-            const hasKeys = await this.crypto.encryptionDevice.hasInboundSessionKeys(
-                streamId,
-                sessionId,
-            )
+            const hasKeys = await this.crypto.hasSessionKey(streamId, sessionId)
             if (!hasKeys) {
                 neededKeyIndexs.push(i)
             }
@@ -656,8 +653,7 @@ export abstract class BaseDecryptionExtensions {
             )
             return
         }
-        const knownSessionIds =
-            (await this.crypto.encryptionDevice.getInboundGroupSessionIds(streamId)) ?? []
+        const knownSessionIds = await this.crypto.getGroupSessionIds(streamId)
 
         const isNewDevice = knownSessionIds.length === 0
 
@@ -685,8 +681,7 @@ export abstract class BaseDecryptionExtensions {
         const streamId = item.streamId
 
         check(this.hasStream(streamId), 'stream not found')
-        const knownSessionIds =
-            (await this.crypto.encryptionDevice.getInboundGroupSessionIds(streamId)) ?? []
+        const knownSessionIds = await this.crypto.getGroupSessionIds(streamId)
 
         const { isValid, reason } = this.isValidEvent(streamId, item.solicitation.srcEventId)
         if (!isValid) {
@@ -718,10 +713,7 @@ export abstract class BaseDecryptionExtensions {
 
         const sessions: GroupEncryptionSession[] = []
         for (const sessionId of replySessionIds) {
-            const groupSession = await this.crypto.encryptionDevice.exportInboundGroupSession(
-                streamId,
-                sessionId,
-            )
+            const groupSession = await this.crypto.exportGroupSession(streamId, sessionId)
             if (groupSession) {
                 sessions.push(groupSession)
             }

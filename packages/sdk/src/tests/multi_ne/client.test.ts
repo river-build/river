@@ -921,7 +921,7 @@ describe('clientTest', () => {
         expect(Object.keys(fallbackKeys)).toContain(alicesUserId)
         expect(Object.keys(fallbackKeys).length).toEqual(1)
         expect(fallbackKeys[alicesUserId].map((k) => k.fallbackKey)).toContain(
-            Object.values(alicesClient.encryptionDevice.fallbackKey)[0],
+            alicesClient.userDeviceKey().fallbackKey,
         )
     })
 
@@ -986,9 +986,7 @@ describe('clientTest', () => {
         const knownDevices = await bobsClient.knownDevicesForUserId(alicesClient.userId)
 
         expect(knownDevices.length).toBe(1)
-        expect(knownDevices[0].fallbackKey).toBe(
-            Object.values(alicesClient.encryptionDevice.fallbackKey)[0],
-        )
+        expect(knownDevices[0].fallbackKey).toBe(alicesClient.userDeviceKey().fallbackKey)
     })
 
     // Make sure that the client only uploads device keys

@@ -58,4 +58,27 @@ export class GroupDecryption extends DecryptionAlgorithm {
             log(`Error handling room key import: ${(<Error>e).message}`)
         }
     }
+
+    /** */
+    public async exportGroupSession(
+        streamId: string,
+        sessionId: string,
+    ): Promise<GroupEncryptionSession | undefined> {
+        return this.device.exportInboundGroupSession(streamId, sessionId)
+    }
+
+    /** */
+    public exportGroupSessions(): Promise<GroupEncryptionSession[]> {
+        return this.device.exportInboundGroupSessions()
+    }
+
+    /** */
+    public exportGroupSessionIds(streamId: string): Promise<string[]> {
+        return this.device.getInboundGroupSessionIds(streamId)
+    }
+
+    /** */
+    public async hasSessionKey(streamId: string, sessionId: string): Promise<boolean> {
+        return this.device.hasInboundSessionKeys(streamId, sessionId)
+    }
 }
