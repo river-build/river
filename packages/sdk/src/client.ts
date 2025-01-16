@@ -787,7 +787,7 @@ export class Client
             streamId: streamIdAsBytes(streamId),
         })
 
-        check(response?.nextCreationCookie !== undefined, 'nextCreationCookie must be defined')
+        check(response?.nextCreationCookie !== undefined, 'nextCreationCookie was expected but was not returned in response')
 
         return { creationCookie: response.nextCreationCookie }
     }
@@ -2270,6 +2270,9 @@ export class Client
         }
     }
 
+    // makeMediaEventWithHashAndAddToMediaStream is used for uploading media chunks to the media stream.
+    // This function uses media stream specific RPC endpoints to upload media chunks.
+    // These endpoints are optimized for media uploads and are not used for general stream events.
     async makeMediaEventWithHashAndAddToMediaStream(
         creationCookie: CreationCookie,
         payload: PlainMessage<StreamEvent>['payload'],
