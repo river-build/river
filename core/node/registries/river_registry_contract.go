@@ -25,7 +25,7 @@ import (
 
 var streamRegistryABI, _ = river.StreamRegistryV1MetaData.GetAbi()
 
-// Convinience wrapper for the IRiverRegistryV1 interface (abigen exports it as RiverRegistryV1)
+// RiverRegistryContract is the convinience wrapper for the IRiverRegistryV1 interface (abigen exports it as RiverRegistryV1)
 type RiverRegistryContract struct {
 	OperatorRegistry *river.OperatorRegistryV1
 
@@ -251,9 +251,9 @@ func (c *RiverRegistryContract) AddStream(
 ) error {
 	log := dlog.FromCtx(ctx)
 
-	flags := uint64(0)
+	var flags StreamFlag
 	if isSealed {
-		flags = 1
+		flags |= StreamFlagSealed
 	}
 
 	pendingTx, err := c.Blockchain.TxPool.Submit(
@@ -265,7 +265,7 @@ func (c *RiverRegistryContract) AddStream(
 					LastMiniblockHash: lastMiniblockHash,
 					LastMiniblockNum:  uint64(lastMiniblockNum),
 					Reserved0:         0,
-					Flags:             flags,
+					Flags:             uint64(flags),
 					Nodes:             addresses,
 				})
 			if err == nil {
