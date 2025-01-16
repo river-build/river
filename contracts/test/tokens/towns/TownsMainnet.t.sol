@@ -35,7 +35,7 @@ contract TownsMainnetTests is TestUtils, ITownsBase {
     vault = deployTownsMainnet.vault();
     manager = deployTownsMainnet.manager();
 
-    TokenInflationLib.initialize(deployTownsMainnet.inflationConfig());
+    TokenInflationLib.initialize(deployTownsMainnet.inflationConfig(manager));
 
     vm.warp(INITIAL_MINT_TIME);
   }
