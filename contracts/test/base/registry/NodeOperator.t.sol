@@ -259,6 +259,9 @@ contract NodeOperatorFacetTest is
       NodeOperatorStatus.Approved
     )
   {
+    vm.assume(randomOperator != address(0));
+    vm.assume(randomOperator != ZERO_SENTINEL);
+
     assertTrue(
       nodeOperator.getOperatorStatus(randomOperator) ==
         NodeOperatorStatus.Approved
@@ -302,6 +305,9 @@ contract NodeOperatorFacetTest is
       NodeOperatorStatus.Exiting
     )
   {
+    vm.assume(randomOperator != address(0));
+    vm.assume(randomOperator != ZERO_SENTINEL);
+
     vm.prank(deployer);
     vm.expectRevert(NodeOperator__InvalidStatusTransition.selector);
     nodeOperator.setOperatorStatus(randomOperator, NodeOperatorStatus.Approved);
@@ -325,6 +331,9 @@ contract NodeOperatorFacetTest is
       NodeOperatorStatus.Exiting
     )
   {
+    vm.assume(randomOperator != address(0));
+    vm.assume(randomOperator != ZERO_SENTINEL);
+
     assertTrue(
       nodeOperator.getOperatorStatus(randomOperator) ==
         NodeOperatorStatus.Exiting
