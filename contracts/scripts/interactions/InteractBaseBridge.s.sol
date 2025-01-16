@@ -22,9 +22,9 @@ contract InteractBaseBridge is Interaction {
   function __interact(address deployer) internal override {
     // Bridge from Base Sepolia to Sepolia
     // vm.startBroadcast(deployer);
-    // IERC20(oldRiverOnBaseSepolia).approve(l2StandardBridge, tokensToDeposit);
+    // IERC20(townsOnBaseSepolia).approve(l2StandardBridge, tokensToDeposit);
     // IL2StandardBridge(l2StandardBridge).bridgeERC20({
-    //   _localToken: oldRiverOnBaseSepolia,
+    //   _localToken: townsOnBaseSepolia,
     //   _remoteToken: townsOnSepolia,
     //   _amount: tokensToDeposit,
     //   _minGasLimit: 100000,
