@@ -47,6 +47,7 @@ import {
     CryptoStore,
     DecryptionEvents,
     EntitlementsDelegate,
+    GroupEncryptionAlgorithmId,
     GroupEncryptionCrypto,
     GroupEncryptionSession,
     IGroupEncryptionClient,
@@ -206,6 +207,7 @@ export class Client
     private mlsAdapter?: MlsAdapter
     private persistenceStore: IPersistenceStore
     private validatedEvents: Record<string, { isValid: boolean; reason?: string }> = {}
+    private defaultGroupEncryptionAlgorithm: GroupEncryptionAlgorithmId
 
     constructor(
         signerContext: SignerContext,
@@ -216,6 +218,7 @@ export class Client
         logNamespaceFilter?: string,
         highPriorityStreamIds?: string[],
         unpackEnvelopeOpts?: UnpackEnvelopeOpts,
+        defaultGroupEncryptionAlgorithm?: GroupEncryptionAlgorithmId,
     ) {
         super()
         if (logNamespaceFilter) {
@@ -235,6 +238,8 @@ export class Client
         this.rpcClient = rpcClient
         this.unpackEnvelopeOpts = unpackEnvelopeOpts
         this.userId = userIdFromAddress(signerContext.creatorAddress)
+        this.defaultGroupEncryptionAlgorithm =
+            defaultGroupEncryptionAlgorithm ?? GroupEncryptionAlgorithmId.GroupEncryption
 
         const shortId = shortenHexString(
             this.userId.startsWith('0x') ? this.userId.slice(2) : this.userId,
@@ -875,7 +880,11 @@ export class Client
         check(isDefined(this.cryptoBackend))
 
         const channelProps = make_ChannelProperties(channelName, channelTopic).toJsonString()
-        const encryptedData = await this.cryptoBackend.encryptGroupEvent(streamId, channelProps)
+        const encryptedData = await this.cryptoBackend.encryptGroupEvent(
+            streamId,
+            channelProps,
+            this.defaultGroupEncryptionAlgorithm,
+        )
 
         const event = make_GDMChannelPayload_ChannelProperties(encryptedData)
         return this.makeEventAndAddToStream(streamId, event, {
@@ -1053,7 +1062,11 @@ export class Client
 
     async setDisplayName(streamId: string, displayName: string) {
         check(isDefined(this.cryptoBackend))
-        const encryptedData = await this.cryptoBackend.encryptGroupEvent(streamId, displayName)
+        const encryptedData = await this.cryptoBackend.encryptGroupEvent(
+            streamId,
+            displayName,
+            this.defaultGroupEncryptionAlgorithm,
+        )
         await this.makeEventAndAddToStream(
             streamId,
             make_MemberPayload_DisplayName(encryptedData),
@@ -1066,7 +1079,11 @@ export class Client
         const stream = this.stream(streamId)
         check(isDefined(stream), 'stream not found')
         stream.view.getMemberMetadata().usernames.setLocalUsername(this.userId, username)
-        const encryptedData = await this.cryptoBackend.encryptGroupEvent(streamId, username)
+        const encryptedData = await this.cryptoBackend.encryptGroupEvent(
+            streamId,
+            username,
+            this.defaultGroupEncryptionAlgorithm,
+        )
         encryptedData.checksum = usernameChecksum(username, streamId)
         try {
             await this.makeEventAndAddToStream(
@@ -1529,8 +1546,10 @@ export class Client
             case MLS_ALGORITHM:
                 message = await this.encryptGroupEventEpochSecret(payload, streamId)
                 break
-            default:
-                message = await this.encryptGroupEvent(payload, streamId)
+            default: {
+                const algorithm = this.defaultGroupEncryptionAlgorithm
+                message = await this.encryptGroupEvent(payload, streamId, algorithm)
+            }
         }
         if (!message) {
             throw new Error('failed to encrypt message')
@@ -2422,7 +2441,11 @@ export class Client
         opts: { awaitInitialShareSession: boolean },
     ) {
         check(isDefined(this.cryptoBackend), 'crypto backend not initialized')
-        return this.cryptoBackend.ensureOutboundSession(streamId, opts)
+        return this.cryptoBackend.ensureOutboundSession(
+            streamId,
+            this.defaultGroupEncryptionAlgorithm,
+            opts,
+        )
     }
 
     /**
@@ -2468,6 +2491,7 @@ export class Client
         inStreamId: string | Uint8Array,
         sessions: GroupEncryptionSession[],
         toDevices: UserDeviceCollection,
+        algorithm: GroupEncryptionAlgorithmId,
     ) {
         const streamIdStr = streamIdAsString(inStreamId)
         const streamIdBytes = streamIdAsBytes(inStreamId)
@@ -2476,6 +2500,11 @@ export class Client
         check(
             new Set(sessions.map((s) => s.streamId)).size === 1,
             'sessions should all be from the same stream',
+        )
+        check(sessions[0].algorithm === algorithm, 'algorithm mismatch')
+        check(
+            new Set(sessions.map((s) => s.algorithm)).size === 1,
+            'all sessions should be the same algorithm',
         )
         check(sessions[0].streamId === streamIdStr, 'streamId mismatch')
 
@@ -2504,6 +2533,7 @@ export class Client
                         senderKey: userDevice.deviceKey,
                         sessionIds: sessionIds,
                         ciphertexts: ciphertext,
+                        algorithm: algorithm,
                     }),
                     miniblockHash,
                 )
@@ -2517,12 +2547,16 @@ export class Client
     }
 
     // Encrypt event using GroupEncryption.
-    public encryptGroupEvent(event: Message, streamId: string): Promise<EncryptedData> {
+    public encryptGroupEvent(
+        event: Message,
+        streamId: string,
+        algorithm: GroupEncryptionAlgorithmId,
+    ): Promise<EncryptedData> {
         if (!this.cryptoBackend) {
             throw new Error('crypto backend not initialized')
         }
         const cleartext = event.toJsonString()
-        return this.cryptoBackend.encryptGroupEvent(streamId, cleartext)
+        return this.cryptoBackend.encryptGroupEvent(streamId, cleartext, algorithm)
     }
 
     async encryptWithDeviceKeys(
