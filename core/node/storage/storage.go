@@ -133,8 +133,9 @@ type StreamStorage interface {
 	// GetLastMiniblockNumber returns the last miniblock number for the given stream from storage.
 	GetLastMiniblockNumber(ctx context.Context, streamID StreamId) (int64, error)
 
-	// NormalizeEphemeralStream removes the ephemeral flag from the stream.
-	NormalizeEphemeralStream(ctx context.Context, streamId StreamId) error
+	// NormalizeEphemeralStream normalizes the given ephemeral stream.
+	// Returns the hash of the first and last miniblock of the normalized stream.
+	NormalizeEphemeralStream(ctx context.Context, streamId StreamId) (common.Hash, common.Hash, error)
 
 	Close(ctx context.Context)
 }

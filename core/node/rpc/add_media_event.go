@@ -31,7 +31,12 @@ func (s *Service) localAddMediaEvent(
 
 	log.Debug("localAddMediaEvent", "parsedEvent", parsedEvent, "creationCookie", creationCookie)
 
-	mb, err := s.addParsedMediaEvent(ctx, streamId, parsedEvent, creationCookie)
+	stream := &replicatedStream{
+		streamId: streamId,
+		service:  s,
+	}
+
+	mb, err := stream.AddMediaEvent(ctx, parsedEvent, creationCookie)
 	if err != nil {
 		return nil, AsRiverError(err).Func("localAddMediaEvent")
 	}
@@ -44,18 +49,4 @@ func (s *Service) localAddMediaEvent(
 			PrevMiniblockHash: mb.Header.Hash,
 		},
 	}), nil
-}
-
-func (s *Service) addParsedMediaEvent(
-	ctx context.Context,
-	streamId StreamId,
-	parsedEvent *ParsedEvent,
-	creationCookie *CreationCookie,
-) (*Miniblock, error) {
-	stream := &replicatedStream{
-		streamId: streamId,
-		service:  s,
-	}
-
-	return stream.AddMediaEvent(ctx, parsedEvent, creationCookie)
 }

@@ -765,6 +765,7 @@ message CreationCookie {
   repeated bytes nodes = 2;
   int64 miniblock_num = 3;
   bytes prev_miniblock_hash = 4;
+  bool last = 5;
 }
 
 message StreamAndCookie {

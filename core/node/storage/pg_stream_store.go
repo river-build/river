@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/protobuf/proto"
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
@@ -1090,6 +1091,15 @@ func (s *PostgresStreamStore) readMiniblocksByStreamTx(
 		return err
 	}
 
+	return s.readMiniblocksByStreamNoLockTx(ctx, tx, streamId, onEachMb)
+}
+
+func (s *PostgresStreamStore) readMiniblocksByStreamNoLockTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	streamId StreamId,
+	onEachMb func(blockdata []byte, seqNum int) error,
+) error {
 	rows, err := tx.Query(
 		ctx,
 		s.sqlForStream(
@@ -2182,46 +2192,83 @@ func (s *PostgresStreamStore) getLastMiniblockNumberTx(
 func (s *PostgresStreamStore) NormalizeEphemeralStream(
 	ctx context.Context,
 	streamId StreamId,
-) error {
+) (common.Hash, common.Hash, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	return s.txRunner(
+	var genesisMiniblockHash common.Hash
+	var lastMiniblockHash common.Hash
+
+	err := s.txRunner(
 		ctx,
 		"NormalizeEphemeralStream",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
-			return s.normalizeEphemeralStreamTx(
-				ctx,
-				tx,
-				streamId,
-			)
+			var err error
+			genesisMiniblockHash, lastMiniblockHash, err = s.normalizeEphemeralStreamTx(ctx, tx, streamId)
+			return err
 		},
 		nil,
 		"streamId", streamId,
 	)
+
+	return genesisMiniblockHash, lastMiniblockHash, err
 }
 
 func (s *PostgresStreamStore) normalizeEphemeralStreamTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
-) error {
+) (common.Hash, common.Hash, error) {
 	_, err := s.lockEphemeralStream(ctx, tx, streamId, true)
 	if err != nil {
-		return err
+		return common.Hash{}, common.Hash{}, err
 	}
 
+	// Read all miniblocks for the ephemeral stream.
+	miniblocks := make([]*Miniblock, 0)
+	if err = s.readMiniblocksByStreamNoLockTx(ctx, tx, streamId, func(blockdata []byte, seqNum int) error {
+		var mb Miniblock
+		if err := proto.Unmarshal(blockdata, &mb); err != nil {
+			return AsRiverError(err, Err_INVALID_ARGUMENT).Message("Failed to decode miniblock from bytes")
+		}
+		miniblocks = append(miniblocks, &mb)
+		return nil
+	}); err != nil {
+		return common.Hash{}, common.Hash{}, err
+	}
+
+	if len(miniblocks) == 0 {
+		return common.Hash{}, common.Hash{}, RiverError(Err_INTERNAL, "No miniblocks found for the given ephemeral stream")
+	}
+
+	var mediaEvent StreamEvent
+	if err := proto.Unmarshal(miniblocks[0].GetEvents()[0].Event, &mediaEvent); err != nil {
+		return common.Hash{}, common.Hash{}, RiverError(Err_INTERNAL, "Failed to decode stream event from genesis miniblock")
+	}
+
+	// The miniblock with 0 number must be the genesis miniblock.
+	// The genesis miniblock must have the media inception event.
+	inception := mediaEvent.GetMediaPayload().GetInception()
+
+	// The number of miniblocks must be <chunks-number>+1 where 1 is the genesis miniblock.
+	if inception.GetChunkCount() != int32(len(miniblocks[1:])) {
+		return common.Hash{}, common.Hash{}, RiverError(Err_INTERNAL, "The ephemenral stream can not be normalized due to missing miniblocks")
+	}
+
+	// Remove ephemeral flag from the given stream.
 	_, err = tx.Exec(
 		ctx,
 		`UPDATE es SET ephemeral = false WHERE stream_id = $1`,
 		streamId,
 	)
 	if err != nil {
-		return err
+		return common.Hash{}, common.Hash{}, err
 	}
 
-	return nil
+	return common.BytesToHash(miniblocks[0].Header.Hash),
+		common.BytesToHash(miniblocks[len(miniblocks)-1].Header.Hash),
+		nil
 }
 
 func getCurrentNodeProcessInfo(currentSchemaName string) string {
