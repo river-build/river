@@ -760,6 +760,13 @@ message SyncCookie  {
     bytes prev_miniblock_hash = 5;
 }
 
+message CreationCookie {
+  bytes stream_id = 1;
+  repeated bytes nodes = 2;
+  int64 miniblock_num = 3;
+  bytes prev_miniblock_hash = 4;
+}
+
 message StreamAndCookie {
     repeated Envelope events = 1;
     SyncCookie next_sync_cookie = 2;
@@ -799,11 +806,21 @@ message CreateStreamRequest {
     repeated Envelope events = 1;
     bytes stream_id = 2; // stream_id should match the stream_id in the inception payload of the first event
     map<string, bytes> metadata = 3;
- }
+}
 
 message CreateStreamResponse {
     // all events in current minipool and cookie allowing to sync from the end of the stream
     StreamAndCookie stream = 1;
+}
+
+message CreateMediaStreamRequest {
+    repeated Envelope events = 1;
+    bytes stream_id = 2; // stream_id should match the stream_id in the inception payload of the first event
+    map<string, bytes> metadata = 3;
+}
+
+message CreateMediaStreamResponse {
+    CreationCookie next_creation_cookie = 1;
 }
 
 message GetStreamRequest {
@@ -957,6 +974,7 @@ message InfoResponse {
 
 service StreamService {
     rpc CreateStream(CreateStreamRequest) returns (CreateStreamResponse);
+    rpc CreateMediaStream(CreateMediaStreamRequest) returns (CreateMediaStreamResponse);
     rpc GetStream(GetStreamRequest) returns (GetStreamResponse);
     rpc GetStreamEx(GetStreamExRequest) returns (stream GetStreamExResponse);
     rpc GetMiniblocks(GetMiniblocksRequest) returns (GetMiniblocksResponse);
