@@ -28,7 +28,8 @@ import {
     UserBio,
     Tags,
     BlockchainTransaction,
-    MemberPayload_Mls, CreationCookie,
+    MemberPayload_Mls,
+    CreationCookie,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -787,7 +788,10 @@ export class Client
             streamId: streamIdAsBytes(streamId),
         })
 
-        check(response?.nextCreationCookie !== undefined, 'nextCreationCookie was expected but was not returned in response')
+        check(
+            response?.nextCreationCookie !== undefined,
+            'nextCreationCookie was expected but was not returned in response',
+        )
 
         return { creationCookie: response.nextCreationCookie }
     }

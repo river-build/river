@@ -14,7 +14,7 @@ import {
 import { assertBytes } from 'ethereum-cryptography/utils'
 import { recoverPublicKey, signSync, verify } from 'ethereum-cryptography/secp256k1'
 import { genIdBlob, streamIdAsBytes, streamIdAsString, userIdFromAddress } from './id'
-import { ParsedEvent, ParsedMiniblock, ParsedStreamAndCookie, ParsedStreamResponse} from './types'
+import { ParsedEvent, ParsedMiniblock, ParsedStreamAndCookie, ParsedStreamResponse } from './types'
 import { SignerContext, checkDelegateSig } from './signerContext'
 import { keccak256 } from 'ethereum-cryptography/keccak'
 import { createHash } from 'crypto'
