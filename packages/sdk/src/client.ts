@@ -351,7 +351,7 @@ export class Client
         }
     }
 
-    private async initUserJoinedStreams() {
+    private initUserJoinedStreams() {
         assert(isDefined(this.userStreamId), 'userStreamId must be set')
         assert(isDefined(this.syncedStreamsExtensions), 'syncedStreamsExtensions must be set')
         const stream = this.stream(this.userStreamId)
@@ -404,7 +404,7 @@ export class Client
             this.initUserMetadataStream(initUserMetadata),
             this.initUserSettingsStream(initUserMetadata),
         ])
-        await this.initUserJoinedStreams()
+        this.initUserJoinedStreams()
 
         this.syncedStreamsExtensions.start()
         const initializeUserEndTime = performance.now()
