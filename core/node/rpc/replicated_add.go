@@ -121,7 +121,8 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 	})
 
 	// Save the ephemeral miniblock on remotes
-	sender.GoRemotes(ctx, cc.NodeAddresses(), func(ctx context.Context, node common.Address) error {
+	remotes := cc.RemoteNodeAddresses(r.service.wallet.Address)
+	sender.GoRemotes(ctx, remotes, func(ctx context.Context, node common.Address) error {
 		stub, err := r.service.nodeRegistry.GetNodeToNodeClientForAddress(node)
 		if err != nil {
 			return err
