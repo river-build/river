@@ -64,6 +64,7 @@ func GetDefaultConfig() *Config {
 			StacksMaxSizeKb:       5 * 1024,
 			Stream:                true,
 			TxPool:                true,
+			CorruptStreams:        true,
 			EnableStorageEndpoint: true,
 		},
 		Scrubbing: ScrubbingConfig{
@@ -349,6 +350,10 @@ type ArchiveConfig struct {
 
 	WorkerPoolSize int `json:",omitempty"` // If 0, default to 20.
 
+	MiniblockScrubQueueSize int `json:",omitempty"` // If 0, default to 10.
+
+	MiniblockScrubWorkerPoolSize int `json:",omitempty"` // If 0, default to 20
+
 	StreamsContractCallPageSize int64 `json:",omitempty"` // If 0, default to 5000.
 }
 
@@ -448,6 +453,7 @@ type DebugEndpointsConfig struct {
 	StacksMaxSizeKb int
 	Stream          bool
 	TxPool          bool
+	CorruptStreams  bool
 
 	// Make storage statistics available via debug endpoints. This may involve running queries
 	// on the underlying database.
@@ -500,6 +506,20 @@ func (ac *ArchiveConfig) GetStreamsContractCallPageSize() int64 {
 		return 1000
 	}
 	return ac.StreamsContractCallPageSize
+}
+
+func (ac *ArchiveConfig) GetMiniblockScrubQueueSize() int {
+	if ac.MiniblockScrubQueueSize <= 0 {
+		return 10
+	}
+	return ac.MiniblockScrubQueueSize
+}
+
+func (ac *ArchiveConfig) GetMiniblockScrubWorkerPoolSize() int {
+	if ac.MiniblockScrubWorkerPoolSize <= 0 {
+		return 20
+	}
+	return ac.MiniblockScrubWorkerPoolSize
 }
 
 type ScrubbingConfig struct {

@@ -370,11 +370,12 @@ func (p *MessageToNotificationsProcessor) apnPayloadV2(
 	}
 
 	apnPayload := map[string]interface{}{
-		"channelId":      hex.EncodeToString(channelID[:]),
-		"kind":           kind,
-		"senderId":       hex.EncodeToString(event.Event.CreatorAddress),
-		"eventId":        eventHash,
-		"payloadVersion": int(NotificationPushVersion_NOTIFICATION_PUSH_VERSION_2),
+		"channelId":        hex.EncodeToString(channelID[:]),
+		"kind":             kind,
+		"senderId":         hex.EncodeToString(event.Event.GetCreatorAddress()),
+		"createdAtEpochMs": event.Event.GetCreatedAtEpochMs(),
+		"eventId":          eventHash,
+		"payloadVersion":   int(NotificationPushVersion_NOTIFICATION_PUSH_VERSION_2),
 	}
 
 	// only add the (stream)event if there is a reasonable chance that the payload isn't too large.
@@ -536,6 +537,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 			if err != nil && statusCode == http.StatusRequestEntityTooLarge {
 				if _, exists := apnPayload["event"]; exists {
 					delete(apnPayload, "event")
+					p.log.Infow("Payload too large, retry notification with event stripped", "event", event.Hash)
 					subscriptionExpired, _, err = p.sendAPNNotification(channelID, sub, event, apnPayload)
 				}
 			}
@@ -606,7 +608,7 @@ func (p *MessageToNotificationsProcessor) sendAPNNotification(
 
 	if p.log.Level() <= zap.DebugLevel {
 		p.log.Debugw("APN Notification",
-			"to", common.BytesToAddress(event.Event.GetCreatorAddress()),
+			"from", common.BytesToAddress(event.Event.GetCreatorAddress()),
 			"notification", notificationPayload)
 	}
 

@@ -28,7 +28,7 @@ func (s *Service) initTracing() {
 	if s.config.PerformanceTracking.OtlpFile != "" {
 		f, err := os.OpenFile(s.config.PerformanceTracking.OtlpFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			s.defaultLogger.Error("initTracing: failed to create trace file", "error", err)
+			s.defaultLogger.Errorw("initTracing: failed to create trace file", "error", err)
 		} else {
 			s.onClose(f.Close)
 
@@ -36,7 +36,7 @@ func (s *Service) initTracing() {
 				stdouttrace.WithWriter(f),
 			)
 			if err != nil {
-				s.defaultLogger.Error("initTracing: failed to create stdout exporter", "error", err)
+				s.defaultLogger.Errorw("initTracing: failed to create stdout exporter", "error", err)
 			} else {
 				s.onClose(exporter.Shutdown)
 
@@ -57,7 +57,7 @@ func (s *Service) initTracing() {
 			s.onClose(exp.Shutdown)
 			exporters = append(exporters, trace.WithBatcher(exp))
 		} else {
-			s.defaultLogger.Error("Failed to create http OTLP exporter", "error", err)
+			s.defaultLogger.Errorw("Failed to create http OTLP exporter", "error", err)
 		}
 	}
 
@@ -73,7 +73,7 @@ func (s *Service) initTracing() {
 			s.onClose(exp.Shutdown)
 			exporters = append(exporters, trace.WithBatcher(exp))
 		} else {
-			s.defaultLogger.Error("Failed to create grpc OTLP exporter", "error", err)
+			s.defaultLogger.Errorw("Failed to create grpc OTLP exporter", "error", err)
 		}
 	}
 
@@ -86,7 +86,7 @@ func (s *Service) initTracing() {
 			s.onClose(exp.Shutdown)
 			exporters = append(exporters, trace.WithBatcher(exp))
 		} else {
-			s.defaultLogger.Error("Failed to create zipkin exporter", "error", err)
+			s.defaultLogger.Errorw("Failed to create zipkin exporter", "error", err)
 		}
 	}
 
@@ -104,7 +104,7 @@ func (s *Service) initTracing() {
 		),
 	)
 	if err != nil {
-		s.defaultLogger.Error("Failed to create resource", "error", err)
+		s.defaultLogger.Errorw("Failed to create resource", "error", err)
 		return
 	}
 
@@ -125,6 +125,6 @@ func (s *Service) initTracing() {
 		otelconnect.WithPropagator(propagation.TraceContext{}),
 	)
 	if err != nil {
-		s.defaultLogger.Error("Failed to create otel interceptor", "error", err)
+		s.defaultLogger.Errorw("Failed to create otel interceptor", "error", err)
 	}
 }

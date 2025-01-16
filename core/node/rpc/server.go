@@ -63,12 +63,12 @@ func (s *Service) httpServerClose() {
 		err := s.httpServer.Shutdown(ctx)
 		if err != nil {
 			if err != context.DeadlineExceeded {
-				s.defaultLogger.Error("failed to shutdown http server", "error", err)
+				s.defaultLogger.Errorw("failed to shutdown http server", "error", err)
 			}
 			s.defaultLogger.Warnw("forcing http server close")
 			err = s.httpServer.Close()
 			if err != nil {
-				s.defaultLogger.Error("failed to close http server", "error", err)
+				s.defaultLogger.Errorw("failed to close http server", "error", err)
 			}
 		} else {
 			if !s.config.Log.Simplify {
@@ -81,7 +81,7 @@ func (s *Service) httpServerClose() {
 		}
 		err := s.httpServer.Close()
 		if err != nil {
-			s.defaultLogger.Error("failed to close http server", "error", err)
+			s.defaultLogger.Errorw("failed to close http server", "error", err)
 		}
 		if !s.config.Log.Simplify {
 			s.defaultLogger.Infow("http server closed")
@@ -96,6 +96,10 @@ func (s *Service) Close() {
 	slices.Reverse(onClose)
 	for _, f := range onClose {
 		f()
+	}
+
+	if s.Archiver != nil {
+		s.Archiver.Close()
 	}
 
 	if !s.config.Log.Simplify {
@@ -550,7 +554,7 @@ func (s *Service) runHttpServer() error {
 func (s *Service) serve() {
 	err := s.httpServer.Serve(s.listener)
 	if err != nil && err != http.ErrServerClosed {
-		s.defaultLogger.Error("Serve failed", "err", err)
+		s.defaultLogger.Errorw("Serve failed", "err", err)
 	} else {
 		s.defaultLogger.Infow("Serve stopped")
 	}

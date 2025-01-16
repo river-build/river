@@ -738,7 +738,7 @@ export class EncryptionDevice {
      *
      * @returns a list of session export objects
      */
-    public async exportRoomKeys(): Promise<GroupEncryptionSession[] | undefined> {
+    public async exportInboundGroupSessions(): Promise<GroupEncryptionSession[]> {
         const exportedSessions: GroupEncryptionSession[] = []
 
         await this.cryptoStore.withGroupSessions(async () => {
