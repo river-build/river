@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto' // used to mock indexdb in dexie, don't remove
 
 import { ethers } from 'ethers'
-import { ChunkedMedia, MediaInfo } from '@river-build/proto'
+import {ChunkedMedia, CreationCookie, MediaInfo} from '@river-build/proto'
 import {
 	Client,
 	encryptAESGCM,
@@ -11,7 +11,7 @@ import {
 	makeStreamRpcClient,
 	MockEntitlementsDelegate,
 	RiverDbManager,
-	SignerContext,
+	SignerContext, streamIdAsString,
 	userIdFromAddress,
 } from '@river-build/sdk'
 import {
@@ -141,21 +141,27 @@ export async function encryptAndSendMediaPayload(
 		throw new Error('Failed to create media stream')
 	}
 
+	let cc: CreationCookie = new CreationCookie(mediaStreamInfo.creationCookie)
 	let chunkIndex = 0
 	for (let i = 0; i < ciphertext.length; i += chunkSize) {
 		const chunk = ciphertext.slice(i, i + chunkSize)
-		const { prevMiniblockHash } = await client.sendMediaPayload(
-			mediaStreamInfo.streamId,
+		const { creationCookie } = await client.sendMediaPayload(
+			cc,
 			chunk,
 			chunkIndex++,
-			mediaStreamInfo.prevMiniblockHash,
 		)
-		mediaStreamInfo.prevMiniblockHash = prevMiniblockHash
+
+		cc = new CreationCookie({
+			...cc,
+			prevMiniblockHash: new Uint8Array(creationCookie.prevMiniblockHash),
+			miniblockNum: creationCookie.miniblockNum,
+			last: i + 1 == ciphertext.length - 1,
+		})
 	}
 
 	const chunkedMedia = new ChunkedMedia({
 		info,
-		streamId: mediaStreamInfo.streamId,
+		streamId: streamIdAsString(mediaStreamInfo.creationCookie.streamId),
 		encryption: {
 			case: 'aesgcm',
 			value: { secretKey, iv },

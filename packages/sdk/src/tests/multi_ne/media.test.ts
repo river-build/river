@@ -4,8 +4,8 @@
 
 import { makeTestClient, makeUniqueSpaceStreamId } from '../testUtils'
 import { Client } from '../../client'
-import { makeUniqueChannelStreamId, makeDMStreamId } from '../../id'
-import { InfoRequest } from '@river-build/proto'
+import { makeUniqueChannelStreamId, makeDMStreamId, streamIdAsString } from '../../id'
+import { CreationCookie, InfoRequest } from '@river-build/proto'
 import { deriveKeyAndIV, encryptAESGCM } from '../../crypto_utils'
 
 describe('mediaTests', () => {
@@ -23,7 +23,7 @@ describe('mediaTests', () => {
 
     async function bobCreateMediaStream(
         chunkCount: number,
-    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array }> {
+    ): Promise<{ creationCookie: CreationCookie }> {
         const spaceId = makeUniqueSpaceStreamId()
         await expect(bobsClient.createSpace(spaceId)).resolves.not.toThrow()
 
@@ -36,33 +36,34 @@ describe('mediaTests', () => {
     }
 
     async function bobSendMediaPayloads(
-        streamId: string,
+        creationCookie: CreationCookie,
         chunks: number,
-        prevMiniblockHash: Uint8Array,
-    ): Promise<Uint8Array> {
-        let prevHash = prevMiniblockHash
+    ): Promise<CreationCookie> {
+        let cc: CreationCookie = new CreationCookie(creationCookie)
         for (let i = 0; i < chunks; i++) {
             const chunk = new Uint8Array(100)
             // Create novel chunk content for testing purposes
             chunk.fill(i, 0, 100)
-            const result = await bobsClient.sendMediaPayload(streamId, chunk, i, prevHash)
-            prevHash = result.prevMiniblockHash
+            const result = await bobsClient.sendMediaPayload(cc, chunk, i)
+            cc = new CreationCookie({
+                ...cc,
+                prevMiniblockHash: new Uint8Array(result.creationCookie.prevMiniblockHash),
+                miniblockNum: result.creationCookie.miniblockNum,
+                last: i + 1 == chunks - 1,
+            })
         }
-        return prevHash
+        return cc
     }
 
     async function bobSendEncryptedMediaPayload(
-        streamId: string,
+        creationCookie: CreationCookie,
         data: Uint8Array,
         key: Uint8Array,
         iv: Uint8Array,
-        prevMiniblockHash: Uint8Array,
     ): Promise<Uint8Array> {
-        let prevHash = prevMiniblockHash
         const { ciphertext } = await encryptAESGCM(data, key, iv)
-        const result = await bobsClient.sendMediaPayload(streamId, ciphertext, 0, prevHash)
-        prevHash = result.prevMiniblockHash
-        return prevHash
+        const result = await bobsClient.sendMediaPayload(creationCookie, ciphertext, 0)
+        return result.creationCookie.prevMiniblockHash
     }
 
     function createTestMediaChunks(chunks: number): Uint8Array {
@@ -78,7 +79,7 @@ describe('mediaTests', () => {
     async function bobCreateSpaceMediaStream(
         spaceId: string,
         chunkCount: number,
-    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array }> {
+    ): Promise<{ creationCookie: CreationCookie }> {
         await expect(bobsClient.createSpace(spaceId)).resolves.not.toThrow()
         const mediaInfo = await bobsClient.createMediaStream(
             undefined,
@@ -100,14 +101,14 @@ describe('mediaTests', () => {
 
     test('clientCanSendMediaPayload', async () => {
         const mediaStreamInfo = await bobCreateMediaStream(10)
-        await bobSendMediaPayloads(mediaStreamInfo.streamId, 10, mediaStreamInfo.prevMiniblockHash)
+        await bobSendMediaPayloads(mediaStreamInfo.creationCookie, 10)
     })
 
     test('clientCanSendSpaceMediaPayload', async () => {
         const spaceId = makeUniqueSpaceStreamId()
         const mediaStreamInfo = await bobCreateSpaceMediaStream(spaceId, 10)
         await expect(
-            bobSendMediaPayloads(mediaStreamInfo.streamId, 10, mediaStreamInfo.prevMiniblockHash),
+            bobSendMediaPayloads(mediaStreamInfo.creationCookie, 10),
         ).resolves.not.toThrow()
     })
 
@@ -117,13 +118,7 @@ describe('mediaTests', () => {
         const { iv, key } = await deriveKeyAndIV(spaceId)
         const data = createTestMediaChunks(2)
         await expect(
-            bobSendEncryptedMediaPayload(
-                mediaStreamInfo.streamId,
-                data,
-                key,
-                iv,
-                mediaStreamInfo.prevMiniblockHash,
-            ),
+            bobSendEncryptedMediaPayload(mediaStreamInfo.creationCookie, data, key, iv),
         ).resolves.not.toThrow()
     })
 
@@ -132,14 +127,12 @@ describe('mediaTests', () => {
         const mediaStreamInfo = await bobCreateSpaceMediaStream(spaceId, 2)
         const { iv, key } = await deriveKeyAndIV(spaceId)
         const data = createTestMediaChunks(2)
-        await bobSendEncryptedMediaPayload(
-            mediaStreamInfo.streamId,
-            data,
+        await bobSendEncryptedMediaPayload(mediaStreamInfo.creationCookie, data, key, iv)
+        const decryptedChunks = await bobsClient.getMediaPayload(
+            streamIdAsString(mediaStreamInfo.creationCookie.streamId),
             key,
             iv,
-            mediaStreamInfo.prevMiniblockHash,
         )
-        const decryptedChunks = await bobsClient.getMediaPayload(mediaStreamInfo.streamId, key, iv)
         expect(decryptedChunks).toEqual(data)
     })
 
@@ -147,10 +140,10 @@ describe('mediaTests', () => {
         const result = await bobCreateMediaStream(10)
         const chunk = new Uint8Array(100)
         await expect(
-            bobsClient.sendMediaPayload(result.streamId, chunk, -1, result.prevMiniblockHash),
+            bobsClient.sendMediaPayload(result.creationCookie, chunk, -1),
         ).rejects.toThrow()
         await expect(
-            bobsClient.sendMediaPayload(result.streamId, chunk, 11, result.prevMiniblockHash),
+            bobsClient.sendMediaPayload(result.creationCookie, chunk, 11),
         ).rejects.toThrow()
     })
 
@@ -158,16 +151,14 @@ describe('mediaTests', () => {
         const result = await bobCreateMediaStream(10)
         const chunk = new Uint8Array(500000)
         await expect(
-            bobsClient.sendMediaPayload(result.streamId, chunk, 0, result.prevMiniblockHash),
+            bobsClient.sendMediaPayload(result.creationCookie, chunk, 0),
         ).resolves.not.toThrow()
     })
 
     test('chunkSizeNeedsToBeWithinLimit', async () => {
         const result = await bobCreateMediaStream(10)
         const chunk = new Uint8Array(500001)
-        await expect(
-            bobsClient.sendMediaPayload(result.streamId, chunk, 0, result.prevMiniblockHash),
-        ).rejects.toThrow()
+        await expect(bobsClient.sendMediaPayload(result.creationCookie, chunk, 0)).rejects.toThrow()
     })
 
     test('chunkCountNeedsToBeWithinLimit', async () => {
@@ -183,7 +174,7 @@ describe('mediaTests', () => {
         alicesClient.startSync()
 
         await expect(
-            alicesClient.sendMediaPayload(result.streamId, chunk, 5, result.prevMiniblockHash),
+            alicesClient.sendMediaPayload(result.creationCookie, chunk, 5),
         ).rejects.toThrow()
         await alicesClient.stop()
     })
@@ -198,7 +189,7 @@ describe('mediaTests', () => {
         alicesClient.startSync()
 
         await expect(
-            alicesClient.sendMediaPayload(result.streamId, chunk, 5, result.prevMiniblockHash),
+            alicesClient.sendMediaPayload(result.creationCookie, chunk, 5),
         ).rejects.toThrow()
         await alicesClient.stop()
     })
@@ -279,9 +270,10 @@ describe('mediaTests', () => {
     // This test is flaky because there is a bug in GetStreamEx where sometimes the miniblock is not
     // finalized before the client tries to fetch it. This is a known issue, see HNT-5291.
     test.skip('mediaStreamGetStreamEx', async () => {
-        const { streamId, prevMiniblockHash } = await bobCreateMediaStream(10)
+        const { creationCookie } = await bobCreateMediaStream(10)
+        const streamId = streamIdAsString(creationCookie.streamId)
         // Send a series of media chunks
-        await bobSendMediaPayloads(streamId, 10, prevMiniblockHash)
+        await bobSendMediaPayloads(creationCookie, 10)
         // Force server to flush minipool events into a block
         await bobsClient.rpcClient.info(
             new InfoRequest({
