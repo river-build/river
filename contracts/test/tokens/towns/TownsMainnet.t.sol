@@ -84,6 +84,7 @@ contract TownsMainnetTests is TestUtils, ITownsBase, EIP712Utils {
   ) external givenCallerHasTokens(alice, amount) {
     vm.assume(bob != address(0));
     vm.assume(bob != ZERO_SENTINEL);
+    vm.assume(alice != bob);
 
     assertEq(towns.allowance(alice, bob), 0);
 
@@ -103,6 +104,8 @@ contract TownsMainnetTests is TestUtils, ITownsBase, EIP712Utils {
     alicePrivateKey = boundPrivateKey(alicePrivateKey);
 
     address alice = vm.addr(alicePrivateKey);
+
+    vm.assume(alice != bob);
 
     vm.prank(vault);
     towns.transfer(alice, amount);
