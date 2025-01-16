@@ -1,1 +1,0 @@
-[TIMESTAMP] INFO test message {"databaseConfig": {"Host": "localhost", "Port": 5432, "User": "user", "Database": "testdb", "Extra": "extra", "NumPartitions": 256, "DebugTransactions": false}}

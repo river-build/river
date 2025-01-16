@@ -1,1 +1,0 @@
-[TIMESTAMP] INFO test message {"tlsConfig": {"Cert": "certvalue"}}

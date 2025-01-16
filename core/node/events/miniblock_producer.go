@@ -595,7 +595,7 @@ func (p *miniblockProducer) jobStart(ctx context.Context, j *mbJob, forceSnapsho
 	candidate, replicated, err := mbProduceCandidate(ctx, p.streamCache.Params(), j.stream, forceSnapshot)
 	if err != nil {
 		logging.FromCtx(ctx).
-			Error(
+			Errorw(
 				"MiniblockProducer: jobStart: Error creating new miniblock proposal",
 				"streamId",
 				j.stream.streamId,

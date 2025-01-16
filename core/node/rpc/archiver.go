@@ -214,7 +214,7 @@ func (a *Archiver) getCorruptStreams(ctx context.Context) map[StreamId]*ArchiveS
 				corruptStreams[stream.streamId] = stream
 			} else if !ok {
 				logging.FromCtx(ctx).
-					Error("Unexpected value stored in stream cache (not an ArchiveStream)", "value", value)
+					Errorw("Unexpected value stored in stream cache (not an ArchiveStream)", "value", value)
 			}
 
 			return true
@@ -234,7 +234,7 @@ func (a *Archiver) addNewStream(
 	if loaded {
 		// TODO: Double notification, shouldn't happen.
 		logging.FromCtx(ctx).
-			Error("Stream already exists in archiver map", "streamId", streamId, "lastKnownMiniblock", lastKnownMiniblock)
+			Errorw("Stream already exists in archiver map", "streamId", streamId, "lastKnownMiniblock", lastKnownMiniblock)
 		return
 	}
 
@@ -432,7 +432,7 @@ func (a *Archiver) emitPeriodicCorruptStreamReport(ctx context.Context) {
 				builder.WriteString("\n")
 			}
 			logging.FromCtx(ctx).
-				Info("Corrupt streams report", "total", len(corruptStreams), "streams", builder.String())
+				Infow("Corrupt streams report", "total", len(corruptStreams), "streams", builder.String())
 		}
 	}
 }

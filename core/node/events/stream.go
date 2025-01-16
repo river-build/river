@@ -173,7 +173,7 @@ func (s *streamImpl) loadInternal(ctx context.Context) error {
 	view, err := MakeStreamView(ctx, streamData)
 	if err != nil {
 		logging.FromCtx(ctx).
-			Error("Stream.loadInternal: Failed to parse stream data loaded from storage", "error", err, "streamId", s.streamId)
+			Errorw("Stream.loadInternal: Failed to parse stream data loaded from storage", "error", err, "streamId", s.streamId)
 		return err
 	}
 
@@ -1046,7 +1046,7 @@ func (s *streamImpl) tryReadAndApplyCandidateLocked(ctx context.Context, mbRef *
 
 	if !IsRiverErrorCode(err, Err_NOT_FOUND) {
 		logging.FromCtx(ctx).
-			Error("Stream.tryReadAndApplyCandidateNoLock: failed to read miniblock candidate", "error", err)
+			Errorw("Stream.tryReadAndApplyCandidateNoLock: failed to read miniblock candidate", "error", err)
 	}
 	return false
 }
@@ -1083,7 +1083,7 @@ func (s *streamImpl) applyStreamEvents(
 	// Sanity check
 	if s.lastAppliedBlockNum >= blockNum {
 		logging.FromCtx(ctx).
-			Error("applyStreamEvents: already applied events for block", "blockNum", blockNum, "streamId", s.streamId,
+			Errorw("applyStreamEvents: already applied events for block", "blockNum", blockNum, "streamId", s.streamId,
 				"lastAppliedBlockNum", s.lastAppliedBlockNum,
 			)
 		return

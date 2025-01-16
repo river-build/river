@@ -217,13 +217,13 @@ func (r rawSettingsMap) init(
 	for _, setting := range retrievedSettings {
 		if setting.BlockNumber == math.MaxUint64 {
 			logging.FromCtx(ctx).
-				Warn("Invalid block number, ignoring", "key", setting.Key, "value", setting.Value)
+				Warnw("Invalid block number, ignoring", "key", setting.Key, "value", setting.Value)
 			continue
 		}
 		name, ok := keyHashToName[setting.Key]
 		if !ok {
 			logging.FromCtx(ctx).
-				Info("Skipping unknown setting key", "key", setting.Key, "value", setting.Value, "block", setting.BlockNumber)
+				Infow("Skipping unknown setting key", "key", setting.Key, "value", setting.Value, "block", setting.BlockNumber)
 			continue
 		}
 		blockMap, ok := r[name]
@@ -235,7 +235,7 @@ func (r rawSettingsMap) init(
 		oldVal, ok := blockMap[blockNum]
 		if ok {
 			logging.FromCtx(ctx).
-				Warn("Duplicate setting", "key", setting.Key, "block", blockNum, "oldValue",
+				Warnw("Duplicate setting", "key", setting.Key, "block", blockNum, "oldValue",
 					oldVal, "newValue", setting.Value)
 		}
 		blockMap[blockNum] = setting.Value
@@ -250,7 +250,7 @@ func (r rawSettingsMap) apply(
 	name, ok := keyHashToName[event.Key]
 	if !ok {
 		logging.FromCtx(ctx).
-			Info("Skipping unknown setting key", "key", event.Key, "value", event.Value, "block", event.Block, "deleted", event.Deleted)
+			Infow("Skipping unknown setting key", "key", event.Key, "value", event.Value, "block", event.Block, "deleted", event.Deleted)
 		return
 	}
 	if event.Deleted {
@@ -267,12 +267,12 @@ func (r rawSettingsMap) apply(
 					}
 				} else {
 					logging.FromCtx(ctx).
-						Warn("Got delete event for non-existing block", "key", event.Key, "block", event.Block)
+						Warnw("Got delete event for non-existing block", "key", event.Key, "block", event.Block)
 				}
 			}
 		} else {
 			logging.FromCtx(ctx).
-				Warn("Got delete event for non-existing setting", "key", event.Key, "block", event.Block)
+				Warnw("Got delete event for non-existing setting", "key", event.Key, "block", event.Block)
 		}
 	} else {
 		if _, ok := r[name]; !ok {

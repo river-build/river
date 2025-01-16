@@ -206,7 +206,7 @@ func (cs *clientSimulator) Start(ctx context.Context) {
 
 	logging.FromCtx(ctx).
 		With("application", "clientSimulator").
-		Info("check requested topics", "topics", cs.checkerABI.Events["EntitlementCheckRequested"].ID)
+		Infow("check requested topics", "topics", cs.checkerABI.Events["EntitlementCheckRequested"].ID)
 
 	cs.baseChain.ChainMonitor.OnContractWithTopicsEvent(
 		0,

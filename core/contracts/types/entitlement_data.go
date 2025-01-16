@@ -32,7 +32,7 @@ func MarshalEntitlement(
 	rawEntitlement base.IEntitlementDataQueryableBaseEntitlementData,
 ) (Entitlement, error) {
 	log := logging.FromCtx(ctx)
-	log.Debugf(
+	log.Debugw(
 		"Marshalling entitlement data",
 		"entitlement_data", rawEntitlement.EntitlementData,
 		"entitlement_type", rawEntitlement.EntitlementType,
