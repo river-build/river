@@ -28,6 +28,9 @@ func TestDatabaseConfig_UrlAndPasswordDoesNotLog(t *testing.T) {
 	logOutput := buffer.String()
 	logOutput = testutils.RemoveJsonTimestamp(logOutput)
 
+	// Uncomment to write log output to test file.
+	// os.WriteFile("testdata/databaseconfig_json.txt", []byte(logOutput), 0644)
+
 	expectedBytes, err := os.ReadFile("testdata/databaseconfig_json.txt")
 	require.NoError(t, err)
 	expected := testutils.RemoveJsonTimestamp(string(expectedBytes))
@@ -48,6 +51,9 @@ func TestTlsConfig_KeyDoesNotLog(t *testing.T) {
 
 	logOutput := buffer.String()
 	logOutput = testutils.RemoveJsonTimestamp(logOutput)
+
+	// Uncomment to write log output to test file.
+	// os.WriteFile("testdata/tlsconfig_json.txt", []byte(logOutput), 0644)
 
 	expectedBytes, err := os.ReadFile("testdata/tlsconfig_json.txt")
 	require.NoError(t, err)

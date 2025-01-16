@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"go.uber.org/zap/zapcore"
 
 	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/protocol"
@@ -83,9 +82,6 @@ func GetDefaultConfig() *Config {
 }
 
 // Viper uses mapstructure module to marshal settings into config struct.
-// Please note: there is a MarshalLogObject defined for this struct in order to omit sensitive
-// fields when logging. If you add a field to this struct and it is not a sensitive field,
-// please make sure it is logged in the MarshalLogObject method.
 type Config struct {
 	// Network
 	// 0 can be used in tests to elect a free available port.
@@ -192,157 +188,10 @@ type Config struct {
 	RiverRegistry RiverRegistryConfig
 }
 
-// MarshalLogObject is used to omit sensitive fields when logging.
-func (c Config) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	if c.Port != 0 {
-		enc.AddInt("Port", c.Port)
-	}
-
-	if c.Address != "" {
-		enc.AddString("Address", c.Address)
-	}
-
-	if c.DisableHttps {
-		enc.AddBool("DisableHttps", c.DisableHttps)
-	}
-
-	// AddObject is used for structs that implement the ObjectMarshaler interface, which is
-	// used here to omit sensitive fields for some config structs. For structs that do not
-	// implement this interface, AddReflected is used.
-	if err := enc.AddObject("TSLConfig", c.TLSConfig); err != nil {
-		return err
-	}
-
-	if err := enc.AddObject("Database", c.Database); err != nil {
-		return err
-	}
-
-	if c.StorageType != "" {
-		enc.AddString("StorageType", c.StorageType)
-	}
-
-	// These two configs have omitted fields and thus must be logged via AddObject.
-	if err := enc.AddObject("BaseChain", c.BaseChain); err != nil {
-		return err
-	}
-	if err := enc.AddObject("RiverChain", c.RiverChain); err != nil {
-		return err
-	}
-
-	if err := enc.AddReflected("ArchitectContract", c.ArchitectContract); err != nil {
-		return err
-	}
-	if err := enc.AddReflected("RegistryContract", c.RegistryContract); err != nil {
-		return err
-	}
-
-	if err := enc.AddReflected("Log", c.Log); err != nil {
-		return err
-	}
-
-	if err := enc.AddReflected("Metrics", c.Metrics); err != nil {
-		return err
-	}
-	if err := enc.AddReflected("PerformanceTracking", c.PerformanceTracking); err != nil {
-		return err
-	}
-
-	if err := enc.AddReflected("Scrubbing", c.Scrubbing); err != nil {
-		return err
-	}
-
-	if err := enc.AddReflected("StreamReconciliation", c.StreamReconciliation); err != nil {
-		return err
-	}
-	if err := enc.AddReflected("Network", c.Network); err != nil {
-		return err
-	}
-
-	if c.StandByOnStart {
-		enc.AddBool("StandByOnStart", c.StandByOnStart)
-	}
-	if c.StandByPollPeriod != 0 {
-		enc.AddDuration("StandByPollPeriod", c.StandByPollPeriod)
-	}
-	if c.ShutdownTimeout != 0 {
-		enc.AddDuration("ShutdownTimeout", c.ShutdownTimeout)
-	}
-
-	if c.Graffiti != "" {
-		enc.AddString("Graffiti", c.Graffiti)
-	}
-
-	if err := enc.AddReflected("Archive", c.Archive); err != nil {
-		return err
-	}
-	if err := enc.AddReflected("Notifications", c.Notifications); err != nil {
-		return err
-	}
-
-	if c.DisableBaseChain {
-		enc.AddBool("DisableBaseChain", c.DisableBaseChain)
-	}
-
-	if c.EnableMls {
-		enc.AddBool("EnableMls", c.EnableMls)
-	}
-
-	if c.ChainBlocktimes != "" {
-		enc.AddString("ChainBlocktimes", c.ChainBlocktimes)
-	}
-
-	if len(c.ChainConfigs) > 0 {
-		if err := enc.AddReflected("ChainConfigs", c.ChainConfigs); err != nil {
-			return err
-		}
-	}
-
-	if err := enc.AddReflected("EntitlementContract", c.EntitlementContract); err != nil {
-		return err
-	}
-	if err := enc.AddReflected("TestEntitlementContract", c.TestEntitlementContract); err != nil {
-		return err
-	}
-
-	if c.History != 0 {
-		enc.AddDuration("History", c.History)
-	}
-
-	if c.EnableTestAPIs {
-		enc.AddBool("EnableTestAPIs", c.EnableTestAPIs)
-	}
-
-	if c.EnableDebugEndpoints {
-		enc.AddBool("EnableDebugEndpoints", c.EnableDebugEndpoints)
-	}
-
-	if err := enc.AddReflected("DebugEndpoints", c.DebugEndpoints); err != nil {
-		return err
-	}
-
-	if err := enc.AddReflected("RiverRegistry", c.RiverRegistry); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Please note: there is a MarshalLogObject defined for this struct in order to omit sensitive
-// fields when logging. If you add a field to this struct and it is not a sensitive field,
-// please make sure it is logged in the MarshalLogObject method.
 type TLSConfig struct {
 	Cert   string // Path to certificate file or BASE64 encoded certificate
-	Key    string `json:"-" yaml:"-"` // Path to key file or BASE64 encoded key. Sensitive data, omit when possible.
-	TestCA string // Path to CA certificate file or BASE64 encoded CA certificate
-}
-
-// MarshalLogObject is used to omit sensitive fields when logging.
-func (c TLSConfig) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	enc.AddString("Cert", c.Cert)
-	if c.TestCA != "" {
-		enc.AddString("TestCA", c.TestCA)
-	}
-	return nil
+	Key    string `json:"-"          yaml:"-"` // Path to key file or BASE64 encoded key. Sensitive data, omit when possible.
+	TestCA string `json:",omitempty"`          // Path to CA certificate file or BASE64 encoded CA certificate
 }
 
 type NetworkConfig struct {
@@ -361,9 +210,6 @@ func (nc *NetworkConfig) GetHttpRequestTimeout() time.Duration {
 	return nc.HttpRequestTimeout
 }
 
-// Please note: there is a MarshalLogObject defined for this struct in order to omit sensitive
-// fields when logging. If you add a field to this struct and it is not a sensitive field,
-// please make sure it is logged in the MarshalLogObject method.
 type DatabaseConfig struct {
 	Url      string `json:"-" yaml:"-"` // Sensitive data, omit when possible
 	Host     string
@@ -394,47 +240,6 @@ type DatabaseConfig struct {
 	DebugTransactions bool
 }
 
-// MarshalLogObject is used to omit sensitive fields when logging.
-func (c DatabaseConfig) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	if c.Host != "" {
-		enc.AddString("Host", c.Host)
-	}
-
-	if c.Port != 0 {
-		enc.AddInt("Port", c.Port)
-	}
-
-	if c.User != "" {
-		enc.AddString("User", c.User)
-	}
-
-	if c.Database != "" {
-		enc.AddString("Database", c.Database)
-	}
-
-	if c.Extra != "" {
-		enc.AddString("Extra", c.Extra)
-	}
-
-	if c.StartupDelay != 0 {
-		enc.AddDuration("StartupDelay", c.StartupDelay)
-	}
-
-	if c.IsolationLevel != "" {
-		enc.AddString("IsolationLevel", c.IsolationLevel)
-	}
-
-	if c.NumPartitions != 0 {
-		enc.AddInt("NumPartitions", c.NumPartitions)
-	}
-
-	if c.DebugTransactions {
-		enc.AddBool("DebugTransactions", c.DebugTransactions)
-	}
-
-	return nil
-}
-
 func (c DatabaseConfig) GetUrl() string {
 	if c.Host != "" {
 		return fmt.Sprintf(
@@ -456,110 +261,47 @@ type TransactionPoolConfig struct {
 	// TransactionTimeout is the duration in which a transaction must be included in the chain before it is marked
 	// eligible for replacement. It is advisable to set the timeout as a multiple of the block period. If not set it
 	// estimates the chains block period and sets Timeout to 3x block period.
-	TransactionTimeout time.Duration
+	TransactionTimeout time.Duration `json:",omitempty"`
 
 	// GasFeeCap determines for EIP-1559 transaction the maximum amount fee per gas the node operator is willing to
 	// pay. If set to 0 the node will use 2 * chain.BaseFee by default. The base fee + miner tip must be below this
 	// cap, if not the transaction could not be made.
-	GasFeeCap int
+	GasFeeCap int `json:",omitempty"`
 
 	// MinerTipFeeReplacementPercentage is the percentage the miner tip for EIP-1559 transactions is incremented when
 	// replaced. Nodes accept replacements only when the miner tip is at least 10% higher than the original transaction.
 	// The node will add 1 Wei to the miner tip and therefore 10% is the least recommended value. Default is 10.
-	MinerTipFeeReplacementPercentage int
+	MinerTipFeeReplacementPercentage int `json:",omitempty"`
 
 	// GasFeeIncreasePercentage is the percentage by which the gas fee for legacy transaction is incremented when it is
 	// replaced. Recommended is >= 10% since nodes typically only accept replacements transactions with at least 10%
 	// higher gas price. The node will add 1 Wei, therefore 10% will also work. Default is 10.
-	GasFeeIncreasePercentage int
+	GasFeeIncreasePercentage int `json:",omitempty"`
 }
 
-// Please note: there is a MarshalLogObject defined for this struct in order to omit sensitive
-// fields when logging. If you add a field to this struct and it is not a sensitive field,
-// please make sure it is logged in the MarshalLogObject method.
 type ChainConfig struct {
 	NetworkUrl  string `json:"-" yaml:"-"` // Sensitive data, omitted from logging.
 	ChainId     uint64
 	BlockTimeMs uint64
 
-	TransactionPool TransactionPoolConfig
+	TransactionPool TransactionPoolConfig `json:",omitempty"`
 
 	// DisableReplacePendingTransactionOnBoot will not try to replace transaction that are pending after start.
-	DisableReplacePendingTransactionOnBoot bool
+	DisableReplacePendingTransactionOnBoot bool `json:",omitempty"`
 
 	// TODO: these need to be removed from here
-	LinkedWalletsLimit                        int
-	ContractCallsTimeoutMs                    int
-	PositiveEntitlementCacheSize              int
-	PositiveEntitlementCacheTTLSeconds        int
-	NegativeEntitlementCacheSize              int
-	NegativeEntitlementCacheTTLSeconds        int
-	PositiveEntitlementManagerCacheSize       int
-	PositiveEntitlementManagerCacheTTLSeconds int
-	NegativeEntitlementManagerCacheSize       int
-	NegativeEntitlementManagerCacheTTLSeconds int
-	LinkedWalletCacheSize                     int
-	LinkedWalletCacheTTLSeconds               int
-}
-
-// MarshalLogObject is used to omit sensitive fields when logging.
-func (c ChainConfig) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	enc.AddUint64("ChainId", c.ChainId)
-
-	if c.BlockTimeMs != 0 {
-		enc.AddUint64("BlockTimeMs", c.BlockTimeMs)
-	}
-
-	zeroTPConfig := TransactionPoolConfig{}
-	if c.TransactionPool != zeroTPConfig {
-		if err := enc.AddReflected("TransactionPool", c.TransactionPool); err != nil {
-			return err
-		}
-	}
-
-	if c.DisableReplacePendingTransactionOnBoot {
-		enc.AddBool("DisableReplacePendingTransactionOnBoot", c.DisableReplacePendingTransactionOnBoot)
-	}
-
-	if c.LinkedWalletsLimit != 0 {
-		enc.AddInt("LinkedWalletsLimit", c.LinkedWalletsLimit)
-	}
-	if c.ContractCallsTimeoutMs != 0 {
-		enc.AddInt("ContractCallsTimeoutMs", c.ContractCallsTimeoutMs)
-	}
-
-	if c.PositiveEntitlementCacheSize != 0 {
-		enc.AddInt("PositiveEntitlementCacheSize", c.PositiveEntitlementCacheSize)
-	}
-	if c.PositiveEntitlementCacheTTLSeconds != 0 {
-		enc.AddInt("PositiveEntitlementCacheTTLSeconds", c.PositiveEntitlementCacheTTLSeconds)
-	}
-	if c.NegativeEntitlementCacheSize != 0 {
-		enc.AddInt("NegativeEntitlementCacheSize", c.NegativeEntitlementCacheSize)
-	}
-	if c.NegativeEntitlementCacheTTLSeconds != 0 {
-		enc.AddInt("NegativeEntitlementCacheTTLSeconds", c.NegativeEntitlementCacheTTLSeconds)
-	}
-	if c.PositiveEntitlementManagerCacheSize != 0 {
-		enc.AddInt("PositiveEntitlementManagerCacheSize", c.PositiveEntitlementManagerCacheSize)
-	}
-	if c.PositiveEntitlementManagerCacheTTLSeconds != 0 {
-		enc.AddInt("PositiveEntitlementManagerCacheTTLSeconds", c.PositiveEntitlementManagerCacheTTLSeconds)
-	}
-	if c.NegativeEntitlementManagerCacheSize != 0 {
-		enc.AddInt("NegativeEntitlementManagerCacheSize", c.NegativeEntitlementManagerCacheSize)
-	}
-	if c.NegativeEntitlementManagerCacheTTLSeconds != 0 {
-		enc.AddInt("NegativeEntitlementManagerCacheTTLSeconds", c.NegativeEntitlementManagerCacheTTLSeconds)
-	}
-	if c.LinkedWalletCacheSize != 0 {
-		enc.AddInt("LinkedWalletCacheSize", c.LinkedWalletCacheSize)
-	}
-	if c.LinkedWalletCacheTTLSeconds != 0 {
-		enc.AddInt("LinkedWalletCacheTTLSeconds", c.LinkedWalletCacheTTLSeconds)
-	}
-
-	return nil
+	LinkedWalletsLimit                        int `json:",omitempty"`
+	ContractCallsTimeoutMs                    int `json:",omitempty"`
+	PositiveEntitlementCacheSize              int `json:",omitempty"`
+	PositiveEntitlementCacheTTLSeconds        int `json:",omitempty"`
+	NegativeEntitlementCacheSize              int `json:",omitempty"`
+	NegativeEntitlementCacheTTLSeconds        int `json:",omitempty"`
+	PositiveEntitlementManagerCacheSize       int `json:",omitempty"`
+	PositiveEntitlementManagerCacheTTLSeconds int `json:",omitempty"`
+	NegativeEntitlementManagerCacheSize       int `json:",omitempty"`
+	NegativeEntitlementManagerCacheTTLSeconds int `json:",omitempty"`
+	LinkedWalletCacheSize                     int `json:",omitempty"`
+	LinkedWalletCacheTTLSeconds               int `json:",omitempty"`
 }
 
 func (c ChainConfig) BlockTime() time.Duration {
@@ -572,21 +314,21 @@ type PerformanceTrackingConfig struct {
 	// If true, write trace data to one of the exporters configured below
 	TracingEnabled bool
 	// If set, write trace data to this jsonl file
-	OtlpFile string
+	OtlpFile string `json:",omitempty"`
 	// If set, send trace data to using OTLP HTTP
 	// Exporter is configured with OTLP env variables as described here:
 	// go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
-	OtlpEnableHttp bool
+	OtlpEnableHttp bool `json:",omitempty"`
 	// If set, send trace data to using OTLP gRRC
 	// Exporter is configured with OTLP env variables as described here:
 	// go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc
-	OtlpEnableGrpc bool
+	OtlpEnableGrpc bool `json:",omitempty"`
 	// If set, connet to OTLP endpoint using http instead of https
 	// Also can be configured by env var from the links above
-	OtlpInsecure bool
+	OtlpInsecure bool `json:",omitempty"`
 
 	// If set, send trace spans to this Zipkin endpoint
-	ZipkinUrl string
+	ZipkinUrl string `json:",omitempty"`
 }
 
 type ContractConfig struct {
@@ -598,16 +340,16 @@ type ArchiveConfig struct {
 	// ArchiveId is the unique identifier of the archive node. Must be set for nodes in archive mode.
 	ArchiveId string
 
-	Filter FilterConfig
+	Filter FilterConfig `json:",omitempty"`
 
 	// Number of miniblocks to read at once from the remote node.
-	ReadMiniblocksSize uint64
+	ReadMiniblocksSize uint64 `json:",omitempty"`
 
-	TaskQueueSize int // If 0, default to 100000.
+	TaskQueueSize int `json:",omitempty"` // If 0, default to 100000.
 
-	WorkerPoolSize int // If 0, default to 20.
+	WorkerPoolSize int `json:",omitempty"` // If 0, default to 20.
 
-	StreamsContractCallPageSize int64 // If 0, default to 5000.
+	StreamsContractCallPageSize int64 `json:",omitempty"` // If 0, default to 5000.
 }
 
 type APNPushNotificationsConfig struct {
@@ -615,7 +357,7 @@ type APNPushNotificationsConfig struct {
 	AppBundleID string
 	// Expiration holds the duration in which the notification must be delivered. After that
 	// the server might drop the notification. If set to 0 a default of 12 hours is used.
-	Expiration time.Duration
+	Expiration time.Duration `json:",omitempty"`
 	// KeyID from developer account (Certificates, Identifiers & Profiles -> Keys)
 	KeyID string
 	// TeamID from developer account (View Account -> Membership)
