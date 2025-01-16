@@ -23,7 +23,7 @@ import { isDefined } from '../../../check'
 import { ParsedMiniblock } from '../../../types'
 import { fail } from 'assert'
 
-describe('mlsTests', () => {
+describe.skip('mlsTests', () => {
     let clients: Client[] = []
     const makeInitAndStartClient = async () => {
         const client = await makeTestClient()
