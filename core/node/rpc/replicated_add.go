@@ -3,18 +3,19 @@ package rpc
 import (
 	"context"
 
+	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
+	"google.golang.org/protobuf/proto"
 
 	. "github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
-
-	"connectrpc.com/connect"
+	"github.com/river-build/river/core/node/storage"
 )
 
 type replicatedStream struct {
-	streamId    string
+	streamId    shared.StreamId
 	localStream AddableStream
 	nodes       StreamNodes
 	service     *Service
@@ -35,10 +36,6 @@ func (r *replicatedStream) AddEvent(ctx context.Context, event *ParsedEvent) err
 	})
 
 	if len(remotes) > 0 {
-		streamId, err := shared.StreamIdFromString(r.streamId)
-		if err != nil {
-			return err
-		}
 		sender.GoRemotes(ctx, remotes, func(ctx context.Context, node common.Address) error {
 			stub, err := r.service.nodeRegistry.GetNodeToNodeClientForAddress(node)
 			if err != nil {
@@ -48,7 +45,7 @@ func (r *replicatedStream) AddEvent(ctx context.Context, event *ParsedEvent) err
 				ctx,
 				connect.NewRequest[NewEventReceivedRequest](
 					&NewEventReceivedRequest{
-						StreamId: streamId[:],
+						StreamId: r.streamId[:],
 						Event:    event.Envelope,
 					},
 				),
@@ -58,4 +55,67 @@ func (r *replicatedStream) AddEvent(ctx context.Context, event *ParsedEvent) err
 	}
 
 	return sender.Wait()
+}
+
+func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent, cc *CreationCookie) (*Miniblock, error) {
+	header, err := MakeEnvelopeWithPayload(r.service.wallet, Make_MiniblockHeader(&MiniblockHeader{
+		MiniblockNum:             cc.MiniblockNum,
+		PrevMiniblockHash:        cc.PrevMiniblockHash,
+		Timestamp:                NextMiniblockTimestamp(nil),
+		EventHashes:              [][]byte{event.Hash[:]},
+		Snapshot:                 nil,
+		EventNumOffset:           0,
+		PrevSnapshotMiniblockNum: 0,
+		Content:                  nil,
+	}), event.MiniblockRef)
+	if err != nil {
+		return nil, err
+	}
+
+	ephemeralMb := &Miniblock{
+		Events: []*Envelope{event.Envelope},
+		Header: header,
+	}
+
+	sender := NewQuorumPool("method", "replicatedStream.AddMediaEvent", "streamId", r.streamId)
+
+	// Save the ephemeral miniblock locally
+	sender.GoLocal(ctx, func(ctx context.Context) error {
+		mbBytes, err := proto.Marshal(ephemeralMb)
+		if err != nil {
+			return err
+		}
+
+		return r.service.storage.WriteEphemeralMiniblock(ctx, r.streamId, &storage.WriteMiniblockData{
+			Number:   cc.MiniblockNum,
+			Hash:     common.BytesToHash(ephemeralMb.Header.Hash),
+			Snapshot: false,
+			Data:     mbBytes,
+		})
+	})
+
+	// Save the ephemeral miniblock on remotes
+	sender.GoRemotes(ctx, cc.NodeAddresses(), func(ctx context.Context, node common.Address) error {
+		stub, err := r.service.nodeRegistry.GetNodeToNodeClientForAddress(node)
+		if err != nil {
+			return err
+		}
+
+		_, err = stub.SaveEphemeralMiniblock(
+			ctx,
+			connect.NewRequest[SaveEphemeralMiniblockRequest](
+				&SaveEphemeralMiniblockRequest{
+					StreamId:  r.streamId[:],
+					Miniblock: ephemeralMb,
+				},
+			),
+		)
+		return err
+	})
+
+	if err = sender.Wait(); err != nil {
+		return nil, err
+	}
+
+	return ephemeralMb, nil
 }

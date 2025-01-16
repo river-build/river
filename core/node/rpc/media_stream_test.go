@@ -46,9 +46,10 @@ func TestCreateMediaStream(t *testing.T) {
 	}))
 	tt.require.NoError(err)
 
+	creationCookie := csResp.Msg.NextCreationCookie
 	mb := &MiniblockRef{
-		Hash: common.BytesToHash(csResp.Msg.NextCreationCookie.PrevMiniblockHash),
-		Num:  csResp.Msg.NextCreationCookie.MiniblockNum,
+		Hash: common.BytesToHash(creationCookie.PrevMiniblockHash),
+		Num:  creationCookie.MiniblockNum,
 	}
 
 	// Make sure AddEvent does not work for ephemeral streams.
@@ -68,9 +69,31 @@ func TestCreateMediaStream(t *testing.T) {
 		tt.require.Equal(connect.CodeNotFound, connect.CodeOf(err))
 	})
 
-	// Only one miniblock of the stream creation event.
-	// TODO: Complete the test in the next PR after implementing AddMediaEvent endpoint.
-	tt.compareStreamDataInStorage(t, mediaStreamId, 1, 0)
+	// Add the rest of the media chunks
+	mediaChunks := make([][]byte, chunks)
+	for i := 0; i < chunks; i++ {
+		// Create media chunk event
+		mediaChunks[i] = []byte("chunk " + fmt.Sprint(i))
+		mp := events.Make_MediaPayload_Chunk(mediaChunks[i], int32(i))
+		envelope, err := events.MakeEnvelopeWithPayload(alice.wallet, mp, mb)
+		tt.require.NoError(err)
+
+		// Add media chunk event
+		aeResp, err := alice.client.AddMediaEvent(alice.ctx, connect.NewRequest(&protocol.AddMediaEventRequest{
+			Event:          envelope,
+			CreationCookie: creationCookie,
+		}))
+		tt.require.NoError(err)
+
+		mb.Hash = common.BytesToHash(aeResp.Msg.CreationCookie.PrevMiniblockHash)
+		mb.Num++
+		creationCookie = aeResp.Msg.CreationCookie
+	}
+
+	// No events in storage since the stream still ephemeral.
+	// The first miniblock is the stream creation miniblock, the rest 10 are media chunks.
+	// TODO: Make sure the stream is sealed in the next PR
+	tt.compareStreamDataInStorage(t, mediaStreamId, 11, 0)
 }
 
 // TestCreateMediaStream_Legacy tests creating a media stream using endpoints for a non-media streams

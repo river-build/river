@@ -872,6 +872,15 @@ message AddEventResponse {
     Error error = 1; // only set if AddEventRequest.optional is true
 }
 
+message AddMediaEventRequest {
+    Envelope event = 1;
+    CreationCookie creation_cookie = 2;
+}
+
+message AddMediaEventResponse {
+    CreationCookie creation_cookie = 1;
+}
+
 // SyncStreamsRequest is a request to start a streams sync session.
 message SyncStreamsRequest {
     // sync_pos is the list of streams and positions in those streams to receive updates from.
@@ -980,6 +989,7 @@ service StreamService {
     rpc GetMiniblocks(GetMiniblocksRequest) returns (GetMiniblocksResponse);
     rpc GetLastMiniblockHash(GetLastMiniblockHashRequest) returns (GetLastMiniblockHashResponse);
     rpc AddEvent(AddEventRequest) returns (AddEventResponse);
+    rpc AddMediaEvent(AddMediaEventRequest) returns (AddMediaEventResponse);
     rpc SyncStreams(SyncStreamsRequest) returns (stream SyncStreamsResponse);
     rpc AddStreamToSync(AddStreamToSyncRequest) returns (AddStreamToSyncResponse);
     // ModifySync adds/removes streams to/from an in progress sync session.
