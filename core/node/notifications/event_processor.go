@@ -369,11 +369,12 @@ func (p *MessageToNotificationsProcessor) apnPayloadV2(
 	}
 
 	apnPayload := map[string]interface{}{
-		"channelId":      hex.EncodeToString(channelID[:]),
-		"kind":           kind,
-		"senderId":       hex.EncodeToString(event.Event.CreatorAddress),
-		"eventId":        eventHash,
-		"payloadVersion": int(NotificationPushVersion_NOTIFICATION_PUSH_VERSION_2),
+		"channelId":        hex.EncodeToString(channelID[:]),
+		"kind":             kind,
+		"senderId":         hex.EncodeToString(event.Event.GetCreatorAddress()),
+		"createdAtEpochMs": event.Event.GetCreatedAtEpochMs(),
+		"eventId":          eventHash,
+		"payloadVersion":   int(NotificationPushVersion_NOTIFICATION_PUSH_VERSION_2),
 	}
 
 	// only add the (stream)event if there is a reasonable chance that the payload isn't too large.
