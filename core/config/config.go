@@ -190,8 +190,8 @@ type Config struct {
 
 type TLSConfig struct {
 	Cert   string // Path to certificate file or BASE64 encoded certificate
-	Key    string `json:"-"          yaml:"-"` // Path to key file or BASE64 encoded key. Sensitive data, omit when possible.
-	TestCA string `json:",omitempty"`          // Path to CA certificate file or BASE64 encoded CA certificate
+	Key    string `json:"-" yaml:"-"` // Path to key file or BASE64 encoded key. Sensitive data, omit when possible.
+	TestCA string // Path to CA certificate file or BASE64 encoded CA certificate
 }
 
 type NetworkConfig struct {
@@ -357,7 +357,7 @@ type APNPushNotificationsConfig struct {
 	AppBundleID string
 	// Expiration holds the duration in which the notification must be delivered. After that
 	// the server might drop the notification. If set to 0 a default of 12 hours is used.
-	Expiration time.Duration `json:",omitempty"`
+	Expiration time.Duration
 	// KeyID from developer account (Certificates, Identifiers & Profiles -> Keys)
 	KeyID string
 	// TeamID from developer account (View Account -> Membership)
