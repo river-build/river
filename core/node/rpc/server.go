@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
-	"log/slog"
 	"net"
 	"net/http"
 	"slices"
@@ -16,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/cors"
+	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
@@ -35,6 +35,7 @@ import (
 	"github.com/river-build/river/core/node/rpc/sync"
 	"github.com/river-build/river/core/node/scrub"
 	"github.com/river-build/river/core/node/storage"
+	"github.com/river-build/river/core/node/utils"
 	"github.com/river-build/river/core/river_node/version"
 	"github.com/river-build/river/core/xchain/entitlement"
 	"github.com/river-build/river/core/xchain/util"
@@ -278,7 +279,7 @@ func (s *Service) initWallet() error {
 	if !s.config.Log.Simplify {
 		s.defaultLogger = s.defaultLogger.With("nodeAddress", wallet.Address.Hex())
 		s.serverCtx = dlog.CtxWithLog(ctx, s.defaultLogger)
-		slog.SetDefault(s.defaultLogger)
+		zap.ReplaceGlobals(s.defaultLogger.Desugar())
 	}
 
 	return nil
@@ -531,7 +532,7 @@ func (s *Service) runHttpServer() error {
 		BaseContext: func(listener net.Listener) context.Context {
 			return ctx
 		},
-		ErrorLog: newHttpLogger(ctx),
+		ErrorLog: utils.NewHttpLogger(ctx),
 	}
 	// ensure that x/http2 is used
 	// https://github.com/golang/go/issues/42534

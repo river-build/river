@@ -1,7 +1,6 @@
 package rpc
 
 import (
-	"log/slog"
 	"os"
 
 	"connectrpc.com/otelconnect"
@@ -13,7 +12,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	"go.uber.org/zap"
 
+	"github.com/river-build/river/core/node/utils"
 	"github.com/river-build/river/core/river_node/version"
 )
 
@@ -79,7 +80,7 @@ func (s *Service) initTracing() {
 	if s.config.PerformanceTracking.ZipkinUrl != "" {
 		exp, err := zipkin.New(
 			s.config.PerformanceTracking.ZipkinUrl+"/api/v2/spans",
-			zipkin.WithLogger(slog.NewLogLogger(s.defaultLogger.Handler(), slog.LevelWarn)),
+			zipkin.WithLogger(utils.NewLevelLogger(s.defaultLogger, zap.WarnLevel)),
 		)
 		if err == nil {
 			s.onClose(exp.Shutdown)

@@ -6,10 +6,11 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"log/slog"
 	"net/http"
 	"slices"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
@@ -55,7 +56,7 @@ type MessageToNotificationsProcessor struct {
 	cache                  UserPreferencesStore
 	subscriptionExpiration time.Duration
 	notifier               push.MessageNotifier
-	log                    *slog.Logger
+	log                    *zap.SugaredLogger
 }
 
 // NewNotificationMessageProcessor processes incoming messages, determines when and to whom to send a notification
@@ -364,7 +365,6 @@ func (p *MessageToNotificationsProcessor) apnPayloadV2(
 		CreatedAtEpochMs: event.Event.GetCreatedAtEpochMs(),
 		Payload:          event.Event.GetPayload(),
 	})
-
 	if err != nil {
 		return nil, base.AsRiverError(err, Err_INTERNAL)
 	}
@@ -604,7 +604,7 @@ func (p *MessageToNotificationsProcessor) sendAPNNotification(
 		MutableContent().
 		Sound("default")
 
-	if p.log.Enabled(ctx, slog.LevelDebug) {
+	if p.log.Level() <= zap.DebugLevel {
 		p.log.Debugw("APN Notification",
 			"to", common.BytesToAddress(event.Event.GetCreatorAddress()),
 			"notification", notificationPayload)

@@ -1,8 +1,9 @@
 package rpc
 
 import (
-	"log/slog"
 	"net/http"
+
+	"go.uber.org/zap"
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
@@ -14,12 +15,12 @@ const (
 
 type httpHandler struct {
 	base http.Handler
-	log  *slog.Logger
+	log  *zap.SugaredLogger
 }
 
 var _ http.Handler = (*httpHandler)(nil)
 
-func newHttpHandler(b http.Handler, l *slog.Logger) *httpHandler {
+func newHttpHandler(b http.Handler, l *zap.SugaredLogger) *httpHandler {
 	return &httpHandler{
 		base: b,
 		log:  l,

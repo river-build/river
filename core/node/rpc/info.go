@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strconv"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/river-build/river/core/node/rpc/sync"
 	"github.com/river-build/river/core/node/utils"
@@ -44,7 +45,7 @@ func (s *Service) Info(
 
 func (s *Service) info(
 	ctx context.Context,
-	log *slog.Logger,
+	log *zap.SugaredLogger,
 	request *connect.Request[InfoRequest],
 ) (*connect.Response[InfoResponse], error) {
 	if len(request.Msg.Debug) > 0 {

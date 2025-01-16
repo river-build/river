@@ -7,10 +7,11 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"log/slog"
 	"math/big"
 	"testing"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/base"
@@ -24,13 +25,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/stretchr/testify/require"
+
 	node_config "github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
 	node_crypto "github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/testutils/testfmt"
-	"github.com/stretchr/testify/require"
 
 	contract_types "github.com/river-build/river/core/contracts/types"
 
@@ -70,16 +72,13 @@ type serviceTester struct {
 }
 
 // Disable color output for console testing.
-func noColorLogger() *slog.Logger {
-	return slog.New(
-		dlog.NewPrettyTextHandler(dlog.DefaultLogOut, &dlog.PrettyHandlerOptions{
-			Colors: dlog.ColorMap_Disabled,
-		}),
-	)
+func noColorLogger() *zap.SugaredLogger {
+	logger, _ := zap.NewDevelopment()
+	return logger.Sugar()
 }
 
-func silentLogger() *slog.Logger {
-	return slog.New(&dlog.NullHandler{})
+func silentLogger() *zap.SugaredLogger {
+	return zap.NewNop().Sugar()
 }
 
 func newServiceTester(numNodes int, require *require.Assertions) *serviceTester {

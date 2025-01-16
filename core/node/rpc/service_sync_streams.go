@@ -3,11 +3,11 @@ package rpc
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"runtime/pprof"
 	"time"
 
 	"connectrpc.com/connect"
+	"go.uber.org/zap"
 
 	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/protocol"
@@ -41,9 +41,9 @@ func (s *Service) SyncStreams(
 		err = s.syncHandler.SyncStreams(ctx, syncId, req, res)
 	})
 	if err != nil {
-		level := slog.LevelWarn
+		level := zap.WarnLevel
 		if errors.Is(err, context.Canceled) {
-			level = slog.LevelDebug
+			level = zap.DebugLevel
 		}
 		err = AsRiverError(
 			err,

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"math"
 	"math/rand"
 	"strconv"
@@ -14,6 +13,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.uber.org/zap"
 	"golang.org/x/sync/semaphore"
 
 	"github.com/river-build/river/core/node/crypto"
@@ -150,7 +150,7 @@ func (s *StreamTrackerConnectGo) Run(
 		// ensure that the first message is received within 30 seconds.
 		// if not cancel the sync session and restart a new one.
 		syncIDCtx, syncIDGot := context.WithTimeout(syncCtx, time.Minute)
-		go func(log *slog.Logger) {
+		go func(log *zap.SugaredLogger) {
 			select {
 			case <-time.After(30 * time.Second):
 				log.Debugw("Didn't receive sync id within 30s, cancel sync session")
@@ -342,7 +342,7 @@ func (s *StreamTrackerConnectGo) Run(
 //nolint:unused
 //lint:ignore U1000 temporary disabled - pings are commented out
 func (s *StreamTrackerConnectGo) liveness(
-	log *slog.Logger,
+	log *zap.SugaredLogger,
 	syncCtx context.Context,
 	cancelSyncSession context.CancelFunc,
 	gotSyncResetUpdate *atomic.Bool,

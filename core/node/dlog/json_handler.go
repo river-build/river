@@ -17,8 +17,17 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"go.uber.org/zap/zapcore"
+
 	buffer "github.com/river-build/river/core/node/dlog/buffer"
 )
+
+// NewZapJsonEncoder returns a json encoder that has custom handling for hex byte arrays
+// and strings.
+func NewZapJsonEncoder() zapcore.Encoder {
+	encoderCfg := DefaultZapEncoderConfig()
+	return zapcore.NewJSONEncoder(encoderCfg)
+}
 
 // PrettyJSONHandler is a Handler that writes Records to an io.Writer as
 // line-delimited JSON objects.

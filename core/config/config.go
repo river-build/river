@@ -200,7 +200,9 @@ type TLSConfig struct {
 // Explicitly define MarshalLogObject method to exclude sensitive fields from logging.
 func (c TLSConfig) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddString("Cert", c.Cert)
-	enc.AddString("TestCA", c.TestCA)
+	if c.TestCA != "" {
+		enc.AddString("TestCA", c.TestCA)
+	}
 	return nil
 }
 

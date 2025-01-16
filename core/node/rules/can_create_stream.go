@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log/slog"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/river-build/river/core/node/crypto"
 
@@ -178,7 +179,7 @@ func CanCreateStream(
 	return builder.run()
 }
 
-func (ru *csParams) log() *slog.Logger {
+func (ru *csParams) log() *zap.SugaredLogger {
 	return dlog.FromCtx(ru.ctx)
 }
 
