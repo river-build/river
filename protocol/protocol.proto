@@ -762,14 +762,14 @@ message EncryptedData {
 
     optional Mls mls = 7;
 
-    // Used if algorithm is set to 'gaes'
+    // Used if algorithm is set to 'grpaes'
     bytes ciphertext_bytes = 8;
 
-    // Used if algorithm is set to 'gaes'
+    // Used if algorithm is set to 'grpaes'
     bytes iv_bytes = 9;
 
     // TODO: fix code to work with binary session_id and enable this field
-    // Used if algorithm is set to 'gaes'
+    // Used if algorithm is set to 'grpaes'
     // bytes session_id_bytes = 10;
 }
 
