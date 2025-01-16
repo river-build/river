@@ -83,6 +83,9 @@ func GetDefaultConfig() *Config {
 }
 
 // Viper uses mapstructure module to marshal settings into config struct.
+// Please note: there is a MarshalLogObject defined for this struct in order to omit sensitive
+// fields when logging. If you add a field to this struct and it is not a sensitive field,
+// please make sure it is logged in the MarshalLogObject method.
 type Config struct {
 	// Network
 	// 0 can be used in tests to elect a free available port.
@@ -156,10 +159,10 @@ type Config struct {
 	// Chains provides a map of chain IDs to their provider URLs as
 	// a comma-serparated list of chainID:URL pairs.
 	// It is parsed into ChainsString variable.
-	Chains string `logging:"omit" json:"-" yaml:"-"`
+	Chains string `json:"-" yaml:"-"`
 
 	// ChainsString is an another alias for Chains kept for backward compatibility.
-	ChainsString string `logging:"omit" json:"-" yaml:"-"`
+	ChainsString string `json:"-" yaml:"-"`
 
 	// This is comma-separated list chaidID:blockTimeDuration pairs.
 	// GetDefaultBlockchainInfo() provides default values for known chains so there is no
@@ -189,13 +192,151 @@ type Config struct {
 	RiverRegistry RiverRegistryConfig
 }
 
+// MarshalLogObject is used to omit sensitive fields when logging.
+func (c Config) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	if c.Port != 0 {
+		enc.AddInt("Port", c.Port)
+	}
+
+	if c.Address != "" {
+		enc.AddString("Address", c.Address)
+	}
+
+	if c.DisableHttps {
+		enc.AddBool("DisableHttps", c.DisableHttps)
+	}
+
+	// AddObject is used for structs that implement the ObjectMarshaler interface, which is
+	// used here to omit sensitive fields for some config structs. For structs that do not
+	// implement this interface, AddReflected is used.
+	if err := enc.AddObject("TSLConfig", c.TLSConfig); err != nil {
+		return err
+	}
+
+	if err := enc.AddObject("Database", c.Database); err != nil {
+		return err
+	}
+
+	if c.StorageType != "" {
+		enc.AddString("StorageType", c.StorageType)
+	}
+
+	// These two configs have omitted fields and thus must be logged via AddObject.
+	if err := enc.AddObject("BaseChain", c.BaseChain); err != nil {
+		return err
+	}
+	if err := enc.AddObject("RiverChain", c.RiverChain); err != nil {
+		return err
+	}
+
+	if err := enc.AddReflected("ArchitectContract", c.ArchitectContract); err != nil {
+		return err
+	}
+	if err := enc.AddReflected("RegistryContract", c.RegistryContract); err != nil {
+		return err
+	}
+
+	if err := enc.AddReflected("Log", c.Log); err != nil {
+		return err
+	}
+
+	if err := enc.AddReflected("Metrics", c.Metrics); err != nil {
+		return err
+	}
+	if err := enc.AddReflected("PerformanceTracking", c.PerformanceTracking); err != nil {
+		return err
+	}
+
+	if err := enc.AddReflected("Scrubbing", c.Scrubbing); err != nil {
+		return err
+	}
+
+	if err := enc.AddReflected("StreamReconciliation", c.StreamReconciliation); err != nil {
+		return err
+	}
+	if err := enc.AddReflected("Network", c.Network); err != nil {
+		return err
+	}
+
+	if c.StandByOnStart {
+		enc.AddBool("StandByOnStart", c.StandByOnStart)
+	}
+	if c.StandByPollPeriod != 0 {
+		enc.AddDuration("StandByPollPeriod", c.StandByPollPeriod)
+	}
+	if c.ShutdownTimeout != 0 {
+		enc.AddDuration("ShutdownTimeout", c.ShutdownTimeout)
+	}
+
+	if c.Graffiti != "" {
+		enc.AddString("Graffiti", c.Graffiti)
+	}
+
+	if err := enc.AddReflected("Archive", c.Archive); err != nil {
+		return err
+	}
+	if err := enc.AddReflected("Notifications", c.Notifications); err != nil {
+		return err
+	}
+
+	if c.DisableBaseChain {
+		enc.AddBool("DisableBaseChain", c.DisableBaseChain)
+	}
+
+	if c.EnableMls {
+		enc.AddBool("EnableMls", c.EnableMls)
+	}
+
+	if c.ChainBlocktimes != "" {
+		enc.AddString("ChainBlocktimes", c.ChainBlocktimes)
+	}
+
+	if len(c.ChainConfigs) > 0 {
+		if err := enc.AddReflected("ChainConfigs", c.ChainConfigs); err != nil {
+			return err
+		}
+	}
+
+	if err := enc.AddReflected("EntitlementContract", c.EntitlementContract); err != nil {
+		return err
+	}
+	if err := enc.AddReflected("TestEntitlementContract", c.TestEntitlementContract); err != nil {
+		return err
+	}
+
+	if c.History != 0 {
+		enc.AddDuration("History", c.History)
+	}
+
+	if c.EnableTestAPIs {
+		enc.AddBool("EnableTestAPIs", c.EnableTestAPIs)
+	}
+
+	if c.EnableDebugEndpoints {
+		enc.AddBool("EnableDebugEndpoints", c.EnableDebugEndpoints)
+	}
+
+	if err := enc.AddReflected("DebugEndpoints", c.DebugEndpoints); err != nil {
+		return err
+	}
+
+	if err := enc.AddReflected("RiverRegistry", c.RiverRegistry); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Please note: there is a MarshalLogObject defined for this struct in order to omit sensitive
+// fields when logging. If you add a field to this struct and it is not a sensitive field,
+// please make sure it is logged in the MarshalLogObject method.
 type TLSConfig struct {
 	Cert   string // Path to certificate file or BASE64 encoded certificate
 	Key    string `json:"-" yaml:"-"` // Path to key file or BASE64 encoded key. Sensitive data, omit when possible.
 	TestCA string // Path to CA certificate file or BASE64 encoded CA certificate
 }
 
-// Explicitly define MarshalLogObject method to exclude sensitive fields from logging.
+// MarshalLogObject is used to omit sensitive fields when logging.
 func (c TLSConfig) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddString("Cert", c.Cert)
 	if c.TestCA != "" {
@@ -220,6 +361,9 @@ func (nc *NetworkConfig) GetHttpRequestTimeout() time.Duration {
 	return nc.HttpRequestTimeout
 }
 
+// Please note: there is a MarshalLogObject defined for this struct in order to omit sensitive
+// fields when logging. If you add a field to this struct and it is not a sensitive field,
+// please make sure it is logged in the MarshalLogObject method.
 type DatabaseConfig struct {
 	Url      string `json:"-" yaml:"-"` // Sensitive data, omit when possible
 	Host     string
@@ -250,7 +394,7 @@ type DatabaseConfig struct {
 	DebugTransactions bool
 }
 
-// Explicitly define MarshalLogObject method to exclude sensitive fields from logging.
+// MarshalLogObject is used to omit sensitive fields when logging.
 func (c DatabaseConfig) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	if c.Host != "" {
 		enc.AddString("Host", c.Host)
@@ -284,7 +428,9 @@ func (c DatabaseConfig) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 		enc.AddInt("NumPartitions", c.NumPartitions)
 	}
 
-	enc.AddBool("DebugTransactions", c.DebugTransactions)
+	if c.DebugTransactions {
+		enc.AddBool("DebugTransactions", c.DebugTransactions)
+	}
 
 	return nil
 }
@@ -328,8 +474,11 @@ type TransactionPoolConfig struct {
 	GasFeeIncreasePercentage int
 }
 
+// Please note: there is a MarshalLogObject defined for this struct in order to omit sensitive
+// fields when logging. If you add a field to this struct and it is not a sensitive field,
+// please make sure it is logged in the MarshalLogObject method.
 type ChainConfig struct {
-	NetworkUrl  string `logging:"omit" json:"-" yaml:"-"` // Sensitive data, omitted from logging.
+	NetworkUrl  string `json:"-" yaml:"-"` // Sensitive data, omitted from logging.
 	ChainId     uint64
 	BlockTimeMs uint64
 
@@ -351,6 +500,66 @@ type ChainConfig struct {
 	NegativeEntitlementManagerCacheTTLSeconds int
 	LinkedWalletCacheSize                     int
 	LinkedWalletCacheTTLSeconds               int
+}
+
+// MarshalLogObject is used to omit sensitive fields when logging.
+func (c ChainConfig) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddUint64("ChainId", c.ChainId)
+
+	if c.BlockTimeMs != 0 {
+		enc.AddUint64("BlockTimeMs", c.BlockTimeMs)
+	}
+
+	zeroTPConfig := TransactionPoolConfig{}
+	if c.TransactionPool != zeroTPConfig {
+		if err := enc.AddReflected("TransactionPool", c.TransactionPool); err != nil {
+			return err
+		}
+	}
+
+	if c.DisableReplacePendingTransactionOnBoot {
+		enc.AddBool("DisableReplacePendingTransactionOnBoot", c.DisableReplacePendingTransactionOnBoot)
+	}
+
+	if c.LinkedWalletsLimit != 0 {
+		enc.AddInt("LinkedWalletsLimit", c.LinkedWalletsLimit)
+	}
+	if c.ContractCallsTimeoutMs != 0 {
+		enc.AddInt("ContractCallsTimeoutMs", c.ContractCallsTimeoutMs)
+	}
+
+	if c.PositiveEntitlementCacheSize != 0 {
+		enc.AddInt("PositiveEntitlementCacheSize", c.PositiveEntitlementCacheSize)
+	}
+	if c.PositiveEntitlementCacheTTLSeconds != 0 {
+		enc.AddInt("PositiveEntitlementCacheTTLSeconds", c.PositiveEntitlementCacheTTLSeconds)
+	}
+	if c.NegativeEntitlementCacheSize != 0 {
+		enc.AddInt("NegativeEntitlementCacheSize", c.NegativeEntitlementCacheSize)
+	}
+	if c.NegativeEntitlementCacheTTLSeconds != 0 {
+		enc.AddInt("NegativeEntitlementCacheTTLSeconds", c.NegativeEntitlementCacheTTLSeconds)
+	}
+	if c.PositiveEntitlementManagerCacheSize != 0 {
+		enc.AddInt("PositiveEntitlementManagerCacheSize", c.PositiveEntitlementManagerCacheSize)
+	}
+	if c.PositiveEntitlementManagerCacheTTLSeconds != 0 {
+		enc.AddInt("PositiveEntitlementManagerCacheTTLSeconds", c.PositiveEntitlementManagerCacheTTLSeconds)
+	}
+	if c.NegativeEntitlementManagerCacheSize != 0 {
+		enc.AddInt("NegativeEntitlementManagerCacheSize", c.NegativeEntitlementManagerCacheSize)
+	}
+	if c.NegativeEntitlementManagerCacheTTLSeconds != 0 {
+		enc.AddInt("NegativeEntitlementManagerCacheTTLSeconds", c.NegativeEntitlementManagerCacheTTLSeconds)
+	}
+	if c.LinkedWalletCacheSize != 0 {
+		enc.AddInt("LinkedWalletCacheSize", c.LinkedWalletCacheSize)
+	}
+	if c.LinkedWalletCacheTTLSeconds != 0 {
+		enc.AddInt("LinkedWalletCacheTTLSeconds", c.LinkedWalletCacheTTLSeconds)
+	}
+
+	return nil
 }
 
 func (c ChainConfig) BlockTime() time.Duration {
