@@ -165,6 +165,12 @@ interface IMembership is IMembershipBase {
     uint256 tokenId
   ) external view returns (uint256);
 
+  /**
+   * @notice Get the protocol fee
+   * @return The protocol fee
+   */
+  function getProtocolFee() external view returns (uint256);
+
   // =============================================================
   //                           Allocation
   // =============================================================
