@@ -311,9 +311,6 @@ func (st *serviceTester) Config() *config.Config {
 		RegistryContract: config.ContractConfig{
 			Address: st.btc.RiverRegistryAddress,
 		},
-		Log: config.LogConfig{
-			NoColor: true,
-		},
 	}
 	cfg.Init()
 	return cfg

@@ -48,8 +48,6 @@ func GetDefaultConfig() *Config {
 			Level:   "info", // NOTE: this default is replaced by flag value
 			Console: true,   // NOTE: this default is replaced by flag value
 			File:    "",     // NOTE: this default is replaced by flag value
-			NoColor: false,  // NOTE: this default is replaced by flag value
-			Format:  "json",
 		},
 		Metrics: MetricsConfig{
 			Enabled: true,
@@ -471,8 +469,6 @@ type LogConfig struct {
 	FileLevel    string // If not set, use Level
 	Console      bool   // Log to console if true
 	ConsoleLevel string // If not set, use Level
-	NoColor      bool   // If true, disable color text output to console
-	Format       string // "json" or "text"
 
 	// Intended for dev use with text logs, do not output instance attributes with each log entry,
 	// drop some large messages.
