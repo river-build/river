@@ -570,7 +570,6 @@ export class Coordinator implements ICoordinator {
         const epoch = sealedEpochSecret.epoch
         this.log.debug('newSealedEpochSecret', { streamId, epoch })
 
-
         if (sealedEpochSecret.sealedEpochSecret === undefined) {
             throw new Error('Fatal: newSealedEpochSecret called for missing sealed secret')
         }
