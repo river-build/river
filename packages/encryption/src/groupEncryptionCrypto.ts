@@ -1,16 +1,11 @@
 import { EncryptedData } from '@river-build/proto'
-import {
-    GROUP_ENCRYPTION_ALGORITHM,
-    GroupEncryptionSession,
-    OLM_ALGORITHM,
-    UserDevice,
-} from './olmLib'
+import { GroupEncryptionSession, UserDevice } from './olmLib'
 
 import { CryptoStore } from './cryptoStore'
-import { IGroupEncryptionClient } from './base'
+import { DecryptionAlgorithm, EncryptionAlgorithm, IGroupEncryptionClient } from './base'
 import { GroupDecryption } from './groupDecryption'
 import { GroupEncryption } from './groupEncryption'
-import { EncryptionDevice, type EncryptionDeviceInitOpts } from './encryptionDevice'
+import { EncryptionDevice, ExportedDevice, type EncryptionDeviceInitOpts } from './encryptionDevice'
 import { EncryptionDelegate } from './encryptionDelegate'
 import { check, dlog } from '@river-build/dlog'
 
@@ -37,10 +32,9 @@ export interface ImportRoomKeyProgressData {
 export class GroupEncryptionCrypto {
     private delegate: EncryptionDelegate | undefined
 
-    public readonly supportedAlgorithms: string[]
-    public readonly encryptionDevice: EncryptionDevice
-    public readonly groupEncryption: GroupEncryption
-    public readonly groupDecryption: GroupDecryption
+    private readonly encryptionDevice: EncryptionDevice
+    public readonly groupEncryption: EncryptionAlgorithm
+    public readonly groupDecryption: DecryptionAlgorithm
     public readonly cryptoStore: CryptoStore
     public globalBlacklistUnverifiedDevices = false
     public globalErrorOnUnknownDevices = true
@@ -55,7 +49,6 @@ export class GroupEncryptionCrypto {
             throw e
         })
         this.encryptionDevice = new EncryptionDevice(this.delegate, cryptoStore)
-        this.supportedAlgorithms = [OLM_ALGORITHM, GROUP_ENCRYPTION_ALGORITHM]
 
         this.groupEncryption = new GroupEncryption({
             device: this.encryptionDevice,
@@ -153,6 +146,41 @@ export class GroupEncryptionCrypto {
      */
     public async decryptGroupEvent(streamId: string, content: EncryptedData) {
         return this.groupDecryption.decrypt(streamId, content)
+    }
+
+    public async exportGroupSession(
+        streamId: string,
+        sessionId: string,
+    ): Promise<GroupEncryptionSession | undefined> {
+        return this.groupDecryption.exportGroupSession(streamId, sessionId)
+    }
+
+    /** */
+    public async exportRoomKeys(): Promise<GroupEncryptionSession[]> {
+        return this.groupDecryption.exportGroupSessions()
+    }
+
+    /** */
+    public async getGroupSessionIds(streamId: string): Promise<string[]> {
+        return this.groupDecryption.exportGroupSessionIds(streamId)
+    }
+
+    /** */
+    public async hasSessionKey(streamId: string, sessionId: string): Promise<boolean> {
+        return this.groupDecryption.hasSessionKey(streamId, sessionId)
+    }
+
+    /** */
+    public getUserDevice(): UserDevice {
+        return {
+            deviceKey: this.encryptionDevice.deviceCurve25519Key!,
+            fallbackKey: this.encryptionDevice.fallbackKey.key,
+        }
+    }
+
+    /** */
+    public async exportDevice(): Promise<ExportedDevice> {
+        return this.encryptionDevice.exportDevice()
     }
 
     /**

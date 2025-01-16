@@ -13,6 +13,7 @@ import (
 
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/scrub"
@@ -61,6 +62,7 @@ func TestMiniblockScrubber(t *testing.T) {
 		tester.nodes[0].service.Storage(),
 		1,
 		reports,
+		infra.NewMetricsFactory(nil, "", ""),
 	)
 	defer close(reports)
 	defer scrubber.Close()
@@ -235,7 +237,6 @@ func createMultiblockChannelStream(
 func writeStreamBackToStore(
 	ctx context.Context,
 	require *require.Assertions,
-	client protocolconnect.StreamServiceClient,
 	store storage.StreamStorage,
 	streamId StreamId,
 	mb1 *events.MiniblockInfo,
@@ -497,9 +498,11 @@ func invalidatePrevSnapshotBlockNum(require *require.Assertions, wallet *crypto.
 	return block
 }
 
+type corruptMiniblockBytesFunc func(require *require.Assertions, wallet *crypto.Wallet, block []byte) []byte
+
 func TestMiniblockScrubber_CorruptBlocks(t *testing.T) {
 	tests := map[string]struct {
-		corruptBlock func(require *require.Assertions, wallet *crypto.Wallet, block []byte) []byte
+		corruptBlock corruptMiniblockBytesFunc
 		expectedErr  string
 	}{
 		"Bad header event length": {
@@ -557,6 +560,7 @@ func TestMiniblockScrubber_CorruptBlocks(t *testing.T) {
 				tester.nodes[0].service.Storage(),
 				1,
 				reports,
+				infra.NewMetricsFactory(nil, "", ""),
 			)
 			defer close(reports)
 			defer scrubber.Close()
@@ -566,7 +570,7 @@ func TestMiniblockScrubber_CorruptBlocks(t *testing.T) {
 			// Corrupt block 1
 			blocks[1] = tc.corruptBlock(require, tester.nodes[0].service.wallet, blocks[1])
 
-			writeStreamBackToStore(ctx, require, client, store, channelId, mb1, blocks)
+			writeStreamBackToStore(ctx, require, store, channelId, mb1, blocks)
 
 			// Start at block 0. We will evaluate block 1 as corrupt and report it as so.
 			require.NoError(scrubber.ScheduleStreamMiniblocksScrub(ctx, channelId, 0))

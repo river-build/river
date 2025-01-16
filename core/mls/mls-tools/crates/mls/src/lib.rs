@@ -72,6 +72,18 @@ fn validate_group_info_message(group_info_message_bytes: Vec<u8>, expected_epoch
     ValidationResult::Valid
 }
 
+fn validate_external_group_can_process_group_info_message(mut external_group: ExternalGroup<ExternalConfig>, group_info_message_bytes: Vec<u8>) -> Result<(), ValidationResult> {
+    let group_info_message = match MlsMessage::from_bytes(&group_info_message_bytes) {
+        Ok(group_info_message) => group_info_message,
+        Err(_) => return Err(ValidationResult::InvalidGroupInfo)
+    };
+
+    match external_group.process_incoming_message(group_info_message) {
+        Ok(ExternalReceivedMessage::GroupInfo(_)) => Ok(()),
+        _ => Err(ValidationResult::InvalidGroupInfo.into())
+    }
+}
+
 pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> InitialGroupInfoResponse {
     let external_client = create_external_client();
     let external_group_snapshot = match ExternalSnapshot::from_bytes(&request.external_group_snapshot) {
@@ -88,7 +100,7 @@ pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> 
         }
     };
 
-    match validate_group_info_message(request.group_info_message,
+    match validate_group_info_message(request.group_info_message.clone(),
                                       0, 
                                       external_group.group_context().group_id()) {
         ValidationResult::Valid => {},
@@ -124,6 +136,14 @@ pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> 
             result: ValidationResult::InvalidPublicSignatureKey.into(),
         };
     }
+    
+    match validate_external_group_can_process_group_info_message(external_group, request.group_info_message) {
+        Ok(_) => {},
+        Err(result) => return InitialGroupInfoResponse {
+            result: result.into(),
+        }
+    }
+
     return InitialGroupInfoResponse {
         result: ValidationResult::Valid.into(),
     };
@@ -158,11 +178,11 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJ
     for commit_bytes in group_state.commits {
         let _ = match MlsMessage::from_bytes(&commit_bytes) {
             Ok(commit) => external_group.process_incoming_message(commit),
-            Err(_) => break
+            Err(_) => continue
         };
     }
 
-    match validate_group_info_message(request.proposed_external_join_info_message, 
+    match validate_group_info_message(request.proposed_external_join_info_message.clone(), 
         external_group.group_context().epoch() + 1, 
         external_group.group_context().group_id()) {
         ValidationResult::Valid => {},
@@ -211,6 +231,13 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> ExternalJ
         true => {}
     }
 
+    match validate_external_group_can_process_group_info_message(external_group, request.proposed_external_join_info_message) {
+        Ok(_) => {},
+        Err(result) => return ExternalJoinResponse {
+            result: result.into(),
+        }
+    }
+
     return ExternalJoinResponse {
         result: ValidationResult::Valid.into(),
     };
@@ -244,7 +271,7 @@ pub fn validate_key_package_request(request: KeyPackageRequest) -> KeyPackageRes
     for commit_bytes in group_state.commits {
         let _ = match MlsMessage::from_bytes(&commit_bytes) {
             Ok(commit) => external_group.process_incoming_message(commit),
-            Err(_) => break
+            Err(_) => continue
         };
     }
 
@@ -261,6 +288,13 @@ pub fn validate_key_package_request(request: KeyPackageRequest) -> KeyPackageRes
             result: ValidationResult::InvalidKeyPackage.into(),
         }
     };
+
+    match external_client.validate_key_package(proposed_key_package_message.clone()) {
+        Ok(_) => {},
+        Err(_) => return KeyPackageResponse {
+            result: ValidationResult::InvalidKeyPackage.into(),
+        }
+    }
 
     let key_package = match proposed_key_package_message.into_key_package() {
         Some(key_package) => key_package,
@@ -308,11 +342,11 @@ pub fn validate_welcome_message_request(request: WelcomeMessageRequest) -> Welco
     for commit_bytes in group_state.commits {
         let _ = match MlsMessage::from_bytes(&commit_bytes) {
             Ok(commit) => external_group.process_incoming_message(commit),
-            Err(_) => break
+            Err(_) => continue
         };
     }
 
-    match validate_group_info_message(request.group_info_message, 
+    match validate_group_info_message(request.group_info_message.clone(),
         external_group.group_context().epoch() + 1, 
         external_group.group_context().group_id()) {
         ValidationResult::Valid => {},
@@ -374,6 +408,36 @@ pub fn validate_welcome_message_request(request: WelcomeMessageRequest) -> Welco
         return WelcomeMessageResponse {
             result: ValidationResult::InvalidPublicSignatureKey.into(),
         };
+    }
+
+    for message in request.welcome_messages {
+        let message = match MlsMessage::from_bytes(&message) {
+            Ok(message) => message,
+            Err(_) => return WelcomeMessageResponse {
+                result: ValidationResult::InvalidWelcomeMessage.into(),
+            }
+        };
+
+        let external_received_message = match external_group.process_incoming_message(message) {
+            Ok(value) => value,
+            Err(_) => return WelcomeMessageResponse {
+                result: ValidationResult::InvalidWelcomeMessage.into(),
+            }
+        };
+
+        match external_received_message {
+            ExternalReceivedMessage::Welcome => {},
+            _ => return WelcomeMessageResponse {
+                result: ValidationResult::InvalidWelcomeMessage.into(),
+            }
+        }
+    }
+
+    match validate_external_group_can_process_group_info_message(external_group, request.group_info_message) {
+        Ok(_) => {},
+        Err(result) => return WelcomeMessageResponse {
+            result: result.into(),
+        }
     }
 
     return WelcomeMessageResponse { 

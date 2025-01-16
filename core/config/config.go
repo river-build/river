@@ -66,6 +66,7 @@ func GetDefaultConfig() *Config {
 			StacksMaxSizeKb:       5 * 1024,
 			Stream:                true,
 			TxPool:                true,
+			CorruptStreams:        true,
 			EnableStorageEndpoint: true,
 		},
 		Scrubbing: ScrubbingConfig{
@@ -79,6 +80,7 @@ func GetDefaultConfig() *Config {
 			SingleCallTimeout:      30 * time.Second, // geth internal timeout is 30 seconds
 			ProgressReportInterval: 10 * time.Second,
 		},
+		EnableMls: false,
 	}
 }
 
@@ -149,6 +151,9 @@ type Config struct {
 
 	// Disable base chain contract usage.
 	DisableBaseChain bool
+	
+	// Enable MemberPayload_Mls.
+	EnableMls bool
 
 	// Chains provides a map of chain IDs to their provider URLs as
 	// a comma-serparated list of chainID:URL pairs.
@@ -347,6 +352,10 @@ type ArchiveConfig struct {
 
 	WorkerPoolSize int // If 0, default to 20.
 
+	MiniblockScrubQueueSize int // If 0, default to 10.
+
+	MiniblockScrubWorkerPoolSize int // If 0, default to 20
+
 	StreamsContractCallPageSize int64 // If 0, default to 5000.
 }
 
@@ -448,6 +457,7 @@ type DebugEndpointsConfig struct {
 	StacksMaxSizeKb int
 	Stream          bool
 	TxPool          bool
+	CorruptStreams  bool
 
 	// Make storage statistics available via debug endpoints. This may involve running queries
 	// on the underlying database.
@@ -500,6 +510,20 @@ func (ac *ArchiveConfig) GetStreamsContractCallPageSize() int64 {
 		return 1000
 	}
 	return ac.StreamsContractCallPageSize
+}
+
+func (ac *ArchiveConfig) GetMiniblockScrubQueueSize() int {
+	if ac.MiniblockScrubQueueSize <= 0 {
+		return 10
+	}
+	return ac.MiniblockScrubQueueSize
+}
+
+func (ac *ArchiveConfig) GetMiniblockScrubWorkerPoolSize() int {
+	if ac.MiniblockScrubWorkerPoolSize <= 0 {
+		return 20
+	}
+	return ac.MiniblockScrubWorkerPoolSize
 }
 
 type ScrubbingConfig struct {
