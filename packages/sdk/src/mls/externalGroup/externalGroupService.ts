@@ -26,7 +26,7 @@ export class ExternalGroupService {
     }
 
     public async loadSnapshot(streamId: string, snapshot: Uint8Array): Promise<ExternalGroup> {
-        return this.crypto.loadExternalGroupFromSnapshot(streamId, snapshot)
+        return await this.crypto.loadExternalGroupFromSnapshot(streamId, snapshot)
     }
 
     public async processCommit(externalGroup: ExternalGroup, commit: Uint8Array): Promise<void> {

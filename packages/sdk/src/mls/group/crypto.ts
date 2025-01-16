@@ -1,5 +1,6 @@
 import {
     Client as MlsClient,
+    ExternalClient as MlsExternalClient,
     ExportedTree as MlsExportedTree,
     Group as MlsGroup,
     CipherSuite as MlsCipherSuite,
@@ -120,5 +121,18 @@ export class Crypto {
 
     public ciphersuite(): MlsCipherSuite {
         return new MlsCipherSuite()
+    }
+
+    public async groupInfoMessage(group: Group): Promise<Uint8Array> {
+        const message = await group.group.groupInfoMessageAllowingExtCommit(true)
+        return message.toBytes()
+    }
+
+    public async exportGroupSnapshot(group: Group): Promise<Uint8Array> {
+        const exportedTree = this.exportTree(group)
+        const groupInfoMessage = await this.groupInfoMessage(group)
+        const externalClient = new MlsExternalClient()
+        const externalGroup = await externalClient.observeGroup(groupInfoMessage, exportedTree)
+        return externalGroup.snapshot().toBytes()
     }
 }

@@ -15,7 +15,7 @@ type ExternalJoinMessage = PlainMessage<MemberPayload_Mls_ExternalJoin>
 export interface IGroupServiceCoordinator {
     joinOrCreateGroup(streamId: string): void
     groupActive(streamId: string): void
-    newEpoch(streamId: string, epoch: bigint): void
+    newEpoch(streamId: string, epoch: bigint, epochSecret: Uint8Array): void
 }
 
 const defaultLogger = dlog('csb:mls:groupService')
@@ -48,6 +48,11 @@ export class GroupService {
             debug: logger.extend('debug'),
             error: logger.extend('error'),
         }
+    }
+
+    public async initialize(): Promise<void> {
+        this.log.debug('initialize')
+        await this.crypto.initialize()
     }
 
     public getGroup(streamId: string): Group | undefined {
@@ -129,7 +134,8 @@ export class GroupService {
 
         this.coordinator?.groupActive(group.streamId)
         const epoch = this.crypto.currentEpoch(group)
-        this.coordinator?.newEpoch(group.streamId, epoch)
+        const epochSecret = await this.crypto.exportEpochSecret(group)
+        this.coordinator?.newEpoch(group.streamId, epoch, epochSecret)
     }
 
     public async handleExternalJoin(group: Group, message: ExternalJoinMessage) {
@@ -140,7 +146,8 @@ export class GroupService {
             await this.crypto.processCommit(group, message.commit)
             await this.saveGroup(group)
             const epoch = this.crypto.currentEpoch(group)
-            this.coordinator?.newEpoch(group.streamId, epoch)
+            const epochSecret = await this.crypto.exportEpochSecret(group)
+            this.coordinator?.newEpoch(group.streamId, epoch, epochSecret)
             return
         }
 
@@ -163,7 +170,8 @@ export class GroupService {
 
         this.coordinator?.groupActive(group.streamId)
         const epoch = this.crypto.currentEpoch(group)
-        this.coordinator?.newEpoch(group.streamId, epoch)
+        const epochSecret = await this.crypto.exportEpochSecret(group)
+        this.coordinator?.newEpoch(group.streamId, epoch, epochSecret)
     }
 
     public async initializeGroupMessage(streamId: string): Promise<InitializeGroupMessage> {
@@ -177,7 +185,7 @@ export class GroupService {
         const group = await this.crypto.createGroup(streamId)
         await this.saveGroup(group)
 
-        const externalGroupSnapshot = this.exportGroupSnapshot(group)
+        const externalGroupSnapshot = await this.exportGroupSnapshot(group)
 
         const signaturePublicKey = this.getSignaturePublicKey()
 
@@ -212,8 +220,8 @@ export class GroupService {
         }
     }
 
-    public exportGroupSnapshot(_group: Group): Uint8Array {
-        throw new Error('Not implemented')
+    public exportGroupSnapshot(group: Group): Promise<Uint8Array> {
+        return this.crypto.exportGroupSnapshot(group)
     }
 
     public currentEpoch(group: Group): bigint {

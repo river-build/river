@@ -22,7 +22,6 @@ import { IPersistenceStore } from '../../persistenceStore'
 import { IAwaiter, IndefiniteAwaiter } from './awaiter'
 import {
     IQueueService,
-    QueueService,
     EpochSecretServiceCoordinatorAdapter,
     GroupServiceCoordinatorAdapter,
 } from '../queue'
@@ -52,12 +51,22 @@ function decode(bytes: Uint8Array): string {
 }
 
 export interface ICoordinator {
-    // Commands
+    // Commands for Group Service
     joinOrCreateGroup(streamId: string): Promise<void>
     groupActive(streamId: string): void
-    newOpenEpochSecret(streamId: string, epoch: bigint): Promise<void>
-    newSealedEpochSecret(streamId: string, epoch: bigint): Promise<void>
-    announceEpochSecret(streamId: string, epoch: bigint): Promise<void>
+    newEpoch(streamId: string, epoch: bigint, epochSecret: Uint8Array): Promise<void>
+
+    // Commands for EpochSecretService
+    newOpenEpochSecret(openEpochSecret: EpochSecret): Promise<void>
+    newSealedEpochSecret(sealedEpochSecret: EpochSecret): Promise<void>
+
+    // Not sure about this one
+    announceEpochSecret(
+        streamId: string,
+        epoch: bigint,
+        sealedEpochSecret: Uint8Array,
+    ): Promise<void>
+
     // Events
     handleInitializeGroup(streamId: string, message: InitializeGroupMessage): Promise<void>
     handleExternalJoin(streamId: string, message: ExternalJoinMessage): Promise<void>
@@ -67,9 +76,18 @@ export interface ICoordinator {
         eventId: string,
         message: EncryptedContent,
     ): Promise<void>
+    // ClientAPI
+    encryptGroupEventEpochSecret(streamId: string, event: Message): Promise<EncryptedData>
+    initialize(): Promise<void>
 }
 
 const defaultLogger = dlog('csb:mls:coordinator')
+
+type EpochId = string & { __brand: 'EpochId' }
+
+function createEpochId(streamId: string, epoch: bigint): EpochId {
+    return `${streamId}/${epoch}` as EpochId
+}
 
 export class Coordinator implements ICoordinator {
     private userId: string
@@ -79,10 +97,25 @@ export class Coordinator implements ICoordinator {
     private groupService: GroupService
     private externalGroupService: ExternalGroupService
     private decryptionFailures: Map<string, Map<bigint, MlsEncryptedContentItem[]>> = new Map()
-    private client!: Client
-    private persistenceStore!: IPersistenceStore
+    private client: Client
+    private persistenceStore: IPersistenceStore
     private awaitingGroupActive: Map<string, IAwaiter> = new Map()
-    private readonly queueService: IQueueService
+    private awaitingEpochOpen: Map<EpochId, IAwaiter> = new Map()
+    private _queueService?: IQueueService
+
+    //
+    private groupServiceCoordinator: GroupServiceCoordinatorAdapter
+    private epochSecretServiceCoordinator: EpochSecretServiceCoordinatorAdapter
+
+    get queueService(): IQueueService | undefined {
+        return this._queueService
+    }
+
+    set queueService(value: IQueueService | undefined) {
+        this._queueService = value
+        this.groupServiceCoordinator.queueService = value
+        this.epochSecretServiceCoordinator.queueService = value
+    }
 
     private log: {
         error: DLogger
@@ -109,23 +142,34 @@ export class Coordinator implements ICoordinator {
         this.deviceKey = deviceKey
 
         // Composing all the dependencies
-        this.queueService = new QueueService(this)
-        this.externalGroupService = new ExternalGroupService(new ExternalCrypto(), opts)
+        this.externalGroupService = new ExternalGroupService(new ExternalCrypto(), {
+            log: logger.extend('egs'),
+        })
         const groupStore = new InMemoryGroupStore()
-        const crypto = new Crypto(this.userAddress, this.deviceKey, opts)
-        const groupServiceCoordinator = new GroupServiceCoordinatorAdapter(this.queueService)
+        const crypto = new Crypto(this.userAddress, this.deviceKey, {
+            log: logger.extend('crypto'),
+        })
+        this.groupServiceCoordinator = new GroupServiceCoordinatorAdapter(this._queueService)
 
-        this.groupService = new GroupService(groupStore, crypto, groupServiceCoordinator, opts)
+        this.groupService = new GroupService(groupStore, crypto, this.groupServiceCoordinator, {
+            log: logger.extend('gs'),
+        })
         const epochSecretStore = new InMemoryEpochSecretStore()
-        const epochSecretServiceCoordinator = new EpochSecretServiceCoordinatorAdapter(
+
+        this.epochSecretServiceCoordinator = new EpochSecretServiceCoordinatorAdapter(
             this.queueService,
         )
+
         this.epochSecretService = new EpochSecretService(
             crypto.ciphersuite(),
             epochSecretStore,
-            epochSecretServiceCoordinator,
-            opts,
+            this.epochSecretServiceCoordinator,
+            { log: logger.extend('ess') },
         )
+    }
+
+    public async initialize(): Promise<void> {
+        await this.groupService.initialize()
     }
 
     // API needed by the client
@@ -134,13 +178,15 @@ export class Coordinator implements ICoordinator {
         streamId: string,
         event: Message,
     ): Promise<EncryptedData> {
+        this.log.debug('encryptGroupEventEpochSecret', { streamId, event })
+
         const hasGroup = this.groupService.getGroup(streamId) !== undefined
         if (!hasGroup) {
             // No group so we request joining
             // NOTE: We are enqueueing command instead of doing the async call
             this.queueService?.enqueueCommand({ tag: 'joinOrCreateGroup', streamId })
         }
-        // Wait for the group to become active
+        // TODO: Refactor this to return group
         await this.awaitGroupActive(streamId)
         const activeGroup = this.groupService.getGroup(streamId)
         if (activeGroup === undefined) {
@@ -152,16 +198,16 @@ export class Coordinator implements ICoordinator {
         }
 
         const epoch = this.groupService.currentEpoch(activeGroup)
-
-        let epochSecret = this.epochSecretService.getEpochSecret(streamId, epoch)
+        // TODO: Refactor this to return EpochSecret
+        await this.awaitEpochOpen(streamId, epoch)
+        const epochSecret = this.epochSecretService.getEpochSecret(streamId, epoch)
 
         if (epochSecret === undefined) {
-            // NOTE: queue has not processed new epoch event yet, force it manually
-            await this.newEpoch(streamId, epoch)
-            epochSecret = this.epochSecretService.getEpochSecret(streamId, epoch)
-            if (epochSecret === undefined) {
-                throw new Error('Fatal: epoch secret not found')
-            }
+            throw new Error('Fatal: no epoch secret after awaitEpochOpen')
+        }
+
+        if (epochSecret.openEpochSecret === undefined) {
+            throw new Error('Fatal: epoch secret not open after awaitEpochOpen')
         }
 
         const plaintext_ = event.toJsonString()
@@ -178,8 +224,8 @@ export class Coordinator implements ICoordinator {
         kind: string, // kind of data
         encryptedData: EncryptedData,
     ) {
-        // this.logCall('decryptGroupEvent', streamId, eventId, kind,
-        // encryptedData)
+        this.log.debug('decryptGroupEvent', { streamId, eventId, kind, encryptedData })
+
         const stream = this.client.stream(streamId)
         check(isDefined(stream), 'stream not found')
         check(isEncryptedContentKind(kind), `invalid kind ${kind}`)
@@ -201,20 +247,36 @@ export class Coordinator implements ICoordinator {
     // # MLS Coordinator #
 
     public async handleInitializeGroup(streamId: string, message: InitializeGroupMessage) {
+        this.log.debug('handleInitializeGroup', { streamId, message })
+
         const group = this.groupService.getGroup(streamId)
         if (group !== undefined) {
             await this.groupService.handleInitializeGroup(group, message)
         }
+
+        const tryJoiningAgain = this.groupService.getGroup(streamId) === undefined
+        if (tryJoiningAgain) {
+            this.queueService?.enqueueCommand({ tag: 'joinOrCreateGroup', streamId })
+        }
     }
 
     public async handleExternalJoin(streamId: string, message: ExternalJoinMessage) {
+        this.log.debug('handleExternalJoin', { streamId, message })
+
         const group = this.groupService.getGroup(streamId)
         if (group !== undefined) {
             await this.groupService.handleExternalJoin(group, message)
         }
+
+        const tryJoiningAgain = this.groupService.getGroup(streamId) === undefined
+        if (tryJoiningAgain) {
+            this.queueService?.enqueueCommand({ tag: 'joinOrCreateGroup', streamId })
+        }
     }
 
     public async handleEpochSecrets(streamId: string, message: EpochSecretsMessage) {
+        this.log.debug('handleEpochSecrets', { streamId, message })
+
         return this.epochSecretService.handleEpochSecrets(streamId, message)
     }
 
@@ -223,6 +285,8 @@ export class Coordinator implements ICoordinator {
         eventId: string,
         message: EncryptedContent,
     ) {
+        this.log.debug('handleEncryptedContent', { streamId, eventId, message })
+
         const encryptedData = message.content
         // TODO: Check if message was encrypted with MLS
         // const ciphertext = encryptedData.mls!.ciphertext
@@ -246,6 +310,8 @@ export class Coordinator implements ICoordinator {
     }
 
     private enqueueDecryptionFailure(streamId: string, epoch: bigint, item: EncryptedContentItem) {
+        this.log.debug('enqueueDecryptionFailure', { streamId, epoch, item })
+
         let perStream = this.decryptionFailures.get(streamId)
         if (perStream === undefined) {
             perStream = new Map()
@@ -260,6 +326,8 @@ export class Coordinator implements ICoordinator {
     }
 
     private async initializeGroupMessage(streamId: string): Promise<InitializeGroupMessage> {
+        this.log.debug('initializeGroupMessage', { streamId })
+
         // TODO: Check preconditions
         // TODO: Catch the error
         return this.groupService.initializeGroupMessage(streamId)
@@ -273,6 +341,8 @@ export class Coordinator implements ICoordinator {
             commits: { commit: Uint8Array; groupInfoMessage: Uint8Array }[]
         },
     ): Promise<ExternalJoinMessage> {
+        this.log.debug('externalJoinMessage', { streamId })
+
         const externalGroup = await this.externalGroupService.loadSnapshot(
             streamId,
             externalInfo.externalGroupSnapshot,
@@ -287,20 +357,31 @@ export class Coordinator implements ICoordinator {
     }
 
     private async epochSecretsMessage(epochSecret: EpochSecret): Promise<EpochSecretsMessage> {
+        this.log.debug('epochSecretsMessage', { epochSecret })
+
         // TODO: Check preconditions
         return this.epochSecretService.epochSecretMessage(epochSecret)
     }
 
     public async joinOrCreateGroup(streamId: string): Promise<void> {
+        this.log.debug('joinOrCreateGroup', { streamId })
+
         const hasGroup = this.groupService.getGroup(streamId) !== undefined
         if (hasGroup) {
+            this.log.debug('Already have group', { streamId })
             return
         }
         const externalInfo = await this.client.getMlsExternalGroupInfo(streamId)
+        this.log.debug('externalInfo', { externalInfo })
 
         let joinOrCreateGroupMessage: PlainMessage<StreamEvent>['payload']
 
-        if (externalInfo === undefined) {
+        const shouldWeInitializeMlsGroup =
+            externalInfo === undefined ||
+            externalInfo.externalGroupSnapshot.length === 0 ||
+            externalInfo.groupInfoMessage.length === 0
+
+        if (shouldWeInitializeMlsGroup) {
             const initializeGroupMessage = await this.initializeGroupMessage(streamId)
             joinOrCreateGroupMessage = make_MemberPayload_Mls({
                 content: {
@@ -331,7 +412,8 @@ export class Coordinator implements ICoordinator {
 
     // NOTE: Critical section, no awaits permitted
     public awaitGroupActive(streamId: string): Promise<void> {
-        // this.log(`awaitGroupActive ${streamId}`)
+        this.log.debug('awaitGroupActive', { streamId })
+
         if (this.groupService.getGroup(streamId)?.status === 'GROUP_ACTIVE') {
             return Promise.resolve()
         }
@@ -354,13 +436,54 @@ export class Coordinator implements ICoordinator {
     }
 
     public groupActive(streamId: string): void {
+        this.log.debug('groupActive', { streamId })
+
         const awaiter = this.awaitingGroupActive.get(streamId)
         if (awaiter !== undefined) {
             awaiter.resolve()
         }
     }
 
-    public async newEpoch(streamId: string, epoch: bigint): Promise<void> {
+    private awaitEpochOpen(streamId: string, epoch: bigint): Promise<void> {
+        this.log.debug('awaitEpochOpen', { streamId, epoch })
+
+        if (
+            this.epochSecretService.getEpochSecret(streamId, epoch)?.openEpochSecret !== undefined
+        ) {
+            return Promise.resolve()
+        }
+
+        const epochId = createEpochId(streamId, epoch)
+        let awaiter = this.awaitingEpochOpen.get(epochId)
+        if (awaiter === undefined) {
+            const internalAwaiter = new IndefiniteAwaiter()
+            const promise = internalAwaiter.promise.finally(() => {
+                this.awaitingEpochOpen.delete(epochId)
+            })
+            awaiter = {
+                promise,
+                resolve: internalAwaiter.resolve,
+            }
+            this.awaitingEpochOpen.set(epochId, awaiter)
+        }
+
+        return awaiter.promise
+    }
+
+    private epochOpen(streamId: string, epoch: bigint): void {
+        this.log.debug('epochOpen', { streamId, epoch })
+
+        const epochId = createEpochId(streamId, epoch)
+        const awaiter = this.awaitingEpochOpen.get(epochId)
+        if (awaiter !== undefined) {
+            awaiter.resolve()
+        }
+    }
+
+    // Derive new epoch secret, add it to epochSecretService.
+    public async newEpoch(streamId: string, epoch: bigint, epochSecret: Uint8Array): Promise<void> {
+        this.log.debug('newEpoch', { streamId, epoch })
+
         const epochAlreadyProcessed =
             this.epochSecretService.getEpochSecret(streamId, epoch) !== undefined
         if (epochAlreadyProcessed) {
@@ -380,31 +503,36 @@ export class Coordinator implements ICoordinator {
             throw new Error('Fatal: newEpoch called for wrong epoch')
         }
 
-        const epochSecret = await this.groupService.exportEpochSecret(group)
-        await this.epochSecretService.addOpenEpochSecret(streamId, epoch, epochSecret)
-        this.queueService?.enqueueCommand({ tag: 'announceEpochSecret', streamId, epoch })
+        return await this.epochSecretService.addOpenEpochSecret(streamId, epoch, epochSecret)
     }
 
-    public async newOpenEpochSecret(streamId: string, _epoch: bigint): Promise<void> {
-        const epochSecret = this.epochSecretService.getEpochSecret(streamId, _epoch)
-        if (epochSecret === undefined) {
-            throw new Error('Fatal: newEpochSecret called for missing epoch secret')
+    public async newOpenEpochSecret(openEpochSecret: EpochSecret): Promise<void> {
+        const streamId = openEpochSecret.streamId
+        const epoch = openEpochSecret.epoch
+
+        this.log.debug('newOpenEpochSecret', { streamId, epoch })
+
+        if (openEpochSecret.openEpochSecret === undefined) {
+            throw new Error('newOpenEpochSecret called for EpochSecret missing open epoch secret')
         }
 
-        if (epochSecret.derivedKeys === undefined) {
-            throw new Error('Fatal: missing derived keys for open secret')
+        if (openEpochSecret.derivedKeys === undefined) {
+            throw new Error('newOpenEpochSecret called for EpochSecret missing derived keys')
         }
 
-        // TODO: Decrypt all messages for that particular epoch secret
+        // Mark the epoch as open
+        this.epochOpen(streamId, epoch)
+
+        // Process decryption failures
         const perStream = this.decryptionFailures.get(streamId)
         if (perStream !== undefined) {
-            const perEpoch = perStream.get(_epoch)
+            const perEpoch = perStream.get(epoch)
             if (perEpoch !== undefined) {
-                perStream.delete(_epoch)
+                perStream.delete(epoch)
                 // TODO: Can this be Promise.all?
                 for (const decryptionFailure of perEpoch) {
                     await this.decryptGroupEvent(
-                        epochSecret,
+                        openEpochSecret,
                         decryptionFailure.streamId,
                         decryptionFailure.eventId,
                         decryptionFailure.kind,
@@ -414,111 +542,88 @@ export class Coordinator implements ICoordinator {
             }
         }
 
-        const previousEpochSecret = this.epochSecretService.getEpochSecret(streamId, _epoch - 1n)
+        // TODO: Check if we do have previous epoch
+        const previousEpochSecret = this.epochSecretService.getEpochSecret(streamId, epoch - 1n)
+
         if (
             previousEpochSecret !== undefined &&
             this.epochSecretService.canBeOpened(previousEpochSecret)
         ) {
             await this.epochSecretService.openSealedEpochSecret(
                 previousEpochSecret,
-                epochSecret.derivedKeys,
+                openEpochSecret.derivedKeys,
+            )
+        } else if (
+            previousEpochSecret !== undefined &&
+            this.epochSecretService.canBeSealed(previousEpochSecret)
+        ) {
+            await this.epochSecretService.sealEpochSecret(
+                previousEpochSecret,
+                openEpochSecret.derivedKeys,
             )
         }
     }
 
-    public async newSealedEpochSecret(streamId: string, epoch: bigint): Promise<void> {
-        const epochSecret = this.epochSecretService.getEpochSecret(streamId, epoch)
-        if (epochSecret === undefined) {
-            throw new Error('Fatal: newSealedEpochSecret called for missing epoch secret')
-        }
+    // TODO: Differentiate between announced epoch secret and freshly sealed epoch secret
+    public async newSealedEpochSecret(sealedEpochSecret: EpochSecret): Promise<void> {
+        const streamId = sealedEpochSecret.streamId
+        const epoch = sealedEpochSecret.epoch
+        this.log.debug('newSealedEpochSecret', { streamId, epoch })
 
-        if (epochSecret.sealedEpochSecret === undefined) {
-            throw new Error('Fatal: missing sealed secret for sealed secret')
-        }
 
-        // TODO: Maybe this can be Promise.all?
-        await this.tryOpeningSealedEpochSecret(epochSecret)
-        await this.tryAnnouncingSealedEpochSecret(epochSecret)
-    }
-
-    private async tryOpeningSealedEpochSecret(sealedEpochSecret: EpochSecret): Promise<void> {
         if (sealedEpochSecret.sealedEpochSecret === undefined) {
-            throw new Error('Fatal: tryOpeningSealedEpochSecret called for missing sealed secret')
+            throw new Error('Fatal: newSealedEpochSecret called for missing sealed secret')
         }
 
-        // Already open
-        if (sealedEpochSecret.openEpochSecret !== undefined) {
-            return
-        }
-
-        // Missing derived keys needed to open
-        const nextEpochSecret = this.epochSecretService.getEpochSecret(
-            sealedEpochSecret.streamId,
-            sealedEpochSecret.epoch + 1n,
-        )
-        if (nextEpochSecret?.derivedKeys === undefined) {
-            return
-        }
-
-        return this.epochSecretService.openSealedEpochSecret(
-            sealedEpochSecret,
-            nextEpochSecret.derivedKeys,
-        )
-    }
-
-    public async announceEpochSecret(_streamId: string, _epoch: bigint) {
-        let epochSecret = this.epochSecretService.getEpochSecret(_streamId, _epoch)
-        if (epochSecret === undefined) {
-            throw new Error('Fatal: announceEpochSecret called for missing epoch secret')
-        }
-
-        if (epochSecret.sealedEpochSecret === undefined) {
-            const nextEpochKey = this.epochSecretService.getEpochSecret(
-                epochSecret.streamId,
-                epochSecret.epoch + 1n,
-            )
-            if (nextEpochKey?.derivedKeys !== undefined) {
-                await this.epochSecretService.sealEpochSecret(epochSecret, nextEpochKey.derivedKeys)
-                epochSecret = this.epochSecretService.getEpochSecret(
-                    epochSecret.streamId,
-                    epochSecret.epoch,
+        if (this.epochSecretService.canBeOpened(sealedEpochSecret)) {
+            const nextEpochSecret = this.epochSecretService.getEpochSecret(streamId, epoch + 1n)
+            if (nextEpochSecret !== undefined && nextEpochSecret.derivedKeys !== undefined) {
+                await this.epochSecretService.openSealedEpochSecret(
+                    sealedEpochSecret,
+                    nextEpochSecret.derivedKeys,
                 )
-                if (epochSecret === undefined) {
-                    throw new Error('Fatal: epoch secret not found after sealing')
-                }
             }
         }
 
-        return this.tryAnnouncingSealedEpochSecret(epochSecret)
+        if (this.epochSecretService.canBeAnnounced(sealedEpochSecret)) {
+            await this.announceEpochSecret(streamId, epoch, sealedEpochSecret.sealedEpochSecret)
+        }
     }
 
-    private async tryAnnouncingSealedEpochSecret(epochSecret: EpochSecret): Promise<void> {
-        const streamId = epochSecret.streamId
-        const epoch = epochSecret.epoch
+    public async announceEpochSecret(
+        streamId: string,
+        epoch: bigint,
+        sealedEpochSecret: Uint8Array,
+    ): Promise<void> {
+        this.log.debug('announceEpochSecret', { streamId: streamId, epoch: epoch })
 
-        if (epochSecret.sealedEpochSecret === undefined) {
-            throw new Error('Fatal: announceSealedEpoch called for missing sealed secret')
-        }
-
-        if (epochSecret.announced) {
-            return
-        }
-
-        const epochSecretsMessage = await this.epochSecretsMessage(epochSecret)
-
+        // TODO: check if the epoch is already announced in the stream view
+        // TODO: move this to epoch secret service
         try {
             await this.client.makeEventAndAddToStream(
                 streamId,
                 make_MemberPayload_Mls({
                     content: {
                         case: 'epochSecrets',
-                        value: epochSecretsMessage,
+                        value: {
+                            secrets: [
+                                {
+                                    epoch,
+                                    secret: sealedEpochSecret,
+                                },
+                            ],
+                        },
                     },
                 }),
             )
         } catch (e) {
             this.log.error('Failed to announce epoch secret', { streamId, epoch, error: e })
-            this.queueService.enqueueCommand({ tag: 'announceEpochSecret', streamId, epoch })
+            this.queueService?.enqueueCommand({
+                tag: 'announceEpochSecret',
+                streamId,
+                epoch,
+                sealedEpochSecret,
+            })
         }
     }
 }

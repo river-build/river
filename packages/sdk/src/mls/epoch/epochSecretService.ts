@@ -15,8 +15,8 @@ import { MLS_ALGORITHM } from '../constants'
 type EpochSecretsMessage = PlainMessage<MemberPayload_Mls_EpochSecrets>
 
 export interface IEpochSecretServiceCoordinator {
-    newOpenEpochSecret(streamId: string, epoch: bigint): void
-    newSealedEpochSecret(streamId: string, epoch: bigint): void
+    newOpenEpochSecret(openEpochSecret: EpochSecret): void
+    newSealedEpochSecret(sealedEpochSecret: EpochSecret): void
 }
 
 const defaultLogger = dlog('csb:mls:epochSecretService')
@@ -100,8 +100,8 @@ export class EpochSecretService {
             await this.cipherSuite.seal(publicKey_, epochKey.openEpochSecret)
         ).toBytes()
         const updatedEpochKey = { ...epochKey, sealedEpochSecret }
-        // TODO: Should this method store epochKey?
         await this.saveEpochSecret(updatedEpochKey)
+        this.coordinator?.newSealedEpochSecret(updatedEpochKey)
     }
 
     // TODO: Refactor this one not to perform load
@@ -121,9 +121,8 @@ export class EpochSecretService {
         } else {
             epochSecret = { ...epochSecret, sealedEpochSecret, announced: true }
         }
-        // TODO: Should this method store epochKey?
         await this.saveEpochSecret(epochSecret)
-        this.coordinator?.newSealedEpochSecret(streamId, epoch)
+        this.coordinator?.newSealedEpochSecret(epochSecret)
     }
 
     // TODO: Should this method persist the epoch secret?
@@ -157,7 +156,7 @@ export class EpochSecretService {
         }
         // TODO: Should this method store epochKey
         await this.saveEpochSecret(epochSecret)
-        this.coordinator?.newOpenEpochSecret(streamId, epoch)
+        this.coordinator?.newOpenEpochSecret(epochSecret)
     }
 
     public async openSealedEpochSecret(
@@ -255,7 +254,6 @@ export class EpochSecretService {
                 epochSecret.epoch,
                 epochSecret.secret,
             )
-            this.coordinator?.newSealedEpochSecret(_streamId, epochSecret.epoch)
         }
     }
 
@@ -282,5 +280,16 @@ export class EpochSecretService {
         return (
             epochSecret.openEpochSecret === undefined && epochSecret.sealedEpochSecret !== undefined
         )
+    }
+
+    // TODO: How does annouce work here?
+    public canBeSealed(epochSecret: EpochSecret): boolean {
+        return (
+            epochSecret.openEpochSecret !== undefined && epochSecret.sealedEpochSecret === undefined
+        )
+    }
+
+    public canBeAnnounced(epochSecret: EpochSecret): boolean {
+        return epochSecret.sealedEpochSecret !== undefined && !epochSecret.announced
     }
 }

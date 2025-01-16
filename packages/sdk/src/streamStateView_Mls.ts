@@ -110,16 +110,43 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
 
         const payload = event.remoteEvent.event.payload.value.content.value
         switch (payload.content.case) {
+            case 'initializeGroup':
+                encryptionEmitter?.emit(
+                    'mlsInitializeGroup',
+                    this.streamId,
+                    payload.content.value.groupInfoMessage,
+                    payload.content.value.externalGroupSnapshot,
+                    payload.content.value.signaturePublicKey,
+                )
+                break
+            case 'externalJoin':
+                encryptionEmitter?.emit(
+                    'mlsExternalJoin',
+                    this.streamId,
+                    payload.content.value.signaturePublicKey,
+                    payload.content.value.commit,
+                    payload.content.value.groupInfoMessage,
+                )
+                break
+            case 'epochSecrets':
+                encryptionEmitter?.emit(
+                    'mlsEpochSecrets',
+                    this.streamId,
+                    payload.content.value.secrets,
+                )
+                break
             case 'welcomeMessage':
                 for (const key of payload.content.value.signaturePublicKeys) {
                     const signatureKey = bytesToHex(key)
                     this.welcomeMessagesMiniblockNum[signatureKey] = event.miniblockNum
                 }
                 break
+            case 'keyPackage':
+                break
             case undefined:
                 break
             default:
-                break
+                logNever(payload.content)
         }
     }
 
