@@ -80,7 +80,7 @@ func TestReflectStreamId(t *testing.T) {
 func TestLoggingText(t *testing.T) {
 	require := require.New(t)
 
-	log, buf := testutils.DlogTextLogger()
+	log, buf := testutils.ZapJsonLogger()
 	streamId, err := StreamIdFromBytes(padBytesId([]byte{STREAM_SPACE_BIN, 0x22, 0x33}))
 	require.NoError(err)
 
@@ -91,7 +91,7 @@ func TestLoggingText(t *testing.T) {
 func TestLoggingJson(t *testing.T) {
 	require := require.New(t)
 
-	log, buf := testutils.DlogJsonLogger()
+	log, buf := testutils.ZapJsonLogger()
 
 	streamId, err := StreamIdFromBytes(padBytesId([]byte{STREAM_SPACE_BIN, 0x22, 0x33}))
 	require.NoError(err)

@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/river-build/river/core/config"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 )
 
 var (
@@ -45,11 +45,10 @@ func InitLogFromConfig(c *config.LogConfig) {
 		fileLogLevel = commonLevel
 	}
 
-	encoder := dlog.NewZapJsonEncoder()
-
+	encoder := zapcore.NewJSONEncoder(logging.DefaultZapEncoderConfig())
 	var zapCores []zapcore.Core
 	if c.Console {
-		zapCores = append(zapCores, zapcore.NewCore(encoder, zapcore.AddSync(dlog.DefaultLogOut), consoleLogLevel))
+		zapCores = append(zapCores, zapcore.NewCore(encoder, zapcore.AddSync(logging.DefaultLogOut), consoleLogLevel))
 	}
 
 	if c.File != "" {

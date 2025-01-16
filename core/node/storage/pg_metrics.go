@@ -10,8 +10,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/logging"
 )
 
 // PostgresStats contains postgres pool stats
@@ -64,7 +64,7 @@ type PostgresStatusResult struct {
 
 // PreparePostgresStatus prepares PostgresStatusResult by the given pool
 func PreparePostgresStatus(ctx context.Context, pool PgxPoolInfo) PostgresStatusResult {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	// Query to get PostgreSQL version
 	var version string

@@ -15,8 +15,8 @@ import (
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
 )
@@ -180,7 +180,7 @@ func CanCreateStream(
 }
 
 func (ru *csParams) log() *zap.SugaredLogger {
-	return dlog.FromCtx(ru.ctx)
+	return logging.FromCtx(ru.ctx)
 }
 
 func (ru *csParams) canCreateStream() ruleBuilderCS {

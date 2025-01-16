@@ -16,8 +16,8 @@ import (
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/rpc/render"
 	"github.com/river-build/river/core/node/shared"
@@ -48,7 +48,7 @@ func (h *debugHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	output, err := render.Execute(&reply)
 	if err != nil {
-		dlog.FromCtx(ctx).Errorw("unable to read memory stats", "err", err)
+		logging.FromCtx(ctx).Errorw("unable to read memory stats", "err", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -128,7 +128,7 @@ func (h *stacksHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for traceScanner.Scan() {
 		stack, err := readGoRoutineStackFrame(traceScanner)
 		if err != nil {
-			dlog.FromCtx(ctx).Errorw("unable to read stack frame", "err", err)
+			logging.FromCtx(ctx).Errorw("unable to read stack frame", "err", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
@@ -137,7 +137,7 @@ func (h *stacksHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	output, err := render.Execute(&reply)
 	if err != nil {
-		dlog.FromCtx(ctx).Errorw("unable to render stack data", "err", err)
+		logging.FromCtx(ctx).Errorw("unable to render stack data", "err", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -158,7 +158,7 @@ func (s *streamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err      error
 		streamId shared.StreamId
 		result   *storage.DebugReadStreamStatisticsResult
-		log      = dlog.FromCtx(ctx).With("func", "streamHandler.ServeHTTP")
+		log      = logging.FromCtx(ctx).With("func", "streamHandler.ServeHTTP")
 	)
 
 	streamIdStr := r.PathValue("streamIdStr")
@@ -190,7 +190,7 @@ func (s *streamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	reply.Result = *result
 	output, err := render.Execute(&reply)
 	if err != nil {
-		dlog.FromCtx(ctx).Errorw("unable to render transaction pool data", "err", err)
+		logging.FromCtx(ctx).Errorw("unable to render transaction pool data", "err", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -227,7 +227,7 @@ func (h *onChainConfigHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	settings := h.onChainConfig.All()
 	bb, err := json.MarshalIndent(settings, "", "  ")
 	if err != nil {
-		dlog.FromCtx(ctx).Errorw("unable to marshall on-chain-config data", "err", err)
+		logging.FromCtx(ctx).Errorw("unable to marshall on-chain-config data", "err", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -235,7 +235,7 @@ func (h *onChainConfigHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 	output, err := render.Execute(&reply)
 	if err != nil {
-		dlog.FromCtx(ctx).Errorw("unable to render on-chain-config data", "err", err)
+		logging.FromCtx(ctx).Errorw("unable to render on-chain-config data", "err", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -265,7 +265,7 @@ func (h *txpoolHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	output, err := render.Execute(&reply)
 	if err != nil {
-		dlog.FromCtx(ctx).Errorw("unable to render transaction pool data", "err", err)
+		logging.FromCtx(ctx).Errorw("unable to render transaction pool data", "err", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -330,7 +330,7 @@ func (h *cacheHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	output, err := render.Execute(&reply)
 	if err != nil {
-		dlog.FromCtx(ctx).Errorw("unable to render cache data", "err", err)
+		logging.FromCtx(ctx).Errorw("unable to render cache data", "err", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}

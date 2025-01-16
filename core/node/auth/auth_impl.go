@@ -15,8 +15,8 @@ import (
 	types "github.com/river-build/river/core/contracts/types"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/xchain/entitlement"
@@ -423,7 +423,7 @@ func (ca *chainAuth) areLinkedWalletsEntitled(
 	cfg *config.Config,
 	args *ChainAuthArgs,
 ) (bool, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	if args.kind == chainAuthKindSpace {
 		log.Debugw("isWalletEntitled", "kind", "space", "args", args)
 		return ca.isEntitledToSpace(ctx, cfg, args)
@@ -527,7 +527,7 @@ func (ca *chainAuth) getSpaceEntitlementsForPermissionUncached(
 	cfg *config.Config,
 	args *ChainAuthArgs,
 ) (CacheResult, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	entitlementData, owner, err := ca.spaceContract.GetSpaceEntitlementsForPermission(
 		ctx,
 		args.spaceId,
@@ -553,7 +553,7 @@ func (ca *chainAuth) getChannelEntitlementsForPermissionUncached(
 	cfg *config.Config,
 	args *ChainAuthArgs,
 ) (CacheResult, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	entitlementData, owner, err := ca.spaceContract.GetChannelEntitlementsForPermission(
 		ctx,
 		args.spaceId,
@@ -578,7 +578,7 @@ func (ca *chainAuth) isEntitledToChannelUncached(
 	cfg *config.Config,
 	args *ChainAuthArgs,
 ) (CacheResult, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	log.Debugw("isEntitledToChannelUncached", "args", args)
 
 	result, cacheHit, err := ca.entitlementManagerCache.executeUsingCache(
@@ -634,7 +634,7 @@ func (ca *chainAuth) evaluateEntitlementData(
 	cfg *config.Config,
 	args *ChainAuthArgs,
 ) (bool, error) {
-	log := dlog.FromCtx(ctx).With("function", "evaluateEntitlementData")
+	log := logging.FromCtx(ctx).With("function", "evaluateEntitlementData")
 	log.Debugw("evaluateEntitlementData", "args", args)
 
 	wallets := deserializeWallets(args.linkedWallets)
@@ -706,7 +706,7 @@ func (ca *chainAuth) evaluateWithEntitlements(
 	owner common.Address,
 	entitlements []types.Entitlement,
 ) (bool, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	// 1. Check if the user is the space owner
 	// Space owner has su over all space operations.
@@ -759,7 +759,7 @@ func (ca *chainAuth) isEntitledToSpaceUncached(
 	cfg *config.Config,
 	args *ChainAuthArgs,
 ) (CacheResult, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	log.Debugw("isEntitledToSpaceUncached", "args", args)
 	result, cacheHit, err := ca.entitlementManagerCache.executeUsingCache(
 		ctx,
@@ -831,7 +831,7 @@ func (ca *chainAuth) getLinkedWalletsUncached(
 	_ *config.Config,
 	args *ChainAuthArgs,
 ) (CacheResult, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	wallets, err := entitlement.GetLinkedWallets(ctx, args.principal, ca.walletLinkContract, nil, nil, nil)
 	if err != nil {
@@ -849,7 +849,7 @@ func (ca *chainAuth) getLinkedWallets(
 	cfg *config.Config,
 	args *ChainAuthArgs,
 ) ([]common.Address, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	if ca.walletLinkContract == nil {
 		log.Warnw("Wallet link contract is not setup properly, returning root key only")
@@ -908,7 +908,7 @@ func (ca *chainAuth) checkMembership(
 	errors chan<- error,
 	wg *sync.WaitGroup,
 ) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	defer wg.Done()
 
 	args := ChainAuthArgs{
@@ -988,7 +988,7 @@ func (ca *chainAuth) checkEntitlement(
 	cfg *config.Config,
 	args *ChainAuthArgs,
 ) (CacheResult, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	ctx, cancel := context.WithTimeout(ctx, time.Millisecond*time.Duration(ca.contractCallsTimeoutMs))
 	defer cancel()

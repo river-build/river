@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -90,7 +90,7 @@ func NewSyncers(
 	cookies StreamCookieSetGroupedByNodeAddress,
 ) (*SyncerSet, <-chan *SyncStreamsResponse, error) {
 	var (
-		log             = dlog.FromCtx(ctx)
+		log             = logging.FromCtx(ctx)
 		syncers         = make(map[common.Address]StreamsSyncer)
 		streamID2Syncer = make(map[StreamId]StreamsSyncer)
 		messages        = make(chan *SyncStreamsResponse, 256)

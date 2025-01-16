@@ -8,8 +8,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/river-build/river/core/contracts/base"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/logging"
 )
 
 func GetLinkedWallets(
@@ -20,7 +20,7 @@ func GetLinkedWallets(
 	getRootKeyForWalletCalls *infra.StatusCounterVec,
 	getWalletsByRootKeyCalls *infra.StatusCounterVec,
 ) ([]common.Address, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	var timer *prometheus.Timer
 
 	if callDurations != nil {

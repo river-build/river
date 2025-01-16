@@ -1,4 +1,4 @@
-package dlog_test
+package logging_test
 
 import (
 	"os"
@@ -18,8 +18,8 @@ func TestJsonLoggerLogsSaneProtoBinaryStrings(t *testing.T) {
 		Hash: []byte("2346ad27d7568ba9896f1b7da6b5991251debdf2"),
 	}
 
-	// Create a new dlog logger that logs to a temp file in JSON format
-	logger, buffer := testutils.DlogJsonLogger()
+	// Create a new logging logger that logs to a temp file in JSON format
+	logger, buffer := testutils.ZapJsonLogger()
 
 	logger.Infow("Logging envelope", "envelope", envelope)
 

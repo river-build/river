@@ -158,10 +158,10 @@ type Config struct {
 	// Chains provides a map of chain IDs to their provider URLs as
 	// a comma-serparated list of chainID:URL pairs.
 	// It is parsed into ChainsString variable.
-	Chains string `dlog:"omit" json:"-" yaml:"-"`
+	Chains string `logging:"omit" json:"-" yaml:"-"`
 
 	// ChainsString is an another alias for Chains kept for backward compatibility.
-	ChainsString string `dlog:"omit" json:"-" yaml:"-"`
+	ChainsString string `logging:"omit" json:"-" yaml:"-"`
 
 	// This is comma-separated list chaidID:blockTimeDuration pairs.
 	// GetDefaultBlockchainInfo() provides default values for known chains so there is no
@@ -253,40 +253,40 @@ type DatabaseConfig struct {
 }
 
 // Explicitly define MarshalLogObject method to exclude sensitive fields from logging.
-func (d DatabaseConfig) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	if d.Host != "" {
-		enc.AddString("Host", d.Host)
+func (c DatabaseConfig) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	if c.Host != "" {
+		enc.AddString("Host", c.Host)
 	}
 
-	if d.Port != 0 {
-		enc.AddInt("Port", d.Port)
+	if c.Port != 0 {
+		enc.AddInt("Port", c.Port)
 	}
 
-	if d.User != "" {
-		enc.AddString("User", d.User)
+	if c.User != "" {
+		enc.AddString("User", c.User)
 	}
 
-	if d.Database != "" {
-		enc.AddString("Database", d.Database)
+	if c.Database != "" {
+		enc.AddString("Database", c.Database)
 	}
 
-	if d.Extra != "" {
-		enc.AddString("Extra", d.Extra)
+	if c.Extra != "" {
+		enc.AddString("Extra", c.Extra)
 	}
 
-	if d.StartupDelay != 0 {
-		enc.AddDuration("StartupDelay", d.StartupDelay)
+	if c.StartupDelay != 0 {
+		enc.AddDuration("StartupDelay", c.StartupDelay)
 	}
 
-	if d.IsolationLevel != "" {
-		enc.AddString("IsolationLevel", d.IsolationLevel)
+	if c.IsolationLevel != "" {
+		enc.AddString("IsolationLevel", c.IsolationLevel)
 	}
 
-	if d.NumPartitions != 0 {
-		enc.AddInt("NumPartitions", d.NumPartitions)
+	if c.NumPartitions != 0 {
+		enc.AddInt("NumPartitions", c.NumPartitions)
 	}
 
-	enc.AddBool("DebugTransactions", d.DebugTransactions)
+	enc.AddBool("DebugTransactions", c.DebugTransactions)
 
 	return nil
 }
@@ -331,7 +331,7 @@ type TransactionPoolConfig struct {
 }
 
 type ChainConfig struct {
-	NetworkUrl  string `dlog:"omit" json:"-" yaml:"-"` // Sensitive data, omitted from logging.
+	NetworkUrl  string `logging:"omit" json:"-" yaml:"-"` // Sensitive data, omitted from logging.
 	ChainId     uint64
 	BlockTimeMs uint64
 

@@ -13,9 +13,9 @@ import (
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 )
@@ -106,7 +106,7 @@ func (tp *streamMembershipScrubTaskProcessorImpl) processMemberImpl(
 	member string,
 	span trace.Span,
 ) error {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	tp.membershipChecks.Inc()
 
 	spaceId := channelId.SpaceID()
@@ -195,7 +195,7 @@ func (tp *streamMembershipScrubTaskProcessorImpl) processMembership(
 
 	err := tp.processMemberImpl(ctx, channelId, member, span)
 	if err != nil {
-		dlog.FromCtx(ctx).Warnw("Failed to scrub member", "channelId", channelId, "member", member, "error", err)
+		logging.FromCtx(ctx).Warnw("Failed to scrub member", "channelId", channelId, "member", member, "error", err)
 	}
 
 	if span != nil {
@@ -222,7 +222,7 @@ func (tp *streamMembershipScrubTaskProcessorImpl) processStream(streamID StreamI
 
 	err := tp.processStreamImpl(ctx, streamID)
 	if err != nil {
-		dlog.FromCtx(ctx).Warnw("Failed to scrub stream", "streamId", streamID, "error", err)
+		logging.FromCtx(ctx).Warnw("Failed to scrub stream", "streamId", streamID, "error", err)
 	}
 
 	if span != nil {

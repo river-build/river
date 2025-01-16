@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/river-build/river/core/contracts/base"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 )
 
 // OperationType Enum
@@ -158,7 +158,7 @@ func GetOperationTree(
 	ctx context.Context,
 	ruleData *base.IRuleEntitlementBaseRuleDataV2,
 ) (Operation, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	decodedOperations := []Operation{}
 	log.Debugw("Decoding operations", "ruleData", ruleData)
 	for _, operation := range ruleData.Operations {

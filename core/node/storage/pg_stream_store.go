@@ -19,8 +19,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 )
@@ -54,7 +54,7 @@ type txnFn func(ctx context.Context, tx pgx.Tx) error
 // it will be created and a default setting of 256 partitions will be used.
 func (s *PostgresStreamStore) createSettingsTableTxnWithPartitions(partitions int) txnFn {
 	return func(ctx context.Context, tx pgx.Tx) error {
-		log := dlog.FromCtx(ctx)
+		log := logging.FromCtx(ctx)
 		log.Infow("Creating settings table")
 		_, err := tx.Exec(
 			ctx,
@@ -158,7 +158,7 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 	ctx context.Context,
 	conn *pgxpool.Conn,
 ) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	defer conn.Release()
 
 	lockId := s.computeLockIdFromSchema()
@@ -193,7 +193,7 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 					Func("maintainSchemaLock").
 					Tag("schema", s.schemaName).
 					Tag("lockId", lockId).
-					LogError(dlog.FromCtx(ctx))
+					LogError(logging.FromCtx(ctx))
 				s.exitSignal <- err
 				return
 			}
@@ -218,7 +218,7 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 					Func("maintainSchemaLock").
 					Tag("schema", s.schemaName).
 					Tag("lockId", lockId).
-					LogError(dlog.FromCtx(ctx))
+					LogError(logging.FromCtx(ctx))
 				s.exitSignal <- err
 			}
 
@@ -228,7 +228,7 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 					Func("maintainSchemaLock").
 					Tag("schema", s.schemaName).
 					Tag("lockId", lockId).
-					LogError(dlog.FromCtx(ctx))
+					LogError(logging.FromCtx(ctx))
 				s.exitSignal <- err
 			}
 		}
@@ -243,7 +243,7 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 // on the integer id derived from the hash of this node's schema name, and launches a
 // go routine to periodically check the connection maintaining the lock.
 func (s *PostgresStreamStore) acquireSchemaLock(ctx context.Context) error {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	lockId := s.computeLockIdFromSchema()
 
 	// Acquire connection
@@ -321,7 +321,7 @@ func (s *PostgresStreamStore) acquireSchemaLock(ctx context.Context) error {
 }
 
 func (s *PostgresStreamStore) initStreamStorage(ctx context.Context) error {
-	dlog.FromCtx(ctx).Infow("Detecting other instances")
+	logging.FromCtx(ctx).Infow("Detecting other instances")
 	err := s.txRunner(
 		ctx,
 		"listOtherInstances",
@@ -333,7 +333,7 @@ func (s *PostgresStreamStore) initStreamStorage(ctx context.Context) error {
 		return err
 	}
 
-	dlog.FromCtx(ctx).Infow("Establishing database usage")
+	logging.FromCtx(ctx).Infow("Establishing database usage")
 	err = s.txRunner(
 		ctx,
 		"initializeSingleNodeKey",
@@ -1473,7 +1473,7 @@ func (s *PostgresStreamStore) getStreamsNumberTx(ctx context.Context, tx pgx.Tx)
 	if err != nil {
 		return 0, err
 	}
-	dlog.FromCtx(ctx).Debugw("GetStreamsNumberTx", "count", count)
+	logging.FromCtx(ctx).Debugw("GetStreamsNumberTx", "count", count)
 	return count, nil
 }
 
@@ -1482,7 +1482,7 @@ func (s *PostgresStreamStore) getStreamsNumberTx(ctx context.Context, tx pgx.Tx)
 func (s *PostgresStreamStore) Close(ctx context.Context) {
 	err := s.CleanupStreamStorage(ctx)
 	if err != nil {
-		log := dlog.FromCtx(ctx)
+		log := logging.FromCtx(ctx)
 		log.Errorw("Error when deleting singlenodekey entry", "error", err)
 	}
 
@@ -1598,7 +1598,7 @@ func DbSchemaNameForArchive(archiveId string) string {
 }
 
 func (s *PostgresStreamStore) listOtherInstancesTx(ctx context.Context, tx pgx.Tx) error {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	rows, err := tx.Query(ctx, "SELECT uuid, storage_connection_time, info FROM singlenodekey")
 	if err != nil {
@@ -1672,7 +1672,7 @@ func (s *PostgresStreamStore) initializeSingleNodeKeyTx(ctx context.Context, tx 
 func (s *PostgresStreamStore) acquireListeningConnection(ctx context.Context) *pgxpool.Conn {
 	var err error
 	var conn *pgxpool.Conn
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	for {
 		conn, err = s.pool.Acquire(ctx)
 		if err == nil {
@@ -1705,7 +1705,7 @@ func (s *PostgresStreamStore) acquireConnection(ctx context.Context) (*pgxpool.C
 	var err error
 	var conn *pgxpool.Conn
 
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	// 20 retries * 1s delay = 20s of connection attempts
 	retries := 20
@@ -1782,7 +1782,7 @@ func (s *PostgresStreamStore) listenForNewNodes(ctx context.Context) {
 				Func("listenForNewNodes").
 				Tag("schema", s.schemaName).
 				Tag("nodeUUID", s.nodeUUID).
-				LogWarn(dlog.FromCtx(ctx))
+				LogWarn(logging.FromCtx(ctx))
 
 			// In the event of detecting node conflict, send the error to the main thread to shut down.
 			s.exitSignal <- err

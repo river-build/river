@@ -20,8 +20,8 @@ import (
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/http_client"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/protocol/protocolconnect"
@@ -101,7 +101,7 @@ func getHttpStatus(
 	client *http.Client,
 	wg *sync.WaitGroup,
 ) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	defer wg.Done()
 
 	start := time.Now()
@@ -162,7 +162,7 @@ func getGrpcStatus(
 	client StreamServiceClient,
 	wg *sync.WaitGroup,
 ) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	defer wg.Done()
 
 	start := time.Now()
@@ -296,7 +296,7 @@ func GetRiverNetworkStatus(
 		if connectOtelIterceptor != nil {
 			connectOpts = append(connectOpts, connect.WithInterceptors(connectOtelIterceptor))
 		} else {
-			dlog.FromCtx(ctx).Errorw("No OpenTelemetry interceptor for gRPC client")
+			logging.FromCtx(ctx).Errorw("No OpenTelemetry interceptor for gRPC client")
 		}
 
 		wg.Add(4)

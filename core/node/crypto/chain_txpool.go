@@ -23,8 +23,8 @@ import (
 
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 )
 
@@ -314,7 +314,7 @@ func (pool *pendingTransactionPool) checkPendingTransactions(ctx context.Context
 	}
 	defer pool.onCheckPendingTransactionsMutex.Unlock()
 
-	log := dlog.FromCtx(ctx).With("chain", pool.chainID)
+	log := logging.FromCtx(ctx).With("chain", pool.chainID)
 
 	// grab the latest nonce, pending transactions with a nonce lower are included in the chain and should
 	// have a receipt available.
@@ -522,7 +522,7 @@ func NewTransactionPoolWithPolicies(
 
 // sendReplacementTransactions tries to send replacement transactions for pending/stuck transactions.
 func (r *transactionPool) sendReplacementTransactions(ctx context.Context) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	nonce, err := r.client.NonceAt(ctx, r.wallet.Address, nil)
 	if err != nil {
@@ -682,7 +682,7 @@ func (r *transactionPool) EstimateGas(ctx context.Context, createTx CreateTransa
 	}
 
 	tx, err := createTx(opts)
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	if err != nil {
 		log.Debugw("Estimating gas for transaction failed", "err", err)
 		return 0, err
@@ -780,7 +780,7 @@ func (r *transactionPool) submitLocked(
 	methodName := getMethodName(tx.Data())
 	r.transactionSubmitted.With(prometheus.Labels{"method_name": methodName}).Add(1)
 
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	log.Infow(
 		"TxPool: Transaction SENT",
 		"txHash", tx.Hash(),
@@ -805,7 +805,7 @@ func (r *transactionPool) Balance(ctx context.Context, _ *types.Header) {
 
 	balance, err := r.client.BalanceAt(ctx, r.wallet.Address, nil)
 	if err != nil {
-		log := dlog.FromCtx(ctx).With("chain", r.chainID)
+		log := logging.FromCtx(ctx).With("chain", r.chainID)
 		log.Errorw("Unable to retrieve wallet balance", "err", err)
 		return
 	}

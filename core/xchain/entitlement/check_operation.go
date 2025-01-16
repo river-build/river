@@ -12,7 +12,7 @@ import (
 
 	"github.com/river-build/river/core/contracts/base"
 	"github.com/river-build/river/core/contracts/types"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/xchain/bindings/erc1155"
 	"github.com/river-build/river/core/xchain/bindings/erc20"
 	"github.com/river-build/river/core/xchain/bindings/erc721"
@@ -47,7 +47,7 @@ func validateCheckOperation(ctx context.Context, op *types.CheckOperation) error
 	// 2. Contract address is not nil
 	// 3. Threshold is positive
 	// 4. Token ID is non-negative
-	log := dlog.FromCtx(ctx).With("function", "validateCheckOperation")
+	log := logging.FromCtx(ctx).With("function", "validateCheckOperation")
 	if op.CheckType != types.ETH_BALANCE && op.ChainID == nil {
 		log.Errorw("Entitlement check: chain ID is nil for operation", "operation", op.CheckType.String())
 		return fmt.Errorf("validateCheckOperation: chain ID is nil for operation %s", op.CheckType)
@@ -163,7 +163,7 @@ func (e *Evaluator) evaluateMockOperation(
 	ctx context.Context,
 	op *types.CheckOperation,
 ) (bool, error) {
-	log := dlog.FromCtx(ctx).With("function", "evaluateMockOperation")
+	log := logging.FromCtx(ctx).With("function", "evaluateMockOperation")
 	params, err := types.DecodeThresholdParams(op.Params)
 	if err != nil {
 		log.Errorw("evaluateMockOperation: failed to decode threshold params", "error", err)
@@ -193,7 +193,7 @@ func (e *Evaluator) evaluateIsEntitledOperation(
 	op *types.CheckOperation,
 	linkedWallets []common.Address,
 ) (bool, error) {
-	log := dlog.FromCtx(ctx).With("function", "evaluateIsEntitledOperation")
+	log := logging.FromCtx(ctx).With("function", "evaluateIsEntitledOperation")
 	client, err := e.clients.Get(op.ChainID.Uint64())
 	if err != nil {
 		log.Errorw("Chain ID not found", "chainID", op.ChainID)
@@ -241,7 +241,7 @@ func (e *Evaluator) evaluateEthBalanceOperation(
 	op *types.CheckOperation,
 	linkedWallets []common.Address,
 ) (bool, error) {
-	log := dlog.FromCtx(ctx).With("function", "evaluateEthBalanceOperation")
+	log := logging.FromCtx(ctx).With("function", "evaluateEthBalanceOperation")
 
 	// Accumulator for the total balance across all chains.
 	total := big.NewInt(0)
@@ -293,7 +293,7 @@ func (e *Evaluator) evaluateErc20Operation(
 	op *types.CheckOperation,
 	linkedWallets []common.Address,
 ) (bool, error) {
-	log := dlog.FromCtx(ctx).With("function", "evaluateErc20Operation")
+	log := logging.FromCtx(ctx).With("function", "evaluateErc20Operation")
 	client, err := e.clients.Get(op.ChainID.Uint64())
 	if err != nil {
 		log.Errorw("Chain ID not found", "chainID", op.ChainID)
@@ -353,7 +353,7 @@ func (e *Evaluator) evaluateErc721Operation(
 	op *types.CheckOperation,
 	linkedWallets []common.Address,
 ) (bool, error) {
-	log := dlog.FromCtx(ctx).With("function", "evaluateErc721Operation")
+	log := logging.FromCtx(ctx).With("function", "evaluateErc721Operation")
 
 	client, err := e.clients.Get(op.ChainID.Uint64())
 	if err != nil {
@@ -406,7 +406,7 @@ func (e *Evaluator) evaluateErc1155Operation(
 	op *types.CheckOperation,
 	linkedWallets []common.Address,
 ) (bool, error) {
-	log := dlog.FromCtx(ctx).With("function", "evaluateErc1155Operation")
+	log := logging.FromCtx(ctx).With("function", "evaluateErc1155Operation")
 
 	client, err := e.clients.Get(op.ChainID.Uint64())
 	if err != nil {

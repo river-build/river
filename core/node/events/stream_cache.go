@@ -15,8 +15,8 @@ import (
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/registries"
 	. "github.com/river-build/river/core/node/shared"
@@ -181,7 +181,7 @@ func (s *streamCacheImpl) onBlockWithLogs(ctx context.Context, blockNum crypto.B
 	streamEvents, errs := s.params.Registry.FilterStreamEvents(ctx, logs)
 	// Process parsed stream events even if some failed to parse
 	for _, err := range errs {
-		dlog.FromCtx(ctx).Errorw("Failed to parse stream event", "err", err)
+		logging.FromCtx(ctx).Errorw("Failed to parse stream event", "err", err)
 	}
 
 	// TODO: parallel processing?
@@ -219,7 +219,7 @@ func (s *streamCacheImpl) onStreamAllocated(
 		stream.nodesLocked.Reset(event.Nodes, s.params.Wallet.Address)
 		stream, created, err := s.createStreamStorage(ctx, stream, event.GenesisMiniblock)
 		if err != nil {
-			dlog.FromCtx(ctx).Errorw("Failed to allocate stream", "err", err, "streamId", stream.streamId)
+			logging.FromCtx(ctx).Errorw("Failed to allocate stream", "err", err, "streamId", stream.streamId)
 		}
 		if created && len(otherEvents) > 0 {
 			stream.applyStreamEvents(ctx, otherEvents, blockNum)
@@ -232,7 +232,7 @@ func (s *streamCacheImpl) Params() *StreamCacheParams {
 }
 
 func (s *streamCacheImpl) runCacheCleanup(ctx context.Context) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	for {
 		pollInterval := s.params.ChainConfig.Get().StreamCachePollIntterval
@@ -258,7 +258,7 @@ type CacheCleanupResult struct {
 
 func (s *streamCacheImpl) CacheCleanup(ctx context.Context, enabled bool, expiration time.Duration) CacheCleanupResult {
 	var (
-		log    = dlog.FromCtx(ctx)
+		log    = logging.FromCtx(ctx)
 		result CacheCleanupResult
 	)
 

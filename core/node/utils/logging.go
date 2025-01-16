@@ -8,13 +8,13 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 )
 
 // NewHttpLogger returns a logger that print TLS handshake errors on debug level
 // and everything else on warn level.
 func NewHttpLogger(ctx context.Context) *log.Logger {
-	l := dlog.FromCtx(ctx)
+	l := logging.FromCtx(ctx)
 
 	return log.New(&handlerWriter{log: l.Named("http-logger")}, "", 0)
 }

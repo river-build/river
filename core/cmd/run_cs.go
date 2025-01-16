@@ -13,7 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 )
 
 func keyboardInput(input chan rune) {
@@ -41,7 +41,7 @@ func runClientSimulator() error {
 	bc := context.Background()
 	pid := os.Getpid()
 
-	log := dlog.FromCtx(bc).With("pid", pid)
+	log := logging.FromCtx(bc).With("pid", pid)
 	log.Infow("Main started")
 	input := make(chan rune)
 

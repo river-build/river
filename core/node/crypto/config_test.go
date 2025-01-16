@@ -14,7 +14,7 @@ import (
 
 	"github.com/river-build/river/core/contracts/river"
 	"github.com/river-build/river/core/node/base/test"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 )
 
 func TestOnChainConfigSettingMultipleActiveBlockValues(t *testing.T) {
@@ -310,7 +310,7 @@ func noColorLogger() *zap.SugaredLogger {
 func TestDecoder(t *testing.T) {
 	require := require.New(t)
 	ctx, cancel := test.NewTestContext()
-	ctx = dlog.CtxWithLog(ctx, noColorLogger())
+	ctx = logging.CtxWithLog(ctx, noColorLogger())
 	defer cancel()
 
 	configMap := make(map[string]interface{})

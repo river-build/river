@@ -22,8 +22,8 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/river-build/river/core/config"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/notifications/push"
 	"github.com/river-build/river/core/node/notifications/types"
 	. "github.com/river-build/river/core/node/protocol"
@@ -77,7 +77,7 @@ func NewNotificationMessageProcessor(
 		notifier:               notifier,
 		cache:                  userPreferences,
 		subscriptionExpiration: subscriptionExpiration,
-		log:                    dlog.FromCtx(ctx),
+		log:                    logging.FromCtx(ctx),
 	}
 }
 

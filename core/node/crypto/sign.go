@@ -19,7 +19,7 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 )
 
@@ -93,7 +93,7 @@ type Wallet struct {
 }
 
 func NewWallet(ctx context.Context) (*Wallet, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	key, err := crypto.GenerateKey()
 	if err != nil {
@@ -119,7 +119,7 @@ func NewWallet(ctx context.Context) (*Wallet, error) {
 }
 
 func NewWalletFromPrivKey(ctx context.Context, privKey string) (*Wallet, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	privKey = strings.TrimPrefix(privKey, "0x")
 
@@ -159,7 +159,7 @@ func NewWalletFromEnv(ctx context.Context, envVar string) (*Wallet, error) {
 }
 
 func LoadWallet(ctx context.Context, filename string) (*Wallet, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	key, err := crypto.LoadECDSA(filename)
 	if err != nil {
@@ -187,7 +187,7 @@ func (w *Wallet) SaveWallet(
 	addressFilename string,
 	overwrite bool,
 ) error {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	openFlags := os.O_WRONLY | os.O_CREATE | os.O_EXCL
 	if overwrite {

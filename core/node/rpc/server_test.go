@@ -8,8 +8,8 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	. "github.com/river-build/river/core/node/shared"
@@ -19,7 +19,7 @@ func TestServerShutdown(t *testing.T) {
 	tester := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
 	ctx := tester.ctx
 	require := tester.require
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	stub := tester.testClient(0)
 	url := tester.nodes[0].url

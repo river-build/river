@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/river-build/river/core/contracts/base"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 )
 
 type Entitlement struct {
@@ -31,7 +31,7 @@ func MarshalEntitlement(
 	ctx context.Context,
 	rawEntitlement base.IEntitlementDataQueryableBaseEntitlementData,
 ) (Entitlement, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	log.Debugf(
 		"Marshalling entitlement data",
 		"entitlement_data", rawEntitlement.EntitlementData,

@@ -11,9 +11,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/river-build/river/core/contracts/river"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/registries"
 	"github.com/river-build/river/core/node/shared"
@@ -113,7 +113,7 @@ func (tracker *StreamsTracker) Run(ctx context.Context) error {
 	// load streams and distribute streams by hashing the stream id over buckets and assign each bucket
 	// to a worker to process stream updates.
 	var (
-		log                   = dlog.FromCtx(ctx)
+		log                   = logging.FromCtx(ctx)
 		validNodes            = tracker.nodeRegistries[0].GetValidNodeAddresses()
 		streamsLoaded         = 0
 		totalStreams          = 0

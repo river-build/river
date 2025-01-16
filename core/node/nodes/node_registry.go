@@ -14,7 +14,7 @@ import (
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/registries"
@@ -54,7 +54,7 @@ func LoadNodeRegistry(
 	httpClient *http.Client,
 	connectOtelIterceptor *otelconnect.Interceptor,
 ) (*nodeRegistryImpl, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	nodes, err := contract.GetAllNodes(ctx, appliedBlockNum)
 	if err != nil {
@@ -152,7 +152,7 @@ func (n *nodeRegistryImpl) addNode(addr common.Address, url string, status uint8
 
 // OnNodeAdded can apply INodeRegistry::NodeAdded event against the in-memory node registry.
 func (n *nodeRegistryImpl) OnNodeAdded(ctx context.Context, event types.Log) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	var e river.NodeRegistryV1NodeAdded
 	if err := n.contract.NodeRegistry.BoundContract().UnpackLog(&e, "NodeAdded", event); err != nil {
@@ -182,7 +182,7 @@ func (n *nodeRegistryImpl) OnNodeAdded(ctx context.Context, event types.Log) {
 
 // OnNodeRemoved can apply INodeRegistry::NodeRemoved event against the in-memory node registry.
 func (n *nodeRegistryImpl) OnNodeRemoved(ctx context.Context, event types.Log) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	var e river.NodeRegistryV1NodeRemoved
 	if err := n.contract.NodeRegistry.BoundContract().UnpackLog(&e, "NodeRemoved", event); err != nil {
@@ -204,7 +204,7 @@ func (n *nodeRegistryImpl) OnNodeRemoved(ctx context.Context, event types.Log) {
 
 // OnNodeStatusUpdated can apply INodeRegistry::NodeStatusUpdated event against the in-memory node registry.
 func (n *nodeRegistryImpl) OnNodeStatusUpdated(ctx context.Context, event types.Log) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	var e river.NodeRegistryV1NodeStatusUpdated
 	if err := n.contract.NodeRegistry.BoundContract().UnpackLog(&e, "NodeStatusUpdated", event); err != nil {
@@ -228,7 +228,7 @@ func (n *nodeRegistryImpl) OnNodeStatusUpdated(ctx context.Context, event types.
 
 // OnNodeUrlUpdated can apply INodeRegistry::NodeUrlUpdated events against the in-memory node registry.
 func (n *nodeRegistryImpl) OnNodeUrlUpdated(ctx context.Context, event types.Log) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	var e river.NodeRegistryV1NodeUrlUpdated
 	if err := n.contract.NodeRegistry.BoundContract().UnpackLog(&e, "NodeUrlUpdated", event); err != nil {

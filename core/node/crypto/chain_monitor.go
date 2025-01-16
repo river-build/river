@@ -10,8 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/logging"
 )
 
 type (
@@ -225,7 +225,7 @@ func (cm *chainMonitor) Start(
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 	if cm.started {
-		dlog.FromCtx(ctx).Errorw("chain monitor already started")
+		logging.FromCtx(ctx).Errorw("chain monitor already started")
 		return
 	}
 	cm.started = true
@@ -273,7 +273,7 @@ func (cm *chainMonitor) runWithBlockPeriod(
 	)
 
 	var (
-		log                   = dlog.FromCtx(ctx)
+		log                   = logging.FromCtx(ctx)
 		one                   = big.NewInt(1)
 		pollInterval          = time.Duration(0)
 		poll                  = NewChainMonitorPollIntervalCalculator(blockPeriod, 30*time.Second)

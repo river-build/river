@@ -9,7 +9,7 @@ import (
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 )
 
@@ -34,7 +34,7 @@ func NewBlockchainClientPool(
 	cfg *config.Config,
 	onChainCfg crypto.OnChainConfiguration,
 ) (BlockchainClientPool, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	clients := make(map[uint64]crypto.BlockchainClient)
 	// TODO: This is not creating errors if a client cannot be created for the sake of maintaining
 	// data availability on the network. As soon as replicated streams reaches maturity on external

@@ -1,5 +1,5 @@
 // See [conventions.md](../conventions.md) for usage examples.
-// TODO: use formatter for dlog for value formatting instead of fmt.
+// TODO: use formatter for logging for value formatting instead of fmt.
 
 package base
 
@@ -341,7 +341,7 @@ func (e *RiverErrorImpl) AsConnectError() *connect.Error {
 func (e *RiverErrorImpl) ForEachTag(f func(name string, value any) bool) {
 	for _, tag := range e.NamedTags {
 		if !f(tag.Name, tag.Value) {
-		 
+			break
 		}
 	}
 }

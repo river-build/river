@@ -12,13 +12,13 @@ import (
 	"golang.org/x/net/http2"
 
 	"github.com/river-build/river/core/config"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 )
 
 // getTLSConfig returns a tls.Config with the system cert pool
 // and any additional CA certs specified in the config file.
 func getTLSConfig(ctx context.Context) *tls.Config {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	// Load the system cert pool
 	sysCerts, err := x509.SystemCertPool()
 	if err != nil {

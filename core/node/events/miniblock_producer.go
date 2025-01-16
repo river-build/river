@@ -11,7 +11,7 @@ import (
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 )
@@ -190,7 +190,7 @@ func (p *miniblockProducer) OnNewBlock(ctx context.Context, blockNum crypto.Bloc
 }
 
 func (p *miniblockProducer) scheduleCandidates(ctx context.Context, blockNum crypto.BlockNumber) []*mbJob {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	candidates := p.streamCache.GetMbCandidateStreams(ctx)
 
@@ -329,7 +329,7 @@ func combineProposals(
 	local *MiniblockProposal,
 	remote []*MiniblockProposal,
 ) (*MiniblockProposal, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	// Filter remotes that don't match local prerequisites.
 	remote = slices.DeleteFunc(remote, func(p *MiniblockProposal) bool {
 		if p.NewMiniblockNum != local.NewMiniblockNum {
@@ -594,7 +594,7 @@ func (p *miniblockProducer) jobStart(ctx context.Context, j *mbJob, forceSnapsho
 
 	candidate, replicated, err := mbProduceCandidate(ctx, p.streamCache.Params(), j.stream, forceSnapshot)
 	if err != nil {
-		dlog.FromCtx(ctx).
+		logging.FromCtx(ctx).
 			Error(
 				"MiniblockProducer: jobStart: Error creating new miniblock proposal",
 				"streamId",
@@ -617,12 +617,12 @@ func (p *miniblockProducer) jobStart(ctx context.Context, j *mbJob, forceSnapsho
 
 func (p *miniblockProducer) jobDone(ctx context.Context, j *mbJob) {
 	if !p.jobs.CompareAndDelete(j.stream.streamId, j) {
-		dlog.FromCtx(ctx).Errorw("MiniblockProducer: jobDone: job not found in jobs map", "streamId", j.stream.streamId)
+		logging.FromCtx(ctx).Errorw("MiniblockProducer: jobDone: job not found in jobs map", "streamId", j.stream.streamId)
 	}
 }
 
 func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals []*mbJob) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	if len(proposals) == 0 {
 		return

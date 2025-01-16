@@ -25,8 +25,8 @@ import (
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/logging"
 
 	contract_types "github.com/river-build/river/core/contracts/types"
 )
@@ -160,7 +160,7 @@ func New(
 	}
 
 	var (
-		log = dlog.FromCtx(ctx).
+		log = logging.FromCtx(ctx).
 			With("worker_id", workerID).
 			With("application", "xchain").
 			With("nodeAddress", wallet.Address.Hex())
@@ -276,7 +276,7 @@ func (x *xchain) Stop() {
 }
 
 func (x *xchain) Log(ctx context.Context) *zap.SugaredLogger {
-	return dlog.FromCtx(ctx).
+	return logging.FromCtx(ctx).
 		With("worker_id", x.workerID).
 		With("application", "xchain").
 		With("nodeAddress", x.baseChain.Wallet.Address.Hex())
@@ -646,7 +646,7 @@ func (x *xchain) process(
 	}
 
 	// Embed log metadata for rule evaluation logs
-	ctx = dlog.CtxWithLog(ctx, log)
+	ctx = logging.CtxWithLog(ctx, log)
 	result, err = x.evaluator.EvaluateRuleData(ctx, wallets, ruleData)
 	if err != nil {
 		log.Errorw("Failed to EvaluateRuleData", "err", err)

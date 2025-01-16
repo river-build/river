@@ -6,7 +6,7 @@ import (
 	"go.uber.org/zap"
 
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 )
 
 const (
@@ -42,7 +42,7 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log := h.log.With("requestId", id)
-	r = r.WithContext(dlog.CtxWithLog(r.Context(), log))
+	r = r.WithContext(logging.CtxWithLog(r.Context(), log))
 
 	if r.Proto != "HTTP/2.0" {
 		log.Debugw("Non HTTP/2.0 request received", "method", r.Method, "path", r.URL.Path, "protocol", r.Proto)

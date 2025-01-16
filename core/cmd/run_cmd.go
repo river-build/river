@@ -12,7 +12,7 @@ import (
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/rpc"
 	"github.com/river-build/river/core/xchain/server"
 )
@@ -24,7 +24,7 @@ func runServices(ctx context.Context, cfg *config.Config, stream bool, xchain bo
 		return err
 	}
 
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()

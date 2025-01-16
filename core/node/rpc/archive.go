@@ -11,7 +11,7 @@ import (
 
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 )
 
@@ -97,7 +97,7 @@ func StartServerInArchiveMode(
 }
 
 func RunArchive(ctx context.Context, cfg *config.Config, once bool) error {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()

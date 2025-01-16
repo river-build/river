@@ -9,7 +9,7 @@ import (
 	"connectrpc.com/connect"
 
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/protocol/protocolconnect"
@@ -479,7 +479,7 @@ func (s *Service) addEventImpl(
 	// TODO: smarter remote select? random?
 	// TODO: retry?
 	firstRemote := stream.GetStickyPeer()
-	dlog.FromCtx(ctx).Debugw("Forwarding request", "nodeAddress", firstRemote)
+	logging.FromCtx(ctx).Debugw("Forwarding request", "nodeAddress", firstRemote)
 	stub, err := s.nodeRegistry.GetStreamServiceClientForAddress(firstRemote)
 	if err != nil {
 		return nil, err

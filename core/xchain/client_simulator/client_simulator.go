@@ -14,7 +14,7 @@ import (
 	contract_types "github.com/river-build/river/core/contracts/types"
 
 	node_crypto "github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 
 	"github.com/river-build/river/core/contracts/base"
 	"github.com/river-build/river/core/contracts/base/deploy"
@@ -204,7 +204,7 @@ func (cs *clientSimulator) Start(ctx context.Context) {
 		},
 	)
 
-	dlog.FromCtx(ctx).
+	logging.FromCtx(ctx).
 		With("application", "clientSimulator").
 		Info("check requested topics", "topics", cs.checkerABI.Events["EntitlementCheckRequested"].ID)
 
@@ -219,7 +219,7 @@ func (cs *clientSimulator) Start(ctx context.Context) {
 }
 
 func (cs *clientSimulator) executeCheck(ctx context.Context, ruleData *deploy.IRuleEntitlementBaseRuleData) error {
-	log := dlog.FromCtx(ctx).With("application", "clientSimulator")
+	log := logging.FromCtx(ctx).With("application", "clientSimulator")
 	log.Infow("ClientSimulator executing check", "ruleData", ruleData, "cfg", cs.cfg)
 
 	pendingTx, err := cs.baseChain.TxPool.Submit(
@@ -270,7 +270,7 @@ func (cs *clientSimulator) executeCheck(ctx context.Context, ruleData *deploy.IR
 }
 
 func (cs *clientSimulator) executeV2Check(ctx context.Context, ruleData *deploy.IRuleEntitlementBaseRuleDataV2) error {
-	log := dlog.FromCtx(ctx).With("application", "clientSimulator")
+	log := logging.FromCtx(ctx).With("application", "clientSimulator")
 	log.Infow("ClientSimulator executing v2 check", "ruleData", ruleData, "cfg", cs.cfg)
 
 	pendingTx, err := cs.baseChain.TxPool.Submit(
@@ -321,7 +321,7 @@ func (cs *clientSimulator) executeV2Check(ctx context.Context, ruleData *deploy.
 }
 
 func (cs *clientSimulator) waitForNextRequest(ctx context.Context) ([32]byte, error) {
-	log := dlog.FromCtx(ctx).With("application", "clientSimulator")
+	log := logging.FromCtx(ctx).With("application", "clientSimulator")
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*60)
 	defer cancel()
@@ -340,7 +340,7 @@ func (cs *clientSimulator) waitForNextRequest(ctx context.Context) ([32]byte, er
 }
 
 func (cs *clientSimulator) waitForPostResult(ctx context.Context, txnId [32]byte) (bool, error) {
-	log := dlog.FromCtx(ctx).With("application", "clientSimulator")
+	log := logging.FromCtx(ctx).With("application", "clientSimulator")
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*60)
 	defer cancel()
@@ -380,7 +380,7 @@ func (cs *clientSimulator) onEntitlementCheckResultPosted(
 	postedResults chan postResult,
 ) {
 	entitlementCheckResultPosted := base.IEntitlementGatedEntitlementCheckResultPosted{}
-	log := dlog.FromCtx(ctx).With("application", "clientSimulator").With("function", "onEntitlementCheckResultPosted")
+	log := logging.FromCtx(ctx).With("application", "clientSimulator").With("function", "onEntitlementCheckResultPosted")
 
 	log.Infow(
 		"Unpacking EntitlementCheckResultPosted event",
@@ -412,7 +412,7 @@ func (cs *clientSimulator) onEntitlementCheckRequested(
 	checkRequests chan [32]byte,
 ) {
 	entitlementCheckRequest := base.IEntitlementCheckerEntitlementCheckRequested{}
-	log := dlog.FromCtx(ctx).With("application", "clientSimulator").With("function", "onEntitlementCheckRequested")
+	log := logging.FromCtx(ctx).With("application", "clientSimulator").With("function", "onEntitlementCheckRequested")
 
 	log.Infow(
 		"Unpacking EntitlementCheckRequested event",
@@ -507,7 +507,7 @@ func convertRuleDataV2FromBaseToDeploy(
 }
 
 func (cs *clientSimulator) awaitNextResult(ctx context.Context) (bool, error) {
-	log := dlog.FromCtx(ctx).With("application", "clientSimulator").With("function", "waitForNextRequest")
+	log := logging.FromCtx(ctx).With("application", "clientSimulator").With("function", "waitForNextRequest")
 	log.Infow("ClientSimulator waiting for request to publish")
 	txId, err := cs.waitForNextRequest(ctx)
 	if err != nil {
@@ -536,7 +536,7 @@ func (cs *clientSimulator) EvaluateRuleDataV2(
 ) (bool, error) {
 	ruleData := convertRuleDataV2FromBaseToDeploy(baseRuleData)
 
-	log := dlog.FromCtx(ctx).With("application", "clientSimulator")
+	log := logging.FromCtx(ctx).With("application", "clientSimulator")
 	log.Infow("ClientSimulator evaluating rule data v2", "ruleData", ruleData)
 
 	err := cs.executeV2Check(ctx, &ruleData)
@@ -554,7 +554,7 @@ func (cs *clientSimulator) EvaluateRuleData(
 ) (bool, error) {
 	ruleData := convertRuleDataFromBaseToDeploy(baseRuleData)
 
-	log := dlog.FromCtx(ctx).With("application", "clientSimulator")
+	log := logging.FromCtx(ctx).With("application", "clientSimulator")
 	log.Infow("ClientSimulator evaluating rule data", "ruleData", ruleData)
 
 	err := cs.executeCheck(ctx, &ruleData)
@@ -569,7 +569,7 @@ func RunClientSimulator(ctx context.Context, cfg *config.Config, wallet *node_cr
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	log := dlog.FromCtx(ctx).With("application", "clientSimulator")
+	log := logging.FromCtx(ctx).With("application", "clientSimulator")
 	log.Infow("--- ClientSimulator starting", "simType", simType)
 
 	cs, err := New(ctx, cfg, nil, wallet)

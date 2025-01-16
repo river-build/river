@@ -13,7 +13,7 @@ import (
 	"github.com/river-build/river/core/contracts/base"
 	"github.com/river-build/river/core/contracts/types"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/xchain/bindings/erc721"
 	"github.com/river-build/river/core/xchain/bindings/ierc5313"
@@ -177,7 +177,7 @@ func (sc *SpaceContractV3) marshalEntitlements(
 	ctx context.Context,
 	entitlementData []base.IEntitlementDataQueryableBaseEntitlementData,
 ) ([]types.Entitlement, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	entitlements := make([]types.Entitlement, len(entitlementData))
 
 	for i, rawEntitlement := range entitlementData {
@@ -196,7 +196,7 @@ func (sc *SpaceContractV3) IsBanned(
 	spaceId shared.StreamId,
 	linkedWallets []common.Address,
 ) (bool, error) {
-	log := dlog.FromCtx(ctx).With("function", "SpaceContractV3.IsBanned")
+	log := logging.FromCtx(ctx).With("function", "SpaceContractV3.IsBanned")
 	space, err := sc.getSpace(ctx, spaceId)
 	if err != nil {
 		log.Warnw("Failed to get space", "space_id", spaceId, "error", err)
@@ -219,7 +219,7 @@ func (sc *SpaceContractV3) GetChannelEntitlementsForPermission(
 	channelId shared.StreamId,
 	permission Permission,
 ) ([]types.Entitlement, common.Address, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	// get the channel entitlements and check if user is entitled.
 	space, err := sc.getSpace(ctx, spaceId)
 	if err != nil {
@@ -283,7 +283,7 @@ func (sc *SpaceContractV3) GetSpaceEntitlementsForPermission(
 	spaceId shared.StreamId,
 	permission Permission,
 ) ([]types.Entitlement, common.Address, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	// get the space entitlements and check if user is entitled.
 	space, err := sc.getSpace(ctx, spaceId)
 	if err != nil {

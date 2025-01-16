@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/river-build/river/core/node/base/test"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/testutils/testfmt"
 )
@@ -18,7 +18,7 @@ import (
 func TestRiverError(t *testing.T) {
 	ctx, cancel := test.NewTestContext()
 	defer cancel()
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	e := RiverError(
 		protocol.Err_INVALID_ARGUMENT,

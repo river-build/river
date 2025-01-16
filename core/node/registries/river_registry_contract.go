@@ -18,7 +18,7 @@ import (
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 )
@@ -68,7 +68,7 @@ func initContract[T any](
 	map[common.Hash]*EventInfo,
 	error,
 ) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	contract, err := maker(address, backend)
 	if err != nil {
@@ -196,7 +196,7 @@ func (c *RiverRegistryContract) AllocateStream(
 	genesisMiniblockHash common.Hash,
 	genesisMiniblock []byte,
 ) error {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	pendingTx, err := c.Blockchain.TxPool.Submit(
 		ctx,
@@ -392,7 +392,7 @@ func (c *RiverRegistryContract) forAllStreamsSingle(
 	blockNum crypto.BlockNumber,
 	cb func(*GetStreamResult) bool,
 ) error {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	pageSize := int64(c.Settings.PageSize)
 	if pageSize <= 0 {
 		pageSize = 5000
@@ -471,7 +471,7 @@ func (c *RiverRegistryContract) forAllStreamsParallel(
 	blockNum crypto.BlockNumber,
 	cb func(*GetStreamResult) bool,
 ) error {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	ctx, cancelCtx := context.WithCancel(ctx)
 	defer cancelCtx()
 
@@ -608,7 +608,7 @@ func (c *RiverRegistryContract) SetStreamLastMiniblockBatch(
 	ctx context.Context, mbs []river.SetMiniblock,
 ) ([]StreamId, []StreamId, error) {
 	var (
-		log     = dlog.FromCtx(ctx)
+		log     = logging.FromCtx(ctx)
 		success []StreamId
 		failed  []StreamId
 	)
@@ -813,7 +813,7 @@ func (c *RiverRegistryContract) OnStreamEvent(
 		func(ctx context.Context, log types.Log) {
 			parsed, err := c.ParseEvent(ctx, c.StreamRegistry.BoundContract(), c.StreamEventInfo, &log)
 			if err != nil {
-				dlog.FromCtx(ctx).Errorw("Failed to parse event", "err", err, "log", log)
+				logging.FromCtx(ctx).Errorw("Failed to parse event", "err", err, "log", log)
 				return
 			}
 			switch e := parsed.(type) {
@@ -824,7 +824,7 @@ func (c *RiverRegistryContract) OnStreamEvent(
 			case *river.StreamRegistryV1StreamPlacementUpdated:
 				placementUpdated(ctx, e)
 			default:
-				dlog.FromCtx(ctx).Errorw("Unknown event type", "event", e)
+				logging.FromCtx(ctx).Errorw("Unknown event type", "event", e)
 			}
 		})
 	return nil

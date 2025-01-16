@@ -1,4 +1,4 @@
-package dlog_test
+package logging_test
 
 import (
 	"encoding/hex"
@@ -96,7 +96,7 @@ func TestByteType(t *testing.T) {
 	t.Skip("TODO - implement in zap")
 	assert := assert.New(t)
 
-	log, buf := testutils.DlogTextLogger()
+	log, buf := testutils.ZapJsonLogger()
 
 	b := byteArray{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	log.Infow("byte array", "byte_array", b)
@@ -107,7 +107,7 @@ func TestCommonAddress(t *testing.T) {
 	t.Skip("TODO - implement in zap")
 	assert := assert.New(t)
 
-	log, buf := testutils.DlogTextLogger()
+	log, buf := testutils.ZapJsonLogger()
 
 	b := common.Address{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	log.Infow("byte array", "byte_array", b)
@@ -117,7 +117,7 @@ func TestCommonAddress(t *testing.T) {
 func TestMapWithCommonAddress(t *testing.T) {
 	assert := assert.New(t)
 
-	log, buf := testutils.DlogTextLogger()
+	log, buf := testutils.ZapJsonLogger()
 
 	mm := map[common.Address]string{
 		{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}:          "hello",
@@ -125,7 +125,6 @@ func TestMapWithCommonAddress(t *testing.T) {
 	}
 
 	log.Infow("byte array", "map", mm)
-	log.Sync()
 
 	assert.Contains(buf.String(), "0102030405060708090a00000000000000000000")
 	assert.Contains(buf.String(), "0b0c0d0e0f101112131400000000000000000000")
@@ -145,7 +144,7 @@ func TestShortHex(t *testing.T) {
 	t.Skip("TODO - implement in zap")
 	assert := assert.New(t)
 
-	log, buf := testutils.DlogTextLogger()
+	log, buf := testutils.ZapJsonLogger()
 
 	type testParams struct {
 		arg      any

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -47,7 +47,7 @@ func ConvertHTTPToWebSocket(httpURL string) (string, error) {
 const requiredBalance = 10000000000000000 // 0.01 ETH in Wei
 
 func WaitUntilWalletFunded(ctx context.Context, wsEndpoint string, walletAddress common.Address) error {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	// Connect to the client using WebSocket for live subscription
 	rpcClient, err := rpc.DialContext(ctx, wsEndpoint)
@@ -100,7 +100,7 @@ func WaitUntilWalletFunded(ctx context.Context, wsEndpoint string, walletAddress
 }
 
 func WaitForTransaction(client *ethclient.Client, tx *types.Transaction) *big.Int {
-	log := dlog.FromCtx(context.Background())
+	log := logging.FromCtx(context.Background())
 	for {
 		receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
 		if err != nil {

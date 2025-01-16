@@ -23,10 +23,10 @@ import (
 	"github.com/river-build/river/core/node/auth"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/http_client"
 	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/notifications"
 	. "github.com/river-build/river/core/node/protocol"
@@ -213,19 +213,19 @@ func (s *Service) initInstance(mode string, opts *ServerStartOpts) {
 	}
 
 	if !s.config.Log.Simplify {
-		s.defaultLogger = dlog.FromCtx(s.serverCtx).With(
+		s.defaultLogger = logging.FromCtx(s.serverCtx).With(
 			"instanceId", s.instanceId,
 			"mode", mode,
 			"nodeType", "stream",
 		)
 	} else {
 		if s.config.Port != 0 {
-			s.defaultLogger = dlog.FromCtx(s.serverCtx).With(
+			s.defaultLogger = logging.FromCtx(s.serverCtx).With(
 				"port", s.config.Port,
 			)
 		}
 	}
-	s.serverCtx = dlog.CtxWithLog(s.serverCtx, s.defaultLogger)
+	s.serverCtx = logging.CtxWithLog(s.serverCtx, s.defaultLogger)
 
 	var (
 		vapidPrivateKey        = s.config.Notifications.Web.Vapid.PrivateKey
@@ -278,7 +278,7 @@ func (s *Service) initWallet() error {
 	// Add node address info to the logger
 	if !s.config.Log.Simplify {
 		s.defaultLogger = s.defaultLogger.With("nodeAddress", wallet.Address.Hex())
-		s.serverCtx = dlog.CtxWithLog(ctx, s.defaultLogger)
+		s.serverCtx = logging.CtxWithLog(ctx, s.defaultLogger)
 		zap.ReplaceGlobals(s.defaultLogger.Desugar())
 	}
 
@@ -451,7 +451,7 @@ func (s *Service) loadTLSConfig() (*tls.Config, error) {
 
 func (s *Service) runHttpServer() error {
 	ctx := s.serverCtx
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	cfg := s.config
 
 	var address string

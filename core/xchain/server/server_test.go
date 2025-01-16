@@ -31,7 +31,7 @@ import (
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
 	node_crypto "github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/testutils/testfmt"
 
 	contract_types "github.com/river-build/river/core/contracts/types"
@@ -84,9 +84,9 @@ func silentLogger() *zap.SugaredLogger {
 func newServiceTester(numNodes int, require *require.Assertions) *serviceTester {
 	ctx, cancel := test.NewTestContext()
 	// Comment out to silence xchain and client simulator logs. Chain monitoring logs are still visible.
-	ctx = dlog.CtxWithLog(ctx, noColorLogger())
+	ctx = logging.CtxWithLog(ctx, noColorLogger())
 
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	log.Infow("Creating service tester")
 
 	st := &serviceTester{
@@ -111,7 +111,7 @@ func newServiceTester(numNodes int, require *require.Assertions) *serviceTester 
 
 func (st *serviceTester) deployXchainTestContracts() {
 	var (
-		log                   = dlog.FromCtx(st.ctx)
+		log                   = logging.FromCtx(st.ctx)
 		approvedNodeOperators []common.Address
 	)
 	for _, w := range st.btc.Wallets {
@@ -165,7 +165,7 @@ func (st *serviceTester) deployXchainTestContracts() {
 	// Commit all deploys
 	st.btc.Commit(st.ctx)
 
-	log = dlog.FromCtx(st.ctx)
+	log = logging.FromCtx(st.ctx)
 	log.Infow(
 		"Contracts deployed",
 		"entitlementChecker",
@@ -198,7 +198,7 @@ func (st *serviceTester) Close() {
 		if node.svr != nil {
 			node.svr.Stop()
 		} else {
-			log := dlog.FromCtx(st.ctx)
+			log := logging.FromCtx(st.ctx)
 			log.Warnw("Skipping srv Stop, node wasn't started")
 		}
 	}
@@ -527,7 +527,7 @@ func TestErc721Entitlements(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			ctx, cancel := test.NewTestContext()
-			ctx = dlog.CtxWithLog(ctx, noColorLogger())
+			ctx = logging.CtxWithLog(ctx, noColorLogger())
 			defer cancel()
 
 			require := require.New(t)
@@ -1007,7 +1007,7 @@ func TestEthBalance(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			ctx, cancel := test.NewTestContext()
-			ctx = dlog.CtxWithLog(ctx, noColorLogger())
+			ctx = logging.CtxWithLog(ctx, noColorLogger())
 			defer cancel()
 
 			require := require.New(t)

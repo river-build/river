@@ -14,9 +14,9 @@ import (
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/registries"
@@ -213,7 +213,7 @@ func (a *Archiver) getCorruptStreams(ctx context.Context) map[StreamId]*ArchiveS
 			if ok && stream.corrupt.Load() {
 				corruptStreams[stream.streamId] = stream
 			} else if !ok {
-				dlog.FromCtx(ctx).
+				logging.FromCtx(ctx).
 					Error("Unexpected value stored in stream cache (not an ArchiveStream)", "value", value)
 			}
 
@@ -233,7 +233,7 @@ func (a *Archiver) addNewStream(
 	_, loaded := a.streams.LoadOrStore(streamId, NewArchiveStream(streamId, nn, lastKnownMiniblock))
 	if loaded {
 		// TODO: Double notification, shouldn't happen.
-		dlog.FromCtx(ctx).
+		logging.FromCtx(ctx).
 			Error("Stream already exists in archiver map", "streamId", streamId, "lastKnownMiniblock", lastKnownMiniblock)
 		return
 	}
@@ -247,7 +247,7 @@ func (a *Archiver) addNewStream(
 // since the last time the stream was archived into storage.  It creates a new stream for
 // streams that have not yet been seen.
 func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) error {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	if !stream.mu.TryLock() {
 		// Reschedule with delay.
@@ -431,7 +431,7 @@ func (a *Archiver) emitPeriodicCorruptStreamReport(ctx context.Context) {
 				builder.WriteString(as.streamId.String())
 				builder.WriteString("\n")
 			}
-			dlog.FromCtx(ctx).
+			logging.FromCtx(ctx).
 				Info("Corrupt streams report", "total", len(corruptStreams), "streams", builder.String())
 		}
 	}
@@ -450,7 +450,7 @@ func (a *Archiver) startImpl(ctx context.Context, once bool, metrics infra.Metri
 	if once {
 		a.tasksWG = &sync.WaitGroup{}
 	} else if metrics != nil {
-		dlog.FromCtx(ctx).Infow("Setting up metrics")
+		logging.FromCtx(ctx).Infow("Setting up metrics")
 		a.setupStatisticsMetrics(metrics)
 	}
 
@@ -466,7 +466,7 @@ func (a *Archiver) startImpl(ctx context.Context, once bool, metrics infra.Metri
 		return err
 	}
 
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	log.Infow(
 		"Reading stream registry for contract state of streams",
 		"blockNum",
@@ -529,7 +529,7 @@ func (a *Archiver) onStreamPlacementUpdated(
 	id := StreamId(event.StreamId)
 	record, loaded := a.streams.Load(id)
 	if !loaded {
-		dlog.FromCtx(ctx).Errorw("onStreamPlacementUpdated: Stream not found in map", "streamId", id)
+		logging.FromCtx(ctx).Errorw("onStreamPlacementUpdated: Stream not found in map", "streamId", id)
 		return
 	}
 	stream := record.(*ArchiveStream)
@@ -545,7 +545,7 @@ func (a *Archiver) onStreamLastMiniblockUpdated(
 	id := StreamId(event.StreamId)
 	record, loaded := a.streams.Load(id)
 	if !loaded {
-		dlog.FromCtx(ctx).Errorw("onStreamLastMiniblockUpdated: Stream not found in map", "streamId", id)
+		logging.FromCtx(ctx).Errorw("onStreamLastMiniblockUpdated: Stream not found in map", "streamId", id)
 		return
 	}
 	stream := record.(*ArchiveStream)
@@ -581,7 +581,7 @@ func (a *Archiver) GetStats() *ArchiverStats {
 }
 
 func (a *Archiver) worker(ctx context.Context) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	defer a.workersWG.Done()
 

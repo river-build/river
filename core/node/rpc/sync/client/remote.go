@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	. "github.com/river-build/river/core/node/shared"
@@ -61,7 +61,7 @@ func newRemoteSyncer(
 		return nil, responseStream.Err()
 	}
 
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	if responseStream.Msg().GetSyncOp() != SyncOp_SYNC_NEW || responseStream.Msg().GetSyncId() == "" {
 		log.Errorw("Received unexpected sync stream message",
@@ -95,7 +95,7 @@ func newRemoteSyncer(
 }
 
 func (s *remoteSyncer) Run() {
-	log := dlog.FromCtx(s.syncStreamCtx)
+	log := logging.FromCtx(s.syncStreamCtx)
 
 	defer s.responseStream.Close()
 
@@ -179,7 +179,7 @@ func (s *remoteSyncer) sendSyncStreamResponseToClient(msg *SyncStreamsResponse) 
 // if the remote can't be reach the sync stream is canceled.
 func (s *remoteSyncer) connectionAlive(latestMsgReceived *atomic.Value) {
 	var (
-		log = dlog.FromCtx(s.syncStreamCtx)
+		log = logging.FromCtx(s.syncStreamCtx)
 		// check every pingTicker if it's time to send a ping req to remote
 		pingTicker = time.NewTicker(3 * time.Second)
 		// don't send a ping req if there was activity within recentActivityInterval

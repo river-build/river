@@ -18,7 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/shared"
@@ -143,7 +143,7 @@ func (s *Service) debugInfoMakeMiniblock(
 	ctx context.Context,
 	request *connect.Request[InfoRequest],
 ) (*connect.Response[InfoResponse], error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	if len(request.Msg.Debug) < 2 {
 		return nil, RiverError(Err_DEBUG_ERROR, "make_miniblock requires a stream id and bool")

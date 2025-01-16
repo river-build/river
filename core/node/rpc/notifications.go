@@ -13,7 +13,7 @@ import (
 
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/notifications"
 	"github.com/river-build/river/core/node/notifications/push"
@@ -42,7 +42,7 @@ func (s *Service) startNotificationMode(notifier push.MessageNotifier, opts *Ser
 
 	if notifier == nil {
 		if s.config.Notifications.Simulate {
-			dlog.FromCtx(s.serverCtx).Infow("Simulate sending notifications (dev mode)")
+			logging.FromCtx(s.serverCtx).Infow("Simulate sending notifications (dev mode)")
 			notifier = push.NewMessageNotificationsSimulator(s.metrics)
 		} else {
 			notifier, err = push.NewMessageNotifier(&s.config.Notifications, s.metrics)
@@ -148,7 +148,7 @@ func StartServerInNotificationMode(
 }
 
 func RunNotificationService(ctx context.Context, cfg *config.Config) error {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()

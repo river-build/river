@@ -17,8 +17,8 @@ import (
 	"golang.org/x/sync/semaphore"
 
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
@@ -64,7 +64,7 @@ func (s *StreamTrackerConnectGo) Run(
 	for {
 		var (
 			sticky              = remotes.GetStickyPeer()
-			log                 = dlog.FromCtx(rootCtx).With("stream", stream.StreamId, "remote", sticky)
+			log                 = logging.FromCtx(rootCtx).With("stream", stream.StreamId, "remote", sticky)
 			syncCtx, syncCancel = context.WithCancel(rootCtx)
 			lastReceivedPong    atomic.Int64
 			syncID              string

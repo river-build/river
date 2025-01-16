@@ -22,8 +22,8 @@ import (
 
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 )
 
@@ -120,7 +120,7 @@ func (s *PostgresEventStore) txRunner(
 	opts *txRunnerOpts,
 	tags ...any,
 ) error {
-	log := dlog.FromCtx(ctx).With(append(tags, "name", name, "dbSchema", s.schemaName)...)
+	log := logging.FromCtx(ctx).With(append(tags, "name", name, "dbSchema", s.schemaName)...)
 
 	if accessMode == pgx.ReadWrite {
 		// For write transactions context should not be cancelled if a client connection drops. Cancellations due to lost client connections can cause
@@ -295,7 +295,7 @@ func (s *PostgresEventStore) init(
 	migrations fs.FS,
 	migrationsPath string,
 ) error {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	setupPostgresMetrics(ctx, *poolInfo, metrics)
 
@@ -362,7 +362,7 @@ func (s *PostgresEventStore) InitStorage(ctx context.Context) error {
 }
 
 func (s *PostgresEventStore) createSchemaTx(ctx context.Context, tx pgx.Tx) error {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	// Create schema iff not exists
 	var schemaExists bool
@@ -443,7 +443,7 @@ func (s *PostgresEventStore) initStorage(ctx context.Context) error {
 
 	// Optionally run a transaction before the migrations are applied
 	if s.preMigrationTx != nil {
-		log := dlog.FromCtx(ctx)
+		log := logging.FromCtx(ctx)
 		log.Infow("Running pre-migration transaction")
 		if err := s.txRunner(
 			ctx,

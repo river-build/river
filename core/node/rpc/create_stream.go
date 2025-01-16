@@ -10,8 +10,8 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/rules"
@@ -33,7 +33,7 @@ func (s *Service) createStreamImpl(
 }
 
 func (s *Service) createStream(ctx context.Context, req *CreateStreamRequest) (*StreamAndCookie, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	streamId, err := StreamIdFromBytes(req.StreamId)
 	if err != nil {

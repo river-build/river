@@ -24,8 +24,8 @@ import (
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	river_sync "github.com/river-build/river/core/node/rpc/sync"
@@ -763,7 +763,7 @@ func testRemoveStreamsFromSync(tester *serviceTester) {
 	ctx := tester.ctx
 	require := tester.require
 	aliceClient := tester.testClient(0)
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	// create alice's wallet and streams
 	aliceWallet, _ := crypto.NewWallet(ctx)

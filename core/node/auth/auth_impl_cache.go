@@ -8,7 +8,7 @@ import (
 
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/protocol"
 
 	lru "github.com/hashicorp/golang-lru/arc/v2"
@@ -72,7 +72,7 @@ func (lwcv *linkedWalletCacheValue) IsAllowed() bool {
 }
 
 func newEntitlementCache(ctx context.Context, cfg *config.ChainConfig) (*entitlementCache, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	positiveCacheSize := 10000
 	if cfg.PositiveEntitlementCacheSize > 0 {
@@ -117,7 +117,7 @@ func newEntitlementCache(ctx context.Context, cfg *config.ChainConfig) (*entitle
 // recent value. That's why the auth_impl module busts the cache whenever IsEntitled is called with
 // the Read permission is requested, or space membership is being evaluated.
 func newLinkedWalletCache(ctx context.Context, cfg *config.ChainConfig) (*entitlementCache, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	positiveCacheSize := 50000
 	if cfg.LinkedWalletCacheSize > 0 {
@@ -157,7 +157,7 @@ func newLinkedWalletCache(ctx context.Context, cfg *config.ChainConfig) (*entitl
 }
 
 func newEntitlementManagerCache(ctx context.Context, cfg *config.ChainConfig) (*entitlementCache, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	positiveCacheSize := 10000
 	if cfg.PositiveEntitlementCacheSize > 0 {

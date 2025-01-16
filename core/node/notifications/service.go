@@ -13,9 +13,9 @@ import (
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/nodes"
 	notificationssync "github.com/river-build/river/core/node/notifications/sync"
 	"github.com/river-build/river/core/node/notifications/types"
@@ -101,7 +101,7 @@ func NewService(
 }
 
 func (s *Service) Start(ctx context.Context) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	go func() {
 		for {
@@ -439,7 +439,7 @@ func (s *Service) UnsubscribeAPN(
 		return nil, RiverError(Err_INVALID_ARGUMENT, "Invalid user id")
 	}
 
-	dlog.FromCtx(ctx).Infow("remove APN subscription", "userID", userID)
+	logging.FromCtx(ctx).Infow("remove APN subscription", "userID", userID)
 
 	if err := s.userPreferences.RemoveAPNSubscription(ctx, deviceToken, userID); err != nil {
 		return nil, err

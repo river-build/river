@@ -23,8 +23,8 @@ import (
 
 	"github.com/river-build/river/core/node/auth"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
 )
@@ -1998,7 +1998,7 @@ func (params *aeParams) isValidNode(addressOrId []byte) bool {
 }
 
 func (params *aeParams) log() *zap.SugaredLogger {
-	return dlog.FromCtx(params.ctx)
+	return logging.FromCtx(params.ctx)
 }
 
 func hasCommon(x, y []string) bool {
