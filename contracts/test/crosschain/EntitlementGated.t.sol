@@ -58,7 +58,7 @@ contract EntitlementGatedTest is
     Vm.Log[] memory requestLogs = vm.getRecordedLogs(); // Retrieve the recorded logs
 
     (
-      address walletAddress,
+      ,
       address spaceAddress,
       address resolverAddress,
       bytes32 transactionId,
