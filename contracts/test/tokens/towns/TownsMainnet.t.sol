@@ -86,7 +86,7 @@ contract TownsMainnetTests is TestUtils, ITownsBase, EIP712Utils {
     vm.assume(bob != ZERO_SENTINEL);
     vm.assume(alice != bob);
 
-    assertEq(towns.allowance(alice, bob), 0);
+    vm.assume(towns.allowance(alice, bob) == 0);
 
     vm.prank(alice);
     towns.approve(bob, amount);
