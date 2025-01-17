@@ -1,4 +1,4 @@
-import { GroupEncryptionSession, UserDeviceCollection } from './olmLib'
+import { GroupEncryptionAlgorithmId, GroupEncryptionSession, UserDeviceCollection } from './olmLib'
 
 import { EncryptionDevice } from './encryptionDevice'
 import { EncryptedData } from '@river-build/proto'
@@ -9,8 +9,10 @@ export interface IGroupEncryptionClient {
         streamId: string,
         sessions: GroupEncryptionSession[],
         devicesInRoom: UserDeviceCollection,
+        algorithm: GroupEncryptionAlgorithmId,
     ): Promise<void>
     getDevicesInStream(streamId: string): Promise<UserDeviceCollection>
+    getMiniblockInfo(streamId: string): Promise<{ miniblockNum: bigint; miniblockHash: Uint8Array }>
 }
 
 export interface IDecryptionParams {

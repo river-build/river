@@ -580,10 +580,8 @@ contract MembershipJoinSpaceTest is
   }
 
   function test_getProtocolFee() external view {
-    uint256 price = membership.getMembershipPrice();
     uint256 protocolFee = membership.getProtocolFee();
     uint256 fee = platformReqs.getMembershipFee();
-
     assertEq(protocolFee, fee);
   }
 
