@@ -126,7 +126,7 @@ export class Coordinator {
         if (!hasGroup) {
             // No group so we request joining
             // NOTE: We are enqueueing command instead of doing the async call
-            this.delegate?.scheduleJoinOrCreateGroup(streamId)
+            this.scheduleJoinOrCreateGroupWhenMlsIsEnabled(streamId)
         }
         // TODO: Refactor this to return group
         await this.awaitGroupActive(streamId)
@@ -198,7 +198,7 @@ export class Coordinator {
 
         const tryJoiningAgain = this.groupService.getGroup(streamId) === undefined
         if (tryJoiningAgain) {
-            this.delegate?.scheduleJoinOrCreateGroup(streamId)
+            this.scheduleJoinOrCreateGroupWhenMlsIsEnabled(streamId)
         }
     }
 
@@ -212,7 +212,7 @@ export class Coordinator {
 
         const tryJoiningAgain = this.groupService.getGroup(streamId) === undefined
         if (tryJoiningAgain) {
-            this.delegate?.scheduleJoinOrCreateGroup(streamId)
+            this.scheduleJoinOrCreateGroupWhenMlsIsEnabled(streamId)
         }
     }
 
@@ -349,6 +349,17 @@ export class Coordinator {
             if (this.groupService.getGroup(streamId) !== undefined) {
                 await this.groupService.clearGroup(streamId)
             }
+        }
+    }
+
+    private scheduleJoinOrCreateGroupWhenMlsIsEnabled(streamId: string): void {
+        this.log.debug('scheduleJoinOrCreateGroup', { streamId })
+        // TODO: Check if MLS is enabled in the stream
+        const stream = this.client.stream(streamId)
+        check(isDefined(stream), 'stream not found')
+        const isMlsEnabled = stream.view.membershipContent.encryptionAlgorithm === MLS_ALGORITHM
+        if (isMlsEnabled) {
+            this.delegate?.scheduleJoinOrCreateGroup(streamId)
         }
     }
 
