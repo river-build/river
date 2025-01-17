@@ -2412,7 +2412,15 @@ export class Client
             throw new Error('deviceKey must be set')
         }
 
-        this.mlsAdapter = new MlsAdapter(this.userId, deviceKey, this, this.persistenceStore, this)
+        this.mlsAdapter = new MlsAdapter(
+            this.userId,
+            deviceKey,
+            this,
+            this.persistenceStore,
+            this,
+            this,
+            { log: this.logMls },
+        )
         await this.mlsAdapter.initialize()
     }
 
