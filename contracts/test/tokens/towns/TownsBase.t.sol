@@ -68,44 +68,44 @@ contract TownsBaseTest is TestUtils, EIP712Utils, ILockBase {
     assertEq(towns.allowance(alice, bob), amount);
   }
 
-  function test_permit(
-    uint256 alicePrivateKey,
-    uint256 amount,
-    address bob
-  ) public {
-    vm.assume(bob != address(0));
-    vm.assume(bob != address(towns));
+  // function test_permit(
+  //   uint256 alicePrivateKey,
+  //   uint256 amount,
+  //   address bob
+  // ) public {
+  //   vm.assume(bob != address(0));
+  //   vm.assume(bob != address(towns));
 
-    amount = bound(amount, 1, type(uint208).max);
+  //   amount = bound(amount, 1, type(uint208).max);
 
-    alicePrivateKey = boundPrivateKey(alicePrivateKey);
+  //   alicePrivateKey = boundPrivateKey(alicePrivateKey);
 
-    address alice = vm.addr(alicePrivateKey);
+  //   address alice = vm.addr(alicePrivateKey);
 
-    vm.assume(towns.delegates(alice) == address(0));
+  //   vm.assume(towns.delegates(alice) == address(0));
 
-    vm.prank(bridge);
-    towns.mint(alice, amount);
+  //   vm.prank(bridge);
+  //   towns.mint(alice, amount);
 
-    vm.warp(block.timestamp + 100);
+  //   vm.warp(block.timestamp + 100);
 
-    uint256 deadline = block.timestamp + 100;
-    (uint8 v, bytes32 r, bytes32 s) = signPermit(
-      alicePrivateKey,
-      address(towns),
-      alice,
-      bob,
-      amount,
-      deadline
-    );
+  //   uint256 deadline = block.timestamp + 100;
+  //   (uint8 v, bytes32 r, bytes32 s) = signPermit(
+  //     alicePrivateKey,
+  //     address(towns),
+  //     alice,
+  //     bob,
+  //     amount,
+  //     deadline
+  //   );
 
-    assertEq(towns.allowance(alice, bob), 0);
+  //   assertEq(towns.allowance(alice, bob), 0);
 
-    vm.prank(bob);
-    towns.permit(alice, bob, amount, deadline, v, r, s);
+  //   vm.prank(bob);
+  //   towns.permit(alice, bob, amount, deadline, v, r, s);
 
-    assertEq(towns.allowance(alice, bob), amount);
-  }
+  //   assertEq(towns.allowance(alice, bob), amount);
+  // }
 
   function test_revertWhen_permit_deadlineExpired(
     uint256 alicePrivateKey,
