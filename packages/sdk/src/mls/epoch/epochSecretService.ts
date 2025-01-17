@@ -25,7 +25,7 @@ export class EpochSecretService {
     private epochSecretStore: IEpochSecretStore
     private cipherSuite: MlsCipherSuite
     private cache: Map<EpochSecretId, EpochSecret> = new Map()
-    private coordinator?: IEpochSecretServiceCoordinator
+    public coordinator?: IEpochSecretServiceCoordinator
     private log: {
         error: DLogger
         debug: DLogger

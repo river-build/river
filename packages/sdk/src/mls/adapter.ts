@@ -4,37 +4,116 @@ import { Message } from '@bufbuild/protobuf'
 import { EncryptedData } from '@river-build/proto'
 import { DLogger, dlog } from '@river-build/dlog'
 import { isMobileSafari } from '../utils'
-import { IQueueService } from './queue'
+import {
+    EpochSecretServiceCoordinatorAdapter,
+    GroupServiceCoordinatorAdapter,
+    QueueService,
+} from './queue'
 import { StreamEncryptionEvents } from '../streamEvents'
 import TypedEmitter from 'typed-emitter'
 import { EncryptedContent } from '../encryptedContentTypes'
-import { ICoordinator } from './coordinator'
+import { Coordinator } from './coordinator'
+import { IPersistenceStore } from '../persistenceStore'
+import { Client } from '../client'
+import { addressFromUserId } from '../id'
+import { ExternalCrypto, ExternalGroupService } from './externalGroup'
+import { GroupService, Crypto, IGroupStore, InMemoryGroupStore } from './group'
+import { EpochSecretService, IEpochSecretStore, InMemoryEpochSecretStore } from './epoch'
+import { CipherSuite as MlsCipherSuite } from '@river-build/mls-rs-wasm'
 
-const defaultLogger = dlog('csb:mls:adapter')
+const defaultLogger = dlog('csb:mls')
 
 export class MlsAdapter {
-    private encryptionEmitter?: TypedEmitter<StreamEncryptionEvents>
-    private queueService?: IQueueService
-    private coordinator?: ICoordinator
-    private log!: {
+    protected readonly userId: string
+    protected readonly userAddress: Uint8Array
+    protected readonly deviceKey: Uint8Array
+    protected readonly client: Client
+    protected readonly persistenceStore: IPersistenceStore
+    protected readonly encryptionEmitter: TypedEmitter<StreamEncryptionEvents>
+
+    protected externalCrypto: ExternalCrypto
+    protected externalGroupService: ExternalGroupService
+    protected crypto: Crypto
+    protected groupStore: IGroupStore
+    protected groupService: GroupService
+    protected cipherSuite: MlsCipherSuite
+    protected epochSecretStore: IEpochSecretStore
+    protected epochSecretService: EpochSecretService
+    protected coordinator: Coordinator
+    protected queueService: QueueService
+
+    protected log!: {
         error: DLogger
         debug: DLogger
     }
 
+    // TODO: Refactor this to a separate factory class
     public constructor(
-        coordinator?: ICoordinator,
-        queueService?: IQueueService,
-        encryptionEmitter?: TypedEmitter<StreamEncryptionEvents>,
+        userId: string,
+        deviceKey: Uint8Array,
+        client: Client,
+        persistenceStore: IPersistenceStore,
+        encryptionEmitter: TypedEmitter<StreamEncryptionEvents>,
         opts?: { log: DLogger },
     ) {
-        this.coordinator = coordinator
-        this.queueService = queueService
+        const logger = opts?.log ?? defaultLogger
+        this.userId = userId
+        this.userAddress = addressFromUserId(userId)
+        this.deviceKey = deviceKey
+        this.client = client
+        this.persistenceStore = persistenceStore
         this.encryptionEmitter = encryptionEmitter
 
-        const logger = opts?.log ?? defaultLogger
+        // External Group Service
+        this.externalCrypto = new ExternalCrypto()
+        this.externalGroupService = new ExternalGroupService(this.externalCrypto, {
+            log: logger.extend('egs'),
+        })
+
+        // Group Service
+        this.crypto = new Crypto(this.userAddress, deviceKey, { log: logger.extend('crypto') })
+        this.groupStore = new InMemoryGroupStore()
+        this.groupService = new GroupService(this.groupStore, this.crypto, undefined, {
+            log: logger.extend('gs'),
+        })
+
+        // Epoch Secret Service
+        this.cipherSuite = new MlsCipherSuite()
+        this.epochSecretStore = new InMemoryEpochSecretStore()
+        this.epochSecretService = new EpochSecretService(
+            this.cipherSuite,
+            this.epochSecretStore,
+            undefined,
+            { log: logger.extend('ess') },
+        )
+
+        // Coordinator
+        this.coordinator = new Coordinator(
+            this.userAddress,
+            this.deviceKey,
+            this.client,
+            this.persistenceStore,
+            this.externalGroupService,
+            this.groupService,
+            this.epochSecretService,
+            undefined,
+            { log: logger.extend('coordinator') },
+        )
+
+        // Queue
+        this.queueService = new QueueService(this.coordinator, { log: logger.extend('queue') })
+
+        // Hook up delegates
+        this.coordinator.queueService = this.queueService
+        this.groupService.coordinator = new GroupServiceCoordinatorAdapter(this.queueService)
+        this.epochSecretService.coordinator = new EpochSecretServiceCoordinatorAdapter(
+            this.queueService,
+        )
+
+        const adapterLogger = logger.extend('adapter')
         this.log = {
-            debug: logger.extend('debug'),
-            error: logger.extend('error'),
+            debug: adapterLogger.extend('debug'),
+            error: adapterLogger.extend('error'),
         }
     }
 
@@ -150,5 +229,11 @@ export class MlsAdapter {
             eventId,
             message: content,
         })
+    }
+
+    // Debug methods
+    public _debugCurrentEpoch(streamId: string): bigint | undefined {
+        const group = this.groupService.getGroup(streamId)
+        return group !== undefined ? this.groupService.currentEpoch(group) : undefined
     }
 }

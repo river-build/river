@@ -30,7 +30,7 @@ export class GroupService {
     }
 
     private crypto: Crypto
-    private coordinator: IGroupServiceCoordinator | undefined
+    public coordinator: IGroupServiceCoordinator | undefined
 
     constructor(
         groupStore: IGroupStore,

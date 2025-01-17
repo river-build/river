@@ -2412,19 +2412,7 @@ export class Client
             throw new Error('deviceKey must be set')
         }
 
-        const coordinator: Coordinator = new Coordinator(
-            this.userId,
-            deviceKey,
-            this,
-            this.persistenceStore,
-            { log: this.logMls.extend('coordinator') },
-        )
-        const queueService = new QueueService(coordinator, { log: this.logMls.extend('queue') })
-        coordinator.queueService = queueService
-
-        this.mlsAdapter = new MlsAdapter(coordinator, queueService, this, {
-            log: this.logMls.extend('adapter'),
-        })
+        this.mlsAdapter = new MlsAdapter(this.userId, deviceKey, this, this.persistenceStore, this)
         await this.mlsAdapter.initialize()
     }
 
