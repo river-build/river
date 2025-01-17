@@ -122,7 +122,7 @@ export class QueueService {
     // # Queue-related operations #
 
     // Queue-related fields
-    private commandQueue: QueueCommand[] = []
+    private commandQueue: Set<QueueCommand> = new Set()
     private eventQueue: QueueEvent[] = []
     private delayMs = 15
     private started: boolean = false
@@ -134,13 +134,18 @@ export class QueueService {
     public enqueueCommand(command: QueueCommand) {
         this.log.debug('enqueueCommand', command)
 
-        this.commandQueue.push(command)
+        this.commandQueue.add(command)
         // TODO: Is this needed when we tick after start
         this.checkStartTicking()
     }
 
     private dequeueCommand(): QueueCommand | undefined {
-        return this.commandQueue.shift()
+        const result = this.commandQueue.values().next()
+        if (result.done) {
+            return undefined
+        }
+        this.commandQueue.delete(result.value)
+        return result.value
     }
 
     public enqueueEvent(event: QueueEvent) {
@@ -227,16 +232,16 @@ export class QueueService {
         this.stopping = false
     }
 
+    // TODO: Figure out how to schedule this...
     public async tick(): Promise<void> {
-        // noop
-        const command = this.dequeueCommand()
-        if (command !== undefined) {
-            return this.processCommand(command)
-        }
-
         const event = this.dequeueEvent()
         if (event !== undefined) {
             return this.processEvent(event)
+        }
+
+        const command = this.dequeueCommand()
+        if (command !== undefined) {
+            return this.processCommand(command)
         }
     }
 
