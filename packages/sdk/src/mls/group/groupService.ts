@@ -104,17 +104,15 @@ export class GroupService {
         // TODO: Clear group in GroupStateStore
     }
 
-    // TODO: Should this throw an Error?
     public async handleInitializeGroup(group: Group, _message: InitializeGroupMessage) {
         this.log.debug('handleInitializeGroup', { streamId: group.streamId })
 
         const isGroupActive = group.status === 'GROUP_ACTIVE'
         if (isGroupActive) {
-            this.log.error('handleInitializeGroup: Group is already active', {
+            this.log.debug('handleInitializeGroup: Group is already active', {
                 streamId: group.streamId,
             })
-            // Report programmer error
-            throw new Error('Programmer error: Group is already active')
+            return
         }
 
         const wasInitializeGroupOurOwn =
