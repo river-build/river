@@ -5,7 +5,7 @@
 import { Client } from '../../../client'
 import { makeTestClient } from '../../testUtils'
 import { MLS_ALGORITHM } from '../../../mls'
-import { checkTimelineContainsAll } from './utils'
+import { checkTimelineContainsAll, getCurrentEpoch } from './utils'
 
 const clients: Client[] = []
 
@@ -92,5 +92,13 @@ describe('dmsMlsTests', () => {
                 { timeout: 5_000 },
             )
             .toBe(true)
+
+        await expect
+            .poll(
+                () =>
+                    getCurrentEpoch(aliceClient, streamId) === getCurrentEpoch(bobClient, streamId),
+                { timeout: 5_000 },
+            )
+            .toBeTruthy()
     }, 10_000)
 })

@@ -1,5 +1,7 @@
 import { StreamTimelineEvent } from '../../../types'
 import { getChannelMessagePayload } from '../../testUtils'
+import { MlsAdapter } from '../../../mls'
+import { Client } from '../../../client'
 
 function getPayloadRemoteEvent(event: StreamTimelineEvent): string | undefined {
     if (event.decryptedContent?.kind === 'channelMessage') {
@@ -35,4 +37,18 @@ export function checkTimelineContainsAll(
         }
     }
     return checks.size === 0
+}
+
+export function getAdapter(client: Client): MlsAdapter {
+    const adapter: MlsAdapter = client['mlsAdapter'] as MlsAdapter
+    expect(adapter).toBeDefined()
+    expect(adapter).toBeInstanceOf(MlsAdapter)
+    return adapter
+}
+
+export function getCurrentEpoch(client: Client, streamId: string): bigint {
+    const adapter = getAdapter(client)
+    const epoch = adapter._debugCurrentEpoch(streamId)!
+    expect(epoch).toBeDefined()
+    return epoch
 }
