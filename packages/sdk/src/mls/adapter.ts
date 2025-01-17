@@ -45,7 +45,7 @@ export class MlsAdapter {
     protected coordinator: Coordinator
     protected queueService: QueueService
 
-    protected log!: {
+    protected log: {
         error: DLogger
         debug: DLogger
     }
