@@ -12,7 +12,7 @@ type InitializeGroupMessage = PlainMessage<MemberPayload_Mls_InitializeGroup>
 type ExternalJoinMessage = PlainMessage<MemberPayload_Mls_ExternalJoin>
 
 // Placeholder for a coordinator
-export interface IGroupServiceCoordinator {
+export interface GroupServiceDelegate {
     joinOrCreateGroup(streamId: string): void
     groupActive(streamId: string): void
     newEpoch(streamId: string, epoch: bigint, epochSecret: Uint8Array): void
@@ -30,17 +30,17 @@ export class GroupService {
     }
 
     private crypto: Crypto
-    public coordinator: IGroupServiceCoordinator | undefined
+    public delegate: GroupServiceDelegate | undefined
 
     constructor(
         groupStore: IGroupStore,
         crypto: Crypto,
-        coordinator?: IGroupServiceCoordinator,
+        coordinator?: GroupServiceDelegate,
         opts?: { log: DLogger },
     ) {
         this.groupStore = groupStore
         this.crypto = crypto
-        this.coordinator = coordinator
+        this.delegate = coordinator
 
         const logger = opts?.log ?? defaultLogger
 
@@ -125,17 +125,17 @@ export class GroupService {
 
         if (!wasInitializeGroupOurOwn) {
             await this.clearGroup(group.streamId)
-            this.coordinator?.joinOrCreateGroup(group.streamId)
+            this.delegate?.joinOrCreateGroup(group.streamId)
             return
         }
 
         const activeGroup = Group.activeGroup(group.streamId, group.group)
         await this.saveGroup(activeGroup)
 
-        this.coordinator?.groupActive(group.streamId)
+        this.delegate?.groupActive(group.streamId)
         const epoch = this.crypto.currentEpoch(group)
         const epochSecret = await this.crypto.exportEpochSecret(group)
-        this.coordinator?.newEpoch(group.streamId, epoch, epochSecret)
+        this.delegate?.newEpoch(group.streamId, epoch, epochSecret)
     }
 
     public async handleExternalJoin(group: Group, message: ExternalJoinMessage) {
@@ -147,7 +147,7 @@ export class GroupService {
             await this.saveGroup(group)
             const epoch = this.crypto.currentEpoch(group)
             const epochSecret = await this.crypto.exportEpochSecret(group)
-            this.coordinator?.newEpoch(group.streamId, epoch, epochSecret)
+            this.delegate?.newEpoch(group.streamId, epoch, epochSecret)
             return
         }
 
@@ -161,17 +161,17 @@ export class GroupService {
 
         if (!wasExternalJoinOurOwn) {
             await this.clearGroup(group.streamId)
-            this.coordinator?.joinOrCreateGroup(group.streamId)
+            this.delegate?.joinOrCreateGroup(group.streamId)
             return
         }
 
         const activeGroup = Group.activeGroup(group.streamId, group.group)
         await this.saveGroup(activeGroup)
 
-        this.coordinator?.groupActive(group.streamId)
+        this.delegate?.groupActive(group.streamId)
         const epoch = this.crypto.currentEpoch(group)
         const epochSecret = await this.crypto.exportEpochSecret(group)
-        this.coordinator?.newEpoch(group.streamId, epoch, epochSecret)
+        this.delegate?.newEpoch(group.streamId, epoch, epochSecret)
     }
 
     public async initializeGroupMessage(streamId: string): Promise<InitializeGroupMessage> {

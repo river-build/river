@@ -4,12 +4,12 @@ import {
     MemberPayload_Mls_ExternalJoin,
     MemberPayload_Mls_InitializeGroup,
 } from '@river-build/proto'
-import { IGroupServiceCoordinator } from '../group'
-import { EpochSecret, IEpochSecretServiceCoordinator } from '../epoch'
+import { GroupServiceDelegate } from '../group'
+import { EpochSecret, EpochSecretServiceDelegate } from '../epoch'
 import { dlog, DLogger } from '@river-build/dlog'
 import { logNever } from '../../check'
 import { EncryptedContent } from '../../encryptedContentTypes'
-import { ICoordinator } from '../coordinator'
+import { Coordinator, CoordinatorDelegate } from '../coordinator'
 
 type InitializeGroupMessage = PlainMessage<MemberPayload_Mls_InitializeGroup>
 type ExternalJoinMessage = PlainMessage<MemberPayload_Mls_ExternalJoin>
@@ -92,28 +92,17 @@ type QueueEvent =
     | EpochSecretsEvent
     | EncryptedContentEvent
 
-export interface IQueueService {
-    // These are only needed by the Coordinator
-    enqueueCommand(command: QueueCommand): void
-    enqueueEvent(event: QueueEvent): void
-    // These are only needed by the adapter
-    start(): void
-    stop(): Promise<void>
-    onMobileSafariPageVisibilityChanged(this: void): void
-}
-
 const defaultLogger = dlog('csb:mls:queue')
 
-// This feels more like a coordinator
-export class QueueService implements IQueueService {
-    private coordinator: ICoordinator
+export class QueueService {
+    private coordinator: Coordinator
 
     private log: {
         error: DLogger
         debug: DLogger
     }
 
-    constructor(coordinator: ICoordinator, opts?: { log: DLogger }) {
+    constructor(coordinator: Coordinator, opts?: { log: DLogger }) {
         this.coordinator = coordinator
         // nop
         const logger = opts?.log ?? defaultLogger
@@ -303,39 +292,64 @@ export class QueueService implements IQueueService {
     }
 }
 
-export class GroupServiceCoordinatorAdapter implements IGroupServiceCoordinator {
-    public queueService?: IQueueService
+export class CoordinatorDelegateAdapter implements CoordinatorDelegate {
+    private queueService: QueueService
 
-    constructor(queueService?: IQueueService) {
+    constructor(queueService: QueueService) {
+        this.queueService = queueService
+    }
+
+    scheduleJoinOrCreateGroup(streamId: string): void {
+        this.queueService.enqueueCommand({ tag: 'joinOrCreateGroup', streamId })
+    }
+
+    scheduleAnnounceEpochSecret(
+        streamId: string,
+        epoch: bigint,
+        sealedEpochSecret: Uint8Array,
+    ): void {
+        this.queueService.enqueueCommand({
+            tag: 'announceEpochSecret',
+            streamId,
+            epoch,
+            sealedEpochSecret,
+        })
+    }
+}
+
+export class GroupServiceCoordinatorAdapter implements GroupServiceDelegate {
+    public queueService: QueueService
+
+    constructor(queueService: QueueService) {
         this.queueService = queueService
     }
 
     public joinOrCreateGroup(streamId: string): void {
-        this.queueService?.enqueueCommand({ tag: 'joinOrCreateGroup', streamId })
+        this.queueService.enqueueCommand({ tag: 'joinOrCreateGroup', streamId })
     }
     public groupActive(streamId: string): void {
-        this.queueService?.enqueueCommand({ tag: 'groupActive', streamId })
+        this.queueService.enqueueCommand({ tag: 'groupActive', streamId })
     }
     public newEpoch(streamId: string, epoch: bigint, epochSecret: Uint8Array): void {
-        this.queueService?.enqueueCommand({ tag: 'newEpoch', streamId, epoch, epochSecret })
+        this.queueService.enqueueCommand({ tag: 'newEpoch', streamId, epoch, epochSecret })
     }
 }
 
-export class EpochSecretServiceCoordinatorAdapter implements IEpochSecretServiceCoordinator {
-    public queueService?: IQueueService
+export class EpochSecretServiceCoordinatorAdapter implements EpochSecretServiceDelegate {
+    public queueService: QueueService
 
-    constructor(queueService?: IQueueService) {
+    constructor(queueService: QueueService) {
         this.queueService = queueService
     }
 
     public newOpenEpochSecret(openEpochSecret: EpochSecret): void {
-        this.queueService?.enqueueCommand({
+        this.queueService.enqueueCommand({
             tag: 'newOpenEpochSecret',
             openEpochSecret,
         })
     }
     public newSealedEpochSecret(sealedEpochSecret: EpochSecret): void {
-        this.queueService?.enqueueCommand({
+        this.queueService.enqueueCommand({
             tag: 'newSealedEpochSecret',
             sealedEpochSecret,
         })

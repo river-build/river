@@ -20,7 +20,6 @@ import {
 import { Client } from '../../client'
 import { IPersistenceStore } from '../../persistenceStore'
 import { IAwaiter, IndefiniteAwaiter } from './awaiter'
-import { IQueueService } from '../queue'
 import { make_MemberPayload_Mls } from '../../types'
 
 type InitializeGroupMessage = PlainMessage<MemberPayload_Mls_InitializeGroup>
@@ -45,37 +44,6 @@ function decode(bytes: Uint8Array): string {
     return decoder.decode(bytes)
 }
 
-export interface ICoordinator {
-    // Commands for Group Service
-    joinOrCreateGroup(streamId: string): Promise<void>
-    groupActive(streamId: string): void
-    newEpoch(streamId: string, epoch: bigint, epochSecret: Uint8Array): Promise<void>
-
-    // Commands for EpochSecretService
-    newOpenEpochSecret(openEpochSecret: EpochSecret): Promise<void>
-    newSealedEpochSecret(sealedEpochSecret: EpochSecret): Promise<void>
-
-    // Not sure about this one
-    announceEpochSecret(
-        streamId: string,
-        epoch: bigint,
-        sealedEpochSecret: Uint8Array,
-    ): Promise<void>
-
-    // Events
-    handleInitializeGroup(streamId: string, message: InitializeGroupMessage): Promise<void>
-    handleExternalJoin(streamId: string, message: ExternalJoinMessage): Promise<void>
-    handleEpochSecrets(streamId: string, message: EpochSecretsMessage): Promise<void>
-    handleEncryptedContent(
-        streamId: string,
-        eventId: string,
-        message: EncryptedContent,
-    ): Promise<void>
-    // ClientAPI
-    encryptGroupEventEpochSecret(streamId: string, event: Message): Promise<EncryptedData>
-    initialize(): Promise<void>
-}
-
 const defaultLogger = dlog('csb:mls:coordinator')
 
 type EpochId = string & { __brand: 'EpochId' }
@@ -84,7 +52,16 @@ function createEpochId(streamId: string, epoch: bigint): EpochId {
     return `${streamId}/${epoch}` as EpochId
 }
 
-export class Coordinator implements ICoordinator {
+export interface CoordinatorDelegate {
+    scheduleJoinOrCreateGroup(streamId: string): void
+    scheduleAnnounceEpochSecret(
+        streamId: string,
+        epoch: bigint,
+        sealedEpochSecret: Uint8Array,
+    ): void
+}
+
+export class Coordinator {
     private readonly userAddress: Uint8Array
     private readonly deviceKey: Uint8Array
     private client: Client
@@ -97,7 +74,7 @@ export class Coordinator implements ICoordinator {
     private epochSecretService: EpochSecretService
     private groupService: GroupService
     private externalGroupService: ExternalGroupService
-    public queueService?: IQueueService
+    public delegate?: CoordinatorDelegate
 
     private log: {
         error: DLogger
@@ -112,7 +89,7 @@ export class Coordinator implements ICoordinator {
         externalGroupService: ExternalGroupService,
         groupService: GroupService,
         epochSecretService: EpochSecretService,
-        queueService?: IQueueService,
+        delegate?: CoordinatorDelegate,
         opts?: { log: DLogger },
     ) {
         this.userAddress = userAddress
@@ -123,7 +100,7 @@ export class Coordinator implements ICoordinator {
         this.externalGroupService = externalGroupService
         this.groupService = groupService
         this.epochSecretService = epochSecretService
-        this.queueService = queueService
+        this.delegate = delegate
 
         const logger = opts?.log ?? defaultLogger
         this.log = {
@@ -148,7 +125,7 @@ export class Coordinator implements ICoordinator {
         if (!hasGroup) {
             // No group so we request joining
             // NOTE: We are enqueueing command instead of doing the async call
-            this.queueService?.enqueueCommand({ tag: 'joinOrCreateGroup', streamId })
+            this.delegate?.scheduleJoinOrCreateGroup(streamId)
         }
         // TODO: Refactor this to return group
         await this.awaitGroupActive(streamId)
@@ -220,7 +197,7 @@ export class Coordinator implements ICoordinator {
 
         const tryJoiningAgain = this.groupService.getGroup(streamId) === undefined
         if (tryJoiningAgain) {
-            this.queueService?.enqueueCommand({ tag: 'joinOrCreateGroup', streamId })
+            this.delegate?.scheduleJoinOrCreateGroup(streamId)
         }
     }
 
@@ -234,7 +211,7 @@ export class Coordinator implements ICoordinator {
 
         const tryJoiningAgain = this.groupService.getGroup(streamId) === undefined
         if (tryJoiningAgain) {
-            this.queueService?.enqueueCommand({ tag: 'joinOrCreateGroup', streamId })
+            this.delegate?.scheduleJoinOrCreateGroup(streamId)
         }
     }
 
@@ -581,12 +558,7 @@ export class Coordinator implements ICoordinator {
             )
         } catch (e) {
             this.log.error('Failed to announce epoch secret', { streamId, epoch, error: e })
-            this.queueService?.enqueueCommand({
-                tag: 'announceEpochSecret',
-                streamId,
-                epoch,
-                sealedEpochSecret,
-            })
+            this.delegate?.scheduleAnnounceEpochSecret(streamId, epoch, sealedEpochSecret)
         }
     }
 }

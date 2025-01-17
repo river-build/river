@@ -5,6 +5,7 @@ import { EncryptedData } from '@river-build/proto'
 import { DLogger, dlog } from '@river-build/dlog'
 import { isMobileSafari } from '../utils'
 import {
+    CoordinatorDelegateAdapter,
     EpochSecretServiceCoordinatorAdapter,
     GroupServiceCoordinatorAdapter,
     QueueService,
@@ -104,9 +105,9 @@ export class MlsAdapter {
         this.queueService = new QueueService(this.coordinator, { log: logger.extend('queue') })
 
         // Hook up delegates
-        this.coordinator.queueService = this.queueService
-        this.groupService.coordinator = new GroupServiceCoordinatorAdapter(this.queueService)
-        this.epochSecretService.coordinator = new EpochSecretServiceCoordinatorAdapter(
+        this.coordinator.delegate = new CoordinatorDelegateAdapter(this.queueService)
+        this.groupService.delegate = new GroupServiceCoordinatorAdapter(this.queueService)
+        this.epochSecretService.delegate = new EpochSecretServiceCoordinatorAdapter(
             this.queueService,
         )
 
