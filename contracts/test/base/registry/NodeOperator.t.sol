@@ -56,7 +56,8 @@ contract NodeOperatorFacetTest is
   //                           registerOperator
   // =============================================================
   modifier givenOperatorIsRegistered(address _operator) {
-    vm.assume(address(_operator) != address(0));
+    vm.assume(_operator != address(0));
+    vm.assume(_operator != ZERO_SENTINEL);
     vm.assume(!nodeOperator.isOperator(_operator));
 
     vm.expectEmit();
@@ -190,6 +191,9 @@ contract NodeOperatorFacetTest is
     address _operator,
     NodeOperatorStatus _newStatus
   ) {
+    vm.assume(_operator != address(0));
+    vm.assume(_operator != ZERO_SENTINEL);
+
     vm.prank(deployer);
     vm.expectEmit();
     emit OperatorStatusChanged(_operator, _newStatus);
@@ -199,6 +203,7 @@ contract NodeOperatorFacetTest is
 
   modifier givenCallerHasBridgedTokens(address caller, uint256 amount) {
     vm.assume(caller != address(0));
+    vm.assume(caller != ZERO_SENTINEL);
     amount = bound(amount, stakeRequirement, stakeRequirement * 10);
 
     vm.prank(bridge);
@@ -207,6 +212,12 @@ contract NodeOperatorFacetTest is
   }
 
   modifier givenNodeOperatorHasStake(address delegator, address _operator) {
+    vm.assume(delegator != address(0));
+    vm.assume(delegator != ZERO_SENTINEL);
+    vm.assume(_operator != address(0));
+    vm.assume(_operator != ZERO_SENTINEL);
+    vm.assume(_operator != delegator);
+
     vm.prank(delegator);
     riverFacet.delegate(_operator);
     _;

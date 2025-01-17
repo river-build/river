@@ -53,9 +53,12 @@ contract DeployTownsBase is Deployer {
       return address(0);
     } else if (block.chainid == 84532) {
       // if deploying to base-sepolia use sepolia token
-      return address(0);
+      return 0xfc85ff424F1b55fB3f9e920A47EC7255488C3bA3;
+    } else if (block.chainid == 31337 || block.chainid == 31338) {
+      // if deploying to base-sepolia use sepolia token
+      return 0xfc85ff424F1b55fB3f9e920A47EC7255488C3bA3;
     } else {
-      return address(0);
+      revert("Invalid chain");
     }
   }
 }

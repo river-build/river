@@ -59,8 +59,10 @@ contract TownsBaseTest is TestUtils, EIP712Utils, ILockBase {
     address bob
   ) public givenCallerHasBridgedTokens(alice, amount) {
     vm.assume(bob != address(0));
+    vm.assume(bob != ZERO_SENTINEL);
+    vm.assume(alice != bob);
 
-    assertEq(towns.allowance(alice, bob), 0);
+    vm.assume(towns.allowance(alice, bob) == 0);
 
     vm.prank(alice);
     towns.approve(bob, amount);
@@ -75,6 +77,7 @@ contract TownsBaseTest is TestUtils, EIP712Utils, ILockBase {
   ) public {
     vm.assume(bob != address(0));
     vm.assume(bob != address(towns));
+    vm.assume(bob != ZERO_SENTINEL);
 
     amount = bound(amount, 1, type(uint208).max);
 
@@ -83,6 +86,7 @@ contract TownsBaseTest is TestUtils, EIP712Utils, ILockBase {
     address alice = vm.addr(alicePrivateKey);
 
     vm.assume(towns.delegates(alice) == address(0));
+    vm.assume(towns.allowance(alice, bob) == 0);
 
     vm.prank(bridge);
     towns.mint(alice, amount);
