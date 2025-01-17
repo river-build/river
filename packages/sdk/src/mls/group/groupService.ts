@@ -143,12 +143,7 @@ export class GroupService {
 
         const isGroupActive = group.status === 'GROUP_ACTIVE'
         if (isGroupActive) {
-            await this.crypto.processCommit(group, message.commit)
-            await this.saveGroup(group)
-            const epoch = this.crypto.currentEpoch(group)
-            const epochSecret = await this.crypto.exportEpochSecret(group)
-            this.delegate?.newEpoch(group.streamId, epoch, epochSecret)
-            return
+            return this.processCommit(group, message.commit)
         }
 
         const wasExternalJoinOurOwn =
@@ -172,6 +167,19 @@ export class GroupService {
         const epoch = this.crypto.currentEpoch(group)
         const epochSecret = await this.crypto.exportEpochSecret(group)
         this.delegate?.newEpoch(group.streamId, epoch, epochSecret)
+    }
+
+    private async processCommit(group: Group, commit: Uint8Array): Promise<void> {
+        this.log.debug('processCommit', { streamId: group.streamId })
+        try {
+            await this.crypto.processCommit(group, commit)
+            await this.saveGroup(group)
+            const epoch = this.crypto.currentEpoch(group)
+            const epochSecret = await this.crypto.exportEpochSecret(group)
+            this.delegate?.newEpoch(group.streamId, epoch, epochSecret)
+        } catch (e) {
+            this.log.error('processCommit', e)
+        }
     }
 
     public async initializeGroupMessage(streamId: string): Promise<InitializeGroupMessage> {

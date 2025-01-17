@@ -30,6 +30,10 @@ export class ExternalGroupService {
     }
 
     public async processCommit(externalGroup: ExternalGroup, commit: Uint8Array): Promise<void> {
-        return this.crypto.processCommit(externalGroup, commit)
+        try {
+            await this.crypto.processCommit(externalGroup, commit)
+        } catch (e) {
+            this.log.error('processCommit', e)
+        }
     }
 }
