@@ -3,9 +3,9 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IVotesEnumerable} from "contracts/src/diamond/facets/governance/votes/enumerable/IVotesEnumerable.sol";
-import {IAuthorizedClaimers} from "contracts/src/tokens/river/mainnet/claimer/IAuthorizedClaimers.sol";
-import {IMainnetDelegationBase, IMainnetDelegation} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
-import {ICrossDomainMessenger} from "./ICrossDomainMessenger.sol";
+import {IAuthorizedClaimers} from "contracts/src/tokens/mainnet/claimer/IAuthorizedClaimers.sol";
+import {IMainnetDelegationBase, IMainnetDelegation} from "contracts/src/base/registry/facets/mainnet/IMainnetDelegation.sol";
+import {ICrossDomainMessenger} from "contracts/src/base/registry/facets/mainnet/ICrossDomainMessenger.sol";
 
 // libraries
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
@@ -18,16 +18,16 @@ contract ProxyBatchDelegation is IMainnetDelegationBase {
   address public immutable MESSENGER;
   address public immutable BASE_REGISTRY;
 
-  address public immutable RIVER;
+  address public immutable TOWNS;
   address public immutable CLAIMER_MANAGER;
 
   constructor(
-    address _rvr,
+    address _towns,
     address _claimers,
     address _messenger,
     address _target
   ) {
-    RIVER = _rvr;
+    TOWNS = _towns;
     CLAIMER_MANAGER = _claimers;
     MESSENGER = _messenger;
     BASE_REGISTRY = _target;
@@ -62,15 +62,15 @@ contract ProxyBatchDelegation is IMainnetDelegationBase {
     view
     returns (DelegationMsg[] memory msgs)
   {
-    address[] memory allDelegators = IVotesEnumerable(RIVER).getDelegators();
+    address[] memory allDelegators = IVotesEnumerable(TOWNS).getDelegators();
     uint256 length = allDelegators.length;
     msgs = new DelegationMsg[](length);
 
     for (uint256 i; i < length; ++i) {
       address delegator = allDelegators[i];
       msgs[i].delegator = delegator;
-      msgs[i].delegatee = _delegates(RIVER, delegator);
-      msgs[i].quantity = RIVER.balanceOf(delegator);
+      msgs[i].delegatee = _delegates(TOWNS, delegator);
+      msgs[i].quantity = TOWNS.balanceOf(delegator);
       msgs[i].claimer = IAuthorizedClaimers(CLAIMER_MANAGER)
         .getAuthorizedClaimer(delegator);
     }
