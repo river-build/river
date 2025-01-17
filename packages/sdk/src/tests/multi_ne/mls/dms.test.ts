@@ -19,11 +19,8 @@ afterEach(async () => {
     clients.length = 0
 })
 
-async function makeInitAndStartClient(_nickname?: string) {
-    const client = await makeTestClient()
-    // if (nickname) {
-    //     client.nickname = nickname
-    // }
+async function makeInitAndStartClient(nickname?: string) {
+    const client = await makeTestClient({ nickname })
     await client.initializeUser()
     client.startSync()
     clients.push(client)

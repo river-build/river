@@ -258,6 +258,7 @@ export interface TestClientOpts {
     context?: SignerContext
     entitlementsDelegate?: EntitlementsDelegate
     deviceId?: string
+    nickname?: string
 }
 
 export const makeTestClient = async (opts?: TestClientOpts): Promise<Client> => {
@@ -267,11 +268,23 @@ export const makeTestClient = async (opts?: TestClientOpts): Promise<Client> => 
     const userId = userIdFromAddress(context.creatorAddress)
     const dbName = `database-${userId}${deviceId}`
     const persistenceDbName = `persistence-${userId}${deviceId}`
+    const nickname = opts?.nickname
 
     // create a new client with store(s)
     const cryptoStore = RiverDbManager.getCryptoDb(userId, dbName)
     const rpcClient = await makeTestRpcClient()
-    return new Client(context, rpcClient, cryptoStore, entitlementsDelegate, persistenceDbName)
+    return new Client(
+        context,
+        rpcClient,
+        cryptoStore,
+        entitlementsDelegate,
+        persistenceDbName,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        nickname,
+    )
 }
 
 export async function setupWalletsAndContexts() {
