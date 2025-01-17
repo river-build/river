@@ -4,7 +4,7 @@
 
 import { dlog, check } from '@river-build/dlog'
 import { isDefined } from '../../check'
-import { DecryptionStatus, UserDevice } from '@river-build/encryption'
+import { DecryptionStatus, GroupEncryptionAlgorithmId, UserDevice } from '@river-build/encryption'
 import { Client } from '../../client'
 import {
     makeUserStreamId,
@@ -173,6 +173,7 @@ describe('clientTest', () => {
         await bobsClient.waitForStream(channelId)
 
         // hand construct a message, (don't do this normally! just use sendMessage(..))
+        const algorithm = GroupEncryptionAlgorithmId.GroupEncryption // algorithm doesn't matter here, don't copy paste
         const encrypted = await bobsClient.encryptGroupEvent(
             new ChannelMessage({
                 payload: {
@@ -186,6 +187,7 @@ describe('clientTest', () => {
                 },
             }),
             channelId,
+            algorithm,
         )
         check(isDefined(encrypted), 'encrypted should be defined')
         const message = make_ChannelPayload_Message(encrypted)
