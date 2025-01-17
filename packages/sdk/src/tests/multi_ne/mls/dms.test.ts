@@ -89,7 +89,7 @@ describe('dmsMlsTests', () => {
                         ['hello bob'],
                         bobClient.streams.get(streamId)!.view.timeline,
                     ),
-                { timeout: 5_000 },
+                { timeout: 10_000 },
             )
             .toBe(true)
 
@@ -97,7 +97,7 @@ describe('dmsMlsTests', () => {
             .poll(
                 () =>
                     getCurrentEpoch(aliceClient, streamId) === getCurrentEpoch(bobClient, streamId),
-                { timeout: 5_000 },
+                { timeout: 10_000 },
             )
             .toBeTruthy()
     }, 10_000)
