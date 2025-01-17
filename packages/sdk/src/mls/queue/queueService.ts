@@ -86,11 +86,18 @@ type EncryptedContentEvent = {
     message: EncryptedContent
 }
 
+type EncryptionAlgorithmUpdated = {
+    tag: 'encryptionAlgorithmUpdated'
+    streamId: string
+    encryptionAlgorithm?: string
+}
+
 type QueueEvent =
     | InitializeGroupEvent
     | ExternalJoinEvent
     | EpochSecretsEvent
     | EncryptedContentEvent
+    | EncryptionAlgorithmUpdated
 
 const defaultLogger = dlog('csb:mls:queue')
 
@@ -277,6 +284,11 @@ export class QueueService {
                     event.streamId,
                     event.eventId,
                     event.message,
+                )
+            case 'encryptionAlgorithmUpdated':
+                return this.coordinator.handleAlgorithmUpdated(
+                    event.streamId,
+                    event.encryptionAlgorithm,
                 )
             default:
                 logNever(event)

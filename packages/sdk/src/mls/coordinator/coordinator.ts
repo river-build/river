@@ -21,6 +21,7 @@ import { Client } from '../../client'
 import { IPersistenceStore } from '../../persistenceStore'
 import { IAwaiter, IndefiniteAwaiter } from './awaiter'
 import { make_MemberPayload_Mls } from '../../types'
+import { MLS_ALGORITHM } from '../constants'
 
 type InitializeGroupMessage = PlainMessage<MemberPayload_Mls_InitializeGroup>
 type ExternalJoinMessage = PlainMessage<MemberPayload_Mls_ExternalJoin>

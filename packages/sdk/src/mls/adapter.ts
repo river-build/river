@@ -21,6 +21,7 @@ import { ExternalCrypto, ExternalGroupService } from './externalGroup'
 import { GroupService, Crypto, IGroupStore, InMemoryGroupStore } from './group'
 import { EpochSecretService, IEpochSecretStore, InMemoryEpochSecretStore } from './epoch'
 import { CipherSuite as MlsCipherSuite } from '@river-build/mls-rs-wasm'
+import { MlsInspector } from './utils/inspector'
 
 const defaultLogger = dlog('csb:mls')
 
@@ -237,6 +238,18 @@ export class MlsAdapter {
             streamId,
             eventId,
             message: content,
+        })
+    }
+
+    public readonly onEncryptionAlgorithmUpdated = (
+        streamId: string,
+        encryptionAlgorithm?: string,
+    ) => {
+        this.log.debug('onEncryptionAlgorithmUpdated', { streamId, encryptionAlgorithm })
+        this.queueService?.enqueueEvent({
+            tag: 'encryptionAlgorithmUpdated',
+            streamId,
+            encryptionAlgorithm,
         })
     }
 
