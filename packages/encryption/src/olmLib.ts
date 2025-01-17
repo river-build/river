@@ -14,6 +14,8 @@ export enum EncryptionAlgorithmId {
 export enum GroupEncryptionAlgorithmId {
     // group olm encryption based on signal protocol with ratcheting
     GroupEncryption = 'r.group-encryption.v1.aes-sha2',
+    // asymmetric encryption (olm) to share symmetric encryption (AES-GSM-256) keys
+    HybridGroupEncryption = 'grpaes',
 }
 
 export function isGroupEncryptionAlgorithmId(value: string): value is GroupEncryptionAlgorithmId {
