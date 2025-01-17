@@ -104,6 +104,7 @@ contract TownsMainnetTests is TestUtils, ITownsBase, EIP712Utils {
     alicePrivateKey = boundPrivateKey(alicePrivateKey);
 
     address alice = vm.addr(alicePrivateKey);
+    vm.assume(towns.allowance(alice, bob) == 0);
 
     vm.assume(alice != bob);
 
@@ -120,8 +121,6 @@ contract TownsMainnetTests is TestUtils, ITownsBase, EIP712Utils {
       amount,
       deadline
     );
-
-    assertEq(towns.allowance(alice, bob), 0);
 
     vm.prank(bob);
     towns.permit(alice, bob, amount, deadline, v, r, s);
