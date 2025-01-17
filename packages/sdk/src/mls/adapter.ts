@@ -10,7 +10,7 @@ import {
     GroupServiceCoordinatorAdapter,
     QueueService,
 } from './queue'
-import { StreamEncryptionEvents } from '../streamEvents'
+import { StreamEncryptionEvents, StreamStateEvents } from '../streamEvents'
 import TypedEmitter from 'typed-emitter'
 import { EncryptedContent } from '../encryptedContentTypes'
 import { Coordinator } from './coordinator'
@@ -30,7 +30,8 @@ export class MlsAdapter {
     protected readonly deviceKey: Uint8Array
     protected readonly client: Client
     protected readonly persistenceStore: IPersistenceStore
-    protected readonly encryptionEmitter: TypedEmitter<StreamEncryptionEvents>
+    protected readonly encryptionEmitter?: TypedEmitter<StreamEncryptionEvents>
+    protected readonly stateEmitter?: TypedEmitter<StreamStateEvents>
 
     protected externalCrypto: ExternalCrypto
     protected externalGroupService: ExternalGroupService
@@ -54,7 +55,8 @@ export class MlsAdapter {
         deviceKey: Uint8Array,
         client: Client,
         persistenceStore: IPersistenceStore,
-        encryptionEmitter: TypedEmitter<StreamEncryptionEvents>,
+        encryptionEmitter?: TypedEmitter<StreamEncryptionEvents>,
+        stateEmitter?: TypedEmitter<StreamStateEvents>,
         opts?: { log: DLogger },
     ) {
         const logger = opts?.log ?? defaultLogger
@@ -64,6 +66,7 @@ export class MlsAdapter {
         this.client = client
         this.persistenceStore = persistenceStore
         this.encryptionEmitter = encryptionEmitter
+        this.stateEmitter = stateEmitter
 
         // External Group Service
         this.externalCrypto = new ExternalCrypto()
@@ -138,6 +141,7 @@ export class MlsAdapter {
         this.encryptionEmitter?.on('mlsExternalJoin', this.onMlsExternalJoin)
         this.encryptionEmitter?.on('mlsEpochSecrets', this.onMlsEpochSecrets)
         this.encryptionEmitter?.on('mlsNewEncryptedContent', this.onMlsNewEncryptedContent)
+        this.stateEmitter?.on('streamEncryptionAlgorithmUpdated', this.onEncryptionAlgorithmUpdated)
     }
 
     public async stop(): Promise<void> {
@@ -154,6 +158,10 @@ export class MlsAdapter {
         this.encryptionEmitter?.off('mlsExternalJoin', this.onMlsExternalJoin)
         this.encryptionEmitter?.off('mlsEpochSecrets', this.onMlsEpochSecrets)
         this.encryptionEmitter?.off('mlsNewEncryptedContent', this.onMlsNewEncryptedContent)
+        this.stateEmitter?.off(
+            'streamEncryptionAlgorithmUpdated',
+            this.onEncryptionAlgorithmUpdated,
+        )
     }
 
     public async encryptGroupEventEpochSecret(
@@ -232,9 +240,18 @@ export class MlsAdapter {
         })
     }
 
-    // Debug methods
-    public _debugCurrentEpoch(streamId: string): bigint | undefined {
-        const group = this.groupService.getGroup(streamId)
-        return group !== undefined ? this.groupService.currentEpoch(group) : undefined
+    public getInspector(): MlsInspector {
+        return new MlsInspector(
+            this.externalCrypto,
+            this.externalGroupService,
+            this.crypto,
+            this.groupStore,
+            this.groupService,
+            this.cipherSuite,
+            this.epochSecretStore,
+            this.epochSecretService,
+            this.coordinator,
+            this.queueService,
+        )
     }
 }

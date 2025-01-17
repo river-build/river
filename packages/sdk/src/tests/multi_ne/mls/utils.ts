@@ -2,6 +2,7 @@ import { StreamTimelineEvent } from '../../../types'
 import { getChannelMessagePayload } from '../../testUtils'
 import { MlsAdapter } from '../../../mls'
 import { Client } from '../../../client'
+import { MlsInspector } from '../../../mls/utils/inspector'
 
 function getPayloadRemoteEvent(event: StreamTimelineEvent): string | undefined {
     if (event.decryptedContent?.kind === 'channelMessage') {
@@ -39,16 +40,16 @@ export function checkTimelineContainsAll(
     return checks.size === 0
 }
 
-export function getAdapter(client: Client): MlsAdapter {
+export function getInspector(client: Client): MlsInspector {
     const adapter: MlsAdapter = client['mlsAdapter'] as MlsAdapter
     expect(adapter).toBeDefined()
     expect(adapter).toBeInstanceOf(MlsAdapter)
-    return adapter
+    return adapter.getInspector()
 }
 
 export function getCurrentEpoch(client: Client, streamId: string): bigint {
-    const adapter = getAdapter(client)
-    const epoch = adapter._debugCurrentEpoch(streamId)!
-    expect(epoch).toBeDefined()
-    return epoch
+    const inspector = getInspector(client)
+    const group = inspector.groupService.getGroup(streamId)!
+    expect(group).toBeDefined()
+    return inspector.groupService.currentEpoch(group)
 }
