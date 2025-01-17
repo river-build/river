@@ -2,11 +2,11 @@
 pragma solidity ^0.8.23;
 
 //interfaces
-import {IAuthorizedClaimersBase} from "contracts/src/tokens/river/mainnet/claimer/IAuthorizedClaimers.sol";
+import {IAuthorizedClaimersBase} from "contracts/src/tokens/mainnet/claimer/IAuthorizedClaimers.sol";
 
 //contracts
 import {TestUtils} from "contracts/test/utils/TestUtils.sol";
-import {AuthorizedClaimers} from "contracts/src/tokens/river/mainnet/claimer/AuthorizedClaimers.sol";
+import {AuthorizedClaimers} from "contracts/src/tokens/mainnet/claimer/AuthorizedClaimers.sol";
 import {DeployAuthorizedClaimers} from "contracts/scripts/deployments/utils/DeployAuthorizedClaimers.s.sol";
 
 contract AuthorizedClaimersTest is TestUtils, IAuthorizedClaimersBase {

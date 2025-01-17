@@ -2,8 +2,8 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {IMainnetDelegationBase, IMainnetDelegation} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
-import {IAuthorizedClaimers} from "contracts/src/tokens/river/mainnet/claimer/IAuthorizedClaimers.sol";
+import {IMainnetDelegationBase, IMainnetDelegation} from "contracts/src/base/registry/facets/mainnet/IMainnetDelegation.sol";
+import {IAuthorizedClaimers} from "contracts/src/tokens/mainnet/claimer/IAuthorizedClaimers.sol";
 
 // libraries
 import {NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
@@ -11,14 +11,14 @@ import {NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/No
 // contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {NodeOperatorFacet} from "contracts/src/base/registry/facets/operator/NodeOperatorFacet.sol";
-import {River} from "contracts/src/tokens/river/mainnet/River.sol";
-import {ProxyBatchDelegation} from "contracts/src/tokens/river/mainnet/delegation/ProxyBatchDelegation.sol";
+import {Towns} from "contracts/src/tokens/towns/mainnet/Towns.sol";
+import {ProxyBatchDelegation} from "contracts/src/tokens/mainnet/delegation/ProxyBatchDelegation.sol";
 
 contract ProxyBatchDelegationTest is BaseSetup, IMainnetDelegationBase {
   IMainnetDelegation internal mainnetDelegation;
   ProxyBatchDelegation internal proxyDelegation;
   IAuthorizedClaimers internal authorizedClaimers;
-  River internal rvr;
+  Towns internal towns;
   NodeOperatorFacet internal operatorFacet;
 
   address[] internal _users;
@@ -39,7 +39,7 @@ contract ProxyBatchDelegationTest is BaseSetup, IMainnetDelegationBase {
 
     tokens = 10 ether;
 
-    rvr = River(mainnetRiverToken);
+    towns = Towns(mainnetRiverToken);
     proxyDelegation = ProxyBatchDelegation(mainnetProxyDelegation);
     mainnetDelegation = IMainnetDelegation(baseRegistry);
     authorizedClaimers = IAuthorizedClaimers(claimers);
@@ -64,7 +64,7 @@ contract ProxyBatchDelegationTest is BaseSetup, IMainnetDelegationBase {
       Delegation memory delegation = mainnetDelegation.getDelegationByDelegator(
         user
       );
-      assertEq(rvr.delegates(user), delegation.operator);
+      assertEq(towns.delegates(user), delegation.operator);
       assertEq(
         authorizedClaimers.getAuthorizedClaimer(user),
         mainnetDelegation.getAuthorizedClaimer(user)
@@ -94,7 +94,7 @@ contract ProxyBatchDelegationTest is BaseSetup, IMainnetDelegationBase {
   modifier givenUsersHaveTokens() {
     vm.startPrank(vault);
     for (uint256 i; i < _users.length; ++i) {
-      rvr.transfer(_users[i], tokens);
+      towns.transfer(_users[i], tokens);
     }
     vm.stopPrank();
     _;
@@ -111,7 +111,7 @@ contract ProxyBatchDelegationTest is BaseSetup, IMainnetDelegationBase {
   modifier givenUsersHaveDelegatedTokens() {
     for (uint256 i; i < _users.length; ++i) {
       vm.prank(_users[i]);
-      rvr.delegate(_getRandomElement(_operators));
+      towns.delegate(_getRandomElement(_operators));
     }
     _;
   }
