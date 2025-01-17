@@ -363,7 +363,7 @@ func (e *RiverErrorImpl) GetTag(name string) any {
 }
 
 func (e *RiverErrorImpl) LogWithLevel(l *zap.SugaredLogger, level zapcore.Level) *RiverErrorImpl {
-	// Context for slog is optional, generally in this codebase context is not passed to slog.
+	// Context for zap is optional, generally in this codebase context is not passed to zap.
 	l.Logw(level, e.GetMessage(), e.FlattenTags()...)
 	return e
 }

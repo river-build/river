@@ -38,7 +38,7 @@ func (w *handlerWriter) Write(buf []byte) (int, error) {
 	if len(buf) > 0 && buf[len(buf)-1] == '\n' {
 		buf = buf[:len(buf)-1]
 	}
-	w.log.Logw(level, string(buf))
+	w.log.Desugar().Log(level, string(buf))
 
 	return origLen, nil
 }
@@ -58,7 +58,7 @@ func (l *levelWriter) Write(buf []byte) (int, error) {
 	if len(buf) > 0 && buf[len(buf)-1] == '\n' {
 		buf = buf[:len(buf)-1]
 	}
-	l.log.Logw(l.level, string(buf))
+	l.log.Desugar().Log(l.level, string(buf))
 
 	return origLen, nil
 }

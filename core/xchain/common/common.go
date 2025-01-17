@@ -167,13 +167,13 @@ func WaitForTransaction(client *ethclient.Client, tx *types.Transaction) *big.In
 				var receiptResp interface{}
 				err = client.Client().CallContext(context.Background(), &receiptResp, "eth_getTransactionReceipt", tx.Hash().Hex())
 				if err != nil {
-					log.Fatalf("Fetching transaction receipt failed %v %v!\n", receiptResp, err)
+					log.Fatalw("Fetching transaction receipt failed %v %v!\n", receiptResp, err)
 				}
 				jsonResp, err := json.Marshal(receiptResp)
 				if err != nil {
-					log.Fatalf("Failed to marshal json %v!\n", err)
+					log.Fatalw("Failed to marshal json %v!\n", err)
 				}
-				log.Fatalf("Transaction != types.ReceiptStatusSuccessful jsonResp: %v", string(jsonResp))
+				log.Fatalw("Transaction != types.ReceiptStatusSuccessful jsonResp: %v", string(jsonResp))
 				return nil
 			*/
 		}
