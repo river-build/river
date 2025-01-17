@@ -562,4 +562,11 @@ export class Coordinator {
             this.delegate?.scheduleAnnounceEpochSecret(streamId, epoch, sealedEpochSecret)
         }
     }
+
+    handleAlgorithmUpdated(streamId: string, encryptionAlgorithm?: string) {
+        this.log.debug('handleAlgorithmUpdated', { streamId, encryptionAlgorithm })
+        if (encryptionAlgorithm === MLS_ALGORITHM) {
+            this.delegate?.scheduleJoinOrCreateGroup(streamId)
+        }
+    }
 }
