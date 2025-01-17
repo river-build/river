@@ -613,7 +613,10 @@ export abstract class BaseDecryptionExtensions {
             })
             if (sessionNotFound) {
                 const streamId = item.streamId
-                const sessionId = item.encryptedData.sessionId
+                const sessionId =
+                    item.encryptedData.sessionId && item.encryptedData.sessionId.length > 0
+                        ? item.encryptedData.sessionId
+                        : bin_toHexString(item.encryptedData.sessionIdBytes)
                 if (!this.decryptionFailures[streamId]) {
                     this.decryptionFailures[streamId] = { [sessionId]: [item] }
                 } else if (!this.decryptionFailures[streamId][sessionId]) {
