@@ -8,6 +8,7 @@ import { Client } from '../../client'
 import { genShortId, makeUniqueChannelStreamId } from '../../id'
 import { ChannelMessage } from '@river-build/proto'
 import { GroupEncryptionAlgorithmId } from '@river-build/encryption'
+import { checkNever } from '@river-build/web3'
 
 describe('outboundSessionTests', () => {
     let bobsDeviceId: string
@@ -123,10 +124,30 @@ describe('outboundSessionTests', () => {
                 algorithm,
             )
 
-            expect(encryptedChannel1_1?.sessionId).toBeDefined()
-            expect(encryptedChannel1_2?.sessionId).toBeDefined()
-            expect(encryptedChannel1_1.sessionId).toEqual(encryptedChannel1_2.sessionId)
-            expect(encryptedChannel1_1.sessionId).not.toEqual(encryptedChannel2_1.sessionId)
+            switch (algorithm) {
+                case GroupEncryptionAlgorithmId.GroupEncryption:
+                    expect(encryptedChannel1_1?.sessionId).toBeDefined()
+                    expect(encryptedChannel1_1?.sessionId).not.toEqual('')
+                    expect(encryptedChannel1_2?.sessionId).toBeDefined()
+                    expect(encryptedChannel1_2?.sessionId).not.toEqual('')
+                    expect(encryptedChannel1_1.sessionId).toEqual(encryptedChannel1_2.sessionId)
+                    expect(encryptedChannel1_1.sessionId).not.toEqual(encryptedChannel2_1.sessionId)
+                    break
+                case GroupEncryptionAlgorithmId.HybridGroupEncryption:
+                    expect(encryptedChannel1_1?.sessionIdBytes).toBeDefined()
+                    expect(encryptedChannel1_1?.sessionIdBytes).not.toEqual(new Uint8Array())
+                    expect(encryptedChannel1_2?.sessionIdBytes).toBeDefined()
+                    expect(encryptedChannel1_2?.sessionIdBytes).not.toEqual(new Uint8Array())
+                    expect(encryptedChannel1_1.sessionIdBytes).toEqual(
+                        encryptedChannel1_2.sessionIdBytes,
+                    )
+                    expect(encryptedChannel1_1.sessionIdBytes).not.toEqual(
+                        encryptedChannel2_1.sessionIdBytes,
+                    )
+                    break
+                default:
+                    checkNever(algorithm)
+            }
 
             const x = bobsClient.cryptoBackend?.hasSessionKey(
                 channelId1,

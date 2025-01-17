@@ -1,7 +1,7 @@
 import { EncryptedData, HybridGroupSessionKey } from '@river-build/proto'
 import { EncryptionAlgorithm, IEncryptionParams } from './base'
 import { GroupEncryptionAlgorithmId } from './olmLib'
-import { bin_toHexString, dlog } from '@river-build/dlog'
+import { dlog } from '@river-build/dlog'
 import { encryptAesGcm, importAesGsmKeyBytes } from './cryptoAesGcm'
 
 const log = dlog('csb:encryption:groupEncryption')
