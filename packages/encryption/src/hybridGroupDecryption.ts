@@ -1,7 +1,7 @@
 import { DecryptionAlgorithm, DecryptionError, IDecryptionParams } from './base'
 import { GroupEncryptionAlgorithmId, GroupEncryptionSession } from './olmLib'
 import { EncryptedData, HybridGroupSessionKey } from '@river-build/proto'
-import { dlog } from '@river-build/dlog'
+import { bin_toHexString, dlog } from '@river-build/dlog'
 import { decryptAesGcm, importAesGsmKeyBytes } from './cryptoAesGcm'
 
 const log = dlog('csb:encryption:groupDecryption')
@@ -26,7 +26,7 @@ export class HybridGroupDecryption extends DecryptionAlgorithm {
     public async decrypt(streamId: string, content: EncryptedData): Promise<string> {
         if (
             !content.senderKey ||
-            !content.sessionId ||
+            !content.sessionIdBytes ||
             !content.ciphertextBytes ||
             !content.ivBytes
         ) {
@@ -36,9 +36,11 @@ export class HybridGroupDecryption extends DecryptionAlgorithm {
             )
         }
 
+        const sessionId = bin_toHexString(content.sessionIdBytes)
+
         const session: HybridGroupSessionKey = await this.device.getHybridGroupSessionKey(
             streamId,
-            content.sessionId,
+            sessionId,
         )
 
         const key = await importAesGsmKeyBytes(session.key)

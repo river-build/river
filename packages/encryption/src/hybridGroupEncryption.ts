@@ -109,7 +109,7 @@ export class HybridGroupEncryption extends EncryptionAlgorithm {
         return new EncryptedData({
             algorithm: this.algorithm,
             senderKey: this.device.deviceCurve25519Key!,
-            sessionId: bin_toHexString(sessionKey.sessionId),
+            sessionIdBytes: sessionKey.sessionId,
             ciphertextBytes: ciphertext,
             ivBytes: iv,
         })
