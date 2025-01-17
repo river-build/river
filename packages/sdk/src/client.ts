@@ -2181,7 +2181,7 @@ export class Client
         check(isDefined(streamView.miniblockInfo), `stream not initialized: ${streamId}`)
         check(isDefined(streamView.prevMiniblockHash), `prevMiniblockHash not found: ${streamId}`)
         return {
-            miniblockNum: streamView.miniblockInfo.min,
+            miniblockNum: streamView.miniblockInfo.max,
             miniblockHash: streamView.prevMiniblockHash,
         }
     }
