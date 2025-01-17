@@ -75,5 +75,5 @@ EOF
 #   -c           : compact output (not strictly needed, but can help performance)
 #
 # The `|| true` at the end ensures the script doesn’t exit if jq fails on a malformed line.
-tail -n 500 -F "$LOGFILE" \
+tail -n 50 -F "$LOGFILE" \
   | jq --unbuffered -r "$JQ_SCRIPT" || true
