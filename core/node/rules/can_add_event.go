@@ -914,6 +914,7 @@ func (ru *aeReceivedBlockchainTransactionRules) parentEventForReceivedBlockchain
 				transaction,
 			),
 			StreamId: streamId,
+			Tags:     ru.params.parsedEvent.Event.Tags, // forward tags
 		}, nil
 	default:
 		return nil, RiverError(Err_INVALID_ARGUMENT, "unknown transaction content", "content", content)
@@ -944,6 +945,7 @@ func (ru *aeBlockchainTransactionRules) parentEventForBlockchainTransaction() (*
 					ru.transaction,
 				),
 				StreamId: userStreamId,
+				Tags:     ru.params.parsedEvent.Event.Tags, // forward tags
 			}, nil
 		}
 
