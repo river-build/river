@@ -151,7 +151,7 @@ type Config struct {
 
 	// Disable base chain contract usage.
 	DisableBaseChain bool
-	
+
 	// Enable MemberPayload_Mls.
 	EnableMls bool
 
@@ -357,6 +357,12 @@ type ArchiveConfig struct {
 	MiniblockScrubWorkerPoolSize int // If 0, default to 20
 
 	StreamsContractCallPageSize int64 // If 0, default to 5000.
+
+	// MaxFailedConsecutiveUpdates is the number of failures to advance the block count
+	// of a stream with available blocks (according to the contract) that the archiver will
+	// allow before considering a stream corrupt.
+	// Please access with GetMaxFailedConsecutiveUpdates
+	MaxFailedConsecutiveUpdates uint32 // If 0, default to 50.
 }
 
 type APNPushNotificationsConfig struct {
@@ -524,6 +530,13 @@ func (ac *ArchiveConfig) GetMiniblockScrubWorkerPoolSize() int {
 		return 20
 	}
 	return ac.MiniblockScrubWorkerPoolSize
+}
+
+func (ac *ArchiveConfig) GetMaxConsecutiveFailedUpdates() uint32 {
+	if ac.MaxFailedConsecutiveUpdates == 0 {
+		return 50
+	}
+	return ac.MaxFailedConsecutiveUpdates
 }
 
 type ScrubbingConfig struct {
