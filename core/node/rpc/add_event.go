@@ -98,6 +98,7 @@ func (s *Service) addParsedEvent(
 					ctx,
 					sideEffects.OnChainAuthFailure.StreamId,
 					sideEffects.OnChainAuthFailure.Payload,
+					sideEffects.OnChainAuthFailure.Tags,
 				)
 				if err != nil {
 					return err
@@ -128,7 +129,12 @@ func (s *Service) addParsedEvent(
 	}
 
 	if sideEffects.RequiredParentEvent != nil {
-		err := s.AddEventPayload(ctx, sideEffects.RequiredParentEvent.StreamId, sideEffects.RequiredParentEvent.Payload)
+		err := s.AddEventPayload(
+			ctx,
+			sideEffects.RequiredParentEvent.StreamId,
+			sideEffects.RequiredParentEvent.Payload,
+			sideEffects.RequiredParentEvent.Tags,
+		)
 		if err != nil {
 			return err
 		}
@@ -149,7 +155,12 @@ func (s *Service) addParsedEvent(
 	return nil
 }
 
-func (s *Service) AddEventPayload(ctx context.Context, streamId StreamId, payload IsStreamEvent_Payload) error {
+func (s *Service) AddEventPayload(
+	ctx context.Context,
+	streamId StreamId,
+	payload IsStreamEvent_Payload,
+	tags *Tags,
+) error {
 	hashRequest := &GetLastMiniblockHashRequest{
 		StreamId: streamId[:],
 	}
@@ -157,10 +168,10 @@ func (s *Service) AddEventPayload(ctx context.Context, streamId StreamId, payloa
 	if err != nil {
 		return err
 	}
-	envelope, err := MakeEnvelopeWithPayload(s.wallet, payload, &MiniblockRef{
+	envelope, err := MakeEnvelopeWithPayloadAndTags(s.wallet, payload, &MiniblockRef{
 		Hash: common.BytesToHash(hashResponse.Msg.Hash),
 		Num:  hashResponse.Msg.MiniblockNum,
-	})
+	}, tags)
 	if err != nil {
 		return err
 	}

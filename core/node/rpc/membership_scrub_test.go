@@ -155,8 +155,9 @@ func (o *ObservingEventAdder) AddEventPayload(
 	ctx context.Context,
 	streamId StreamId,
 	payload IsStreamEvent_Payload,
+	tags *Tags,
 ) error {
-	err := o.adder.AddEventPayload(ctx, streamId, payload)
+	err := o.adder.AddEventPayload(ctx, streamId, payload, tags)
 	if err != nil {
 		return err
 	}
