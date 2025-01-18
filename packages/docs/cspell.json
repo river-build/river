@@ -46,7 +46,11 @@
         "nocolor",
         "gdms",
         "wagmi",
-        "viem"
+        "viem",
+        "infof",
+        "warnf",
+        "debugf",
+        "errorf"
     ],
     "allowCompoundWords": true,
     "ignoreRegExpList": [

@@ -15,9 +15,9 @@ import (
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/registries"
@@ -95,7 +95,7 @@ func (ct *StreamCorruptionTracker) RecordBlockUpdateFailure(ctx context.Context,
 	// If this task run was able to advance the number of blocks, let's reset the update
 	// failure counter.
 	if ct.parent.numBlocksInDb.Load()-1 > ct.lastUpdatedBlock {
-		dlog.FromCtx(ctx).Debug(
+		logging.FromCtx(ctx).Debugw(
 			"Update failure still saw progress, resetting",
 			"streamId",
 			ct.parent.streamId,
@@ -111,7 +111,7 @@ func (ct *StreamCorruptionTracker) RecordBlockUpdateFailure(ctx context.Context,
 		ct.corrupt = true
 		ct.corruptionReason = FetchFailed
 		ct.firstCorruptBlock = max(ct.parent.numBlocksInDb.Load(), 0)
-		dlog.FromCtx(ctx).Debug(
+		logging.FromCtx(ctx).Debugw(
 			"Incrementing update failures for stream and toggling corrupt=true",
 			"streamId", ct.parent.streamId,
 			"numBlocksInDb", ct.parent.numBlocksInDb.Load(),
@@ -123,7 +123,7 @@ func (ct *StreamCorruptionTracker) RecordBlockUpdateFailure(ctx context.Context,
 		)
 	} else {
 		if ct.consecutiveUpdateFailures > 0 && ct.consecutiveUpdateFailures%5 == 0 {
-			dlog.FromCtx(ctx).Debug(
+			logging.FromCtx(ctx).Debugw(
 				"Incrementing update failures for stream",
 				"numBlocksInDb", ct.parent.numBlocksInDb.Load(),
 				"lastUpdatedBlock", ct.lastUpdatedBlock,
@@ -158,7 +158,7 @@ func (ct *StreamCorruptionTracker) ReportBlockUpdateSuccess(ctx context.Context)
 	ct.mu.Lock()
 	defer ct.mu.Unlock()
 
-	dlog.FromCtx(ctx).Debug("BlockUpdateSuccess", "streamId", ct.parent.streamId)
+	logging.FromCtx(ctx).Debugw("BlockUpdateSuccess", "streamId", ct.parent.streamId)
 	ct.resetLocked()
 }
 
@@ -223,7 +223,7 @@ func (ct *StreamCorruptionTracker) ReportScrubSuccess(ctx context.Context, block
 				Tag("corruptBlock", ct.firstCorruptBlock).
 				Tag("scrubUntilBlockInclusive", blockNum).
 				Func("ReportScrubSuccess").
-				Log(dlog.FromCtx(ctx))
+				Log(logging.FromCtx(ctx))
 		}
 	}
 
@@ -512,8 +512,8 @@ func (a *Archiver) GetCorruptStreams(ctx context.Context) []scrub.CorruptStreamR
 					corruptStreams = append(corruptStreams, record)
 				}
 			} else if !ok {
-				dlog.FromCtx(ctx).
-					Error("Unexpected value stored in stream cache (not an ArchiveStream)", "value", value)
+				logging.FromCtx(ctx).
+					Errorw("Unexpected value stored in stream cache (not an ArchiveStream)", "value", value)
 			}
 
 			return true
@@ -532,8 +532,8 @@ func (a *Archiver) addNewStream(
 	_, loaded := a.streams.LoadOrStore(streamId, NewArchiveStream(streamId, nn, lastKnownMiniblock))
 	if loaded {
 		// TODO: Double notification, shouldn't happen.
-		dlog.FromCtx(ctx).
-			Error("Stream already exists in archiver map", "streamId", streamId, "lastKnownMiniblock", lastKnownMiniblock)
+		logging.FromCtx(ctx).
+			Errorw("Stream already exists in archiver map", "streamId", streamId, "lastKnownMiniblock", lastKnownMiniblock)
 		return
 	}
 
@@ -569,7 +569,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) (er
 			stream.corrupt.RecordBlockUpdateFailure(ctx, err)
 		}
 	}()
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	if !stream.mu.TryLock() {
 		// Reschedule with delay.
@@ -610,7 +610,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) (er
 		return nil
 	}
 
-	log.Debug(
+	log.Debugw(
 		"Archiving stream",
 		"streamId",
 		stream.streamId,
@@ -640,7 +640,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) (er
 			}),
 		)
 		if err != nil && AsRiverError(err).Code != Err_NOT_FOUND {
-			log.Warn(
+			log.Warnw(
 				"Error when calling GetMiniblocks on server",
 				"error",
 				err,
@@ -667,7 +667,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) (er
 				),
 			)
 
-			log.Debug(
+			log.Debugw(
 				"ArchiveStream: GetMiniblocks did not return data, remote storage is not up-to-date with contract yet",
 				"streamId",
 				stream.streamId,
@@ -705,7 +705,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) (er
 			serialized = append(serialized, bb)
 		}
 
-		log.Debug("Writing miniblocks to storage", "streamId", stream.streamId, "numBlocks", len(serialized))
+		log.Debugw("Writing miniblocks to storage", "streamId", stream.streamId, "numBlocks", len(serialized))
 
 		err = a.storage.WriteArchiveMiniblocks(ctx, stream.streamId, mbsInDb, serialized)
 		if err != nil {
@@ -761,26 +761,26 @@ func (a *Archiver) Close() {
 // processScrubReports continuously reads scrub reports and updates the archive stream's state until
 // the context expires or is cancelled.
 func (a *Archiver) processScrubReports(ctx context.Context) {
-	log := dlog.FromCtx(ctx).With("func", "processScrubReports")
+	log := logging.FromCtx(ctx).With("func", "processScrubReports")
 	for {
 		select {
 		case report := <-a.reports:
 			a.scrubsInProgress.Add(-1)
 			value, ok := a.streams.Load(report.StreamId)
 			if !ok {
-				log.Error("No stream found in cache for scrubbed stream report", "streamId", report.StreamId)
+				log.Errorw("No stream found in cache for scrubbed stream report", "streamId", report.StreamId)
 				continue
 			}
 			as, ok := value.(*ArchiveStream)
 			if !ok {
-				log.Error("Cached object for stream id is not an ArchiveStream", "streamId", report.StreamId)
+				log.Errorw("Cached object for stream id is not an ArchiveStream", "streamId", report.StreamId)
 				continue
 			}
 
 			// Corrupt block detected
 			if report.ScrubError != nil && report.FirstCorruptBlock != -1 {
 				if err := as.corrupt.MarkBlockCorrupt(report.FirstCorruptBlock, report.ScrubError); err != nil {
-					dlog.FromCtx(ctx).Error(
+					logging.FromCtx(ctx).Errorw(
 						"Error marking block as corrupt from failed scrub",
 						"streamId", as.streamId,
 						"corruptBlock", report.FirstCorruptBlock,
@@ -792,7 +792,7 @@ func (a *Archiver) processScrubReports(ctx context.Context) {
 				as.mostRecentScrubbedBlock.Store(report.LatestBlockScrubbed)
 				as.scrubInProgress.Store(false)
 
-				log.Error("Corrupt stream detected",
+				log.Errorw("Corrupt stream detected",
 					"streamId", as.streamId,
 					"corruptBlock", report.FirstCorruptBlock,
 					"error", report.ScrubError,
@@ -803,7 +803,7 @@ func (a *Archiver) processScrubReports(ctx context.Context) {
 
 			// Scrub encountered error, but block was not deemed corrupt.
 			if report.ScrubError != nil {
-				log.Error("Error encountered during miniblock scrub",
+				log.Errorw("Error encountered during miniblock scrub",
 					"streamId", as.streamId,
 					"error", report.ScrubError,
 					"lastBlockScrubbed", report.LatestBlockScrubbed,
@@ -850,7 +850,7 @@ func (a *Archiver) processMiniblockScrubs(ctx context.Context) {
 
 			as, ok := value.(*ArchiveStream)
 			if !ok {
-				dlog.FromCtx(ctx).Error("Expected archive stream in stream cache", "key", key)
+				logging.FromCtx(ctx).Errorw("Expected archive stream in stream cache", "key", key)
 				return true
 			}
 
@@ -871,8 +871,8 @@ func (a *Archiver) processMiniblockScrubs(ctx context.Context) {
 			err := a.scrubber.ScheduleStreamMiniblocksScrub(ctx, as.streamId, firstUnscrubbedBlock)
 			if err != nil {
 				as.scrubInProgress.Store(false)
-				dlog.FromCtx(ctx).
-					Error("Failed to schedule scrub", "error", err, "streamId", as.streamId.String(), "firstUnscrubbedBlock", firstUnscrubbedBlock)
+				logging.FromCtx(ctx).
+					Errorw("Failed to schedule scrub", "error", err, "streamId", as.streamId.String(), "firstUnscrubbedBlock", firstUnscrubbedBlock)
 				return true
 			} else {
 				a.scrubsInProgress.Add(1)
@@ -887,7 +887,7 @@ func (a *Archiver) startImpl(ctx context.Context, once bool, metrics infra.Metri
 	if once {
 		a.tasksWG = &sync.WaitGroup{}
 	} else if metrics != nil {
-		dlog.FromCtx(ctx).Info("Setting up metrics")
+		logging.FromCtx(ctx).Infow("Setting up metrics")
 		a.setupStatisticsMetrics(metrics)
 	}
 
@@ -903,8 +903,8 @@ func (a *Archiver) startImpl(ctx context.Context, once bool, metrics infra.Metri
 		return err
 	}
 
-	log := dlog.FromCtx(ctx)
-	log.Info(
+	log := logging.FromCtx(ctx)
+	log.Infow(
 		"Reading stream registry for contract state of streams",
 		"blockNum",
 		blockNum,
@@ -934,7 +934,7 @@ func (a *Archiver) startImpl(ctx context.Context, once bool, metrics infra.Metri
 	}
 
 	if !once {
-		log.Info("Listening to stream events", "blockNum", blockNum+1)
+		log.Infow("Listening to stream events", "blockNum", blockNum+1)
 		err := a.contract.OnStreamEvent(
 			ctx,
 			blockNum+1,
@@ -966,7 +966,7 @@ func (a *Archiver) onStreamPlacementUpdated(
 	id := StreamId(event.StreamId)
 	record, loaded := a.streams.Load(id)
 	if !loaded {
-		dlog.FromCtx(ctx).Error("onStreamPlacementUpdated: Stream not found in map", "streamId", id)
+		logging.FromCtx(ctx).Errorw("onStreamPlacementUpdated: Stream not found in map", "streamId", id)
 		return
 	}
 	stream := record.(*ArchiveStream)
@@ -982,7 +982,7 @@ func (a *Archiver) onStreamLastMiniblockUpdated(
 	id := StreamId(event.StreamId)
 	record, loaded := a.streams.Load(id)
 	if !loaded {
-		dlog.FromCtx(ctx).Error("onStreamLastMiniblockUpdated: Stream not found in map", "streamId", id)
+		logging.FromCtx(ctx).Errorw("onStreamLastMiniblockUpdated: Stream not found in map", "streamId", id)
 		return
 	}
 	stream := record.(*ArchiveStream)
@@ -1020,7 +1020,7 @@ func (a *Archiver) GetStats() *ArchiverStats {
 }
 
 func (a *Archiver) worker(ctx context.Context) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	defer a.workersWG.Done()
 
@@ -1031,12 +1031,12 @@ func (a *Archiver) worker(ctx context.Context) {
 		case streamId := <-a.tasks:
 			record, loaded := a.streams.Load(streamId)
 			if !loaded {
-				log.Error("archiver.worker: Stream not found in map", "streamId", streamId)
+				log.Errorw("archiver.worker: Stream not found in map", "streamId", streamId)
 				continue
 			}
 			err := a.ArchiveStream(ctx, record.(*ArchiveStream))
 			if err != nil {
-				log.Error("archiver.worker: Failed to archive stream", "error", err, "streamId", streamId)
+				log.Errorw("archiver.worker: Failed to archive stream", "error", err, "streamId", streamId)
 				a.failedOpsCount.Add(1)
 			} else {
 				a.successOpsCount.Add(1)
