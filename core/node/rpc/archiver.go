@@ -26,10 +26,6 @@ import (
 	"github.com/river-build/river/core/node/storage"
 )
 
-// maxFailedConsecutiveUpdates is the maximum number of consecutive update failures allowed
-// before a stream is considered corrupt.
-var maxFailedConsecutiveUpdates = uint32(50)
-
 type CorruptionReason int
 
 const (
@@ -64,6 +60,9 @@ type StreamCorruptionTracker struct {
 
 	// Corresponding archive stream. Read-only, set on creation.
 	parent *ArchiveStream
+
+	// maximum failed consecutive updates. Read-only, set on creation.
+	maxFailedConsecutiveUpdates uint32
 }
 
 func (ct *StreamCorruptionTracker) GetConsecutiveUpdateFailures() uint32 {
@@ -107,7 +106,7 @@ func (ct *StreamCorruptionTracker) RecordBlockUpdateFailure(ctx context.Context,
 	}
 
 	ct.consecutiveUpdateFailures = ct.consecutiveUpdateFailures + 1
-	if ct.consecutiveUpdateFailures >= maxFailedConsecutiveUpdates && !ct.corrupt {
+	if ct.consecutiveUpdateFailures >= ct.maxFailedConsecutiveUpdates && !ct.corrupt {
 		ct.corrupt = true
 		ct.corruptionReason = FetchFailed
 		ct.firstCorruptBlock = max(ct.parent.numBlocksInDb.Load(), 0)
@@ -275,11 +274,12 @@ func (ct *StreamCorruptionTracker) SetParent(parent *ArchiveStream) {
 
 // NewStreamCorruptionTracker returns a new CorruptionTracker. A constructor is needed because
 // the default values of some fields are nonzero.
-func NewStreamCorruptionTracker() StreamCorruptionTracker {
+func NewStreamCorruptionTracker(maxFailedConsecutiveUpdates uint32) StreamCorruptionTracker {
 	return StreamCorruptionTracker{
-		latestScrubbedBlock: -1,
-		firstCorruptBlock:   -1,
-		lastUpdatedBlock:    -1,
+		latestScrubbedBlock:         -1,
+		firstCorruptBlock:           -1,
+		lastUpdatedBlock:            -1,
+		maxFailedConsecutiveUpdates: maxFailedConsecutiveUpdates,
 	}
 }
 
@@ -302,11 +302,16 @@ type ArchiveStream struct {
 	mu sync.Mutex
 }
 
-func NewArchiveStream(streamId StreamId, nn *[]common.Address, lastKnownMiniblock uint64) *ArchiveStream {
+func NewArchiveStream(
+	streamId StreamId,
+	nn *[]common.Address,
+	lastKnownMiniblock uint64,
+	maxConsecutiveFailedUpdates uint32,
+) *ArchiveStream {
 	stream := &ArchiveStream{
 		streamId: streamId,
 		nodes:    nodes.NewStreamNodesWithLock(*nn, common.Address{}),
-		corrupt:  NewStreamCorruptionTracker(),
+		corrupt:  NewStreamCorruptionTracker(maxConsecutiveFailedUpdates),
 	}
 	stream.numBlocksInContract.Store(int64(lastKnownMiniblock + 1))
 	stream.numBlocksInDb.Store(-1)
@@ -529,7 +534,10 @@ func (a *Archiver) addNewStream(
 	nn *[]common.Address,
 	lastKnownMiniblock uint64,
 ) {
-	_, loaded := a.streams.LoadOrStore(streamId, NewArchiveStream(streamId, nn, lastKnownMiniblock))
+	_, loaded := a.streams.LoadOrStore(
+		streamId,
+		NewArchiveStream(streamId, nn, lastKnownMiniblock, a.config.GetMaxConsecutiveFailedUpdates()),
+	)
 	if loaded {
 		// TODO: Double notification, shouldn't happen.
 		logging.FromCtx(ctx).
@@ -551,7 +559,7 @@ func (a *Archiver) advanceNodeAndRetryWithDelay(stream *ArchiveStream, delay tim
 
 	// Continue to retry with a much lower frequency if the stream has failed to update
 	// past the threshold at which we consider it unavailable.
-	if stream.corrupt.GetConsecutiveFailedUpdates() >= maxFailedConsecutiveUpdates {
+	if stream.corrupt.GetConsecutiveFailedUpdates() >= a.config.GetMaxConsecutiveFailedUpdates() {
 		delay = max(delay, time.Minute)
 	}
 
