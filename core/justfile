@@ -195,6 +195,7 @@ run-go *args: _require_run_env
     source ${ENV_FILE}
     cd ${RUN_BASE}
     mkdir -p logs
+    CGO_LDFLAGS="-L./bin" \
     go run ../../river_node/main.go \
         --config common.yaml \
         --config config.yaml \
