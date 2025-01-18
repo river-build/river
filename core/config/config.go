@@ -374,14 +374,14 @@ type APNPushNotificationsConfig struct {
 	// TeamID from developer account (View Account -> Membership)
 	TeamID string
 	// AuthKey contains the private key to authenticate the notification service with the APN service
-	AuthKey string
+	AuthKey string `json:"-" yaml:"-"` // Omit sensitive field from logging
 }
 
 type WebPushVapidNotificationConfig struct {
 	// PrivateKey is the private key of the public key that is shared with the client
 	// and used to sign push notifications that allows the client to verify the incoming
 	// notification for origin and validity.
-	PrivateKey string
+	PrivateKey string `json:"-" yaml:"-"` // Omit sensitive field from logging
 	// PublicKey as shared with the client that is used for subscribing and verifying
 	// the incoming push notification.
 	PublicKey string
@@ -391,6 +391,27 @@ type WebPushVapidNotificationConfig struct {
 
 type WebPushNotificationConfig struct {
 	Vapid WebPushVapidNotificationConfig
+}
+
+type SessionKeyConfig struct {
+	// Algorithm indicates how the session token is signed (only HS256 is supported)
+	Algorithm string
+	// Key holds the hex encoded key
+	Key string
+}
+
+type SessionTokenConfig struct {
+	// Lifetime indicates how long a session token is valid (default=30m).
+	Lifetime time.Duration
+	// Key holds the secret key that is used to sign the session token.
+	Key SessionKeyConfig `json:"-" yaml:"-"` // Omit sensitive field from logging
+}
+
+type AuthenticationConfig struct {
+	// ChallengeTimeout is the lifetime an authentication challenge is valid (default=30s).
+	ChallengeTimeout time.Duration
+	// SessionTokenKey contains the configuration for the JWT session token.
+	SessionToken SessionTokenConfig
 }
 
 type NotificationsConfig struct {
@@ -407,22 +428,7 @@ type NotificationsConfig struct {
 	Web WebPushNotificationConfig `mapstructure:"webpush"`
 
 	// Authentication holds configuration for the Client API authentication service.
-	Authentication struct {
-		// ChallengeTimeout is the lifetime an authentication challenge is valid (default=30s).
-		ChallengeTimeout time.Duration
-		// SessionTokenKey contains the configuration for the JWT session token.
-		SessionToken struct {
-			// Lifetime indicates how long a session token is valid (default=30m).
-			Lifetime time.Duration
-			// Key holds the secret key that is used to sign the session token.
-			Key struct {
-				// Algorithm indicates how the session token is signed (only HS256 is supported)
-				Algorithm string
-				// Key holds the hex encoded key
-				Key string
-			}
-		}
-	}
+	Authentication AuthenticationConfig
 }
 
 type LogConfig struct {
