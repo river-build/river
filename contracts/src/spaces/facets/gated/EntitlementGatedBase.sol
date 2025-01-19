@@ -12,23 +12,14 @@ import {EntitlementGatedStorage} from "./EntitlementGatedStorage.sol";
 import {MembershipStorage} from "contracts/src/spaces/facets/membership/MembershipStorage.sol";
 
 abstract contract EntitlementGatedBase is IEntitlementGatedBase {
-  // Function to convert the first four bytes of bytes32 to a hex string of 8 characters
-  /*
-  function bytes32ToHexStringFirst8(
-    bytes32 _data
-  ) public pure returns (string memory) {
-    bytes memory alphabet = "0123456789abcdef";
-    bytes memory str = new bytes(8); // Since we need only the first 8 hex characters
-
-    for (uint256 i = 0; i < 4; i++) {
-      // Loop only through the first 4 bytes
-      str[i * 2] = alphabet[uint256(uint8(_data[i] >> 4))];
-      str[1 + i * 2] = alphabet[uint256(uint8(_data[i] & 0x0f))];
+  modifier onlyEntitlementChecker() {
+    if (
+      msg.sender != address(EntitlementGatedStorage.layout().entitlementChecker)
+    ) {
+      revert EntitlementGated_OnlyEntitlementChecker();
     }
-
-    return string(str);
+    _;
   }
-  */
 
   function _setEntitlementChecker(
     IEntitlementChecker entitlementChecker
@@ -163,6 +154,83 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
       }
     }
   }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           V2                               */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+  function _requestEntitlementCheckV2(
+    address walletAddress,
+    bytes32 transactionId,
+    IRuleEntitlement entitlement,
+    uint256 requestId
+  ) internal {
+    EntitlementGatedStorage.Layout storage ds = EntitlementGatedStorage
+      .layout();
+
+    Transaction storage transaction = ds.transactions[transactionId];
+
+    if (transaction.hasBenSet) {
+      uint256 _length = transaction.roleIds.length;
+      for (uint256 i; i < _length; ++i) {
+        if (transaction.roleIds[i] == requestId) {
+          revert EntitlementGated_TransactionCheckAlreadyRegistered();
+        }
+      }
+    }
+
+    // if the entitlement checker has not been set, set it
+    if (address(ds.entitlementChecker) == address(0)) {
+      _setFallbackEntitlementChecker();
+    }
+
+    if (!transaction.hasBenSet) {
+      transaction.hasBenSet = true;
+      transaction.entitlement = entitlement;
+    }
+
+    transaction.roleIds.push(requestId);
+
+    ds.entitlementChecker.requestEntitlementCheckV2{value: msg.value}(
+      walletAddress,
+      transactionId,
+      requestId
+    );
+  }
+
+  function _postEntitlementCheckResultV2(
+    bytes32 transactionId,
+    uint256 roleId,
+    NodeVoteStatus result
+  ) internal {
+    EntitlementGatedStorage.Layout storage ds = EntitlementGatedStorage
+      .layout();
+    Transaction storage transaction = ds.transactions[transactionId];
+
+    if (transaction.hasBenSet == false) {
+      revert EntitlementGated_TransactionNotRegistered();
+    }
+
+    if (transaction.isCompleted[roleId]) {
+      revert EntitlementGated_TransactionCheckAlreadyCompleted();
+    }
+
+    transaction.isCompleted[roleId] = true;
+
+    bool allRoleIdsCompleted = _checkAllRoleIdsCompleted(transactionId);
+
+    if (allRoleIdsCompleted) {
+      _removeTransaction(transactionId);
+    }
+
+    if (result == NodeVoteStatus.PASSED || allRoleIdsCompleted) {
+      _onEntitlementCheckResultPosted(transactionId, result);
+      emit EntitlementCheckResultPosted(transactionId, result);
+    }
+  }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           Helpers                          */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function _checkAllRoleIdsCompleted(
     bytes32 transactionId

@@ -9,6 +9,11 @@ abstract contract EntitlementTestUtils {
       "EntitlementCheckRequested(address,address,bytes32,uint256,address[])"
     );
 
+  bytes32 internal constant CHECK_REQUESTED_V2 =
+    keccak256(
+      "EntitlementCheckRequestedV2(address,address,address,bytes32,uint256,address[])"
+    );
+
   /// @dev Capture the requested entitlement data from the logs emitted by the EntitlementChecker
   function _getRequestedEntitlementData(
     Vm.Log[] memory requestLogs

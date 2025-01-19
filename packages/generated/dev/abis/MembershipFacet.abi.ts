@@ -1109,6 +1109,11 @@ export default [
   },
   {
     "type": "error",
+    "name": "EntitlementGated_OnlyEntitlementChecker",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "EntitlementGated_TransactionCheckAlreadyCompleted",
     "inputs": []
   },
