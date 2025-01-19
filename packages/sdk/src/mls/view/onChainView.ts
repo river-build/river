@@ -58,6 +58,9 @@ export class OnChainView {
     // rejected events by event id
     public readonly rejected: Map<string, ConfirmedMlsEvent> = new Map()
 
+    // commits by epoch
+    public readonly commits: Map<bigint, Uint8Array> = new Map()
+
     private log: {
         info?: DLogger
         debug?: DLogger
@@ -193,8 +196,10 @@ export class OnChainView {
         try {
             const commit = event.value.commit
             const groupInfo = event.value.groupInfoMessage
+            const epoch = this.externalGroup.group.epoch
             await this.processCommitWithError(this.externalGroup, commit, groupInfo)
             this.accepted.set(event.eventId, event)
+            this.commits.set(epoch, commit)
         } catch (e) {
             // this.log.error?.('processCommit', e)
             this.rejected.set(event.eventId, event)
