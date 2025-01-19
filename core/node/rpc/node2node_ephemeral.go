@@ -137,7 +137,7 @@ func (s *Service) sealEphemeralStream(ctx context.Context, req *SealEphemeralStr
 	}
 
 	// Normalize stream locally
-	if _, _, err = s.storage.NormalizeEphemeralStream(ctx, streamId); err != nil {
+	if _, err = s.storage.NormalizeEphemeralStream(ctx, streamId); err != nil {
 		return nil, err
 	}
 

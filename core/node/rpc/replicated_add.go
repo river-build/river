@@ -76,7 +76,7 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 	sender := NewQuorumPool("method", "replicatedStream.AddMediaEvent", "streamId", r.streamId)
 
 	// These are needed to register the stream onchain if everything goes well.
-	var genesisMiniblockHash, lastMiniblockHash common.Hash
+	var genesisMiniblockHash common.Hash
 
 	// Save the ephemeral miniblock locally
 	sender.GoLocal(ctx, func(ctx context.Context) error {
@@ -100,7 +100,7 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 		}
 
 		// Normalize stream locally
-		genesisMiniblockHash, lastMiniblockHash, err = r.service.storage.NormalizeEphemeralStream(ctx, r.streamId)
+		genesisMiniblockHash, err = r.service.storage.NormalizeEphemeralStream(ctx, r.streamId)
 		if err != nil {
 			return err
 		}
@@ -157,7 +157,7 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 		r.streamId,
 		cc.NodeAddresses(),
 		genesisMiniblockHash,
-		lastMiniblockHash,
+		common.BytesToHash(ephemeralMb.Header.Hash),
 		0,
 		true,
 	); err != nil {
