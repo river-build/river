@@ -151,17 +151,19 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 		return nil, err
 	}
 
-	// Register the given stream onchain with sealed flag
-	if err = r.service.streamRegistry.AddStream(
-		ctx,
-		r.streamId,
-		cc.NodeAddresses(),
-		genesisMiniblockHash,
-		common.BytesToHash(ephemeralMb.Header.Hash),
-		0,
-		true,
-	); err != nil {
-		return nil, err
+	if last {
+		// Register the given stream onchain with sealed flag
+		if err = r.service.streamRegistry.AddStream(
+			ctx,
+			r.streamId,
+			cc.NodeAddresses(),
+			genesisMiniblockHash,
+			common.BytesToHash(ephemeralMb.Header.Hash),
+			0,
+			true,
+		); err != nil {
+			return nil, err
+		}
 	}
 
 	return ephemeralMb, nil
