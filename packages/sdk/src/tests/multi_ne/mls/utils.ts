@@ -3,6 +3,8 @@ import { getChannelMessagePayload } from '../../testUtils'
 import { MlsAdapter } from '../../../mls'
 import { Client } from '../../../client'
 import { MlsInspector } from '../../../mls/utils/inspector'
+import { ExternalClient as MlsExternalClient, Group as MlsGroup } from '@river-build/mls-rs-wasm'
+import { ExternalJoin, InitializeGroup } from '../../../mls/view/types'
 
 function getPayloadRemoteEvent(event: StreamTimelineEvent): string | undefined {
     if (event.decryptedContent?.kind === 'channelMessage') {
@@ -52,4 +54,51 @@ export function getCurrentEpoch(client: Client, streamId: string): bigint {
     const group = inspector.groupService.getGroup(streamId)!
     expect(group).toBeDefined()
     return inspector.groupService.currentEpoch(group)
+}
+
+export function makeInitializeGroup(
+    signaturePublicKey: Uint8Array,
+    externalGroupSnapshot: Uint8Array,
+    groupInfoMessage: Uint8Array,
+): InitializeGroup {
+    return {
+        case: 'initializeGroup',
+        value: {
+            signaturePublicKey: signaturePublicKey,
+            externalGroupSnapshot: externalGroupSnapshot,
+            groupInfoMessage: groupInfoMessage,
+        },
+    }
+}
+
+export function makeExternalJoin(
+    signaturePublicKey: Uint8Array,
+    commit: Uint8Array,
+    groupInfoMessage: Uint8Array,
+): ExternalJoin {
+    return {
+        case: 'externalJoin',
+        value: {
+            signaturePublicKey: signaturePublicKey,
+            commit: commit,
+            groupInfoMessage: groupInfoMessage,
+        },
+    }
+}
+
+// helper function to create a group + external snapshot
+export async function createGroupInfoAndExternalSnapshot(group: MlsGroup): Promise<{
+    groupInfoMessage: Uint8Array
+    externalGroupSnapshot: Uint8Array
+}> {
+    const groupInfoMessage = await group.groupInfoMessageAllowingExtCommit(false)
+    const tree = group.exportTree()
+    const externalClient = new MlsExternalClient()
+    const externalGroup = externalClient.observeGroup(groupInfoMessage.toBytes(), tree.toBytes())
+
+    const externalGroupSnapshot = (await externalGroup).snapshot()
+    return {
+        groupInfoMessage: groupInfoMessage.toBytes(),
+        externalGroupSnapshot: externalGroupSnapshot.toBytes(),
+    }
 }
