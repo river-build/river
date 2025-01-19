@@ -78,12 +78,11 @@ func TestCreateMediaStream(t *testing.T) {
 		envelope, err := events.MakeEnvelopeWithPayload(alice.wallet, mp, mb)
 		tt.require.NoError(err)
 
-		creationCookie.Last = i == chunks-1
-
 		// Add media chunk event
 		aeResp, err := alice.client.AddMediaEvent(alice.ctx, connect.NewRequest(&protocol.AddMediaEventRequest{
 			Event:          envelope,
 			CreationCookie: creationCookie,
+			Last:           i == chunks-1,
 		}))
 		tt.require.NoError(err)
 

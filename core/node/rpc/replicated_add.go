@@ -55,7 +55,7 @@ func (r *replicatedStream) AddEvent(ctx context.Context, event *ParsedEvent) err
 	return sender.Wait()
 }
 
-func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent, cc *CreationCookie) (*Miniblock, error) {
+func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent, cc *CreationCookie, last bool) (*Miniblock, error) {
 	header, err := MakeEnvelopeWithPayload(r.service.wallet, Make_MiniblockHeader(&MiniblockHeader{
 		MiniblockNum:      cc.MiniblockNum,
 		PrevMiniblockHash: cc.PrevMiniblockHash,
@@ -95,7 +95,7 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 		}
 
 		// Return here if there are more chunks to upload.
-		if !cc.GetLast() {
+		if !last {
 			return nil
 		}
 
@@ -128,7 +128,7 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 		}
 
 		// Return here if there are more chunks to upload.
-		if !cc.GetLast() {
+		if !last {
 			return nil
 		}
 
