@@ -305,7 +305,7 @@ const _abi = [
         internalType: "bytes32",
       },
       {
-        name: "prevMiniBlockHash",
+        name: "prevMiniblockHash",
         type: "bytes32",
         internalType: "bytes32",
       },

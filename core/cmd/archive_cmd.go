@@ -4,17 +4,23 @@ import (
 	"context"
 
 	"github.com/river-build/river/core/config"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/rpc"
+	"go.uber.org/zap"
 
 	"github.com/spf13/cobra"
 )
 
 func runArchive(cfg *config.Config, once bool) error {
-	ctx := context.Background() // lint:ignore context.Background() is fine here
-	err := setupProfiler(ctx, "archive-node", cfg)
+	err := setupProfiler("archive-node", cfg)
+
+	// Enable sampling for archiver logs.
+	zap.ReplaceGlobals(logging.SampledLogger(zap.L()))
+
 	if err != nil {
 		return err
 	}
+	ctx := context.Background() // lint:ignore context.Background() is fine here
 	return rpc.RunArchive(ctx, cfg, once)
 }
 

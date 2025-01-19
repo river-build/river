@@ -26,10 +26,10 @@
         "fake-indexeddb": "^4.0.1",
         "ioredis": "^5.3.2",
         "pino": "^8.17.1",
-        "pino-pretty": "^10.2.3"
+        "pino-pretty": "^13.0.0"
     },
     "devDependencies": {
-        "@river-build/mls-rs-wasm-node": "^0.0.7",
+        "@river-build/mls-rs-wasm-node": "^0.0.16",
         "@types/debug": "^4.1.8",
         "@types/lodash": "^4.14.186",
         "@types/node": "^20.5.0",

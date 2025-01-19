@@ -634,6 +634,8 @@ jobs:
                     --name river_postgres_container
 
         steps:
+            - uses: taiki-e/install-action@just
+
             - name: Cancel previous runs
               if: github.event_name != 'schedule'
               uses: styfle/cancel-workflow-action@0.12.1
@@ -706,11 +708,8 @@ jobs:
               run: ./scripts/register-ca.sh
               working-directory: core
 
-            - name: Build MLS libs
-              run: ./scripts/build-mls.sh
-
             - name: Run go tests
-              run: CGO_LDFLAGS="./libmls_lib.a -ldl" go test -race -timeout 24m -v -parallel 1 -count 1 -p 8 ./...
+              run: just test-all -race -timeout 24m -parallel 1 -count 1 -p 8
               working-directory: core
 
     XChain_Integration:

@@ -12,7 +12,7 @@ import (
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/mls_service"
 	"github.com/river-build/river/core/node/mls_service/mls_tools"
 	. "github.com/river-build/river/core/node/protocol"
@@ -139,13 +139,18 @@ func MakeRemoteStreamView(ctx context.Context, stream *StreamAndCookie) (*stream
 	}
 
 	miniblocks := make([]*MiniblockInfo, len(stream.Miniblocks))
-	// +1 below will make it -1 for the first iteration so block number is not enforced.
-	lastMiniblockNumber := int64(-2)
+	lastMiniblockNumber := int64(-1)
 	snapshotIndex := 0
 	for i, binMiniblock := range stream.Miniblocks {
+		opts := NewParsedMiniblockInfoOpts()
+		// Ignore block number of first block, but enforce afterwards
+		if i > 0 {
+			opts = opts.WithExpectedBlockNumber(lastMiniblockNumber + 1)
+		}
+
 		miniblock, err := NewMiniblockInfoFromProto(
 			binMiniblock,
-			NewMiniblockInfoFromProtoOpts{ExpectedBlockNumber: lastMiniblockNumber + 1},
+			opts,
 		)
 		if err != nil {
 			return nil, err
@@ -254,7 +259,7 @@ func (r *streamViewImpl) ProposeNextMiniblock(
 		Hashes:            hashes,
 		NewMiniblockNum:   r.minipool.generation,
 		PrevMiniblockHash: r.LastBlock().headerEvent.Hash[:],
-		ShouldSnapshot:    forceSnapshot || r.shouldSnapshot(ctx, cfg),
+		ShouldSnapshot:    forceSnapshot || r.shouldSnapshot(cfg),
 	}, nil
 }
 
@@ -274,7 +279,7 @@ func (r *streamViewImpl) makeMiniblockHeader(
 		)
 	}
 
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	hashes := make([][]byte, 0, r.minipool.events.Len())
 	events := make([]*ParsedEvent, 0, r.minipool.events.Len())
 
@@ -304,6 +309,12 @@ func (r *streamViewImpl) makeMiniblockHeader(
 		snapshot = proto.Clone(r.snapshot).(*Snapshot)
 		mlsSnapshotRequest := r.makeMlsSnapshotRequest()
 
+		if snapshot.Members.GetMls() == nil {
+			snapshot.Members.Mls = &MemberPayload_Snapshot_Mls{}
+		}
+		// reset the MLS commits
+		snapshot.Members.Mls.CommitsSinceLastSnapshot = make([][]byte, 0)
+
 		// update all blocks since last snapshot
 		for i := r.snapshotIndex + 1; i < len(r.blocks); i++ {
 			block := r.blocks[i]
@@ -312,7 +323,7 @@ func (r *streamViewImpl) makeMiniblockHeader(
 				offset := block.Header().EventNumOffset
 				err := Update_Snapshot(snapshot, e, miniblockNum, offset+int64(j))
 				if err != nil {
-					log.Error("Failed to update snapshot",
+					log.Errorw("Failed to update snapshot",
 						"error", err,
 						"streamId", r.streamId,
 						"event", e.ShortDebugStr(),
@@ -325,13 +336,16 @@ func (r *streamViewImpl) makeMiniblockHeader(
 		for i, e := range events {
 			err := Update_Snapshot(snapshot, e, nextMiniblockNum, eventNumOffset+int64(i))
 			if err != nil {
-				log.Error("Failed to update snapshot",
+				log.Errorw("Failed to update snapshot",
 					"error", err,
 					"streamId", r.streamId,
 					"event", e.ShortDebugStr(),
 				)
 			}
-			updateMlsSnapshotRequest(mlsSnapshotRequest, e) // is it wrong that we're calling this for events in the minipool?
+			updateMlsSnapshotRequest(
+				mlsSnapshotRequest,
+				e,
+			) // is it wrong that we're calling this for events in the minipool?
 		}
 
 		// only attempt to snapshot the MLS state if MLS has been initialized for this stream.
@@ -339,7 +353,7 @@ func (r *streamViewImpl) makeMiniblockHeader(
 			resp, err := mls_service.SnapshotExternalGroupRequest(mlsSnapshotRequest)
 			if err != nil {
 				// what to do here...?
-				log.Error("Failed to update MLS snapshot",
+				log.Errorw("Failed to update MLS snapshot",
 					"error", err,
 					"streamId", r.streamId,
 				)
@@ -584,7 +598,7 @@ func (r *streamViewImpl) SyncCookie(localNodeAddress common.Address) *SyncCookie
 	}
 }
 
-func (r *streamViewImpl) shouldSnapshot(ctx context.Context, cfg *crypto.OnChainSettings) bool {
+func (r *streamViewImpl) shouldSnapshot(cfg *crypto.OnChainSettings) bool {
 	minEventsPerSnapshot := int(cfg.MinSnapshotEvents.ForType(r.streamId.Type()))
 
 	count := 0
@@ -672,7 +686,7 @@ func (r *streamViewImpl) ValidateNextEvent(
 
 	// make sure we're recent
 	// if the user isn't adding the latest block, allow it if the block after was recently created
-	if foundBlockAt < len(r.blocks)-1 && !r.isRecentBlock(ctx, cfg, r.blocks[foundBlockAt+1], currentTime) {
+	if foundBlockAt < len(r.blocks)-1 && !r.isRecentBlock(cfg, r.blocks[foundBlockAt+1], currentTime) {
 		return RiverError(
 			Err_BAD_PREV_MINIBLOCK_HASH,
 			"prevMiniblockHash did not reference a recent block",
@@ -714,7 +728,6 @@ func (r *streamViewImpl) ValidateNextEvent(
 }
 
 func (r *streamViewImpl) isRecentBlock(
-	ctx context.Context,
 	cfg *crypto.OnChainSettings,
 	block *MiniblockInfo,
 	currentTime time.Time,
