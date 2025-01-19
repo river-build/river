@@ -155,7 +155,7 @@ import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from
 import { makeTags, makeTipTags } from './tags'
 import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
 import { extractMlsExternalGroup, ExtractMlsExternalGroupResult } from './mls/utils/mlsutils'
-import { MlsAdapter, MLS_ALGORITHM, Coordinator, QueueService } from './mls'
+import { MlsAdapter, MLS_ALGORITHM } from './mls'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
