@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/stretchr/testify/require"
-
+	"github.com/river-build/river/core/contracts/river"
 	"github.com/river-build/river/core/node/crypto"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/testutils"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestStreamCacheViewEviction(t *testing.T) {
@@ -450,4 +451,120 @@ func Disabled_TestStreamUnloadWithSubscribers(t *testing.T) {
 
 	// make sure that all views are dropped
 	require.True(areAllViewsDropped(streamCache))
+}
+
+// TestMiniblockRegistrationWithPendingLocalCandidate tests that the node can recover from a situation where it tries to
+// register a miniblock candidate but fails because the candidate was already registered but the confirmation receipt was
+// missed before and therefore the candidate was never promoted.
+func TestMiniblockRegistrationWithPendingLocalCandidate(t *testing.T) {
+	ctx, tt := makeCacheTestContext(t, testParams{replFactor: 1})
+	_ = tt.initCache(0, nil)
+	require := require.New(t)
+	instance := tt.instances[0]
+	mbProducer := instance.mbProducer
+
+	spaceStreamId := testutils.FakeStreamId(STREAM_SPACE_BIN)
+	genesisMb := MakeGenesisMiniblockForSpaceStream(t, instance.params.Wallet, instance.params.Wallet, spaceStreamId)
+
+	stream, view := tt.createStream(spaceStreamId, genesisMb.Proto)
+
+	// advance the stream with some miniblocks
+	for i := range 2 {
+		addEventToStream(t, ctx, instance.params, stream, fmt.Sprintf("%d", i*2), view.LastBlock().Ref)
+		addEventToStream(t, ctx, instance.params, stream, fmt.Sprintf("%d", 1+(i*2)), view.LastBlock().Ref)
+
+		mb, err := mbProducer.TestMakeMiniblock(ctx, spaceStreamId, false)
+		require.NoError(err)
+		require.Equal(int64(i+1), mb.Num)
+	}
+
+	view, err := stream.GetView(ctx)
+	require.NoError(err)
+	lastBlock := view.LastBlock()
+
+	// Pause cache event processing. The cache/mbProduces won't witness any events giving the test the
+	// required control to simulate the scenario where the node misses stream update events.
+	instance.cache.PauseEventProcessing()
+	instance.mbProducer.PauseEventProcessing()
+
+	// create a new candidate1 with 2 events in it.
+	event1 := MakeEvent(
+		t, instance.params.Wallet, Make_MemberPayload_Username(&EncryptedData{Ciphertext: "A"}), lastBlock.Ref)
+
+	event2 := MakeEvent(
+		t, instance.params.Wallet, Make_MemberPayload_Username(&EncryptedData{Ciphertext: "B"}), lastBlock.Ref)
+
+	candidate1Header := &MiniblockHeader{
+		MiniblockNum:             lastBlock.Ref.Num + 1,
+		Timestamp:                NextMiniblockTimestamp(lastBlock.Header().Timestamp),
+		EventHashes:              [][]byte{event1.Hash.Bytes(), event2.Hash.Bytes()},
+		PrevMiniblockHash:        lastBlock.headerEvent.Hash[:],
+		Snapshot:                 nil,
+		EventNumOffset:           0,
+		PrevSnapshotMiniblockNum: view.LastBlock().Header().GetPrevSnapshotMiniblockNum(),
+		Content: &MiniblockHeader_None{
+			None: &emptypb.Empty{},
+		},
+	}
+
+	candidate1, err := NewMiniblockInfoFromHeaderAndParsed(
+		instance.params.Wallet, candidate1Header, []*ParsedEvent{event1, event2})
+	require.NoError(err)
+
+	err = mbProduceCandidate_Save(ctx, instance.params, spaceStreamId, candidate1, []common.Address{})
+	require.NoError(err)
+	
+	// register candidate1 in the stream facet and bypass the mini-block producer
+	req := []river.SetMiniblock{{
+		StreamId:          spaceStreamId,
+		PrevMiniBlockHash: common.BytesToHash(candidate1Header.GetPrevMiniblockHash()),
+		LastMiniblockHash: candidate1.Ref.Hash,
+		LastMiniblockNum:  uint64(candidate1.Ref.Num),
+		IsSealed:          false,
+	}}
+
+	success, invalidMiniBlocks, failed, err := instance.params.Registry.SetStreamLastMiniblockBatch(ctx, req)
+	require.NoError(err)
+	require.Equal([]StreamId{spaceStreamId}, success)
+	require.Empty(invalidMiniBlocks)
+	require.Empty(failed)
+
+	// makes sure that stream advanced in stream facet to candidate but local stream is still on the prev mini-block
+	riverChainBlockNum, err := instance.params.RiverChain.Client.BlockNumber(ctx)
+	require.NoError(err)
+	getStream, err := instance.params.Registry.GetStream(ctx, spaceStreamId, crypto.BlockNumber(riverChainBlockNum))
+	require.NoError(err)
+
+	require.Equal(int64(getStream.LastMiniblockNum), candidate1.Ref.Num)
+	require.Equal(getStream.LastMiniblockHash, candidate1.Ref.Hash)
+
+	view, err = stream.GetView(ctx)
+	require.NoError(err)
+	lastBlock = view.LastBlock()
+	require.Equal(lastBlock.Ref.Num+1, int64(getStream.LastMiniblockNum))
+
+	// Add some events to the stream and try produce a mini-block. This must fail because the
+	// stream facet already progressed by the just registered candidate. The node must detect this
+	// scenario and load the candidate from its storage and apply/promote it. After that the node
+	// must be able to produce the next mini-block that contains the 3 events
+	addEventToStream(t, ctx, instance.params, stream, "A", view.LastBlock().Ref)
+	addEventToStream(t, ctx, instance.params, stream, "B", view.LastBlock().Ref)
+	addEventToStream(t, ctx, instance.params, stream, "C", view.LastBlock().Ref)
+
+	mb, err := mbProducer.TestMakeMiniblock(ctx, spaceStreamId, false)
+	require.NoError(err)
+	require.Equal(candidate1Header.MiniblockNum, mb.Num) // candidate was promoted
+
+	view, err = stream.GetView(ctx)
+	require.NoError(err)
+	require.Equal(3, view.GetStats().EventsInMinipool)
+
+	mb, err = mbProducer.TestMakeMiniblock(ctx, spaceStreamId, false)
+	require.NoError(err)
+	require.Equal(candidate1Header.MiniblockNum+1, mb.Num)
+
+	view, err = stream.GetView(ctx)
+	require.NoError(err)
+	lastBlock = view.LastBlock()
+	require.Equal(3, len(lastBlock.Events()))
 }
