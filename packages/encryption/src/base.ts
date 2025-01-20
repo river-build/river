@@ -46,7 +46,11 @@ export abstract class EncryptionAlgorithm implements IEncryptionParams {
         opts?: { awaitInitialShareSession: boolean },
     ): Promise<void>
 
-    abstract encrypt(streamId: string, payload: string): Promise<EncryptedData>
+    abstract encrypt(
+        streamId: string,
+        payload: Uint8Array,
+        dataType: string,
+    ): Promise<EncryptedData>
 }
 
 /**
@@ -59,7 +63,7 @@ export abstract class DecryptionAlgorithm implements IDecryptionParams {
         this.device = params.device
     }
 
-    abstract decrypt(streamId: string, content: EncryptedData): Promise<string>
+    abstract decrypt(streamId: string, content: EncryptedData): Promise<Uint8Array>
 
     abstract importStreamKey(streamId: string, session: GroupEncryptionSession): Promise<void>
 

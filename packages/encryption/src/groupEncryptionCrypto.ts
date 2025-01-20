@@ -156,10 +156,11 @@ export class GroupEncryptionCrypto {
      */
     public async encryptGroupEvent(
         streamId: string,
-        payload: string,
+        payload: Uint8Array,
+        dataType: string,
         algorithm: GroupEncryptionAlgorithmId,
     ): Promise<EncryptedData> {
-        return this.groupEncryption[algorithm].encrypt(streamId, payload)
+        return this.groupEncryption[algorithm].encrypt(streamId, payload, dataType)
     }
     /**
      * Decrypt a received event using group encryption algorithm

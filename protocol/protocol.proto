@@ -728,6 +728,13 @@ message StreamSettings {
  */
 message EncryptedData {
     /**
+     * Encrypted payload when algorithm is set to mls_0.0.1
+     */
+     message Mls {
+        uint64 epoch = 1;
+        bytes ciphertext = 2;
+      }
+    /**
     * Ciphertext of the encryption envelope.
     */
     string ciphertext = 1;
@@ -758,11 +765,6 @@ message EncryptedData {
     /**
      * Encrypted payload when algorithm is set to mls_0.0.1
      */
-    message Mls {
-      uint64 epoch = 1;
-      bytes ciphertext = 2;
-    }
-
     optional Mls mls = 7;
 
     // Used if algorithm is set to 'grpaes'
@@ -773,6 +775,9 @@ message EncryptedData {
 
     // Used if algorithm is set to 'grpaes'
     bytes session_id_bytes = 10;
+
+    // used to parse data after it's decrypted
+    optional string data_type = 11; 
 }
 
 message WrappedEncryptedData {
