@@ -11,9 +11,10 @@ import {
     MlsMessage,
 } from '@river-build/mls-rs-wasm'
 import { dlog } from '@river-build/dlog'
-import { OnChainView, OnChainViewOpts } from '../../../mls/view/onChainView'
+import { OnChainView } from '../../../mls/view/onChainView'
 import { createGroupInfoAndExternalSnapshot, makeExternalJoin, makeInitializeGroup } from './utils'
 import { expect } from 'vitest'
+import { ViewAdapter, ViewAdapterOpts } from '../../../mls/view/viewAdapter'
 
 const encoder = new TextEncoder()
 
@@ -23,17 +24,17 @@ type TestClient = {
     mlsClient: MlsClient
 }
 
-const log = dlog('test:mls:onChainView')
+const log = dlog('test:mls:viewAdapter')
 
-describe('onChainViewTests', () => {
-    const clients: TestClient[] = []
+describe('ViewAdapterTests', () => {
+    const clients: TestClientWithViewAdapter[] = []
 
     const mlsClientOptions: MlsClientOptions = {
         withAllowExternalCommit: true,
         withRatchetTreeExtension: false,
     }
 
-    function makeOnChainViewOpts(nickname: string): OnChainViewOpts {
+    function makeViewAdapterOpts(nickname: string): ViewAdapterOpts {
         const log_ = log.extend(nickname)
         return {
             log: {
@@ -53,34 +54,55 @@ describe('onChainViewTests', () => {
         const name = encoder.encode(nickname)
         const mlsClient = await MlsClient.create(name, mlsClientOptions)
 
-        const testClient = {
+        return {
             nickname,
             client,
             mlsClient,
         }
-
-        clients.push(testClient)
-
-        return testClient
     }
 
-    let alice: TestClient
-    let bob: TestClient
-    let charlie: TestClient
+    type TestClientWithViewAdapter = TestClient & { viewAdapter: ViewAdapter }
+
+    let alice: TestClientWithViewAdapter
+    let bob: TestClientWithViewAdapter
+    let charlie: TestClientWithViewAdapter
     let streamId: string
 
     beforeEach(async () => {
-        alice = await makeInitAndStartClient('alice')
-        bob = await makeInitAndStartClient('bob')
-        charlie = await makeInitAndStartClient('charlie')
+        const alice_ = await makeInitAndStartClient('alice')
+        const bob_ = await makeInitAndStartClient('bob')
+        const charlie_ = await makeInitAndStartClient('charlie')
 
-        const { streamId: gdmStreamId } = await alice.client.createGDMChannel([
-            bob.client.userId,
-            charlie.client.userId,
+        const { streamId: gdmStreamId } = await alice_.client.createGDMChannel([
+            bob_.client.userId,
+            charlie_.client.userId,
         ])
 
-        await Promise.all(clients.map((client) => client.client.waitForStream(gdmStreamId)))
+        const testClients = [alice_, bob_, charlie_]
+
+        await Promise.all(
+            testClients.map((testClient) => testClient.client.waitForStream(gdmStreamId)),
+        )
         streamId = gdmStreamId
+        alice = {
+            ...alice_,
+            viewAdapter: new ViewAdapter(alice_.client, makeViewAdapterOpts(alice_.nickname)),
+        }
+        bob = {
+            ...bob_,
+            viewAdapter: new ViewAdapter(bob_.client, makeViewAdapterOpts(bob_.nickname)),
+        }
+        charlie = {
+            ...charlie_,
+            viewAdapter: new ViewAdapter(charlie_.client, makeViewAdapterOpts(charlie_.nickname)),
+        }
+        clients.push(alice, bob, charlie)
+    })
+
+    beforeEach(() => {
+        for (const client of clients) {
+            client.viewAdapter
+        }
     })
 
     afterEach(async () => {
@@ -136,10 +158,10 @@ describe('onChainViewTests', () => {
         }
     }
 
-    async function getView(client: TestClient, verbose = false): Promise<OnChainView> {
-        const stream = await client.client.getStream(streamId)
-        const opts = verbose ? makeOnChainViewOpts(client.nickname) : undefined
-        return OnChainView.loadFromStreamStateView(stream, opts)
+    function getView(client: TestClientWithViewAdapter): OnChainView {
+        const onChainView = client.viewAdapter.onChainView(streamId)!
+        expect(onChainView).toBeDefined()
+        return onChainView
     }
 
     type Counts = {
@@ -149,7 +171,7 @@ describe('onChainViewTests', () => {
     }
 
     function waitUntilClientsObserve(
-        clients: TestClient[],
+        clients: TestClientWithViewAdapter[],
         counts: Counts,
         opts = { timeout: 10_000 },
     ): Promise<void> {
@@ -157,8 +179,10 @@ describe('onChainViewTests', () => {
         const rejected = counts.rejected ?? -1
         const processed = counts.rejected ?? -1
 
-        const perClient = async (client: TestClient) => {
-            const view = await getView(client)
+        const perClient = async (client: TestClientWithViewAdapter) => {
+            // Manually trigger a stream update
+            await client.viewAdapter.streamUpdated(streamId)
+            const view = getView(client)
             return (
                 view.accepted.size >= accepted &&
                 view.rejected.size >= rejected &&
@@ -173,11 +197,11 @@ describe('onChainViewTests', () => {
         return expect(promise).resolves.not.toThrow()
     }
 
-    async function clientsViewsAgree(clients: TestClient[]) {
+    function clientsViewsAgree(clients: TestClientWithViewAdapter[]) {
         if (clients.length < 2) {
             return
         }
-        const [view, ...others] = await Promise.all(clients.map((client) => getView(client)))
+        const [view, ...others] = clients.map((client) => getView(client))
         others.forEach((otherView) => {
             expect(otherView.externalInfo).toStrictEqual(view.externalInfo)
             expect(otherView.accepted).toStrictEqual(view.accepted)
@@ -191,7 +215,7 @@ describe('onChainViewTests', () => {
 
         await waitUntilClientsObserve(clients, { accepted: 1, processed: 1, rejected: 0 })
 
-        const clientsViews = await Promise.all(clients.map((client) => getView(client)))
+        const clientsViews = clients.map((client) => getView(client))
 
         clientsViews.forEach((view) => {
             const externalInfo = view.externalInfo!
@@ -218,7 +242,7 @@ describe('onChainViewTests', () => {
 
         await waitUntilClientsObserve(clients, { accepted: 1, processed: howManySucceeded })
 
-        await expect(clientsViewsAgree(clients)).resolves.not.toThrow()
+        clientsViewsAgree(clients)
     })
 
     test('clients can observe external join getting accepted', async () => {
@@ -228,7 +252,7 @@ describe('onChainViewTests', () => {
         // wait for all clients to observe it
         await waitUntilClientsObserve([bob], { accepted: 1 })
 
-        const bobView = await getView(bob)
+        const bobView = getView(bob)
         const bobExternalInfo = bobView.externalInfo!
         expect(bobExternalInfo).toBeDefined()
 
@@ -246,7 +270,7 @@ describe('onChainViewTests', () => {
         const { eventId } = await bobAttempt.attempt()
 
         await waitUntilClientsObserve(clients, { accepted: 2 })
-        const clientsViews = await Promise.all(clients.map((client) => getView(client)))
+        const clientsViews = clients.map((client) => getView(client))
         clientsViews.forEach((view) => {
             const bobEvent = bobAttempt.event
             const acceptedEvent = view.accepted.get(eventId)!
@@ -267,7 +291,7 @@ describe('onChainViewTests', () => {
 
         const externalJoinAttempts = await Promise.all(
             otherClients.map(async (client) => {
-                const view = await getView(client)
+                const view = getView(client)
                 const { latestGroupInfo, exportedTree } = view.externalInfo!
                 return attemptExternalJoin(client, latestGroupInfo, exportedTree)
             }),
@@ -284,6 +308,6 @@ describe('onChainViewTests', () => {
         const rejected = howManySucceeded - 1
 
         await waitUntilClientsObserve(clients, { accepted, rejected })
-        await expect(clientsViewsAgree(clients)).resolves.not.toThrow()
+        clientsViewsAgree(clients)
     })
 })

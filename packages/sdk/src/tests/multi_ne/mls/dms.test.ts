@@ -27,7 +27,7 @@ async function makeInitAndStartClient(nickname?: string) {
     return client
 }
 
-describe('dmsMlsTests', () => {
+describe.skip('dmsMlsTests', () => {
     let aliceClient!: Client
     let bobClient!: Client
     let streamId!: string

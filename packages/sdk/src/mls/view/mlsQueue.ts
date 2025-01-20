@@ -1,14 +1,5 @@
 import { dlog, DLogger } from '@river-build/dlog'
-import { logNever } from '../../check'
-import { EncryptedContent } from '../../encryptedContentTypes'
-import { ConfirmedMlsEvent } from './types'
-
-// TODO: Should encrypted content get its own queue?
-type EncryptedContentEvent = {
-    streamId: string
-    eventId: string
-    message: EncryptedContent
-}
+import { ViewAdapter } from './viewAdapter'
 
 const defaultLogger = dlog('csb:mls:queue')
 
@@ -19,6 +10,7 @@ export type MlsQueueOpts = {
         error?: DLogger
         warn?: DLogger
     }
+    delayMs: number
 }
 
 const defaultMlsQueueOpts = {
@@ -26,10 +18,19 @@ const defaultMlsQueueOpts = {
         info: defaultLogger.extend('info'),
         error: defaultLogger.extend('error'),
     },
+    delayMs: 15,
 }
 
 export class MlsQueue {
-    // private coordinator?: Coordinator
+    private updatedStreams: Set<string> = new Set()
+
+    private delayMs = 15
+    private started: boolean = false
+    private stopping: boolean = false
+    private timeoutId?: NodeJS.Timeout
+    private inProgressTick?: Promise<void>
+    private isMobileSafariBackgrounded = false
+    public viewAdapter?: ViewAdapter
 
     private log: {
         info?: DLogger
@@ -38,35 +39,22 @@ export class MlsQueue {
         warn?: DLogger
     }
 
-    constructor(opts: MlsQueueOpts = defaultMlsQueueOpts) {
+    constructor(viewAdapter?: ViewAdapter, opts: MlsQueueOpts = defaultMlsQueueOpts) {
+        this.viewAdapter = viewAdapter
         // this.coordinator = coordinator
         this.log = opts.log
+        this.delayMs = opts.delayMs
     }
 
     // # Queue-related operations #
 
     // Queue-related fields
     // private commandQueue: Set<QueueCommand> = new Set()
-    private mlsEventQueue: Map<string, ConfirmedMlsEvent[]> = new Map()
-    private encryptedContentQueue: EncryptedContentEvent[] = []
 
-    private delayMs = 15
-    private started: boolean = false
-    private stopping: boolean = false
-    private timeoutId?: NodeJS.Timeout
-    private inProgressTick?: Promise<void>
-    private isMobileSafariBackgrounded = false
+    public enqueueUpdatedStream(streamId: string) {
+        this.log.debug?.('enqueueConfirmedEvent', { streamId })
 
-    public enqueueConfirmedMlsEvent(streamId: string, event: ConfirmedMlsEvent) {
-        this.log.debug?.('enqueueEvent', streamId, event)
-
-        const perStream = this.mlsEventQueue.get(streamId)
-        if (perStream === undefined) {
-            this.mlsEventQueue.set(streamId, [event])
-        } else {
-            perStream.push(event)
-        }
-
+        this.updatedStreams.add(streamId)
         // TODO: Is this needed when we tick after start
         this.checkStartTicking()
     }
@@ -74,23 +62,13 @@ export class MlsQueue {
     // Dequeue streams in round-robin fashion
     // Dequeue first stream that got inserted
     // TODO: Add limit for draining in one go
-    public dequeueConfirmedMlsEventsPerStream():
-        | { streamId: string; events: ConfirmedMlsEvent[] }
-        | undefined {
-        const firstStream = this.mlsEventQueue.keys().next()
+    public dequeueConfirmedStream(): string | undefined {
+        const firstStream = this.updatedStreams.keys().next()
         if (firstStream.done) {
             return undefined
         }
-        const streamId = firstStream.value
-        const events = this.mlsEventQueue.get(streamId)
-        if (events === undefined) {
-            return undefined
-        }
-        this.mlsEventQueue.delete(streamId)
-        return {
-            streamId,
-            events,
-        }
+        this.updatedStreams.delete(firstStream.value)
+        return firstStream.value
     }
 
     getDelayMs(): number {
@@ -167,45 +145,9 @@ export class MlsQueue {
 
     // TODO: Figure out how to schedule this...
     public async tick(): Promise<void> {
-        const perStream = this.dequeueConfirmedMlsEventsPerStream()
-        if (perStream !== undefined) {
-            for (const event of perStream.events) {
-                await this.processEvent(perStream.streamId, event)
-            }
-        }
-
-    }
-
-    public async processEvent(streamId: string, event: ConfirmedMlsEvent): Promise<void> {
-        this.log.debug?.('processEvent', event)
-
-        switch (event.case) {
-            case 'initializeGroup':
-                return
-            // return this.coordinator.handleInitializeGroup(streamId, event.value)
-            case 'externalJoin':
-                return
-            // return this.coordinator.handleExternalJoin(streamId, event.value)
-            case 'epochSecrets':
-                return
-            // return this.coordinator.handleEpochSecrets(streamId, event.value)
-            // case 'encryptedContent':
-            //     return this.coordinator.handleEncryptedContent(
-            //         streamId,
-            //         event.eventId,
-            //         event.message,
-            //     )
-            // case 'encryptionAlgorithmUpdated':
-            //     return this.coordinator.handleAlgorithmUpdated(
-            //         streamId,
-            //         event.encryptionAlgorithm,
-            //     )
-            case 'keyPackage':
-            case 'welcomeMessage':
-            case undefined:
-                return
-            default:
-                logNever(event)
+        const streamId = this.dequeueConfirmedStream()
+        if (streamId !== undefined) {
+            await this.viewAdapter?.streamUpdated(streamId)
         }
     }
 
@@ -217,4 +159,3 @@ export class MlsQueue {
         }
     }
 }
-
