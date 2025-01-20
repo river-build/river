@@ -5,6 +5,10 @@ import { Client } from '../../../client'
 import { MlsInspector } from '../../../mls/utils/inspector'
 import { ExternalClient as MlsExternalClient, Group as MlsGroup } from '@river-build/mls-rs-wasm'
 import { ExternalJoin, InitializeGroup } from '../../../mls/view/types'
+import {
+    MemberPayload_Mls_ExternalJoin,
+    MemberPayload_Mls_InitializeGroup,
+} from '@river-build/proto'
 
 function getPayloadRemoteEvent(event: StreamTimelineEvent): string | undefined {
     if (event.decryptedContent?.kind === 'channelMessage') {
@@ -61,13 +65,14 @@ export function makeInitializeGroup(
     externalGroupSnapshot: Uint8Array,
     groupInfoMessage: Uint8Array,
 ): InitializeGroup {
+    const value = new MemberPayload_Mls_InitializeGroup({
+        signaturePublicKey: signaturePublicKey,
+        externalGroupSnapshot: externalGroupSnapshot,
+        groupInfoMessage: groupInfoMessage,
+    })
     return {
         case: 'initializeGroup',
-        value: {
-            signaturePublicKey: signaturePublicKey,
-            externalGroupSnapshot: externalGroupSnapshot,
-            groupInfoMessage: groupInfoMessage,
-        },
+        value,
     }
 }
 
@@ -76,13 +81,14 @@ export function makeExternalJoin(
     commit: Uint8Array,
     groupInfoMessage: Uint8Array,
 ): ExternalJoin {
+    const value = new MemberPayload_Mls_ExternalJoin({
+        signaturePublicKey: signaturePublicKey,
+        commit: commit,
+        groupInfoMessage: groupInfoMessage,
+    })
     return {
         case: 'externalJoin',
-        value: {
-            signaturePublicKey: signaturePublicKey,
-            commit: commit,
-            groupInfoMessage: groupInfoMessage,
-        },
+        value,
     }
 }
 

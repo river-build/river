@@ -5,9 +5,9 @@ import { EncryptedData } from '@river-build/proto'
 import { DLogger, dlog } from '@river-build/dlog'
 import { isMobileSafari } from '../utils'
 import {
-    CoordinatorDelegateAdapter,
-    EpochSecretServiceCoordinatorAdapter,
-    GroupServiceCoordinatorAdapter,
+    // CoordinatorDelegateAdapter,
+    // EpochSecretServiceCoordinatorAdapter,
+    // GroupServiceCoordinatorAdapter,
     QueueService,
 } from './queue'
 import { StreamEncryptionEvents, StreamStateEvents } from '../streamEvents'
@@ -109,11 +109,11 @@ export class MlsAdapter {
         this.queueService = new QueueService(this.coordinator, { log: logger.extend('queue') })
 
         // Hook up delegates
-        this.coordinator.delegate = new CoordinatorDelegateAdapter(this.queueService)
-        this.groupService.delegate = new GroupServiceCoordinatorAdapter(this.queueService)
-        this.epochSecretService.delegate = new EpochSecretServiceCoordinatorAdapter(
-            this.queueService,
-        )
+        // this.coordinator.delegate = new CoordinatorDelegateAdapter(this.queueService)
+        // this.groupService.delegate = new GroupServiceCoordinatorAdapter(this.queueService)
+        // this.epochSecretService.delegate = new EpochSecretServiceCoordinatorAdapter(
+        //     this.queueService,
+        // )
 
         const adapterLogger = logger.extend('adapter')
         this.log = {
@@ -184,7 +184,7 @@ export class MlsAdapter {
         signaturePublicKey: Uint8Array,
     ) => {
         this.log.debug('onMlsInitializeGroup')
-        this.queueService?.enqueueEvent({
+        this.queueService?.enqueueConfirmedMlsEvent({
             tag: 'initializeGroup',
             streamId,
             message: {
@@ -202,7 +202,7 @@ export class MlsAdapter {
         groupInfoMessage: Uint8Array,
     ) => {
         this.log.debug('onMlsExternalJoin')
-        this.queueService?.enqueueEvent({
+        this.queueService?.enqueueConfirmedMlsEvent({
             tag: 'externalJoin',
             streamId,
             message: {
@@ -218,7 +218,7 @@ export class MlsAdapter {
         secrets: { epoch: bigint; secret: Uint8Array }[],
     ) => {
         this.log.debug('onMlsEpochSecrets')
-        this.queueService?.enqueueEvent({
+        this.queueService?.enqueueConfirmedMlsEvent({
             tag: 'epochSecrets',
             streamId,
             message: {
@@ -233,7 +233,7 @@ export class MlsAdapter {
         content: EncryptedContent,
     ) => {
         this.log.debug('onMlsNewEncryptedContent')
-        this.queueService?.enqueueEvent({
+        this.queueService?.enqueueConfirmedMlsEvent({
             tag: 'encryptedContent',
             streamId,
             eventId,
@@ -246,7 +246,7 @@ export class MlsAdapter {
         encryptionAlgorithm?: string,
     ) => {
         this.log.debug('onEncryptionAlgorithmUpdated', { streamId, encryptionAlgorithm })
-        this.queueService?.enqueueEvent({
+        this.queueService?.enqueueConfirmedMlsEvent({
             tag: 'encryptionAlgorithmUpdated',
             streamId,
             encryptionAlgorithm,

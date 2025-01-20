@@ -14,6 +14,7 @@ import { dlog } from '@river-build/dlog'
 import { OnChainView, OnChainViewOpts } from '../../../mls/view/onChainView'
 import { createGroupInfoAndExternalSnapshot, makeExternalJoin, makeInitializeGroup } from './utils'
 import { expect } from 'vitest'
+import {MemberPayload_Mls_InitializeGroup} from "@river-build/proto";
 
 const encoder = new TextEncoder()
 
@@ -205,19 +206,7 @@ describe('onChainViewTests', () => {
             const acceptedEvent = view.accepted.get(aliceEventId)!
             expect(acceptedEvent).toBeDefined()
             expect(acceptedEvent.case).toBe('initializeGroup')
-            // TODO: Ask why this is failing
-            // expect(acceptedEvent.value).toStrictEqual(aliceEvent.value)
-            if (acceptedEvent.case === 'initializeGroup') {
-                expect(acceptedEvent.value.groupInfoMessage).toStrictEqual(
-                    aliceEvent.value.groupInfoMessage,
-                )
-                expect(acceptedEvent.value.signaturePublicKey).toStrictEqual(
-                    aliceEvent.value.signaturePublicKey,
-                )
-                expect(acceptedEvent.value.externalGroupSnapshot).toStrictEqual(
-                    aliceEvent.value.externalGroupSnapshot,
-                )
-            }
+            expect(acceptedEvent).toMatchObject(aliceEvent)
         })
     })
 
@@ -264,15 +253,7 @@ describe('onChainViewTests', () => {
             const acceptedEvent = view.accepted.get(eventId)!
             expect(acceptedEvent).toBeDefined()
             expect(acceptedEvent.case).toBe('externalJoin')
-            if (acceptedEvent.case === 'externalJoin') {
-                expect(acceptedEvent.value.signaturePublicKey).toStrictEqual(
-                    bobEvent.value.signaturePublicKey,
-                )
-                expect(acceptedEvent.value.groupInfoMessage).toStrictEqual(
-                    bobEvent.value.groupInfoMessage,
-                )
-                expect(acceptedEvent.value.commit).toStrictEqual(bobEvent.value.commit)
-            }
+            expect(acceptedEvent).toMatchObject(bobEvent)
         })
     })
 

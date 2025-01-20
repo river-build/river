@@ -1,6 +1,7 @@
-import { Client as MlsClient, Group as MlsGroup, MlsMessage } from '@river-build/mls-rs-wasm'
+import { Group as MlsGroup, MlsMessage } from '@river-build/mls-rs-wasm'
 import { OnChainView } from './onChainView'
 import { dlog, DLogger } from '@river-build/dlog'
+import { EpochEncryption } from './epochEncryption'
 
 type PendingInfo = {
     eventId: string
@@ -26,12 +27,23 @@ const defaultOnChainViewOpts = {
     },
 }
 
+type LocalEpochSecret = {
+    epoch: bigint
+    secret: Uint8Array
+    derivedKeys: {
+        publicKey: Uint8Array
+        secretKey: Uint8Array
+    }
+}
+
 export class LocalView {
     private group: MlsGroup
     private pendingInfo?: PendingInfo
-    // private epochSecrets: Map<bigint, Uint8Array> = new Map()
+    private epochSecrets: Map<bigint, LocalEpochSecret> = new Map()
     // this will mark the epoch rejected by the group
     private rejectedEpoch?: bigint
+
+    private crypto: EpochEncryption = new EpochEncryption()
 
     // public readonly pending: Map<bigint, Uint8Array> = new Map()
 
@@ -137,9 +149,20 @@ export class LocalView {
     }
 
     private async addCurrentEpochSecret(): Promise<void> {
-        // TODO: Uncomment once dealing with epochSecrets
-        // const currentEpoch = group.group.currentEpoch
-        // const epochSecret = await group.group.currentEpochSecret()
-        // this.epochSecrets.set(currentEpoch, epochSecret.toBytes())
+        const epoch = this.group.currentEpoch
+        const secret = (await this.group.currentEpochSecret()).toBytes()
+        const derivedKeys = await this.crypto.deriveKeys(secret)
+        const epochSecret = {
+            epoch,
+            secret,
+            derivedKeys,
+        }
+
+        this.epochSecrets.set(epoch, epochSecret)
+    }
+
+    // TODO: What to do if corrupted?
+    latestEpochSecret(): LocalEpochSecret {
+        return this.epochSecrets.get(this.group.currentEpoch)!
     }
 }

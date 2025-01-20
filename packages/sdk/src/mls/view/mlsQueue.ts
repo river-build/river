@@ -1,8 +1,7 @@
 import { dlog, DLogger } from '@river-build/dlog'
 import { logNever } from '../../check'
 import { EncryptedContent } from '../../encryptedContentTypes'
-import { Coordinator } from '../coordinator'
-import { ConfirmedMlsEvent } from '../view/types'
+import { ConfirmedMlsEvent } from './types'
 
 // TODO: Should encrypted content get its own queue?
 type EncryptedContentEvent = {
@@ -13,7 +12,7 @@ type EncryptedContentEvent = {
 
 const defaultLogger = dlog('csb:mls:queue')
 
-export type QueueServiceOpts = {
+export type MlsQueueOpts = {
     log: {
         info?: DLogger
         debug?: DLogger
@@ -22,15 +21,15 @@ export type QueueServiceOpts = {
     }
 }
 
-const defaultQueueServiceOpts = {
+const defaultMlsQueueOpts = {
     log: {
         info: defaultLogger.extend('info'),
         error: defaultLogger.extend('error'),
     },
 }
 
-export class QueueService {
-    private coordinator?: Coordinator
+export class MlsQueue {
+    // private coordinator?: Coordinator
 
     private log: {
         info?: DLogger
@@ -39,8 +38,8 @@ export class QueueService {
         warn?: DLogger
     }
 
-    constructor(coordinator?: Coordinator, opts: QueueServiceOpts = defaultQueueServiceOpts) {
-        this.coordinator = coordinator
+    constructor(opts: MlsQueueOpts = defaultMlsQueueOpts) {
+        // this.coordinator = coordinator
         this.log = opts.log
     }
 
@@ -57,23 +56,6 @@ export class QueueService {
     private timeoutId?: NodeJS.Timeout
     private inProgressTick?: Promise<void>
     private isMobileSafariBackgrounded = false
-
-    // public enqueueCommand(command: QueueCommand) {
-    //     this.log.debug('enqueueCommand', command)
-    //
-    //     this.commandQueue.add(command)
-    //     // TODO: Is this needed when we tick after start
-    //     this.checkStartTicking()
-    // }
-    //
-    // private dequeueCommand(): QueueCommand | undefined {
-    //     const result = this.commandQueue.values().next()
-    //     if (result.done) {
-    //         return undefined
-    //     }
-    //     this.commandQueue.delete(result.value)
-    //     return result.value
-    // }
 
     public enqueueConfirmedMlsEvent(streamId: string, event: ConfirmedMlsEvent) {
         this.log.debug?.('enqueueEvent', streamId, event)
@@ -192,54 +174,21 @@ export class QueueService {
             }
         }
 
-        // const command = this.dequeueCommand()
-        // if (command !== undefined) {
-        //     return this.processCommand(command)
-        // }
     }
 
-    // public async processCommand(command: QueueCommand): Promise<void> {
-    //     this.log.debug('processCommand', command)
-    //
-    //     switch (command.tag) {
-    //         case 'joinOrCreateGroup':
-    //             return this.coordinator.joinOrCreateGroup(command.streamId)
-    //         case 'groupActive':
-    //             return this.coordinator.groupActive(command.streamId)
-    //         case 'newEpoch':
-    //             return this.coordinator.newEpoch(
-    //                 command.streamId,
-    //                 command.epoch,
-    //                 command.epochSecret,
-    //             )
-    //         case 'newOpenEpochSecret':
-    //             return this.coordinator.newOpenEpochSecret(command.openEpochSecret)
-    //         case 'newSealedEpochSecret':
-    //             return this.coordinator.newSealedEpochSecret(command.sealedEpochSecret)
-    //         case 'announceEpochSecret':
-    //             return this.coordinator.announceEpochSecret(
-    //                 command.streamId,
-    //                 command.epoch,
-    //                 command.sealedEpochSecret,
-    //             )
-    //         default:
-    //             logNever(command)
-    //     }
-    // }
-
     public async processEvent(streamId: string, event: ConfirmedMlsEvent): Promise<void> {
-        if (this.coordinator === undefined) {
-            return
-        }
         this.log.debug?.('processEvent', event)
 
         switch (event.case) {
             case 'initializeGroup':
-                return this.coordinator.handleInitializeGroup(streamId, event.value)
+                return
+            // return this.coordinator.handleInitializeGroup(streamId, event.value)
             case 'externalJoin':
-                return this.coordinator.handleExternalJoin(streamId, event.value)
+                return
+            // return this.coordinator.handleExternalJoin(streamId, event.value)
             case 'epochSecrets':
-                return this.coordinator.handleEpochSecrets(streamId, event.value)
+                return
+            // return this.coordinator.handleEpochSecrets(streamId, event.value)
             // case 'encryptedContent':
             //     return this.coordinator.handleEncryptedContent(
             //         streamId,
@@ -269,66 +218,3 @@ export class QueueService {
     }
 }
 
-// export class CoordinatorDelegateAdapter implements CoordinatorDelegate {
-//     private queueService: QueueService
-//
-//     constructor(queueService: QueueService) {
-//         this.queueService = queueService
-//     }
-//
-//     scheduleJoinOrCreateGroup(streamId: string): void {
-//         this.queueService.enqueueCommand({ tag: 'joinOrCreateGroup', streamId })
-//     }
-//
-//     scheduleAnnounceEpochSecret(
-//         streamId: string,
-//         epoch: bigint,
-//         sealedEpochSecret: Uint8Array,
-//     ): void {
-//         this.queueService.enqueueCommand({
-//             tag: 'announceEpochSecret',
-//             streamId,
-//             epoch,
-//             sealedEpochSecret,
-//         })
-//     }
-// }
-
-// export class GroupServiceCoordinatorAdapter implements GroupServiceDelegate {
-//     public queueService: QueueService
-//
-//     constructor(queueService: QueueService) {
-//         this.queueService = queueService
-//     }
-//
-//     public joinOrCreateGroup(streamId: string): void {
-//         this.queueService.enqueueCommand({ tag: 'joinOrCreateGroup', streamId })
-//     }
-//     public groupActive(streamId: string): void {
-//         this.queueService.enqueueCommand({ tag: 'groupActive', streamId })
-//     }
-//     public newEpoch(streamId: string, epoch: bigint, epochSecret: Uint8Array): void {
-//         this.queueService.enqueueCommand({ tag: 'newEpoch', streamId, epoch, epochSecret })
-//     }
-// }
-//
-// export class EpochSecretServiceCoordinatorAdapter implements EpochSecretServiceDelegate {
-//     public queueService: QueueService
-//
-//     constructor(queueService: QueueService) {
-//         this.queueService = queueService
-//     }
-//
-//     public newOpenEpochSecret(openEpochSecret: EpochSecret): void {
-//         this.queueService.enqueueCommand({
-//             tag: 'newOpenEpochSecret',
-//             openEpochSecret,
-//         })
-//     }
-//     public newSealedEpochSecret(sealedEpochSecret: EpochSecret): void {
-//         this.queueService.enqueueCommand({
-//             tag: 'newSealedEpochSecret',
-//             sealedEpochSecret,
-//         })
-//     }
-// }

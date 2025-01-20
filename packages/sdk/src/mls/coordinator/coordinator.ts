@@ -22,6 +22,9 @@ import { IPersistenceStore } from '../../persistenceStore'
 import { IAwaiter, IndefiniteAwaiter } from './awaiter'
 import { make_MemberPayload_Mls } from '../../types'
 import { MLS_ALGORITHM } from '../constants'
+import { OnChainView } from '../view/onChainView'
+import { LocalView } from '../view/localView'
+import { EpochEncryption } from '../view/epochEncryption'
 
 type InitializeGroupMessage = PlainMessage<MemberPayload_Mls_InitializeGroup>
 type ExternalJoinMessage = PlainMessage<MemberPayload_Mls_ExternalJoin>
@@ -62,6 +65,22 @@ export interface CoordinatorDelegate {
     ): void
 }
 
+export type CoordinatorOpts = {
+    log: {
+        info?: DLogger
+        debug?: DLogger
+        error?: DLogger
+        warn?: DLogger
+    }
+}
+
+const defaultCoordinatorOpts = {
+    log: {
+        info: defaultLogger.extend('info'),
+        error: defaultLogger.extend('error'),
+    },
+}
+
 export class Coordinator {
     private readonly userAddress: Uint8Array
     private readonly deviceKey: Uint8Array
@@ -72,14 +91,18 @@ export class Coordinator {
     private awaitingGroupActive: Map<string, IAwaiter> = new Map()
     private awaitingEpochOpen: Map<EpochId, IAwaiter> = new Map()
 
-    private epochSecretService: EpochSecretService
-    private groupService: GroupService
-    private externalGroupService: ExternalGroupService
+    private crypto: EpochEncryption = new EpochEncryption()
+
     public delegate?: CoordinatorDelegate
 
+    private onChainViews: Map<string, OnChainView> = new Map()
+    private localViews: Map<string, LocalView> = new Map()
+
     private log: {
-        error: DLogger
-        debug: DLogger
+        info?: DLogger
+        debug?: DLogger
+        error?: DLogger
+        warn?: DLogger
     }
 
     constructor(
@@ -87,32 +110,20 @@ export class Coordinator {
         deviceKey: Uint8Array,
         client: Client,
         persistenceStore: IPersistenceStore,
-        externalGroupService: ExternalGroupService,
-        groupService: GroupService,
-        epochSecretService: EpochSecretService,
         delegate?: CoordinatorDelegate,
-        opts?: { log: DLogger },
+        opts: CoordinatorOpts = defaultCoordinatorOpts,
     ) {
         this.userAddress = userAddress
         this.deviceKey = deviceKey
 
         this.client = client
         this.persistenceStore = persistenceStore
-        this.externalGroupService = externalGroupService
-        this.groupService = groupService
-        this.epochSecretService = epochSecretService
         this.delegate = delegate
 
-        const logger = opts?.log ?? defaultLogger
-        this.log = {
-            debug: logger.extend('debug'),
-            error: logger.extend('error'),
-        }
+        this.log = opts.log
     }
 
-    public async initialize(): Promise<void> {
-        await this.groupService.initialize()
-    }
+    public async initialize(): Promise<void> {}
 
     // API needed by the client
     // TODO: How long will be the timeout here?
@@ -120,42 +131,27 @@ export class Coordinator {
         streamId: string,
         event: Message,
     ): Promise<EncryptedData> {
-        this.log.debug('encryptGroupEventEpochSecret', { streamId, event })
+        this.log.debug?.('encryptGroupEventEpochSecret', { streamId, event })
 
-        const hasGroup = this.groupService.getGroup(streamId) !== undefined
-        if (!hasGroup) {
-            // No group so we request joining
-            // NOTE: We are enqueueing command instead of doing the async call
-            this.scheduleJoinOrCreateGroupWhenMlsIsEnabled(streamId)
+        const localView = await this.awaitActiveLocalView(streamId)
+        if (localView.status !== 'active') {
+            this.log.error?.('local view is not active', { streamId })
+            throw new Error(`localView for stream ${streamId} is not active`)
         }
-        // TODO: Refactor this to return group
-        await this.awaitGroupActive(streamId)
-        const activeGroup = this.groupService.getGroup(streamId)
-        if (activeGroup === undefined) {
-            throw new Error('Fatal: no group after awaitGroupActive')
-        }
-
-        if (activeGroup.status !== 'GROUP_ACTIVE') {
-            throw new Error('Fatal: group is not active')
-        }
-
-        const epoch = this.groupService.currentEpoch(activeGroup)
-        // TODO: Refactor this to return EpochSecret
-        await this.awaitEpochOpen(streamId, epoch)
-        const epochSecret = this.epochSecretService.getEpochSecret(streamId, epoch)
-
-        if (epochSecret === undefined) {
-            throw new Error('Fatal: no epoch secret after awaitEpochOpen')
-        }
-
-        if (epochSecret.openEpochSecret === undefined) {
-            throw new Error('Fatal: epoch secret not open after awaitEpochOpen')
-        }
+        const epochSecret = localView.latestEpochSecret()
 
         const plaintext_ = event.toJsonString()
         const plaintext = encode(plaintext_)
 
-        return this.epochSecretService.encryptMessage(epochSecret, plaintext)
+        const ciphertext = await this.crypto.seal(epochSecret.derivedKeys, plaintext)
+
+        return new EncryptedData({
+            algorithm: MLS_ALGORITHM,
+            mls: {
+                epoch: epochSecret.epoch,
+                ciphertext,
+            },
+        })
     }
 
     // TODO: Maybe this could be refactored into a separate class
@@ -166,7 +162,7 @@ export class Coordinator {
         kind: string, // kind of data
         encryptedData: EncryptedData,
     ) {
-        this.log.debug('decryptGroupEvent', { streamId, eventId, kind, encryptedData })
+        this.log.debug?.('decryptGroupEvent', { streamId, eventId, kind, encryptedData })
 
         const stream = this.client.stream(streamId)
         check(isDefined(stream), 'stream not found')
@@ -189,7 +185,7 @@ export class Coordinator {
     // # MLS Coordinator #
 
     public async handleInitializeGroup(streamId: string, message: InitializeGroupMessage) {
-        this.log.debug('handleInitializeGroup', { streamId, message })
+        this.log.debug?.('handleInitializeGroup', { streamId, message })
 
         const group = this.groupService.getGroup(streamId)
         if (group !== undefined) {
@@ -203,7 +199,7 @@ export class Coordinator {
     }
 
     public async handleExternalJoin(streamId: string, message: ExternalJoinMessage) {
-        this.log.debug('handleExternalJoin', { streamId, message })
+        this.log.debug?.('handleExternalJoin', { streamId, message })
 
         const group = this.groupService.getGroup(streamId)
         if (group !== undefined) {
@@ -217,7 +213,7 @@ export class Coordinator {
     }
 
     public async handleEpochSecrets(streamId: string, message: EpochSecretsMessage) {
-        this.log.debug('handleEpochSecrets', { streamId, message })
+        this.log.debug?.('handleEpochSecrets', { streamId, message })
 
         return this.epochSecretService.handleEpochSecrets(streamId, message)
     }
@@ -227,7 +223,7 @@ export class Coordinator {
         eventId: string,
         message: EncryptedContent,
     ) {
-        this.log.debug('handleEncryptedContent', { streamId, eventId, message })
+        this.log.debug?.('handleEncryptedContent', { streamId, eventId, message })
 
         const encryptedData = message.content
         // TODO: Check if message was encrypted with MLS
@@ -237,7 +233,7 @@ export class Coordinator {
 
         const epochSecret = this.epochSecretService.getEpochSecret(streamId, epoch)
         if (epochSecret === undefined) {
-            this.log.debug('Epoch secret not found', { streamId, epoch })
+            this.log.debug?.('Epoch secret not found', { streamId, epoch })
             this.enqueueDecryptionFailure(streamId, epoch, {
                 streamId,
                 eventId,
@@ -252,7 +248,7 @@ export class Coordinator {
     }
 
     private enqueueDecryptionFailure(streamId: string, epoch: bigint, item: EncryptedContentItem) {
-        this.log.debug('enqueueDecryptionFailure', { streamId, epoch, item })
+        this.log.debug?.('enqueueDecryptionFailure', { streamId, epoch, item })
 
         let perStream = this.decryptionFailures.get(streamId)
         if (perStream === undefined) {
@@ -268,7 +264,7 @@ export class Coordinator {
     }
 
     private async initializeGroupMessage(streamId: string): Promise<InitializeGroupMessage> {
-        this.log.debug('initializeGroupMessage', { streamId })
+        this.log.debug?.('initializeGroupMessage', { streamId })
 
         // TODO: Check preconditions
         // TODO: Catch the error
@@ -283,7 +279,7 @@ export class Coordinator {
             commits: { commit: Uint8Array; groupInfoMessage: Uint8Array }[]
         },
     ): Promise<ExternalJoinMessage> {
-        this.log.debug('externalJoinMessage', { streamId })
+        this.log.debug?.('externalJoinMessage', { streamId })
 
         const externalGroup = await this.externalGroupService.loadSnapshot(
             streamId,
@@ -299,14 +295,14 @@ export class Coordinator {
     }
 
     private async epochSecretsMessage(epochSecret: EpochSecret): Promise<EpochSecretsMessage> {
-        this.log.debug('epochSecretsMessage', { epochSecret })
+        this.log.debug?.('epochSecretsMessage', { epochSecret })
 
         // TODO: Check preconditions
         return this.epochSecretService.epochSecretMessage(epochSecret)
     }
 
     public async joinOrCreateGroup(streamId: string): Promise<void> {
-        this.log.debug('joinOrCreateGroup', { streamId })
+        this.log.debug?.('joinOrCreateGroup', { streamId })
 
         const hasGroup = this.groupService.getGroup(streamId) !== undefined
         if (hasGroup) {
@@ -579,5 +575,9 @@ export class Coordinator {
         if (encryptionAlgorithm === MLS_ALGORITHM) {
             this.delegate?.scheduleJoinOrCreateGroup(streamId)
         }
+    }
+
+    private async awaitActiveLocalView(streamId: string): Promise<LocalView> {
+        throw new Error('Not implemented')
     }
 }
