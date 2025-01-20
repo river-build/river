@@ -36,7 +36,7 @@ func (s *Service) localAddMediaEvent(
 		service:  s,
 	}
 
-	mb, err := stream.AddMediaEvent(ctx, parsedEvent, creationCookie)
+	mb, err := stream.AddMediaEvent(ctx, parsedEvent, creationCookie, req.Msg.GetLast())
 	if err != nil {
 		return nil, AsRiverError(err).Func("localAddMediaEvent")
 	}

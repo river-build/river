@@ -55,7 +55,7 @@ func (r *replicatedStream) AddEvent(ctx context.Context, event *ParsedEvent) err
 	return sender.Wait()
 }
 
-func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent, cc *CreationCookie) (*Miniblock, error) {
+func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent, cc *CreationCookie, last bool) (*Miniblock, error) {
 	header, err := MakeEnvelopeWithPayload(r.service.wallet, Make_MiniblockHeader(&MiniblockHeader{
 		MiniblockNum:      cc.MiniblockNum,
 		PrevMiniblockHash: cc.PrevMiniblockHash,
@@ -76,7 +76,7 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 	sender := NewQuorumPool("method", "replicatedStream.AddMediaEvent", "streamId", r.streamId)
 
 	// These are needed to register the stream onchain if everything goes well.
-	var genesisMiniblockHash, lastMiniblockHash common.Hash
+	var genesisMiniblockHash common.Hash
 
 	// Save the ephemeral miniblock locally
 	sender.GoLocal(ctx, func(ctx context.Context) error {
@@ -95,12 +95,12 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 		}
 
 		// Return here if there are more chunks to upload.
-		if !cc.GetLast() {
+		if !last {
 			return nil
 		}
 
 		// Normalize stream locally
-		genesisMiniblockHash, lastMiniblockHash, err = r.service.storage.NormalizeEphemeralStream(ctx, r.streamId)
+		genesisMiniblockHash, err = r.service.storage.NormalizeEphemeralStream(ctx, r.streamId)
 		if err != nil {
 			return err
 		}
@@ -128,7 +128,7 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 		}
 
 		// Return here if there are more chunks to upload.
-		if !cc.GetLast() {
+		if !last {
 			return nil
 		}
 
@@ -151,17 +151,19 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 		return nil, err
 	}
 
-	// Register the given stream onchain with sealed flag
-	if err = r.service.streamRegistry.AddStream(
-		ctx,
-		r.streamId,
-		cc.NodeAddresses(),
-		genesisMiniblockHash,
-		lastMiniblockHash,
-		0,
-		true,
-	); err != nil {
-		return nil, err
+	if last {
+		// Register the given stream onchain with sealed flag
+		if err = r.service.streamRegistry.AddStream(
+			ctx,
+			r.streamId,
+			cc.NodeAddresses(),
+			genesisMiniblockHash,
+			common.BytesToHash(ephemeralMb.Header.Hash),
+			0,
+			true,
+		); err != nil {
+			return nil, err
+		}
 	}
 
 	return ephemeralMb, nil
