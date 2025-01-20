@@ -1,4 +1,6 @@
-import { describe } from 'vitest'
+/**
+ * @group main
+ */
 
 describe('MlsQueueTests', () => {
     it('should enqueue a stream', () => {

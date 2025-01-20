@@ -1,7 +1,7 @@
 import { OnChainView } from './onChainView'
 import { Client } from '../../client'
 import { DLogger, dlog } from '@river-build/dlog'
-import {LocalView} from "./localView";
+import { LocalView } from './localView'
 
 export type ViewAdapterOpts = {
     log: {
@@ -50,6 +50,7 @@ export class ViewAdapter {
         return this.localViews.get(streamId)
     }
 
+    // TODO: Update not to depend on client
     public async streamUpdated(streamId: string): Promise<void> {
         this.log.debug?.('streamUpdated', streamId)
         const stream = this.client.stream(streamId)

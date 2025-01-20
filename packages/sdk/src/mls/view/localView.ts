@@ -27,7 +27,7 @@ const defaultOnChainViewOpts = {
     },
 }
 
-type LocalEpochSecret = {
+export type LocalEpochSecret = {
     epoch: bigint
     secret: Uint8Array
     derivedKeys: {
@@ -162,7 +162,11 @@ export class LocalView {
     }
 
     // TODO: What to do if corrupted?
-    latestEpochSecret(): LocalEpochSecret {
-        return this.epochSecrets.get(this.group.currentEpoch)!
+    latestEpochSecret(): LocalEpochSecret | undefined {
+        return this.epochSecrets.get(this.group.currentEpoch)
+    }
+
+    getEpochSecret(epoch: bigint): LocalEpochSecret | undefined {
+        return this.epochSecrets.get(epoch)
     }
 }

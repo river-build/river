@@ -6,9 +6,13 @@ import {
     Secret as MlsSecret,
 } from '@river-build/mls-rs-wasm'
 import { dlog, DLogger } from '@river-build/dlog'
-import { DerivedKeys } from '../epoch'
 
 const defaultLogger = dlog('csb:mls:epochEncryption')
+
+export type DerivedKeys = {
+    secretKey: Uint8Array
+    publicKey: Uint8Array
+}
 
 export type EpochEncryptionOpts = {
     cipherSuite: MlsCipherSuite
