@@ -44,7 +44,7 @@ describe('mediaTests', () => {
             const chunk = new Uint8Array(100)
             // Create novel chunk content for testing purposes
             chunk.fill(i, 0, 100)
-            const last = i + 1 == chunks - 1
+            const last = i == chunks - 1
             const result = await bobsClient.sendMediaPayload(cc, last, chunk, i)
             cc = new CreationCookie({
                 ...cc,
