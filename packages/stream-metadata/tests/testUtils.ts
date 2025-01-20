@@ -145,13 +145,13 @@ export async function encryptAndSendMediaPayload(
 	let cc: CreationCookie = new CreationCookie(mediaStreamInfo.creationCookie)
 	for (let i = 0; i < ciphertext.length; i += chunkSize) {
 		const chunk = ciphertext.slice(i, i + chunkSize)
-		const { creationCookie } = await client.sendMediaPayload(cc, chunk, i)
+		const last = i + 1 == ciphertext.length - 1
+		const { creationCookie } = await client.sendMediaPayload(cc, last, chunk, i)
 
 		cc = new CreationCookie({
 			...cc,
 			prevMiniblockHash: new Uint8Array(creationCookie.prevMiniblockHash),
 			miniblockNum: creationCookie.miniblockNum,
-			last: i + 1 == ciphertext.length - 1,
 		})
 	}
 

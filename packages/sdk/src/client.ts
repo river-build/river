@@ -1624,6 +1624,7 @@ export class Client
 
     async sendMediaPayload(
         creationCookie: CreationCookie,
+        last: boolean,
         data: Uint8Array,
         chunkIndex: number,
     ): Promise<{ creationCookie: CreationCookie }> {
@@ -1631,7 +1632,7 @@ export class Client
             data: data,
             chunkIndex: chunkIndex,
         })
-        return this.makeMediaEventWithHashAndAddToMediaStream(creationCookie, payload)
+        return this.makeMediaEventWithHashAndAddToMediaStream(creationCookie, last, payload)
     }
 
     async getMediaPayload(
@@ -2279,6 +2280,7 @@ export class Client
     // These endpoints are optimized for media uploads and are not used for general stream events.
     async makeMediaEventWithHashAndAddToMediaStream(
         creationCookie: CreationCookie,
+        last: boolean,
         payload: PlainMessage<StreamEvent>['payload'],
     ): Promise<{ creationCookie: CreationCookie }> {
         const streamIdStr = streamIdAsString(creationCookie.streamId)
@@ -2288,6 +2290,7 @@ export class Client
         const resp = await this.rpcClient.addMediaEvent({
             event,
             creationCookie,
+            last,
         })
 
         check(isDefined(resp.creationCookie), 'creationCookie not found in response')

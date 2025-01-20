@@ -44,12 +44,12 @@ describe('mediaTests', () => {
             const chunk = new Uint8Array(100)
             // Create novel chunk content for testing purposes
             chunk.fill(i, 0, 100)
-            const result = await bobsClient.sendMediaPayload(cc, chunk, i)
+            const last = i + 1 == chunks - 1
+            const result = await bobsClient.sendMediaPayload(cc, last, chunk, i)
             cc = new CreationCookie({
                 ...cc,
                 prevMiniblockHash: new Uint8Array(result.creationCookie.prevMiniblockHash),
                 miniblockNum: result.creationCookie.miniblockNum,
-                last: i + 1 == chunks - 1,
             })
         }
         return cc
@@ -57,12 +57,13 @@ describe('mediaTests', () => {
 
     async function bobSendEncryptedMediaPayload(
         creationCookie: CreationCookie,
+        last: boolean,
         data: Uint8Array,
         key: Uint8Array,
         iv: Uint8Array,
     ): Promise<Uint8Array> {
         const { ciphertext } = await encryptAESGCM(data, key, iv)
-        const result = await bobsClient.sendMediaPayload(creationCookie, ciphertext, 0)
+        const result = await bobsClient.sendMediaPayload(creationCookie, last, ciphertext, 0)
         return result.creationCookie.prevMiniblockHash
     }
 
@@ -118,7 +119,7 @@ describe('mediaTests', () => {
         const { iv, key } = await deriveKeyAndIV(spaceId)
         const data = createTestMediaChunks(2)
         await expect(
-            bobSendEncryptedMediaPayload(mediaStreamInfo.creationCookie, data, key, iv),
+            bobSendEncryptedMediaPayload(mediaStreamInfo.creationCookie, false, data, key, iv),
         ).resolves.not.toThrow()
     })
 
@@ -127,7 +128,7 @@ describe('mediaTests', () => {
         const mediaStreamInfo = await bobCreateSpaceMediaStream(spaceId, 2)
         const { iv, key } = await deriveKeyAndIV(spaceId)
         const data = createTestMediaChunks(2)
-        await bobSendEncryptedMediaPayload(mediaStreamInfo.creationCookie, data, key, iv)
+        await bobSendEncryptedMediaPayload(mediaStreamInfo.creationCookie, false, data, key, iv)
         const decryptedChunks = await bobsClient.getMediaPayload(
             streamIdAsString(mediaStreamInfo.creationCookie.streamId),
             key,
@@ -140,10 +141,13 @@ describe('mediaTests', () => {
         const result = await bobCreateMediaStream(10)
         const chunk = new Uint8Array(100)
         await expect(
-            bobsClient.sendMediaPayload(result.creationCookie, chunk, -1),
+            bobsClient.sendMediaPayload(result.creationCookie, false, chunk, -1),
         ).rejects.toThrow()
         await expect(
-            bobsClient.sendMediaPayload(result.creationCookie, chunk, 11),
+            bobsClient.sendMediaPayload(result.creationCookie, false, chunk, 11),
+        ).rejects.toThrow()
+        await expect(
+            bobsClient.sendMediaPayload(result.creationCookie, true, chunk, 11),
         ).rejects.toThrow()
     })
 
@@ -151,14 +155,16 @@ describe('mediaTests', () => {
         const result = await bobCreateMediaStream(10)
         const chunk = new Uint8Array(500000)
         await expect(
-            bobsClient.sendMediaPayload(result.creationCookie, chunk, 0),
+            bobsClient.sendMediaPayload(result.creationCookie, false, chunk, 0),
         ).resolves.not.toThrow()
     })
 
     test('chunkSizeNeedsToBeWithinLimit', async () => {
         const result = await bobCreateMediaStream(10)
         const chunk = new Uint8Array(500001)
-        await expect(bobsClient.sendMediaPayload(result.creationCookie, chunk, 0)).rejects.toThrow()
+        await expect(
+            bobsClient.sendMediaPayload(result.creationCookie, false, chunk, 0),
+        ).rejects.toThrow()
     })
 
     test('chunkCountNeedsToBeWithinLimit', async () => {
@@ -174,7 +180,7 @@ describe('mediaTests', () => {
         alicesClient.startSync()
 
         await expect(
-            alicesClient.sendMediaPayload(result.creationCookie, chunk, 5),
+            alicesClient.sendMediaPayload(result.creationCookie, false, chunk, 5),
         ).rejects.toThrow()
         await alicesClient.stop()
     })
@@ -189,7 +195,7 @@ describe('mediaTests', () => {
         alicesClient.startSync()
 
         await expect(
-            alicesClient.sendMediaPayload(result.creationCookie, chunk, 5),
+            alicesClient.sendMediaPayload(result.creationCookie, false, chunk, 5),
         ).rejects.toThrow()
         await alicesClient.stop()
     })
