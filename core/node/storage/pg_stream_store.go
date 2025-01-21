@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/protobuf/proto"
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
@@ -435,7 +436,7 @@ func (s *PostgresStreamStore) CreateStreamStorage(
 		"CreateStreamStorage",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
-			return s.createStreamStorageTx(ctx, tx, streamId, genesisMiniblock, false)
+			return s.createStreamStorageTx(ctx, tx, streamId, genesisMiniblock)
 		},
 		nil,
 		"streamId", streamId,
@@ -452,7 +453,7 @@ func (s *PostgresStreamStore) CreateEphemeralStreamStorage(
 		"CreateEphemeralStreamStorage",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
-			return s.createStreamStorageTx(ctx, tx, streamId, genesisMiniblock, true)
+			return s.createEphemeralStreamStorageTx(ctx, tx, streamId, genesisMiniblock)
 		},
 		nil,
 		"streamId", streamId,
@@ -530,16 +531,37 @@ func (s *PostgresStreamStore) createStreamStorageTx(
 	tx pgx.Tx,
 	streamId StreamId,
 	genesisMiniblock []byte,
-	isEphemeral bool,
 ) error {
 	sql := s.sqlForStream(
 		`
-			INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated, ephemeral) VALUES ($1, 0, true, $3);
+			INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated, ephemeral) VALUES ($1, 0, true, false);
 			INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
 			INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
 		streamId,
 	)
-	_, err := tx.Exec(ctx, sql, streamId, genesisMiniblock, isEphemeral)
+	_, err := tx.Exec(ctx, sql, streamId, genesisMiniblock)
+	if err != nil {
+		if pgerr, ok := err.(*pgconn.PgError); ok && pgerr.Code == pgerrcode.UniqueViolation {
+			return WrapRiverError(Err_ALREADY_EXISTS, err).Message("stream already exists")
+		}
+		return err
+	}
+	return nil
+}
+
+func (s *PostgresStreamStore) createEphemeralStreamStorageTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	streamId StreamId,
+	genesisMiniblock []byte,
+) error {
+	sql := s.sqlForStream(
+		`
+			INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated, ephemeral) VALUES ($1, 0, true, true);
+			INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);`,
+		streamId,
+	)
+	_, err := tx.Exec(ctx, sql, streamId, genesisMiniblock)
 	if err != nil {
 		if pgerr, ok := err.(*pgconn.PgError); ok && pgerr.Code == pgerrcode.UniqueViolation {
 			return WrapRiverError(Err_ALREADY_EXISTS, err).Message("stream already exists")
@@ -1545,10 +1567,6 @@ func (s *PostgresStreamStore) writeEphemeralMiniblockTx(
 		streamId,
 		miniblock.Number,
 		miniblock.Data)
-	if err != nil {
-		return err
-	}
-
 	return err
 }
 
@@ -2144,6 +2162,126 @@ func (s *PostgresStreamStore) getLastMiniblockNumberTx(
 	}
 
 	return maxSeqNum, nil
+}
+
+func (s *PostgresStreamStore) NormalizeEphemeralStream(
+	ctx context.Context,
+	streamId StreamId,
+) (common.Hash, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var genesisMiniblockHash common.Hash
+
+	err := s.txRunner(
+		ctx,
+		"NormalizeEphemeralStream",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			var err error
+			genesisMiniblockHash, err = s.normalizeEphemeralStreamTx(ctx, tx, streamId)
+			return err
+		},
+		nil,
+		"streamId", streamId,
+	)
+
+	return genesisMiniblockHash, err
+}
+
+func (s *PostgresStreamStore) normalizeEphemeralStreamTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	streamId StreamId,
+) (common.Hash, error) {
+	_, err := s.lockEphemeralStream(ctx, tx, streamId, true)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	// Read the genesis miniblock for the given streeam
+	genesisMbData := make([]byte, 0)
+	if err = tx.QueryRow(
+		ctx,
+		s.sqlForStream("SELECT blockdata FROM {{miniblocks}} WHERE stream_id = $1 AND seq_num = 0", streamId),
+		streamId,
+	).Scan(&genesisMbData); err != nil {
+		return common.Hash{}, err
+	}
+
+	var genesisMb Miniblock
+	if err = proto.Unmarshal(genesisMbData, &genesisMb); err != nil {
+		return common.Hash{}, err
+	}
+
+	var mediaEvent StreamEvent
+	if err = proto.Unmarshal(genesisMb.GetEvents()[0].Event, &mediaEvent); err != nil {
+		return common.Hash{}, RiverError(Err_INTERNAL, "Failed to decode stream event from genesis miniblock")
+	}
+
+	// The miniblock with 0 number must be the genesis miniblock.
+	// The genesis miniblock must have the media inception event.
+	inception := mediaEvent.GetMediaPayload().GetInception()
+
+	// Get all non-genesis miniblock numbers of the given stream for further verification.
+	rows, err := tx.Query(
+		ctx,
+		s.sqlForStream(
+			"SELECT seq_num FROM {{miniblocks}} WHERE stream_id = $1 AND seq_num > 0 ORDER BY seq_num",
+			streamId,
+		),
+		streamId,
+	)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	prevNumber := 0
+	var seqNum int
+	if _, err = pgx.ForEachRow(rows, []any{&seqNum}, func() error {
+		if seqNum != prevNumber+1 {
+			// There is a gap in sequence numbers
+			return RiverError(Err_MINIBLOCKS_STORAGE_FAILURE, "Miniblocks consistency violation").
+				Tag("ActualBlockNumber", seqNum).
+				Tag("ExpectedBlockNumber", prevNumber+1).
+				Tag("streamId", streamId)
+		}
+		prevNumber = seqNum
+		return nil
+	}); err != nil {
+		return common.Hash{}, err
+	}
+
+	// Last miniblock number must be equal to the number of chunks + 1.
+	if seqNum != int(inception.GetChunkCount()) {
+		return common.Hash{}, RiverError(Err_INTERNAL, "The ephemeral stream can not be normalized due to missing miniblocks")
+	}
+
+	// Update generation in the minipools table
+	_, err = tx.Exec(
+		ctx,
+		s.sqlForStream(
+			"INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, $2, -1)",
+			streamId,
+		),
+		streamId,
+		seqNum+1,
+	)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	// Remove ephemeral flag from the given stream.
+	_, err = tx.Exec(
+		ctx,
+		`UPDATE es SET ephemeral = false WHERE stream_id = $1`,
+		streamId,
+	)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return common.BytesToHash(genesisMb.Header.Hash), nil
 }
 
 func getCurrentNodeProcessInfo(currentSchemaName string) string {
