@@ -56,12 +56,12 @@ export function toDecryptedContent(
                     kind: 'text',
                     content: new TextDecoder().decode(cleartext),
                 } satisfies DecryptedContent_Text
-            case ChannelProperties.typeName:
+            case 'ChannelProperties':
                 return {
                     kind: 'channelProperties',
                     content: ChannelProperties.fromBinary(cleartext),
                 } satisfies DecryptedContent_ChannelProperties
-            case ChannelMessage.typeName:
+            case 'ChannelMessage':
                 return {
                     kind: 'channelMessage',
                     content: ChannelMessage.fromBinary(cleartext),
