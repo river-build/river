@@ -403,3 +403,35 @@ func setOnChainStreamConfig(t *testing.T, ctx context.Context, btc *crypto.Block
 		)
 	}
 }
+
+func (i *cacheTestInstance) makeAndSaveMbCandidate(
+	ctx context.Context,
+	stream SyncStream,
+) (*MiniblockInfo, error) {
+	j := &mbJob{
+		stream: stream.(*streamImpl),
+		params: i.params,
+	}
+	err := j.produceCandidate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return j.candidate, nil
+}
+
+func (i *cacheTestInstance) makeMbCandidate(
+	ctx context.Context,
+	stream SyncStream,
+) (*MiniblockInfo, error) {
+	j := &mbJob{
+		stream: stream.(*streamImpl),
+		params: i.params,
+	}
+	j.remoteNodes, _ = j.stream.GetRemotesAndIsLocal()
+	j.replicated = len(j.remoteNodes) > 0
+	err := j.makeCandidate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return j.candidate, nil
+}

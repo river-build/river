@@ -28,6 +28,9 @@ func TestLoad(t *testing.T) {
 	defer cancel()
 	userWallet, _ := crypto.NewWallet(ctx)
 	nodeWallet, _ := crypto.NewWallet(ctx)
+	params := &StreamCacheParams{
+		Wallet: nodeWallet,
+	}
 	streamId := UserStreamIdFromAddr(userWallet.Address)
 
 	userAddress := userWallet.Address[:]
@@ -152,8 +155,9 @@ func TestLoad(t *testing.T) {
 
 	// and miniblocks should have nil snapshots
 	proposal, _ := view.ProposeNextMiniblock(ctx, cfg, false)
-	miniblockHeader, _, _ = view.makeMiniblockHeader(ctx, proposal)
-	assert.Nil(t, miniblockHeader.Snapshot)
+	mbCandidate, err := view.makeMiniblockCandidate(ctx, params, mbProposalFromProto(proposal))
+	require.NoError(t, err)
+	assert.Nil(t, mbCandidate.headerEvent.Event.GetMiniblockHeader().Snapshot)
 
 	// add another join event
 	join3, err := MakeEnvelopeWithPayload(
@@ -175,8 +179,9 @@ func TestLoad(t *testing.T) {
 	// and miniblocks should have non - nil snapshots
 
 	proposal, _ = view.ProposeNextMiniblock(ctx, cfg, false)
-	miniblockHeader, envelopes, _ := view.makeMiniblockHeader(ctx, proposal)
-	assert.NotNil(t, miniblockHeader.Snapshot)
+	mbCandidate, err = view.makeMiniblockCandidate(ctx, params, mbProposalFromProto(proposal))
+	require.NoError(t, err)
+	assert.NotNil(t, mbCandidate.headerEvent.Event.GetMiniblockHeader().Snapshot)
 
 	// check count2
 	count2 := 0
@@ -205,7 +210,7 @@ func TestLoad(t *testing.T) {
 		view.LastBlock().Ref,
 	)
 	assert.NoError(t, err)
-	miniblock, err := NewMiniblockInfoFromParsed(miniblockHeaderEvent, envelopes)
+	miniblock, err := NewMiniblockInfoFromParsed(miniblockHeaderEvent, mbCandidate.Events())
 	assert.NoError(t, err)
 	// with 5 generations (5 blocks kept in memory)
 	newSV1, newEvents, err := view.copyAndApplyBlock(miniblock, cfg)
