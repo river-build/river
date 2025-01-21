@@ -37,7 +37,7 @@ export type LocalViewStatus = 'pending' | 'active' | 'rejected' | 'corrupted'
 export class LocalView {
     private group: MlsGroup
     private pendingInfo?: PendingInfo
-    private epochSecrets: Map<bigint, LocalEpochSecret> = new Map()
+    public readonly epochSecrets: Map<bigint, LocalEpochSecret> = new Map()
     // this will mark the epoch rejected by the group
     private rejectedEpoch?: bigint
 
@@ -133,12 +133,12 @@ export class LocalView {
             }
         }
 
-        // move all unprocessable commits to pending
-        // for (const [epoch, commit] of view.commits) {
-        //     if (!processableCommits.has(epoch)) {
-        //         this.pending.set(epoch, commit)
-        //     }
-        // }
+        // process all epoch secrets in descending order
+        const secrets = Array.from(view.sealedEpochSecrets.entries())
+        secrets.sort((a, b) => (a[0] > b[0] ? -1 : a[0] < b[0] ? 1 : 0))
+        for (const [epoch, sealedSecret] of secrets) {
+            await this.processSealedEpochSecret(epoch, sealedSecret)
+        }
     }
 
     private async addCurrentEpochSecret(): Promise<void> {
@@ -161,5 +161,31 @@ export class LocalView {
 
     getEpochSecret(epoch: bigint): LocalEpochSecret | undefined {
         return this.epochSecrets.get(epoch)
+    }
+
+    public async sealEpochSecret(secret: LocalEpochSecret): Promise<Uint8Array | undefined> {
+        const nextEpochSecret = this.epochSecrets.get(secret.epoch + 1n)
+        if (nextEpochSecret === undefined) {
+            return undefined
+        }
+        return await this.crypto.seal(nextEpochSecret.derivedKeys, secret.secret)
+    }
+
+    public async processSealedEpochSecret(epoch: bigint, sealedSecret: Uint8Array): Promise<void> {
+        if (this.epochSecrets.has(epoch)) {
+            return
+        }
+
+        const nextEpochSecret = this.epochSecrets.get(epoch + 1n)
+        if (nextEpochSecret === undefined) {
+            return
+        }
+
+        const secret = await this.crypto.open(nextEpochSecret.derivedKeys, sealedSecret)
+        this.epochSecrets.set(epoch, {
+            epoch,
+            secret,
+            derivedKeys: nextEpochSecret.derivedKeys,
+        })
     }
 }

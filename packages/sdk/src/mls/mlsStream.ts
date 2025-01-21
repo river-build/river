@@ -1,7 +1,7 @@
 import { OnChainView } from './onChainView'
 import { Client } from '../client'
 import { DLogger, dlog } from '@river-build/dlog'
-import { LocalView } from './localView'
+import { LocalEpochSecret, LocalView } from './localView'
 import { MlsLogger } from './logger'
 import { IValueAwaiter, IndefiniteValueAwaiter } from './awaiter'
 
@@ -88,6 +88,29 @@ export class MlsStream {
         if (this._localView?.status === 'active') {
             this.awaitingActiveLocalView?.resolve(this._localView)
         }
+    }
+
+    public async unannouncedEpochKeys(): Promise<{ epoch: bigint; secret: Uint8Array }[]> {
+        const unannouncedSecrets: LocalEpochSecret[] = []
+
+        this._localView?.epochSecrets.forEach((secret) => {
+            if (!this.onChainView.sealedEpochSecrets.has(secret.epoch)) {
+                unannouncedSecrets.push(secret)
+            }
+        })
+
+        const sealedSecrets: { epoch: bigint; secret: Uint8Array }[] = []
+        for (const unnannouncedSecret of unannouncedSecrets) {
+            const sealedSecret = await this._localView?.sealEpochSecret(unnannouncedSecret)
+            if (sealedSecret) {
+                sealedSecrets.push({
+                    epoch: unnannouncedSecret.epoch,
+                    secret: sealedSecret,
+                })
+            }
+        }
+
+        return sealedSecrets
     }
 
     // TODO: Update not to depend on client

@@ -1,6 +1,6 @@
-import { EncryptedData } from '@river-build/proto'
+import { EncryptedData, MemberPayload_Mls } from '@river-build/proto'
 import { LocalEpochSecret } from './localView'
-import { Message } from '@bufbuild/protobuf'
+import { Message, PlainMessage } from '@bufbuild/protobuf'
 import { ExternalInfo } from './onChainView'
 import {
     ExportedTree as MlsExportedTree,
@@ -39,6 +39,19 @@ export class MlsMessages {
                 ciphertext,
             },
         })
+    }
+
+    public static epochSecretsMessage(
+        epochSecrets: { epoch: bigint; secret: Uint8Array }[],
+    ): PlainMessage<MemberPayload_Mls> {
+        return {
+            content: {
+                case: 'epochSecrets',
+                value: {
+                    secrets: epochSecrets,
+                },
+            },
+        }
     }
 
     public static async decryptEpochSecretMessage(

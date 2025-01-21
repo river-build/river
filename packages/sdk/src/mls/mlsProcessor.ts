@@ -111,6 +111,32 @@ export class MlsProcessor {
         }
     }
 
+    public async announceEpochSecrets(mlsStream: MlsStream): Promise<void> {
+        if (mlsStream.localView?.status !== 'active') {
+            return
+        }
+
+        const epochSecrets = await mlsStream.unannouncedEpochKeys()
+        if (epochSecrets.length === 0) {
+            return
+        }
+
+        const epochSecretsMessage = MlsMessages.epochSecretsMessage(epochSecrets)
+
+        try {
+            await this.client.makeEventAndAddToStream(
+                mlsStream.streamId,
+                make_MemberPayload_Mls(epochSecretsMessage),
+                this.sendingOptions,
+            )
+        } catch (e) {
+            this.log.debug?.('error sending epoch secrets', {
+                streamId: mlsStream.streamId,
+                e,
+            })
+        }
+    }
+
     // TODO: Not sure what to do with exception
     public async createPendingLocalView(
         streamId: string,
