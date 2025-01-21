@@ -44,13 +44,14 @@ export class MlsStream {
     public constructor(
         streamId: string,
         client: Client,
+        persistenceStore?: IPersistenceStore,
         localView?: LocalView,
         opts: MlsStreamOpts = defaultMlsStreamOpts,
     ) {
         this.streamId = streamId
         this._localView = localView
         this.client = client
-        this.streamId = streamId
+        this.persistenceStore = persistenceStore
         this.log = opts.log
     }
 
