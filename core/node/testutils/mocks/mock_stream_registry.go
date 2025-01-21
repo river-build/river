@@ -17,6 +17,24 @@ type MockStreamRegistry struct {
 	mock.Mock
 }
 
+// AddStream provides a mock function with given fields: ctx, streamId, addrs, genesisMiniblockHash, lastMiniblockHash, lastMiniblockNum, isSealed
+func (_m *MockStreamRegistry) AddStream(ctx context.Context, streamId shared.StreamId, addrs []common.Address, genesisMiniblockHash common.Hash, lastMiniblockHash common.Hash, lastMiniblockNum int64, isSealed bool) error {
+	ret := _m.Called(ctx, streamId, addrs, genesisMiniblockHash, lastMiniblockHash, lastMiniblockNum, isSealed)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AddStream")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, shared.StreamId, []common.Address, common.Hash, common.Hash, int64, bool) error); ok {
+		r0 = rf(ctx, streamId, addrs, genesisMiniblockHash, lastMiniblockHash, lastMiniblockNum, isSealed)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // AllocateStream provides a mock function with given fields: ctx, streamId, genesisMiniblockHash, genesisMiniblock
 func (_m *MockStreamRegistry) AllocateStream(ctx context.Context, streamId shared.StreamId, genesisMiniblockHash common.Hash, genesisMiniblock []byte) ([]common.Address, error) {
 	ret := _m.Called(ctx, streamId, genesisMiniblockHash, genesisMiniblock)

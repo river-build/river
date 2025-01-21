@@ -49,6 +49,9 @@ type StreamStorage interface {
 		onEachMb func(blockdata []byte, seqNum int) error,
 	) error
 
+	// ReadGenesisMiniblock reads genesis miniblock of the stream.
+	ReadGenesisMiniblock(ctx context.Context, streamId StreamId) ([]byte, error)
+
 	// WriteEvent adds event to the given minipool.
 	// Current generation of minipool should match minipoolGeneration,
 	// and there should be exactly minipoolSlot events in the minipool.
