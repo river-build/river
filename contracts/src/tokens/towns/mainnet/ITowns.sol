@@ -26,6 +26,7 @@ interface ITownsBase {
   error InvalidAddress();
   error InvalidInflationRate();
   error MintingTooSoon();
+  error InitialSupplyAlreadyMinted();
 }
 
 interface ITowns is ITownsBase {

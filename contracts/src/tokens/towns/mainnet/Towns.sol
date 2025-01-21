@@ -47,6 +47,9 @@ contract Towns is
   /// @dev initial supply is 10 billion tokens
   uint256 internal constant INITIAL_SUPPLY = 10_000_000_000 ether;
 
+  /// @dev whether the initial supply has been minted
+  bool internal initialSupplyMinted;
+
   /// @dev the role for the inflation caller
   uint256 public constant ROLE_INFLATION_MANAGER = 1;
 
@@ -86,8 +89,18 @@ contract Towns is
     initialMintTime = config.initialMintTime;
 
     TokenInflationLib.initialize(config);
+  }
 
-    _mint(vault, INITIAL_SUPPLY);
+  /// @notice Mints the initial supply to the given address
+  /// @dev Can only be called by the owner
+  /// @dev Can only be called once
+  function mintInitialSupply(address to) external onlyOwner {
+    if (initialSupplyMinted) {
+      CustomRevert.revertWith(InitialSupplyAlreadyMinted.selector);
+    }
+
+    _mint(to, INITIAL_SUPPLY);
+    initialSupplyMinted = true;
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
