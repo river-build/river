@@ -1,5 +1,4 @@
 import { dlog } from '@river-build/dlog'
-import { ViewAdapter } from './viewAdapter'
 import { MlsLogger } from './logger'
 
 const defaultLogger = dlog('csb:mls:queue')
