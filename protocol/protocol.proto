@@ -883,7 +883,9 @@ message AddEventResponse {
         string msg = 2;
         repeated string funcs = 3;
     }
-    Error error = 1; // only set if AddEventRequest.optional is true
+    // error thrown during this request, only set if AddEventRequest.optional is true, otherwise the request will fail with this error
+    Error error = 1; 
+    // all events created during this request including parent events
     repeated EventRef new_events = 2;
 }
 
