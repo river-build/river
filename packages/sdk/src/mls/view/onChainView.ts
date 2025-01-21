@@ -10,19 +10,15 @@ import {
     ConfirmedMlsEventWithCommit,
     MlsSnapshot,
 } from './types'
-import { dlog, DLogger } from '@river-build/dlog'
+import { dlog } from '@river-build/dlog'
 import { logNever } from '../../check'
 import { IStreamStateView } from '../../streamStateView'
+import { MlsLogger } from './logger'
 
 const defaultLogger = dlog('csb:mls:onChainView')
 
 export type OnChainViewOpts = {
-    log: {
-        info?: DLogger
-        debug?: DLogger
-        error?: DLogger
-        warn?: DLogger
-    }
+    log: MlsLogger
 }
 
 const defaultOnChainViewOpts = {
@@ -61,12 +57,7 @@ export class OnChainView {
     // commits by epoch
     public readonly commits: Map<bigint, Uint8Array> = new Map()
 
-    private log: {
-        info?: DLogger
-        debug?: DLogger
-        error?: DLogger
-        warn?: DLogger
-    }
+    private log: MlsLogger
 
     public constructor(opts: OnChainViewOpts = defaultOnChainViewOpts) {
         this.log = opts.log

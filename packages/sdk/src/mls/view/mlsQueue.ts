@@ -1,15 +1,11 @@
-import { dlog, DLogger } from '@river-build/dlog'
+import { dlog } from '@river-build/dlog'
 import { ViewAdapter } from './viewAdapter'
+import { MlsLogger } from './logger'
 
 const defaultLogger = dlog('csb:mls:queue')
 
 export type MlsQueueOpts = {
-    log: {
-        info?: DLogger
-        debug?: DLogger
-        error?: DLogger
-        warn?: DLogger
-    }
+    log: MlsLogger
     delayMs: number
 }
 
@@ -21,6 +17,10 @@ const defaultMlsQueueOpts = {
     delayMs: 15,
 }
 
+export type MlsQueueDelegate = {
+    handleStreamUpdate(streamId: string): Promise<void>
+}
+
 export class MlsQueue {
     private updatedStreams: Set<string> = new Set()
 
@@ -30,17 +30,12 @@ export class MlsQueue {
     private timeoutId?: NodeJS.Timeout
     private inProgressTick?: Promise<void>
     private isMobileSafariBackgrounded = false
-    public viewAdapter?: ViewAdapter
+    public delegate?: MlsQueueDelegate
 
-    private log: {
-        info?: DLogger
-        debug?: DLogger
-        error?: DLogger
-        warn?: DLogger
-    }
+    private log: MlsLogger
 
-    constructor(viewAdapter?: ViewAdapter, opts: MlsQueueOpts = defaultMlsQueueOpts) {
-        this.viewAdapter = viewAdapter
+    constructor(delegate?: MlsQueueDelegate, opts: MlsQueueOpts = defaultMlsQueueOpts) {
+        this.delegate = delegate
         // this.coordinator = coordinator
         this.log = opts.log
         this.delayMs = opts.delayMs
@@ -147,7 +142,7 @@ export class MlsQueue {
     public async tick(): Promise<void> {
         const streamId = this.dequeueConfirmedStream()
         if (streamId !== undefined) {
-            await this.viewAdapter?.streamUpdated(streamId)
+            await this.delegate?.handleStreamUpdate(streamId)
         }
     }
 

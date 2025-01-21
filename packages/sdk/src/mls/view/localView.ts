@@ -1,7 +1,8 @@
 import { Group as MlsGroup, MlsMessage } from '@river-build/mls-rs-wasm'
 import { OnChainView } from './onChainView'
-import { dlog, DLogger } from '@river-build/dlog'
+import { dlog } from '@river-build/dlog'
 import { EpochEncryption } from './epochEncryption'
+import { MlsLogger } from './logger'
 
 type PendingInfo = {
     eventId: string
@@ -12,12 +13,7 @@ type PendingInfo = {
 const defaultLogger = dlog('csb:mls:onChainView')
 
 export type LocalViewOpts = {
-    log: {
-        info?: DLogger
-        debug?: DLogger
-        error?: DLogger
-        warn?: DLogger
-    }
+    log: MlsLogger
 }
 
 const defaultOnChainViewOpts = {
@@ -36,6 +32,8 @@ export type LocalEpochSecret = {
     }
 }
 
+export type LocalViewStatus = 'pending' | 'active' | 'rejected' | 'corrupted'
+
 export class LocalView {
     private group: MlsGroup
     private pendingInfo?: PendingInfo
@@ -47,14 +45,9 @@ export class LocalView {
 
     // public readonly pending: Map<bigint, Uint8Array> = new Map()
 
-    private log: {
-        info?: DLogger
-        debug?: DLogger
-        error?: DLogger
-        warn?: DLogger
-    }
+    private log: MlsLogger
 
-    public get status(): string {
+    public get status(): LocalViewStatus {
         if (this.rejectedEpoch === this.group.currentEpoch) {
             return 'rejected'
         }

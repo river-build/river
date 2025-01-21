@@ -5,7 +5,8 @@ import {
     HpkeSecretKey,
     Secret as MlsSecret,
 } from '@river-build/mls-rs-wasm'
-import { dlog, DLogger } from '@river-build/dlog'
+import { dlog } from '@river-build/dlog'
+import { MlsLogger } from './logger'
 
 const defaultLogger = dlog('csb:mls:epochEncryption')
 
@@ -16,12 +17,7 @@ export type DerivedKeys = {
 
 export type EpochEncryptionOpts = {
     cipherSuite: MlsCipherSuite
-    log: {
-        info?: DLogger
-        debug?: DLogger
-        error?: DLogger
-        warn?: DLogger
-    }
+    log: MlsLogger
 }
 
 const defaultEpochEncryptionOpts = {
@@ -35,12 +31,7 @@ const defaultEpochEncryptionOpts = {
 export class EpochEncryption {
     private cipherSuite: MlsCipherSuite
 
-    private log: {
-        info?: DLogger
-        debug?: DLogger
-        error?: DLogger
-        warn?: DLogger
-    }
+    private log: MlsLogger
 
     constructor(opts: EpochEncryptionOpts = defaultEpochEncryptionOpts) {
         this.log = opts.log

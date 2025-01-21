@@ -2,14 +2,10 @@ import { OnChainView } from './onChainView'
 import { Client } from '../../client'
 import { DLogger, dlog } from '@river-build/dlog'
 import { LocalView } from './localView'
+import { MlsLogger } from './logger'
 
 export type ViewAdapterOpts = {
-    log: {
-        info?: DLogger
-        debug?: DLogger
-        error?: DLogger
-        warn?: DLogger
-    }
+    log: MlsLogger
 }
 
 const defaultLogger = dlog('csb:mls:viewAdapter')
@@ -46,13 +42,17 @@ export class ViewAdapter {
         this.localViews.set(streamId, localView)
     }
 
+    public clearLocalView(streamId: string): void {
+        this.localViews.delete(streamId)
+    }
+
     public localView(streamId: string): LocalView | undefined {
         return this.localViews.get(streamId)
     }
 
     // TODO: Update not to depend on client
-    public async streamUpdated(streamId: string): Promise<void> {
-        this.log.debug?.('streamUpdated', streamId)
+    public async handleStreamUpdate(streamId: string): Promise<void> {
+        this.log.debug?.('handleStreamUpdate', streamId)
         const stream = this.client.stream(streamId)
         if (stream === undefined) {
             this.log.debug?.('streamUpdated: stream not found', streamId)

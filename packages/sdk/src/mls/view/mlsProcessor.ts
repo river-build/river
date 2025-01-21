@@ -4,7 +4,7 @@ import { Client } from '../../client'
 import { Client as MlsClient, Group as MlsGroup } from '@river-build/mls-rs-wasm'
 import { OnChainView } from './onChainView'
 import { LocalView } from './localView'
-import { check, dlog, DLogger } from '@river-build/dlog'
+import { check, dlog } from '@river-build/dlog'
 import { make_MemberPayload_Mls } from '../../types'
 import { MlsMessages } from './messages'
 import { ViewAdapter } from './viewAdapter'
@@ -12,16 +12,12 @@ import { IPersistenceStore } from '../../persistenceStore'
 import { DecryptedContent, EncryptedContent, toDecryptedContent } from '../../encryptedContentTypes'
 import { MLS_ALGORITHM } from '../constants'
 import { isDefined } from '../../check'
+import { MlsLogger } from './logger'
 
 const defaultLogger = dlog('csb:mls:ext')
 
 export type MlsProcessorOpts = {
-    log: {
-        info?: DLogger
-        debug?: DLogger
-        error?: DLogger
-        warn?: DLogger
-    }
+    log: MlsLogger
     sendingOptions: {
         method?: 'mls'
     }
@@ -53,12 +49,7 @@ export class MlsProcessor {
     public decryptionFailures: MlsEncryptedContentItem[] = []
     private sendingOptions: MlsProcessorOpts['sendingOptions']
 
-    private log: {
-        info?: DLogger
-        debug?: DLogger
-        error?: DLogger
-        warn?: DLogger
-    }
+    private log: MlsLogger
 
     constructor(
         client: Client,
@@ -96,12 +87,36 @@ export class MlsProcessor {
     }
 
     public async initializeOrJoinGroup(streamId: string): Promise<void> {
-        const onChainView = this.viewAdapter.onChainView(streamId)
-        if (onChainView === undefined) {
-            throw new Error('waiting for on chain view not supported yet')
+        const currentLocalView = this.viewAdapter.localView(streamId)
+        if (currentLocalView?.status === 'active') {
+            return
         }
-        const localView = await this.createPendingLocalView(streamId, onChainView)
-        this.viewAdapter.trackLocalView(streamId, localView)
+        if (currentLocalView?.status === 'corrupted') {
+            this.log?.warn?.('corrupted local view', { streamId })
+            return
+        }
+        if (currentLocalView?.status === 'pending') {
+            this.log?.debug?.('pending local view', { streamId })
+        }
+        if (currentLocalView?.status === 'rejected') {
+            this.log?.debug?.('rejected local view', { streamId })
+            this.viewAdapter.clearLocalView(streamId)
+        }
+        let onChainView = this.viewAdapter.onChainView(streamId)
+        if (onChainView === undefined) {
+            // TODO: Refactor this
+            await this.viewAdapter.handleStreamUpdate(streamId)
+            onChainView = this.viewAdapter.onChainView(streamId)
+            if (onChainView === undefined) {
+                throw new Error('fetching onchain view failed')
+            }
+        }
+        try {
+            const localView = await this.createPendingLocalView(streamId, onChainView)
+            this.viewAdapter.trackLocalView(streamId, localView)
+        } catch (e) {
+            this.log.debug?.('error creating pending local view', { e, streamId, onChainView })
+        }
     }
 
     // TODO: Not sure what to do with exception

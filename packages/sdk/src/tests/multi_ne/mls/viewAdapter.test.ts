@@ -181,7 +181,7 @@ describe('ViewAdapterTests', () => {
 
         const perClient = async (client: TestClientWithViewAdapter) => {
             // Manually trigger a stream update
-            await client.viewAdapter.streamUpdated(streamId)
+            await client.viewAdapter.handleStreamUpdate(streamId)
             const view = getView(client)
             return (
                 view.accepted.size >= accepted &&
