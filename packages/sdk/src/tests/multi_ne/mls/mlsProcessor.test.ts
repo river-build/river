@@ -6,11 +6,9 @@ import { makeTestClient } from '../../testUtils'
 import { Client } from '../../../client'
 import { Client as MlsClient, ClientOptions as MlsClientOptions } from '@river-build/mls-rs-wasm'
 import { dlog } from '@river-build/dlog'
-import { OnChainView } from '../../../mls/onChainView'
 import { beforeEach, describe, expect } from 'vitest'
-import { ViewAdapter } from '../../../mls/viewAdapter'
+import { MlsStream } from '../../../mls/mlsStream'
 import { MlsProcessor, MlsProcessorOpts } from '../../../mls/mlsProcessor'
-import { MlsQueue } from '../../../mls/mlsQueue'
 
 const encoder = new TextEncoder()
 
@@ -62,8 +60,7 @@ describe('MlsProcessorTests', () => {
 
     type TestClientWithProcessor = TestClient & {
         processor: MlsProcessor
-        viewAdapter: ViewAdapter
-        queue: MlsQueue
+        stream: MlsStream
     }
 
     let alice: TestClientWithProcessor
@@ -72,20 +69,17 @@ describe('MlsProcessorTests', () => {
     let streamId: string
 
     function makeClient(testClient: TestClient): TestClientWithProcessor {
-        const viewAdapter = new ViewAdapter(testClient.client)
-        const queue = new MlsQueue(viewAdapter)
+        const stream = new MlsStream(streamId, undefined, testClient.client)
         const processor = new MlsProcessor(
             testClient.client,
             testClient.mlsClient,
-            viewAdapter,
             undefined,
             makeMlsProcessorOpts(testClient.nickname),
         )
         return {
             ...testClient,
-            viewAdapter,
+            stream,
             processor,
-            queue,
         }
     }
 
@@ -112,25 +106,12 @@ describe('MlsProcessorTests', () => {
         clients.push(alice, bob, charlie)
     })
 
-    beforeEach(() => {
-        clients.forEach((client) => {
-            client.queue.start()
-        })
-    })
-
     afterEach(async () => {
         for (const client of clients) {
-            await client.queue.stop()
             await client.client.stop()
         }
         clients.length = 0
     })
-
-    function getView(client: TestClientWithProcessor): OnChainView {
-        const onChainView = client.viewAdapter.onChainView(streamId)!
-        expect(onChainView).toBeDefined()
-        return onChainView
-    }
 
     type Counts = {
         accepted?: number
@@ -149,8 +130,8 @@ describe('MlsProcessorTests', () => {
 
         const perClient = async (client: TestClientWithProcessor) => {
             // Manually trigger a stream update
-            client.queue.enqueueUpdatedStream(streamId)
-            const view = getView(client)
+            await client.stream.handleStreamUpdate()
+            const view = client.stream.onChainView
             return (
                 view.accepted.size >= accepted &&
                 view.rejected.size >= rejected &&
@@ -170,29 +151,29 @@ describe('MlsProcessorTests', () => {
             // manually seed the viewAdapter
             await expect
                 .poll(
-                    () => {
-                        alice.queue.enqueueUpdatedStream(streamId)
-                        return alice.viewAdapter.onChainView(streamId)
+                    async () => {
+                        await alice.stream.handleStreamUpdate()
+                        return alice.stream.onChainView
                     },
                     { timeout: 10_000 },
                 )
                 .toBeDefined()
 
-            await alice.processor.initializeOrJoinGroup(streamId)
+            await alice.processor.initializeOrJoinGroup(alice.stream)
             await waitUntilClientsObserve(clients, { accepted: 1, processed: 1, rejected: 0 })
-            expect(alice.viewAdapter.localView(streamId)?.status).toBe('active')
+            expect(alice.stream.localView?.status).toBe('active')
         })
 
         test('only one client will be able to join the group', async () => {
             await waitUntilClientsObserve(clients, { accepted: 0, processed: 0, rejected: 0 })
             const results = await Promise.allSettled(
-                clients.map((client) => client.processor.initializeOrJoinGroup(streamId)),
+                clients.map((client) => client.processor.initializeOrJoinGroup(client.stream)),
             )
             const howManySucceeded = results.filter((r) => r.status === 'fulfilled').length
             expect(howManySucceeded).toBeGreaterThan(0)
 
             await waitUntilClientsObserve(clients, { accepted: 1 })
-            const statuses = clients.map((client) => client.viewAdapter.localView(streamId)?.status)
+            const statuses = clients.map((client) => client.stream.localView?.status)
             const howManyActive = statuses.filter((s) => s === 'active').length
             expect(howManyActive).toBe(1)
         })
@@ -203,17 +184,13 @@ describe('MlsProcessorTests', () => {
             const tryJoin = () => {
                 return Promise.allSettled(
                     clients
-                        .filter(
-                            (client) => client.viewAdapter.localView(streamId)?.status !== 'active',
-                        )
-                        .map((client) => client.processor.initializeOrJoinGroup(streamId)),
+                        .filter((client) => client.stream.localView?.status !== 'active')
+                        .map((client) => client.processor.initializeOrJoinGroup(client.stream)),
                 )
             }
 
             const howManyActive = () =>
-                clients.filter(
-                    (client) => client.viewAdapter.localView(streamId)?.status === 'active',
-                ).length
+                clients.filter((client) => client.stream.localView?.status === 'active').length
 
             await tryJoin()
             await waitUntilClientsObserve(clients, { accepted: 1 })

@@ -10,6 +10,7 @@ import {
     MlsConfirmedEvent,
     ConfirmedMlsEventWithCommit,
     MlsSnapshot,
+    MlsConfirmedSnapshot,
 } from './types'
 import { dlog } from '@river-build/dlog'
 import { logNever } from '../check'
@@ -83,19 +84,27 @@ export class OnChainView {
 
     /// Processing snapshot will reload the external group from the snapshot
     public async processSnapshot(snapshot: MlsSnapshot): Promise<void> {
-        this.log.debug?.('processSnapshot', {
-            miniblockNum: snapshot.miniblockNum,
-            confirmedEventNum: snapshot.confirmedEventNum,
-        })
-
-        if (this.lastConfirmedEventNumFor.snapshot >= snapshot.confirmedEventNum) {
-            this.log.warn?.('processSnapshot: snapshot older than last one', {
-                prev: this.lastConfirmedEventNumFor.snapshot,
-                curr: snapshot.confirmedEventNum,
-            })
-        }
-        this.lastConfirmedEventNumFor.snapshot = snapshot.confirmedEventNum
+        // this.log.debug?.('processSnapshot', {
+        //     miniblockNum: snapshot.miniblockNum,
+        //     confirmedEventNum: snapshot.confirmedEventNum,
+        // })
+        //
+        // if (this.lastConfirmedEventNumFor.snapshot >= snapshot.confirmedEventNum) {
+        //     this.log.warn?.('processSnapshot: snapshot older than last one', {
+        //         prev: this.lastConfirmedEventNumFor.snapshot,
+        //         curr: snapshot.confirmedEventNum,
+        //     })
+        // }
+        // this.lastConfirmedEventNumFor.snapshot = snapshot.confirmedEventNum
         // nop
+        const externalGroupSnapshot = snapshot.externalGroupSnapshot
+        const groupInfoMessage = snapshot.groupInfoMessage
+        if (externalGroupSnapshot.length > 0 && groupInfoMessage.length > 0) {
+            this.externalGroup = await this.loadExternalGroupSnapshotWithError(
+                externalGroupSnapshot,
+                groupInfoMessage,
+            )
+        }
     }
 
     /// Process event
@@ -206,7 +215,7 @@ export class OnChainView {
     ): Promise<OnChainView> {
         const onChainView = new OnChainView(opts)
 
-        let lastConfirmedMlsSnapshot: MlsSnapshot | undefined
+        let lastConfirmedMlsSnapshot: MlsConfirmedSnapshot | undefined
         streamView.timeline.forEach((event) => {
             if (event.confirmedEventNum === undefined) {
                 return

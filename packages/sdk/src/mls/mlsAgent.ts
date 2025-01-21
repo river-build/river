@@ -3,8 +3,9 @@ import { StreamEncryptionEvents } from '../streamEvents'
 import { MlsQueue } from './mlsQueue'
 import { dlog } from '@river-build/dlog'
 import { MlsLogger } from './logger'
-import { ViewAdapter } from './viewAdapter'
+import { MlsStream } from './mlsStream'
 import { MlsProcessor } from './mlsProcessor'
+import { Client } from '../client'
 
 const defaultLogger = dlog('csb:mls:agent')
 
@@ -22,12 +23,12 @@ const defaultMlsAgentOpts = {
 }
 
 export class MlsAgent {
-    // private readonly client: Client
+    private readonly client: Client
     // private readonly mlsClient: MlsClient
     // private readonly persistenceStore?: IPersistenceStore
     private readonly encryptionEmitter?: TypedEmitter<StreamEncryptionEvents>
 
-    public readonly viewAdapter: ViewAdapter
+    public readonly streams: Map<string, MlsStream> = new Map()
     public readonly processor: MlsProcessor
     public readonly queue: MlsQueue
     private readonly enabledStreams: Set<string> = new Set<string>()
@@ -35,20 +36,18 @@ export class MlsAgent {
     private log: MlsLogger
 
     public constructor(
-        // client: Client,
+        client: Client,
         // mlsClient: MlsClient,
-        viewAdapter: ViewAdapter,
         processor: MlsProcessor,
         queue: MlsQueue,
         // persistenceStore: IPersistenceStore,
         encryptionEmitter?: TypedEmitter<StreamEncryptionEvents>,
         opts: MlsAgentOpts = defaultMlsAgentOpts,
     ) {
-        // this.client = client
+        this.client = client
         // this.mlsClient = mlsClient
         // this.persistenceStore = persistenceStore
         this.encryptionEmitter = encryptionEmitter
-        this.viewAdapter = viewAdapter
         this.processor = processor
         this.queue = queue
         this.log = opts.log
@@ -71,6 +70,9 @@ export class MlsAgent {
 
     public enableStream(streamId: string) {
         this.enabledStreams.add(streamId)
+        if (!this.streams.has(streamId)) {
+            this.streams.set(streamId, new MlsStream(streamId, undefined, this.client))
+        }
     }
 
     public disableStream(streamId: string) {
@@ -82,9 +84,10 @@ export class MlsAgent {
     }
 
     public async handleStreamUpdate(streamId: string): Promise<void> {
-        await this.viewAdapter.handleStreamUpdate(streamId)
-        if (this.enabledStreams.has(streamId)) {
-            await this.processor.initializeOrJoinGroup(streamId)
+        const mlsStream = this.streams.get(streamId)
+        if (this.enabledStreams.has(streamId) && mlsStream !== undefined) {
+            await mlsStream.handleStreamUpdate()
+            await this.processor.initializeOrJoinGroup(mlsStream)
         }
     }
 }

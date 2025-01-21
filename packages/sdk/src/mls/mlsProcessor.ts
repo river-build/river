@@ -7,10 +7,9 @@ import { LocalView } from './localView'
 import { check, dlog } from '@river-build/dlog'
 import { make_MemberPayload_Mls } from '../types'
 import { MlsMessages } from './messages'
-import { ViewAdapter } from './viewAdapter'
+import { MlsStream } from './mlsStream'
 import { IPersistenceStore } from '../persistenceStore'
-import { DecryptedContent, EncryptedContent, toDecryptedContent } from '../encryptedContentTypes'
-import { MLS_ALGORITHM } from './constants'
+import { DecryptedContent, EncryptedContent } from '../encryptedContentTypes'
 import { isDefined } from '../check'
 import { MlsLogger } from './logger'
 
@@ -44,7 +43,6 @@ type JoinOrCreateMessage = PlainMessage<MemberPayload_Mls>
 export class MlsProcessor {
     private client: Client
     private mlsClient: MlsClient
-    private viewAdapter: ViewAdapter
     private persistenceStore?: IPersistenceStore
     public decryptionFailures: MlsEncryptedContentItem[] = []
     private sendingOptions: MlsProcessorOpts['sendingOptions']
@@ -54,13 +52,11 @@ export class MlsProcessor {
     constructor(
         client: Client,
         mlsClient: MlsClient,
-        viewAdapter: ViewAdapter,
         persistenceStore?: IPersistenceStore,
         opts: MlsProcessorOpts = defaultMlsProcessorOpts,
     ) {
         this.client = client
         this.mlsClient = mlsClient
-        this.viewAdapter = viewAdapter
         this.persistenceStore = persistenceStore
         this.log = opts.log
         this.sendingOptions = opts.sendingOptions
@@ -68,8 +64,8 @@ export class MlsProcessor {
 
     // API needed by the client
     // TODO: How long will be the timeout here?
-    public async encryptMessage(streamId: string, event: Message): Promise<EncryptedData> {
-        const localView = this.viewAdapter.localView(streamId)
+    public async encryptMessage(mlsStream: MlsStream, event: Message): Promise<EncryptedData> {
+        const localView = mlsStream.localView
         if (localView === undefined) {
             throw new Error('waiting for local view not supported yet')
         }
@@ -86,36 +82,32 @@ export class MlsProcessor {
         return MlsMessages.encryptEpochSecretMessage(lastEpochSecret, event)
     }
 
-    public async initializeOrJoinGroup(streamId: string): Promise<void> {
-        const currentLocalView = this.viewAdapter.localView(streamId)
-        if (currentLocalView?.status === 'active') {
-            return
-        }
-        if (currentLocalView?.status === 'corrupted') {
-            this.log?.warn?.('corrupted local view', { streamId })
-            return
-        }
-        if (currentLocalView?.status === 'pending') {
-            this.log?.debug?.('pending local view', { streamId })
-        }
-        if (currentLocalView?.status === 'rejected') {
-            this.log?.debug?.('rejected local view', { streamId })
-            this.viewAdapter.clearLocalView(streamId)
-        }
-        let onChainView = this.viewAdapter.onChainView(streamId)
-        if (onChainView === undefined) {
-            // TODO: Refactor this
-            await this.viewAdapter.handleStreamUpdate(streamId)
-            onChainView = this.viewAdapter.onChainView(streamId)
-            if (onChainView === undefined) {
-                throw new Error('fetching onchain view failed')
-            }
+    public async initializeOrJoinGroup(mlsStream: MlsStream): Promise<void> {
+        switch (mlsStream.localView?.status) {
+            case 'corrupted':
+                this.log?.warn?.('corrupted mls stream', { streamId: mlsStream.streamId })
+                return
+            case 'active':
+                return
+            case 'pending':
+                return
+            case 'rejected':
+                this.log?.debug?.('rejected local view', { streamId: mlsStream.streamId })
+                mlsStream.clearLocalView()
+                break
+            default:
         }
         try {
-            const localView = await this.createPendingLocalView(streamId, onChainView)
-            this.viewAdapter.trackLocalView(streamId, localView)
+            const localView = await this.createPendingLocalView(
+                mlsStream.streamId,
+                mlsStream.onChainView,
+            )
+            mlsStream.trackLocalView(localView)
         } catch (e) {
-            this.log.debug?.('error creating pending local view', { e, streamId, onChainView })
+            this.log.debug?.('error creating pending local view', {
+                streamId: mlsStream.streamId,
+                e,
+            })
         }
     }
 
@@ -145,50 +137,50 @@ export class MlsProcessor {
         return new LocalView(prepared.group, { eventId, miniblockBefore: 0n })
     }
 
-    public async handleEncryptedContent(
-        streamId: string,
-        eventId: string,
-        message: EncryptedContent,
-    ): Promise<void> {
-        const encryptedData = message.content
-        const kind = message.kind
-        const epoch = encryptedData.mls?.epoch
-        const ciphertext = encryptedData.mls?.ciphertext
-
-        if (epoch === undefined) {
-            throw new Error('epoch not found')
-        }
-
-        if (ciphertext === undefined) {
-            throw new Error('ciphertext not found')
-        }
-
-        if (encryptedData.algorithm == MLS_ALGORITHM) {
-            throw new Error(`unknown algorithm: ${encryptedData.algorithm}`)
-        }
-
-        const clearText = await this.persistenceStore?.getCleartext(eventId)
-        if (clearText !== undefined) {
-            return this.updateDecryptedContent(
-                streamId,
-                eventId,
-                toDecryptedContent(kind, clearText),
-            )
-        }
-
-        const epochSecret = this.viewAdapter.localView(streamId)?.getEpochSecret(epoch)
-        if (epochSecret === undefined) {
-            // Decryption failure
-            return this.decryptionFailure(streamId, eventId, kind, encryptedData)
-        }
-
-        const decryptedContent = await MlsMessages.decryptEpochSecretMessage(
-            epochSecret.derivedKeys,
-            kind,
-            ciphertext,
-        )
-        return this.updateDecryptedContent(streamId, eventId, decryptedContent)
-    }
+    // public async handleEncryptedContent(
+    //     streamId: string,
+    //     eventId: string,
+    //     message: EncryptedContent,
+    // ): Promise<void> {
+    //     const encryptedData = message.content
+    //     const kind = message.kind
+    //     const epoch = encryptedData.mls?.epoch
+    //     const ciphertext = encryptedData.mls?.ciphertext
+    //
+    //     if (epoch === undefined) {
+    //         throw new Error('epoch not found')
+    //     }
+    //
+    //     if (ciphertext === undefined) {
+    //         throw new Error('ciphertext not found')
+    //     }
+    //
+    //     if (encryptedData.algorithm == MLS_ALGORITHM) {
+    //         throw new Error(`unknown algorithm: ${encryptedData.algorithm}`)
+    //     }
+    //
+    //     const clearText = await this.persistenceStore?.getCleartext(eventId)
+    //     if (clearText !== undefined) {
+    //         return this.updateDecryptedContent(
+    //             streamId,
+    //             eventId,
+    //             toDecryptedContent(kind, clearText),
+    //         )
+    //     }
+    //
+    //     const epochSecret = this.viewAdapter.localView(streamId)?.getEpochSecret(epoch)
+    //     if (epochSecret === undefined) {
+    //         // Decryption failure
+    //         return this.decryptionFailure(streamId, eventId, kind, encryptedData)
+    //     }
+    //
+    //     const decryptedContent = await MlsMessages.decryptEpochSecretMessage(
+    //         epochSecret.derivedKeys,
+    //         kind,
+    //         ciphertext,
+    //     )
+    //     return this.updateDecryptedContent(streamId, eventId, decryptedContent)
+    // }
 
     public async updateDecryptedContent(
         streamId: string,

@@ -11,10 +11,9 @@ import {
     MlsMessage,
 } from '@river-build/mls-rs-wasm'
 import { dlog } from '@river-build/dlog'
-import { OnChainView } from '../../../mls/onChainView'
 import { createGroupInfoAndExternalSnapshot, makeExternalJoin, makeInitializeGroup } from './utils'
 import { describe, expect } from 'vitest'
-import { ViewAdapter } from '../../../mls/viewAdapter'
+import { MlsStream } from '../../../mls/mlsStream'
 import { MlsQueue, MlsQueueOpts } from '../../../mls/mlsQueue'
 import { LocalView } from '../../../mls/localView'
 
@@ -64,7 +63,7 @@ describe('MlsQueueTests', () => {
         }
     }
 
-    type TestClientWithQueue = TestClient & { viewAdapter: ViewAdapter; queue: MlsQueue }
+    type TestClientWithQueue = TestClient & { stream: MlsStream; queue: MlsQueue }
 
     let alice: TestClientWithQueue
     let bob: TestClientWithQueue
@@ -72,11 +71,11 @@ describe('MlsQueueTests', () => {
     let streamId: string
 
     function makeClient(testClient: TestClient): TestClientWithQueue {
-        const viewAdapter = new ViewAdapter(testClient.client)
-        const queue = new MlsQueue(viewAdapter, makeMlsQueueOpts(testClient.nickname))
+        const stream = new MlsStream(streamId, undefined, testClient.client)
+        const queue = new MlsQueue(stream, makeMlsQueueOpts(testClient.nickname))
         return {
             ...testClient,
-            viewAdapter,
+            stream,
             queue,
         }
     }
@@ -164,12 +163,6 @@ describe('MlsQueueTests', () => {
         }
     }
 
-    function getView(client: TestClientWithQueue): OnChainView {
-        const onChainView = client.viewAdapter.onChainView(streamId)!
-        expect(onChainView).toBeDefined()
-        return onChainView
-    }
-
     type Counts = {
         accepted?: number
         rejected?: number
@@ -188,7 +181,7 @@ describe('MlsQueueTests', () => {
         const perClient = async (client: TestClientWithQueue) => {
             // Manually trigger a stream update
             client.queue.enqueueUpdatedStream(streamId)
-            const view = getView(client)
+            const view = client.stream.onChainView
             return (
                 view.accepted.size >= accepted &&
                 view.rejected.size >= rejected &&
@@ -207,7 +200,7 @@ describe('MlsQueueTests', () => {
         if (clients.length < 2) {
             return
         }
-        const [view, ...others] = clients.map((client) => getView(client))
+        const [view, ...others] = clients.map((client) => client.stream.onChainView)
         others.forEach((otherView) => {
             expect(otherView.externalInfo).toStrictEqual(view.externalInfo)
             expect(otherView.accepted).toStrictEqual(view.accepted)
@@ -222,7 +215,7 @@ describe('MlsQueueTests', () => {
 
             await waitUntilClientsObserve(clients, { accepted: 1, processed: 1, rejected: 0 })
 
-            const clientsViews = clients.map((client) => getView(client))
+            const clientsViews = clients.map((client) => client.stream.onChainView)
 
             clientsViews.forEach((view) => {
                 const externalInfo = view.externalInfo!
@@ -261,7 +254,7 @@ describe('MlsQueueTests', () => {
             // wait for all clients to observe it
             await waitUntilClientsObserve([bob], { accepted: 1 })
 
-            const bobView = getView(bob)
+            const bobView = bob.stream.onChainView
             const bobExternalInfo = bobView.externalInfo!
             expect(bobExternalInfo).toBeDefined()
 
@@ -279,7 +272,7 @@ describe('MlsQueueTests', () => {
             const { eventId } = await bobAttempt.attempt()
 
             await waitUntilClientsObserve(clients, { accepted: 2 })
-            const clientsViews = clients.map((client) => getView(client))
+            const clientsViews = clients.map((client) => client.stream.onChainView)
             clientsViews.forEach((view) => {
                 const bobEvent = bobAttempt.event
                 const acceptedEvent = view.accepted.get(eventId)!
@@ -300,7 +293,7 @@ describe('MlsQueueTests', () => {
 
             const externalJoinAttempts = await Promise.all(
                 otherClients.map(async (client) => {
-                    const view = getView(client)
+                    const view = client.stream.onChainView
                     const { latestGroupInfo, exportedTree } = view.externalInfo!
                     return attemptExternalJoin(client, latestGroupInfo, exportedTree)
                 }),
@@ -329,7 +322,7 @@ describe('MlsQueueTests', () => {
                 eventId: aliceEventId,
                 miniblockBefore: 0n,
             })
-            alice.viewAdapter.trackLocalView(streamId, aliceLocalView)
+            alice.stream.trackLocalView(aliceLocalView)
 
             await waitUntilClientsObserve([alice], { accepted: 1, processed: 1, rejected: 0 })
             expect(aliceLocalView.status).toBe('active')
@@ -342,14 +335,14 @@ describe('MlsQueueTests', () => {
                 clientAttempts.map(async (attempt, id) => {
                     const { eventId } = await attempt.attempt()
                     const localView = new LocalView(attempt.group, { eventId, miniblockBefore: 0n })
-                    clients[id].viewAdapter.trackLocalView(streamId, localView)
+                    clients[id].stream.trackLocalView(localView)
                 }),
             )
             const howManySucceeded = result.filter((r) => r.status === 'fulfilled').length
             expect(howManySucceeded).toBeGreaterThan(0)
 
             await waitUntilClientsObserve(clients, { accepted: 1, processed: howManySucceeded })
-            const statuses = clients.map((c) => c.viewAdapter.localView(streamId)?.status)
+            const statuses = clients.map((c) => c.stream.localView?.status)
 
             // one client has active local View
             const howManyActive = statuses.filter((s) => s === 'active').length
@@ -367,7 +360,7 @@ describe('MlsQueueTests', () => {
             // wait for all clients to observe it
             await waitUntilClientsObserve([bob], { accepted: 1 })
 
-            const bobView = getView(bob)
+            const bobView = bob.stream.onChainView
             const bobExternalInfo = bobView.externalInfo!
             expect(bobExternalInfo).toBeDefined()
 
@@ -379,7 +372,7 @@ describe('MlsQueueTests', () => {
 
             const { eventId } = await bobAttempt.attempt()
             const bobLocalView = new LocalView(bobAttempt.group, { eventId, miniblockBefore: 0n })
-            bob.viewAdapter.trackLocalView(streamId, bobLocalView)
+            bob.stream.trackLocalView(bobLocalView)
 
             await waitUntilClientsObserve([bob], { accepted: 2 })
             expect(bobLocalView.status).toBe('active')
@@ -389,7 +382,7 @@ describe('MlsQueueTests', () => {
             const aliceAttempt = await attemptInitializeGroup(alice)
             const { eventId } = await aliceAttempt.attempt()
             const localView = new LocalView(aliceAttempt.group, { eventId, miniblockBefore: 0n })
-            alice.viewAdapter.trackLocalView(streamId, localView)
+            alice.stream.trackLocalView(localView)
 
             const otherClients = clients.slice(1)
 
@@ -398,7 +391,7 @@ describe('MlsQueueTests', () => {
 
             const externalJoinAttempts = await Promise.all(
                 otherClients.map(async (client) => {
-                    const view = getView(client)
+                    const view = client.stream.onChainView
                     const { latestGroupInfo, exportedTree } = view.externalInfo!
                     return attemptExternalJoin(client, latestGroupInfo, exportedTree)
                 }),
@@ -408,7 +401,7 @@ describe('MlsQueueTests', () => {
                 externalJoinAttempts.map(async (attempt, id) => {
                     const { eventId } = await attempt.attempt()
                     const localView = new LocalView(attempt.group, { eventId, miniblockBefore: 0n })
-                    otherClients[id].viewAdapter.trackLocalView(streamId, localView)
+                    otherClients[id].stream.trackLocalView(localView)
                 }),
             )
 
@@ -420,7 +413,7 @@ describe('MlsQueueTests', () => {
 
             await waitUntilClientsObserve(clients, { accepted, rejected })
 
-            const statuses = clients.map((c) => c.viewAdapter.localView(streamId)?.status)
+            const statuses = clients.map((c) => c.stream.localView?.status)
 
             // one client has active local View
             const howManyActive = statuses.filter((s) => s === 'active').length

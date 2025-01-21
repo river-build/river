@@ -7,7 +7,6 @@ import { Client } from '../../../client'
 import { Client as MlsClient, ClientOptions as MlsClientOptions } from '@river-build/mls-rs-wasm'
 import { dlog } from '@river-build/dlog'
 import { beforeEach, describe, expect } from 'vitest'
-import { ViewAdapter } from '../../../mls/viewAdapter'
 import { MlsProcessor, MlsProcessorOpts } from '../../../mls/mlsProcessor'
 import { MlsQueue } from '../../../mls/mlsQueue'
 import { MlsAgent, MlsAgentOpts } from '../../../mls/mlsAgent'
@@ -82,17 +81,15 @@ describe('MlsAgentTests', () => {
     let streamId: string
 
     function makeClient(testClient: TestClient): TestClientWithAgent {
-        const viewAdapter = new ViewAdapter(testClient.client)
         const queue = new MlsQueue()
         const processor = new MlsProcessor(
             testClient.client,
             testClient.mlsClient,
-            viewAdapter,
             undefined,
             makeMlsProcessorOpts(testClient.nickname),
         )
         const agent = new MlsAgent(
-            viewAdapter,
+            testClient.client,
             processor,
             queue,
             testClient.client,
@@ -150,7 +147,7 @@ describe('MlsAgentTests', () => {
             // manually seed the viewAdapter
             await alice.agent.enableAndParticipate(streamId)
             await expect
-                .poll(() => alice.agent.viewAdapter.localView(streamId)?.status, {
+                .poll(() => alice.agent.streams.get(streamId)?.localView?.status, {
                     timeout: 10_000,
                 })
                 .toBe('active')
@@ -161,7 +158,7 @@ describe('MlsAgentTests', () => {
 
             const howManyActive = () =>
                 clients.filter(
-                    (client) => client.agent.viewAdapter.localView(streamId)?.status === 'active',
+                    (client) => client.agent.streams.get(streamId)?.localView?.status === 'active',
                 ).length
             await expect.poll(() => howManyActive(), { timeout: 10_000 }).toBe(3)
         })

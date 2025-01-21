@@ -20,7 +20,7 @@ import { KeySolicitationContent, UserDevice } from '@river-build/encryption'
 import { EncryptedContent } from './encryptedContentTypes'
 import { SyncState } from './syncedStreamsLoop'
 import { Pin } from './streamStateView_Members'
-import {MlsConfirmedEvent, MlsSnapshot} from './mls/types'
+import { MlsConfirmedEvent, MlsSnapshot } from './mls/types'
 
 export type StreamChange = {
     prepended?: RemoteTimelineEvent[]

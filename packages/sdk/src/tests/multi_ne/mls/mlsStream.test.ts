@@ -11,10 +11,9 @@ import {
     MlsMessage,
 } from '@river-build/mls-rs-wasm'
 import { dlog } from '@river-build/dlog'
-import { OnChainView } from '../../../mls/onChainView'
 import { createGroupInfoAndExternalSnapshot, makeExternalJoin, makeInitializeGroup } from './utils'
 import { expect } from 'vitest'
-import { ViewAdapter, ViewAdapterOpts } from '../../../mls/viewAdapter'
+import { MlsStream, MlsStreamOpts } from '../../../mls/mlsStream'
 
 const encoder = new TextEncoder()
 
@@ -24,17 +23,17 @@ type TestClient = {
     mlsClient: MlsClient
 }
 
-const log = dlog('test:mls:viewAdapter')
+const log = dlog('test:mls:stream')
 
-describe('ViewAdapterTests', () => {
-    const clients: TestClientWithViewAdapter[] = []
+describe('MlsStreamTests', () => {
+    const clients: TestClientWithMlsStream[] = []
 
     const mlsClientOptions: MlsClientOptions = {
         withAllowExternalCommit: true,
         withRatchetTreeExtension: false,
     }
 
-    function makeViewAdapterOpts(nickname: string): ViewAdapterOpts {
+    function makeMlsStreamOpts(nickname: string): MlsStreamOpts {
         const log_ = log.extend(nickname)
         return {
             log: {
@@ -61,11 +60,11 @@ describe('ViewAdapterTests', () => {
         }
     }
 
-    type TestClientWithViewAdapter = TestClient & { viewAdapter: ViewAdapter }
+    type TestClientWithMlsStream = TestClient & { stream: MlsStream }
 
-    let alice: TestClientWithViewAdapter
-    let bob: TestClientWithViewAdapter
-    let charlie: TestClientWithViewAdapter
+    let alice: TestClientWithMlsStream
+    let bob: TestClientWithMlsStream
+    let charlie: TestClientWithMlsStream
     let streamId: string
 
     beforeEach(async () => {
@@ -86,22 +85,37 @@ describe('ViewAdapterTests', () => {
         streamId = gdmStreamId
         alice = {
             ...alice_,
-            viewAdapter: new ViewAdapter(alice_.client, makeViewAdapterOpts(alice_.nickname)),
+            stream: new MlsStream(
+                streamId,
+                undefined,
+                alice_.client,
+                makeMlsStreamOpts(alice_.nickname),
+            ),
         }
         bob = {
             ...bob_,
-            viewAdapter: new ViewAdapter(bob_.client, makeViewAdapterOpts(bob_.nickname)),
+            stream: new MlsStream(
+                streamId,
+                undefined,
+                bob_.client,
+                makeMlsStreamOpts(bob_.nickname),
+            ),
         }
         charlie = {
             ...charlie_,
-            viewAdapter: new ViewAdapter(charlie_.client, makeViewAdapterOpts(charlie_.nickname)),
+            stream: new MlsStream(
+                streamId,
+                undefined,
+                charlie_.client,
+                makeMlsStreamOpts(charlie_.nickname),
+            ),
         }
         clients.push(alice, bob, charlie)
     })
 
     beforeEach(() => {
         for (const client of clients) {
-            client.viewAdapter
+            client.stream
         }
     })
 
@@ -158,12 +172,6 @@ describe('ViewAdapterTests', () => {
         }
     }
 
-    function getView(client: TestClientWithViewAdapter): OnChainView {
-        const onChainView = client.viewAdapter.onChainView(streamId)!
-        expect(onChainView).toBeDefined()
-        return onChainView
-    }
-
     type Counts = {
         accepted?: number
         rejected?: number
@@ -171,7 +179,7 @@ describe('ViewAdapterTests', () => {
     }
 
     function waitUntilClientsObserve(
-        clients: TestClientWithViewAdapter[],
+        clients: TestClientWithMlsStream[],
         counts: Counts,
         opts = { timeout: 10_000 },
     ): Promise<void> {
@@ -179,10 +187,10 @@ describe('ViewAdapterTests', () => {
         const rejected = counts.rejected ?? -1
         const processed = counts.rejected ?? -1
 
-        const perClient = async (client: TestClientWithViewAdapter) => {
+        const perClient = async (client: TestClientWithMlsStream) => {
             // Manually trigger a stream update
-            await client.viewAdapter.handleStreamUpdate(streamId)
-            const view = getView(client)
+            await client.stream.handleStreamUpdate()
+            const view = client.stream.onChainView
             return (
                 view.accepted.size >= accepted &&
                 view.rejected.size >= rejected &&
@@ -197,11 +205,11 @@ describe('ViewAdapterTests', () => {
         return expect(promise).resolves.not.toThrow()
     }
 
-    function clientsViewsAgree(clients: TestClientWithViewAdapter[]) {
+    function clientsViewsAgree(clients: TestClientWithMlsStream[]) {
         if (clients.length < 2) {
             return
         }
-        const [view, ...others] = clients.map((client) => getView(client))
+        const [view, ...others] = clients.map((client) => client.stream.onChainView)
         others.forEach((otherView) => {
             expect(otherView.externalInfo).toStrictEqual(view.externalInfo)
             expect(otherView.accepted).toStrictEqual(view.accepted)
@@ -215,7 +223,7 @@ describe('ViewAdapterTests', () => {
 
         await waitUntilClientsObserve(clients, { accepted: 1, processed: 1, rejected: 0 })
 
-        const clientsViews = clients.map((client) => getView(client))
+        const clientsViews = clients.map((client) => client.stream.onChainView)
 
         clientsViews.forEach((view) => {
             const externalInfo = view.externalInfo!
@@ -252,7 +260,7 @@ describe('ViewAdapterTests', () => {
         // wait for all clients to observe it
         await waitUntilClientsObserve([bob], { accepted: 1 })
 
-        const bobView = getView(bob)
+        const bobView = bob.stream.onChainView
         const bobExternalInfo = bobView.externalInfo!
         expect(bobExternalInfo).toBeDefined()
 
@@ -270,7 +278,7 @@ describe('ViewAdapterTests', () => {
         const { eventId } = await bobAttempt.attempt()
 
         await waitUntilClientsObserve(clients, { accepted: 2 })
-        const clientsViews = clients.map((client) => getView(client))
+        const clientsViews = clients.map((client) => client.stream.onChainView)
         clientsViews.forEach((view) => {
             const bobEvent = bobAttempt.event
             const acceptedEvent = view.accepted.get(eventId)!
@@ -291,7 +299,7 @@ describe('ViewAdapterTests', () => {
 
         const externalJoinAttempts = await Promise.all(
             otherClients.map(async (client) => {
-                const view = getView(client)
+                const view = client.stream.onChainView
                 const { latestGroupInfo, exportedTree } = view.externalInfo!
                 return attemptExternalJoin(client, latestGroupInfo, exportedTree)
             }),
