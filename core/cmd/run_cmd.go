@@ -21,7 +21,7 @@ import (
 
 func handleSignals(ctx context.Context) {
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGSEGV, syscall.SIGABRT)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, syscall.SIGSEGV, syscall.SIGABRT)
 
 	go func() {
 		fmt.Println("Signal handler started")
