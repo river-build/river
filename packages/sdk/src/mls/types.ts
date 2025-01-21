@@ -1,6 +1,7 @@
 import { PlainMessage } from '@bufbuild/protobuf'
 import {
-    MemberPayload_Mls, MemberPayload_Mls_EpochSecrets,
+    MemberPayload_Mls,
+    MemberPayload_Mls_EpochSecrets,
     MemberPayload_Mls_ExternalJoin,
     MemberPayload_Mls_InitializeGroup,
     MemberPayload_Mls_WelcomeMessage,

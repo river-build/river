@@ -2,7 +2,7 @@
  * @group main
  */
 
-describe('MlsQueueTests', () => {
+describe.skip('MlsQueueTests', () => {
     it('should enqueue a stream', () => {
         // TODO
     })

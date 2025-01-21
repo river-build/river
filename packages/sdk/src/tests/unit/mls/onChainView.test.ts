@@ -1,17 +1,8 @@
-import { beforeEach, describe } from 'vitest'
-import { OnChainView } from '../../../mls/onChainView'
+import { describe } from 'vitest'
 
-describe('onChainViewTests', () => {
-    let view: OnChainView
-
-    beforeEach(() => {
-        view = new OnChainView()
-    })
-
+describe.skip('onChainViewTests', () => {
     describe('Snapshot', () => {
-        it('can be loaded from snapshot', () => {
-
-        })
+        it('can be loaded from snapshot', () => {})
     })
 
     describe('InitializeGroup', () => {

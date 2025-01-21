@@ -1,6 +1,6 @@
 import { describe } from 'vitest'
 
-describe('LocalViewTests', () => {
+describe.skip('LocalViewTests', () => {
     describe('InitializeGroup', () => {
         it('accepted initialize group makes active', () => {
             // TODO
@@ -21,7 +21,7 @@ describe('LocalViewTests', () => {
 
     describe('OnChainView', () => {
         // TODO
-    });
+    })
 
     describe('Commit', () => {
         it('commit adds an epoch secret', () => {
