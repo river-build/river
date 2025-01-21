@@ -495,8 +495,8 @@ export class Space {
         return allTokenArrays.flat().map((token) => token.toString())
     }
 
-    public async getProtocolFee(): Promise<BigNumberish> {
-        return this.membership.read.getProtocolFee()
+    public async getProtocolFee(): Promise<bigint> {
+        return (await this.membership.read.getProtocolFee()).toBigInt()
     }
 
     /**
