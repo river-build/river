@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"sync"
 	"syscall"
 
@@ -17,7 +18,33 @@ import (
 	"github.com/river-build/river/core/xchain/server"
 )
 
+func handleSignals(ctx context.Context) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGSEGV, syscall.SIGABRT)
+
+	go func() {
+		for sig := range c {
+			log := logging.FromCtx(ctx)
+			log.Error("Caught signal", "signal", sig)
+			debug.PrintStack() // Print stack trace for debugging
+			os.Exit(1)         // Exit after logging
+		}
+	}()
+}
+
 func runServices(ctx context.Context, cfg *config.Config, stream bool, xchain bool) error {
+	// Defer to recover from panics and log debug information
+	defer func() {
+		if r := recover(); r != nil {
+			log := logging.FromCtx(ctx)
+			log.Error("Panic occurred", "error", r)
+			debug.PrintStack() // Print the stack trace
+		}
+	}()
+
+	// Handle signals
+	handleSignals(ctx)
+
 	var err error
 	err = setupProfiler("river-node", cfg)
 	if err != nil {
