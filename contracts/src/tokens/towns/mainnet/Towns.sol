@@ -60,7 +60,12 @@ contract Towns is
   /*                           Constructor                      */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-  constructor(address vault, address manager, InflationConfig memory config) {
+  constructor(
+    address owner,
+    address vault,
+    address manager,
+    InflationConfig memory config
+  ) {
     if (vault == address(0) || manager == address(0)) {
       CustomRevert.revertWith(InvalidAddress.selector);
     }
@@ -69,7 +74,7 @@ contract Towns is
       CustomRevert.revertWith(InvalidAddress.selector);
     }
 
-    _initializeOwner(vault);
+    _initializeOwner(owner);
 
     _grantRoles(vault, ROLE_INFLATION_MANAGER);
     _grantRoles(manager, ROLE_INFLATION_RATE_MANAGER);
