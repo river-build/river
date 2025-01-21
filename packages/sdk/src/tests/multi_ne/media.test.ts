@@ -129,6 +129,7 @@ describe('mediaTests', () => {
         const { iv, key } = await deriveKeyAndIV(spaceId)
         const data = createTestMediaChunks(2)
         await bobSendEncryptedMediaPayload(mediaStreamInfo.creationCookie, false, data, key, iv)
+        await bobSendEncryptedMediaPayload(mediaStreamInfo.creationCookie, true, data, key, iv)
         const decryptedChunks = await bobsClient.getMediaPayload(
             streamIdAsString(mediaStreamInfo.creationCookie.streamId),
             key,
