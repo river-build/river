@@ -26,7 +26,7 @@ WORKDIR /build
 RUN CGO_LDFLAGS="-L/build" \
     go build \
     -o /bin/river_node \
-    -gcflags=all="-N -l" \  
+    -trimpath \
     -ldflags="-X github.com/river-build/river/core/river_node/version.version=$VER_VERSION -X github.com/river-build/river/core/river_node/version.branch=$VER_BRANCH -X github.com/river-build/river/core/river_node/version.commit=$VER_COMMIT" \
     ./river_node
 
