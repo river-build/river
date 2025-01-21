@@ -1,6 +1,6 @@
 import { PlainMessage } from '@bufbuild/protobuf'
 import {
-    MemberPayload_Mls,
+    MemberPayload_Mls, MemberPayload_Mls_EpochSecrets,
     MemberPayload_Mls_ExternalJoin,
     MemberPayload_Mls_InitializeGroup,
     MemberPayload_Mls_WelcomeMessage,
@@ -39,3 +39,10 @@ export type MlsEventWithCommit =
       }
 
 export type ConfirmedMlsEventWithCommit = MlsEventWithCommit & ConfirmedMetadata
+
+export type EpochSecrets = {
+    case: 'epochSecrets'
+    value: PlainMessage<MemberPayload_Mls_EpochSecrets>
+}
+
+export type ConfirmedEpochSecrets = EpochSecrets & ConfirmedMetadata

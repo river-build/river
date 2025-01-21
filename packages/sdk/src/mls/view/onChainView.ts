@@ -5,6 +5,7 @@ import {
     MlsMessage,
 } from '@river-build/mls-rs-wasm'
 import {
+    ConfirmedEpochSecrets,
     ConfirmedInitializeGroup,
     ConfirmedMlsEvent,
     ConfirmedMlsEventWithCommit,
@@ -56,6 +57,7 @@ export class OnChainView {
 
     // commits by epoch
     public readonly commits: Map<bigint, Uint8Array> = new Map()
+    public readonly sealedEpochSecrets: Map<bigint, Uint8Array> = new Map()
 
     private log: MlsLogger
 
@@ -120,6 +122,7 @@ export class OnChainView {
             case 'welcomeMessage':
                 return this.processEventWithCommit(event)
             case 'epochSecrets':
+                return this.processEpochSecrets(event)
             case 'keyPackage':
             case undefined:
                 break
@@ -288,5 +291,11 @@ export class OnChainView {
             await onChainView.processConfirmedMlsEvent(confirmedMlsEvent)
         }
         return onChainView
+    }
+
+    private processEpochSecrets(event: ConfirmedEpochSecrets): void {
+        event.value.secrets.forEach((secret) => {
+            this.sealedEpochSecrets.set(secret.epoch, secret.secret)
+        })
     }
 }
