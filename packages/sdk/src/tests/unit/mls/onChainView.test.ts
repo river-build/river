@@ -1,5 +1,5 @@
 import { beforeEach, describe } from 'vitest'
-import { OnChainView } from '../../../mls/view/onChainView'
+import { OnChainView } from '../../../mls/onChainView'
 
 describe('onChainViewTests', () => {
     let view: OnChainView

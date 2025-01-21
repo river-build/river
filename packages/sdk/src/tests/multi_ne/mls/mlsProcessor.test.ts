@@ -6,11 +6,11 @@ import { makeTestClient } from '../../testUtils'
 import { Client } from '../../../client'
 import { Client as MlsClient, ClientOptions as MlsClientOptions } from '@river-build/mls-rs-wasm'
 import { dlog } from '@river-build/dlog'
-import { OnChainView } from '../../../mls/view/onChainView'
+import { OnChainView } from '../../../mls/onChainView'
 import { beforeEach, describe, expect } from 'vitest'
-import { ViewAdapter } from '../../../mls/view/viewAdapter'
-import { MlsProcessor, MlsProcessorOpts } from '../../../mls/view/mlsProcessor'
-import { MlsQueue } from '../../../mls/view/mlsQueue'
+import { ViewAdapter } from '../../../mls/viewAdapter'
+import { MlsProcessor, MlsProcessorOpts } from '../../../mls/mlsProcessor'
+import { MlsQueue } from '../../../mls/mlsQueue'
 
 const encoder = new TextEncoder()
 

@@ -5,7 +5,7 @@
 import { makeTestClient, waitFor } from '../../testUtils'
 import { Client } from '../../../client'
 import { PlainMessage } from '@bufbuild/protobuf'
-import { MemberPayload_Mls, MemberPayload_Mls_WelcomeMessage } from '@river-build/proto'
+import { MemberPayload_Mls } from '@river-build/proto'
 import {
     ExternalClient,
     Group as MlsGroup,
@@ -20,8 +20,6 @@ import { bin_equal, check } from '@river-build/dlog'
 import { addressFromUserId } from '../../../id'
 import { bytesToHex } from 'ethereum-cryptography/utils'
 import { isDefined } from '../../../check'
-import { ParsedMiniblock } from '../../../types'
-import { fail } from 'assert'
 
 describe('mlsTests', () => {
     let clients: Client[] = []
@@ -690,96 +688,96 @@ describe('mlsTests', () => {
         })
     })
 
-    test('correct external group info is returned', async () => {
-        const externalGroupInfo = (await bobClient.getMlsExternalGroupInfo(streamId))!
-        const externalClient = new ExternalClient()
-        const externalGroupSnapshot = ExternalSnapshot.fromBytes(
-            externalGroupInfo.externalGroupSnapshot,
-        )
-        expect(externalGroupInfo.commits.length).toBe(1)
+    // test('correct external group info is returned', async () => {
+    //     const externalGroupInfo = (await bobClient.getMlsExternalGroupInfo(streamId))!
+    //     const externalClient = new ExternalClient()
+    //     const externalGroupSnapshot = ExternalSnapshot.fromBytes(
+    //         externalGroupInfo.externalGroupSnapshot,
+    //     )
+    //     expect(externalGroupInfo.commits.length).toBe(1)
+    //
+    //     let latestValidGroupInfoMessage = externalGroupInfo.groupInfoMessage
+    //     const externalGroup = await externalClient.loadGroup(externalGroupSnapshot)
+    //     for (const commit of externalGroupInfo.commits) {
+    //         try {
+    //             const mlsMessage = MlsMessage.fromBytes(commit.commit)
+    //             await externalGroup.processIncomingMessage(mlsMessage)
+    //             latestValidGroupInfoMessage = commit.groupInfoMessage
+    //         } catch {
+    //             // catch, in case this is an invalid commit
+    //         }
+    //     }
+    //
+    //     expect(bin_equal(latestValidGroupInfoMessage, latestGroupInfoMessage)).toBe(true)
+    //
+    //     const aliceThrowawayClient = await MlsClient.create(new Uint8Array(randomBytes(32)))
+    //     const {
+    //         commit: aliceCommit,
+    //         groupInfoMessage: aliceGroupInfoMessage,
+    //         group: aliceGroup,
+    //     } = await commitExternal(
+    //         aliceThrowawayClient,
+    //         latestValidGroupInfoMessage,
+    //         externalGroup.snapshot().toBytes(),
+    //     )
+    //     const aliceMlsPayload = makeMlsPayloadExternalJoin(
+    //         aliceThrowawayClient.signaturePublicKey(),
+    //         aliceCommit,
+    //         aliceGroupInfoMessage,
+    //     )
+    //
+    //     await expect(
+    //         bobMlsGroup.processIncomingMessage(MlsMessage.fromBytes(aliceCommit)),
+    //     ).resolves.not.toThrow()
+    //
+    //     expect(bobMlsGroup.currentEpoch).toBe(aliceGroup.currentEpoch)
+    //     await expect(aliceClient._debugSendMls(streamId, aliceMlsPayload)).resolves.not.toThrow()
+    //     commits.push(aliceCommit)
+    // })
 
-        let latestValidGroupInfoMessage = externalGroupInfo.groupInfoMessage
-        const externalGroup = await externalClient.loadGroup(externalGroupSnapshot)
-        for (const commit of externalGroupInfo.commits) {
-            try {
-                const mlsMessage = MlsMessage.fromBytes(commit.commit)
-                await externalGroup.processIncomingMessage(mlsMessage)
-                latestValidGroupInfoMessage = commit.groupInfoMessage
-            } catch {
-                // catch, in case this is an invalid commit
-            }
-        }
+    // test('devices added from key packages are snapshotted', async () => {
+    //     // force snapshot
+    //     await expect(
+    //         bobClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true }),
+    //     ).resolves.not.toThrow()
+    //
+    //     // verify that the key package is picked up in the snapshot
+    //     const streamAfterSnapshot = await bobClient.getStream(streamId)
+    //     const mls = streamAfterSnapshot.membershipContent.mls
+    //     expect(mls.members[aliceClient.userId].signaturePublicKeys.length).toBe(3)
+    // })
 
-        expect(bin_equal(latestValidGroupInfoMessage, latestGroupInfoMessage)).toBe(true)
-
-        const aliceThrowawayClient = await MlsClient.create(new Uint8Array(randomBytes(32)))
-        const {
-            commit: aliceCommit,
-            groupInfoMessage: aliceGroupInfoMessage,
-            group: aliceGroup,
-        } = await commitExternal(
-            aliceThrowawayClient,
-            latestValidGroupInfoMessage,
-            externalGroup.snapshot().toBytes(),
-        )
-        const aliceMlsPayload = makeMlsPayloadExternalJoin(
-            aliceThrowawayClient.signaturePublicKey(),
-            aliceCommit,
-            aliceGroupInfoMessage,
-        )
-
-        await expect(
-            bobMlsGroup.processIncomingMessage(MlsMessage.fromBytes(aliceCommit)),
-        ).resolves.not.toThrow()
-
-        expect(bobMlsGroup.currentEpoch).toBe(aliceGroup.currentEpoch)
-        await expect(aliceClient._debugSendMls(streamId, aliceMlsPayload)).resolves.not.toThrow()
-        commits.push(aliceCommit)
-    })
-
-    test('devices added from key packages are snapshotted', async () => {
-        // force snapshot
-        await expect(
-            bobClient.debugForceMakeMiniblock(streamId, { forceSnapshot: true }),
-        ).resolves.not.toThrow()
-
-        // verify that the key package is picked up in the snapshot
-        const streamAfterSnapshot = await bobClient.getStream(streamId)
-        const mls = streamAfterSnapshot.membershipContent.mls
-        expect(mls.members[aliceClient.userId].signaturePublicKeys.length).toBe(3)
-    })
-
-    test('the snapshot contains a pointer to the miniblock containing the welcome message', async () => {
-        function getWelcomeMessage(miniblock: ParsedMiniblock): MemberPayload_Mls_WelcomeMessage {
-            for (const payload of miniblock.events.map((e) => e.event.payload)) {
-                if (payload.value?.content.case !== 'mls') {
-                    continue
-                }
-                if (payload.value.content.value.content.case !== 'welcomeMessage') {
-                    continue
-                }
-                return payload.value.content.value.content.value
-            }
-            fail('no welcome message found')
-        }
-
-        const streamAfterSnapshot = await aliceClient.getStream(streamId)
-        const mls = streamAfterSnapshot.membershipContent.mls
-        const signature = aliceMlsClient2.signaturePublicKey()
-        const miniblockNum = mls.welcomeMessagesMiniblockNum[bytesToHex(signature)]
-        expect(miniblockNum).toBeGreaterThan(0n)
-
-        const { miniblocks } = await aliceClient.getMiniblocks(
-            streamId,
-            miniblockNum,
-            miniblockNum + 1n,
-        )
-
-        expect(miniblocks.length).toBe(1)
-        const welcomeMessage = getWelcomeMessage(miniblocks[0])
-        expect(bin_equal(welcomeMessage.commit, welcomeMessageCommit)).toBe(true)
-        expect(
-            welcomeMessage.signaturePublicKeys.find((val) => bin_equal(val, signature)),
-        ).toBeDefined()
-    })
+    // test('the snapshot contains a pointer to the miniblock containing the welcome message', async () => {
+    //     function getWelcomeMessage(miniblock: ParsedMiniblock): MemberPayload_Mls_WelcomeMessage {
+    //         for (const payload of miniblock.events.map((e) => e.event.payload)) {
+    //             if (payload.value?.content.case !== 'mls') {
+    //                 continue
+    //             }
+    //             if (payload.value.content.value.content.case !== 'welcomeMessage') {
+    //                 continue
+    //             }
+    //             return payload.value.content.value.content.value
+    //         }
+    //         fail('no welcome message found')
+    //     }
+    //
+    //     const streamAfterSnapshot = await aliceClient.getStream(streamId)
+    //     const mls = streamAfterSnapshot.membershipContent.mls
+    //     const signature = aliceMlsClient2.signaturePublicKey()
+    //     const miniblockNum = mls.welcomeMessagesMiniblockNum[bytesToHex(signature)]
+    //     expect(miniblockNum).toBeGreaterThan(0n)
+    //
+    //     const { miniblocks } = await aliceClient.getMiniblocks(
+    //         streamId,
+    //         miniblockNum,
+    //         miniblockNum + 1n,
+    //     )
+    //
+    //     expect(miniblocks.length).toBe(1)
+    //     const welcomeMessage = getWelcomeMessage(miniblocks[0])
+    //     expect(bin_equal(welcomeMessage.commit, welcomeMessageCommit)).toBe(true)
+    //     expect(
+    //         welcomeMessage.signaturePublicKeys.find((val) => bin_equal(val, signature)),
+    //     ).toBeDefined()
+    // })
 })

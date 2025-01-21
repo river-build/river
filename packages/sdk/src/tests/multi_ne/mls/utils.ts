@@ -1,14 +1,13 @@
 import { StreamTimelineEvent } from '../../../types'
 import { getChannelMessagePayload } from '../../testUtils'
-import { MlsAdapter } from '../../../mls'
-import { Client } from '../../../client'
-import { MlsInspector } from '../../../mls/utils/inspector'
 import { ExternalClient as MlsExternalClient, Group as MlsGroup } from '@river-build/mls-rs-wasm'
-import { ExternalJoin, InitializeGroup } from '../../../mls/view/types'
+import { ExternalJoin, InitializeGroup } from '../../../mls/types'
 import {
     MemberPayload_Mls_ExternalJoin,
     MemberPayload_Mls_InitializeGroup,
 } from '@river-build/proto'
+import { ExternalInfo } from '../../../mls/onChainView'
+import { Client } from '../../../client'
 
 function getPayloadRemoteEvent(event: StreamTimelineEvent): string | undefined {
     if (event.decryptedContent?.kind === 'channelMessage') {
@@ -44,20 +43,6 @@ export function checkTimelineContainsAll(
         }
     }
     return checks.size === 0
-}
-
-export function getInspector(client: Client): MlsInspector {
-    const adapter: MlsAdapter = client['mlsAdapter'] as MlsAdapter
-    expect(adapter).toBeDefined()
-    expect(adapter).toBeInstanceOf(MlsAdapter)
-    return adapter.getInspector()
-}
-
-export function getCurrentEpoch(client: Client, streamId: string): bigint {
-    const inspector = getInspector(client)
-    const group = inspector.groupService.getGroup(streamId)!
-    expect(group).toBeDefined()
-    return inspector.groupService.currentEpoch(group)
 }
 
 export function makeInitializeGroup(
@@ -107,4 +92,11 @@ export async function createGroupInfoAndExternalSnapshot(group: MlsGroup): Promi
         groupInfoMessage: groupInfoMessage.toBytes(),
         externalGroupSnapshot: externalGroupSnapshot.toBytes(),
     }
+}
+
+export async function getMlsExternalGroupInfo(
+    _client: Client,
+    _streamId: string,
+): Promise<ExternalInfo> {
+    throw new Error('Not implemented')
 }

@@ -154,8 +154,8 @@ import { SignerContext } from './signerContext'
 import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from './crypto_utils'
 import { makeTags, makeTipTags } from './tags'
 import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
-import { extractMlsExternalGroup, ExtractMlsExternalGroupResult } from './mls/utils/mlsutils'
-import { MlsAdapter, MLS_ALGORITHM } from './mls'
+import { MLS_ALGORITHM } from './mls'
+import { MlsClientExtensions } from './mls/mlsClientExtensions'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -205,7 +205,7 @@ export class Client
     private entitlementsDelegate: EntitlementsDelegate
     private decryptionExtensions?: BaseDecryptionExtensions
     private syncedStreamsExtensions?: SyncedStreamsExtension
-    private mlsAdapter?: MlsAdapter
+    private mlsExtensions?: MlsClientExtensions
     private persistenceStore: IPersistenceStore
     private validatedEvents: Record<string, { isValid: boolean; reason?: string }> = {}
     private defaultGroupEncryptionAlgorithm: GroupEncryptionAlgorithmId
@@ -270,7 +270,7 @@ export class Client
             startSyncStreams: async () => {
                 await this.streams.startSyncStreams()
                 this.decryptionExtensions?.start()
-                this.mlsAdapter?.start()
+                this.mlsExtensions?.start()
             },
             initStream: (streamId, allowGetStream) => this.initStream(streamId, allowGetStream),
             emitClientInitStatus: (status) => this.emit('clientInitStatusUpdated', status),
@@ -297,7 +297,7 @@ export class Client
         this.logCall('stop')
         await this.decryptionExtensions?.stop()
         await this.syncedStreamsExtensions?.stop()
-        await this.mlsAdapter?.stop()
+        await this.mlsExtensions?.stop()
         await this.stopSync()
     }
 
@@ -406,7 +406,7 @@ export class Client
 
         check(isDefined(this.decryptionExtensions), 'decryptionExtensions must be defined')
         check(isDefined(this.syncedStreamsExtensions), 'syncedStreamsExtensions must be defined')
-        check(isDefined(this.mlsAdapter), 'mlsAdapter must be defined')
+        check(isDefined(this.mlsExtensions), 'mlsAdapter must be defined')
 
         await Promise.all([
             this.initUserStream(initUserMetadata),
@@ -2401,8 +2401,8 @@ export class Client
     /// Initialise MLS but do not start it
     private async initMls(): Promise<void> {
         this.logCall('initMls')
-        if (this.mlsAdapter) {
-            this.logCall('Attempt to re-init mls adapter, ignoring')
+        if (this.mlsExtensions) {
+            this.logCall('Attempt to re-init mls extensions, ignoring')
             return
         }
 
@@ -2412,16 +2412,8 @@ export class Client
             throw new Error('deviceKey must be set')
         }
 
-        this.mlsAdapter = new MlsAdapter(
-            this.userId,
-            deviceKey,
-            this,
-            this.persistenceStore,
-            this,
-            this,
-            { log: this.logMls },
-        )
-        await this.mlsAdapter.initialize()
+        this.mlsExtensions = new MlsClientExtensions()
+        await this.mlsExtensions.initialize()
     }
 
     /**
@@ -2660,25 +2652,14 @@ export class Client
         })
     }
 
-    public async getMlsExternalGroupInfo(
-        streamId: string,
-    ): Promise<ExtractMlsExternalGroupResult | undefined> {
-        let streamView = this.stream(streamId)?.view
-        if (!streamView || !streamView.isInitialized) {
-            streamView = await this.getStream(streamId)
-        }
-        check(isDefined(streamView), `stream not found: ${streamId}`)
-        return extractMlsExternalGroup(streamView)
-    }
-
     private async encryptGroupEventEpochSecret(
         payload: Message,
         streamId: string,
     ): Promise<EncryptedData> {
-        if (this.mlsAdapter === undefined) {
+        if (this.mlsExtensions === undefined) {
             throw new Error('mls adapter not initialized')
         }
-        return this.mlsAdapter.encryptGroupEventEpochSecret(streamId, payload)
+        return this.mlsExtensions.encryptMessage(streamId, payload)
     }
 }
 

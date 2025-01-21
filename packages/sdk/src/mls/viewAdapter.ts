@@ -1,5 +1,5 @@
 import { OnChainView } from './onChainView'
-import { Client } from '../../client'
+import { Client } from '../client'
 import { DLogger, dlog } from '@river-build/dlog'
 import { LocalView } from './localView'
 import { MlsLogger } from './logger'

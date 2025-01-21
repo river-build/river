@@ -7,10 +7,10 @@ import { Client } from '../../../client'
 import { Client as MlsClient, ClientOptions as MlsClientOptions } from '@river-build/mls-rs-wasm'
 import { dlog } from '@river-build/dlog'
 import { beforeEach, describe, expect } from 'vitest'
-import { ViewAdapter } from '../../../mls/view/viewAdapter'
-import { MlsProcessor, MlsProcessorOpts } from '../../../mls/view/mlsProcessor'
-import { MlsQueue } from '../../../mls/view/mlsQueue'
-import { MlsAgent, MlsAgentOpts } from '../../../mls/view/mlsAgent'
+import { ViewAdapter } from '../../../mls/viewAdapter'
+import { MlsProcessor, MlsProcessorOpts } from '../../../mls/mlsProcessor'
+import { MlsQueue } from '../../../mls/mlsQueue'
+import { MlsAgent, MlsAgentOpts } from '../../../mls/mlsAgent'
 
 const encoder = new TextEncoder()
 

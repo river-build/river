@@ -12,8 +12,8 @@ import {
     MlsSnapshot,
 } from './types'
 import { dlog } from '@river-build/dlog'
-import { logNever } from '../../check'
-import { IStreamStateView } from '../../streamStateView'
+import { logNever } from '../check'
+import { IStreamStateView } from '../streamStateView'
 import { MlsLogger } from './logger'
 
 const defaultLogger = dlog('csb:mls:onChainView')

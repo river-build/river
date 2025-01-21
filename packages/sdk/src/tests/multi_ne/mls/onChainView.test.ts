@@ -11,7 +11,7 @@ import {
     MlsMessage,
 } from '@river-build/mls-rs-wasm'
 import { dlog } from '@river-build/dlog'
-import { OnChainView, OnChainViewOpts } from '../../../mls/view/onChainView'
+import { OnChainView, OnChainViewOpts } from '../../../mls/onChainView'
 import { createGroupInfoAndExternalSnapshot, makeExternalJoin, makeInitializeGroup } from './utils'
 import { expect } from 'vitest'
 

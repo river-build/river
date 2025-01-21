@@ -1,5 +1,5 @@
 import TypedEmitter from 'typed-emitter'
-import { StreamEncryptionEvents } from '../../streamEvents'
+import { StreamEncryptionEvents } from '../streamEvents'
 import { MlsQueue } from './mlsQueue'
 import { dlog } from '@river-build/dlog'
 import { MlsLogger } from './logger'

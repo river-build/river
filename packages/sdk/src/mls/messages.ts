@@ -11,10 +11,10 @@ import {
     createGroupInfoAndExternalSnapshot,
     makeExternalJoin,
     makeInitializeGroup,
-} from '../../tests/multi_ne/mls/utils'
-import { MLS_ALGORITHM } from '../constants'
+} from '../tests/multi_ne/mls/utils'
+import { MLS_ALGORITHM } from './constants'
 import { DerivedKeys, EpochEncryption } from './epochEncryption'
-import { DecryptedContent, EncryptedContent, toDecryptedContent } from '../../encryptedContentTypes'
+import { DecryptedContent, EncryptedContent, toDecryptedContent } from '../encryptedContentTypes'
 
 const encoder = new TextEncoder()
 const encode = (s: string) => encoder.encode(s)

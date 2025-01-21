@@ -11,10 +11,10 @@ import {
     MlsMessage,
 } from '@river-build/mls-rs-wasm'
 import { dlog } from '@river-build/dlog'
-import { OnChainView } from '../../../mls/view/onChainView'
+import { OnChainView } from '../../../mls/onChainView'
 import { createGroupInfoAndExternalSnapshot, makeExternalJoin, makeInitializeGroup } from './utils'
 import { expect } from 'vitest'
-import { ViewAdapter, ViewAdapterOpts } from '../../../mls/view/viewAdapter'
+import { ViewAdapter, ViewAdapterOpts } from '../../../mls/viewAdapter'
 
 const encoder = new TextEncoder()
 
