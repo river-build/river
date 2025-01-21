@@ -21,7 +21,7 @@ import (
 )
 
 type EventAdder interface {
-	AddEventPayload(ctx context.Context, streamId StreamId, payload IsStreamEvent_Payload) error
+	AddEventPayload(ctx context.Context, streamId StreamId, payload IsStreamEvent_Payload, tags *Tags) error
 }
 
 type streamMembershipScrubTaskProcessorImpl struct {
@@ -163,6 +163,7 @@ func (tp *streamMembershipScrubTaskProcessorImpl) processMemberImpl(
 				&member,
 				spaceId[:],
 			),
+			nil,
 		); err != nil {
 			return err
 		}

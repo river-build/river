@@ -136,7 +136,7 @@ func (s *Service) createStream(ctx context.Context, req *CreateStreamRequest) (*
 	// add derived events
 	if csRules.DerivedEvents != nil {
 		for _, de := range csRules.DerivedEvents {
-			err := s.AddEventPayload(ctx, de.StreamId, de.Payload)
+			err := s.AddEventPayload(ctx, de.StreamId, de.Payload, de.Tags)
 			if err != nil {
 				return nil, RiverError(Err_INTERNAL, "failed to add derived event", "err", err)
 			}
