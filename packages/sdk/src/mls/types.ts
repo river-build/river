@@ -18,7 +18,9 @@ type ConfirmedMetadata = {
 export type MlsSnapshot = PlainMessage<MemberPayload_Snapshot_Mls>
 export type MlsConfirmedSnapshot = MlsSnapshot & ConfirmedMetadata
 
-export type MlsConfirmedEvent = PlainMessage<MemberPayload_Mls>['content'] & ConfirmedMetadata
+export type MlsEvent = PlainMessage<MemberPayload_Mls>['content']
+
+export type MlsConfirmedEvent = MlsEvent & ConfirmedMetadata
 
 export type InitializeGroup = {
     case: 'initializeGroup'
