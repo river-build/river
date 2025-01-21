@@ -3,6 +3,7 @@ import { Client } from '../../client'
 import { DLogger, dlog } from '@river-build/dlog'
 import { LocalView } from './localView'
 import { MlsLogger } from './logger'
+import { IValueAwaiter, IndefiniteValueAwaiter } from './awaiter'
 
 export type ViewAdapterOpts = {
     log: MlsLogger
@@ -20,6 +21,7 @@ const defaultViewAdapterOpts = {
 export class ViewAdapter {
     private onChainViews: Map<string, OnChainView> = new Map()
     private localViews: Map<string, LocalView> = new Map()
+    private awaitingActiveLocalView: Map<string, IValueAwaiter<LocalView>> = new Map()
     // cheating
     private client: Client
     private log: {
@@ -50,6 +52,38 @@ export class ViewAdapter {
         return this.localViews.get(streamId)
     }
 
+    public awaitActiveLocalView(streamId: string): Promise<LocalView> {
+        const localView = this.localViews.get(streamId)
+        if (localView?.status === 'active') {
+            return Promise.resolve(localView)
+        }
+
+        let awaiter = this.awaitingActiveLocalView.get(streamId)
+        if (awaiter === undefined) {
+            const internalAwaiter: IndefiniteValueAwaiter<LocalView> = new IndefiniteValueAwaiter()
+            const promise = internalAwaiter.promise.finally(() => {
+                this.awaitingActiveLocalView.delete(streamId)
+            })
+            awaiter = {
+                promise,
+                resolve: internalAwaiter.resolve,
+            }
+            this.awaitingActiveLocalView.set(streamId, awaiter)
+        }
+
+        return awaiter.promise
+    }
+
+    public resolveActiveLocalView(streamId: string, LocalView: LocalView): void {
+        if (LocalView.status !== 'active') {
+            return
+        }
+        const awaiter = this.awaitingActiveLocalView.get(streamId)
+        if (awaiter !== undefined) {
+            awaiter.resolve(LocalView)
+        }
+    }
+
     // TODO: Update not to depend on client
     public async handleStreamUpdate(streamId: string): Promise<void> {
         this.log.debug?.('handleStreamUpdate', streamId)
@@ -66,6 +100,7 @@ export class ViewAdapter {
         const localView = this.localViews.get(streamId)
         if (localView !== undefined) {
             await localView.processOnChainView(onChainView)
+            this.resolveActiveLocalView(streamId, localView)
         }
     }
 }
