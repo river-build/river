@@ -160,7 +160,7 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
         })
 
         if (snapshot.members.mls) {
-            this.mls.applySnapshot(snapshot.members.mls)
+            this.mls.applySnapshot(snapshot.members.mls, encryptionEmitter)
         }
         this.tips = { ...snapshot.members.tips }
         this.encryptionAlgorithm = snapshot.members.encryptionAlgorithm?.algorithm

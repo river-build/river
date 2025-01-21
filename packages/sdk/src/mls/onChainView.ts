@@ -7,7 +7,7 @@ import {
 import {
     ConfirmedEpochSecrets,
     ConfirmedInitializeGroup,
-    ConfirmedMlsEvent,
+    MlsConfirmedEvent,
     ConfirmedMlsEventWithCommit,
     MlsSnapshot,
 } from './types'
@@ -50,10 +50,10 @@ export class OnChainView {
     private externalGroup?: ExternalGroup
 
     // confirmed events by event id
-    public readonly accepted: Map<string, ConfirmedMlsEvent> = new Map()
+    public readonly accepted: Map<string, MlsConfirmedEvent> = new Map()
 
     // rejected events by event id
-    public readonly rejected: Map<string, ConfirmedMlsEvent> = new Map()
+    public readonly rejected: Map<string, MlsConfirmedEvent> = new Map()
 
     // commits by epoch
     public readonly commits: Map<bigint, Uint8Array> = new Map()
@@ -99,7 +99,7 @@ export class OnChainView {
     }
 
     /// Process event
-    public async processConfirmedMlsEvent(event: ConfirmedMlsEvent): Promise<void> {
+    public async processConfirmedMlsEvent(event: MlsConfirmedEvent): Promise<void> {
         this.log.debug?.('processConfirmedMlsEvent', {
             miniblockNum: event.miniblockNum,
             confirmedEventNum: event.confirmedEventNum,
@@ -241,7 +241,7 @@ export class OnChainView {
         })
 
         const snapshotConfirmedEventNum = lastConfirmedMlsSnapshot?.confirmedEventNum ?? BigInt(-1)
-        const confirmedMlsEvents: ConfirmedMlsEvent[] = []
+        const confirmedMlsEvents: MlsConfirmedEvent[] = []
 
         streamView.timeline.forEach((event) => {
             if (event.confirmedEventNum === undefined) {

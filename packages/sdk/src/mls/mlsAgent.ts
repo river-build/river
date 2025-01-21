@@ -55,17 +55,13 @@ export class MlsAgent {
     }
 
     public start(): void {
-        this.encryptionEmitter?.on('mlsInitializeGroup', this.onStreamUpdated)
-        this.encryptionEmitter?.on('mlsExternalJoin', this.onStreamUpdated)
-        this.encryptionEmitter?.on('mlsEpochSecrets', this.onStreamUpdated)
-        this.encryptionEmitter?.on('mlsNewEncryptedContent', this.onStreamUpdated)
+        this.encryptionEmitter?.on('mlsQueueConfirmedEvent', this.onStreamUpdated)
+        this.encryptionEmitter?.on('mlsQueueSnapshot', this.onStreamUpdated)
     }
 
     public stop(): void {
-        this.encryptionEmitter?.off('mlsInitializeGroup', this.onStreamUpdated)
-        this.encryptionEmitter?.off('mlsExternalJoin', this.onStreamUpdated)
-        this.encryptionEmitter?.off('mlsEpochSecrets', this.onStreamUpdated)
-        this.encryptionEmitter?.off('mlsNewEncryptedContent', this.onStreamUpdated)
+        this.encryptionEmitter?.off('mlsQueueConfirmedEvent', this.onStreamUpdated)
+        this.encryptionEmitter?.off('mlsQueueSnapshot', this.onStreamUpdated)
     }
 
     public enableAndParticipate(streamId: string): Promise<void> {

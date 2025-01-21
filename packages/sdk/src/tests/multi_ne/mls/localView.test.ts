@@ -15,7 +15,7 @@ import { OnChainView, OnChainViewOpts } from '../../../mls/onChainView'
 import { createGroupInfoAndExternalSnapshot, makeExternalJoin, makeInitializeGroup } from './utils'
 import { expect } from 'vitest'
 import { LocalView } from '../../../mls/localView'
-import { ConfirmedMlsEvent } from '../../../mls/types'
+import { MlsConfirmedEvent } from '../../../mls/types'
 
 const encoder = new TextEncoder()
 
@@ -222,7 +222,7 @@ describe('localViewTests', () => {
         })
 
         const view = await getView(alice)
-        view.rejected.set(aliceEventId, <ConfirmedMlsEvent>{})
+        view.rejected.set(aliceEventId, <MlsConfirmedEvent>{})
         await aliceView.processOnChainView(view)
         expect(aliceView.status).toBe('rejected')
     })

@@ -27,13 +27,17 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
         this.streamId = streamId
     }
 
-    applySnapshot(content: MemberPayload_Snapshot_Mls): void {
+    applySnapshot(
+        content: MemberPayload_Snapshot_Mls,
+        encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
+    ): void {
         this.externalGroupSnapshot = content.externalGroupSnapshot
         this.groupInfoMessage = content.groupInfoMessage
         this.members = content.members
         this.epochSecrets = content.epochSecrets
         this.pendingKeyPackages = content.pendingKeyPackages
         this.welcomeMessagesMiniblockNum = content.welcomeMessagesMiniblockNum
+        encryptionEmitter?.emit('mlsQueueSnapshot', this.streamId, content)
     }
 
     appendEvent(
@@ -148,6 +152,15 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
             default:
                 logNever(payload.content)
         }
+
+        const confirmedEvent = {
+            confirmedEventNum: event.confirmedEventNum,
+            miniblockNum: event.miniblockNum,
+            eventId: event.remoteEvent.hashStr,
+            ...payload.content,
+        }
+
+        encryptionEmitter?.emit('mlsQueueConfirmedEvent', this.streamId, confirmedEvent)
     }
 
     addSignaturePublicKey(userId: string, signaturePublicKey: Uint8Array): void {

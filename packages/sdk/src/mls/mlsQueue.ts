@@ -46,7 +46,7 @@ export class MlsQueue {
     // private commandQueue: Set<QueueCommand> = new Set()
 
     public enqueueUpdatedStream(streamId: string) {
-        this.log.debug?.('enqueueConfirmedEvent', { streamId })
+        this.log.debug?.('enqueueUpdatedStream', { streamId })
 
         this.updatedStreams.add(streamId)
         // TODO: Is this needed when we tick after start
