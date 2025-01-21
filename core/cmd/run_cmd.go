@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"runtime/debug"
@@ -23,9 +24,9 @@ func handleSignals(ctx context.Context) {
 	signal.Notify(c, syscall.SIGSEGV, syscall.SIGABRT)
 
 	go func() {
+		fmt.Println("Signal handler started")
 		for sig := range c {
-			log := logging.FromCtx(ctx)
-			log.Error("Caught signal", "signal", sig)
+			fmt.Printf("Got signal: %v\n", sig)
 			debug.PrintStack() // Print stack trace for debugging
 			os.Exit(1)         // Exit after logging
 		}
@@ -35,9 +36,9 @@ func handleSignals(ctx context.Context) {
 func runServices(ctx context.Context, cfg *config.Config, stream bool, xchain bool) error {
 	// Defer to recover from panics and log debug information
 	defer func() {
+		fmt.Println("Defer function called for panic recovery")
 		if r := recover(); r != nil {
-			log := logging.FromCtx(ctx)
-			log.Error("Panic occurred", "error", r)
+			fmt.Printf("Panic occurred: %v\n", r)
 			debug.PrintStack() // Print the stack trace
 		}
 	}()
