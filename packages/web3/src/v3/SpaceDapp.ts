@@ -1739,6 +1739,7 @@ async function wrapTransaction(
 
     const runTx = async () => {
         let retryCount = 0
+        const errors = []
         // eslint-disable-next-line no-constant-condition
         while (true) {
             try {
@@ -1753,11 +1754,17 @@ async function wrapTransaction(
                 return tx
             } catch (error) {
                 retryCount++
+                errors.push(error)
                 if (retryCount >= retryLimit) {
-                    throw new Error('Transaction failed after retries: ' + (error as Error).message)
+                    throw new Error(
+                        `Transaction failed after ${retryCount} tries: \n` +
+                            errors.map((e) => (e as Error).message).join('\n =============== \n'),
+                    )
                 }
                 logger.error('Transaction submission failed, retrying...', { error, retryCount })
-                await new Promise((resolve) => setTimeout(resolve, 1000))
+                await new Promise((resolve) =>
+                    setTimeout(resolve, (1000 + Math.random() * 500) * retryCount),
+                )
             }
         }
     }
