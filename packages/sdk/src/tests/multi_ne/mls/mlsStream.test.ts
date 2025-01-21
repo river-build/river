@@ -87,8 +87,8 @@ describe('MlsStreamTests', () => {
             ...alice_,
             stream: new MlsStream(
                 streamId,
-                undefined,
                 alice_.client,
+                undefined,
                 makeMlsStreamOpts(alice_.nickname),
             ),
         }
@@ -96,8 +96,8 @@ describe('MlsStreamTests', () => {
             ...bob_,
             stream: new MlsStream(
                 streamId,
-                undefined,
                 bob_.client,
+                undefined,
                 makeMlsStreamOpts(bob_.nickname),
             ),
         }
@@ -105,8 +105,8 @@ describe('MlsStreamTests', () => {
             ...charlie_,
             stream: new MlsStream(
                 streamId,
-                undefined,
                 charlie_.client,
+                undefined,
                 makeMlsStreamOpts(charlie_.nickname),
             ),
         }

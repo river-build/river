@@ -71,7 +71,7 @@ describe('MlsQueueTests', () => {
     let streamId: string
 
     function makeClient(testClient: TestClient): TestClientWithQueue {
-        const stream = new MlsStream(streamId, undefined, testClient.client)
+        const stream = new MlsStream(streamId, testClient.client)
         const queue = new MlsQueue(stream, makeMlsQueueOpts(testClient.nickname))
         return {
             ...testClient,

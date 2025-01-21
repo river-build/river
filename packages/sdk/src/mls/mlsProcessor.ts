@@ -4,14 +4,13 @@ import { Client } from '../client'
 import { Client as MlsClient, Group as MlsGroup } from '@river-build/mls-rs-wasm'
 import { OnChainView } from './onChainView'
 import { LocalView } from './localView'
-import { check, dlog } from '@river-build/dlog'
+import { dlog } from '@river-build/dlog'
 import { make_MemberPayload_Mls } from '../types'
 import { MlsMessages } from './messages'
 import { MlsStream } from './mlsStream'
 import { IPersistenceStore } from '../persistenceStore'
-import { DecryptedContent, EncryptedContent } from '../encryptedContentTypes'
-import { isDefined } from '../check'
 import { MlsLogger } from './logger'
+import { MlsEncryptedContentItem } from './types'
 
 const defaultLogger = dlog('csb:mls:ext')
 
@@ -28,13 +27,6 @@ const defaultMlsProcessorOpts = {
         error: defaultLogger.extend('error'),
     },
     sendingOptions: {},
-}
-
-type MlsEncryptedContentItem = {
-    streamId: string
-    eventId: string
-    kind: EncryptedContent['kind']
-    encryptedData: EncryptedData
 }
 
 type JoinOrCreateMessage = PlainMessage<MemberPayload_Mls>
@@ -161,69 +153,5 @@ export class MlsProcessor {
 
         // TODO: Figure how to get miniblockBefore
         return new LocalView(prepared.group, { eventId, miniblockBefore: 0n })
-    }
-
-    // public async handleEncryptedContent(
-    //     streamId: string,
-    //     eventId: string,
-    //     message: EncryptedContent,
-    // ): Promise<void> {
-    //     const encryptedData = message.content
-    //     const kind = message.kind
-    //     const epoch = encryptedData.mls?.epoch
-    //     const ciphertext = encryptedData.mls?.ciphertext
-    //
-    //     if (epoch === undefined) {
-    //         throw new Error('epoch not found')
-    //     }
-    //
-    //     if (ciphertext === undefined) {
-    //         throw new Error('ciphertext not found')
-    //     }
-    //
-    //     if (encryptedData.algorithm == MLS_ALGORITHM) {
-    //         throw new Error(`unknown algorithm: ${encryptedData.algorithm}`)
-    //     }
-    //
-    //     const clearText = await this.persistenceStore?.getCleartext(eventId)
-    //     if (clearText !== undefined) {
-    //         return this.updateDecryptedContent(
-    //             streamId,
-    //             eventId,
-    //             toDecryptedContent(kind, clearText),
-    //         )
-    //     }
-    //
-    //     const epochSecret = this.viewAdapter.localView(streamId)?.getEpochSecret(epoch)
-    //     if (epochSecret === undefined) {
-    //         // Decryption failure
-    //         return this.decryptionFailure(streamId, eventId, kind, encryptedData)
-    //     }
-    //
-    //     const decryptedContent = await MlsMessages.decryptEpochSecretMessage(
-    //         epochSecret.derivedKeys,
-    //         kind,
-    //         ciphertext,
-    //     )
-    //     return this.updateDecryptedContent(streamId, eventId, decryptedContent)
-    // }
-
-    public async updateDecryptedContent(
-        streamId: string,
-        eventId: string,
-        content: DecryptedContent,
-    ): Promise<void> {
-        const stream = this.client.stream(streamId)
-        check(isDefined(stream), 'stream not found')
-        stream.updateDecryptedContent(eventId, content)
-    }
-
-    private decryptionFailure(
-        streamId: string,
-        eventId: string,
-        kind: EncryptedContent['kind'],
-        encryptedData: EncryptedData,
-    ) {
-        this.decryptionFailures.push({ streamId, eventId, kind, encryptedData })
     }
 }

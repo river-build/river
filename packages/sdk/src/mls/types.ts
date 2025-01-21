@@ -1,5 +1,6 @@
 import { PlainMessage } from '@bufbuild/protobuf'
 import {
+    EncryptedData,
     MemberPayload_Mls,
     MemberPayload_Mls_EpochSecrets,
     MemberPayload_Mls_ExternalJoin,
@@ -7,6 +8,7 @@ import {
     MemberPayload_Mls_WelcomeMessage,
     MemberPayload_Snapshot_Mls,
 } from '@river-build/proto'
+import { EncryptedContent } from '../encryptedContentTypes'
 
 type ConfirmedMetadata = {
     confirmedEventNum: bigint
@@ -52,3 +54,11 @@ export type EpochSecrets = {
 }
 
 export type ConfirmedEpochSecrets = EpochSecrets & ConfirmedMetadata
+
+export type MlsEncryptedContentItem = {
+    streamId: string
+    eventId: string
+    kind: EncryptedContent['kind']
+    encryptedData: EncryptedData
+    epoch: bigint
+}

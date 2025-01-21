@@ -69,7 +69,7 @@ describe('MlsProcessorTests', () => {
     let streamId: string
 
     function makeClient(testClient: TestClient): TestClientWithProcessor {
-        const stream = new MlsStream(streamId, undefined, testClient.client)
+        const stream = new MlsStream(streamId, testClient.client)
         const processor = new MlsProcessor(
             testClient.client,
             testClient.mlsClient,
