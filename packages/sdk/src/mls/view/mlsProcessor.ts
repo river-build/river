@@ -68,7 +68,7 @@ export class MlsProcessor {
 
     // API needed by the client
     // TODO: How long will be the timeout here?
-    public async encrypEpochSecret(streamId: string, event: Message): Promise<EncryptedData> {
+    public async encryptMessage(streamId: string, event: Message): Promise<EncryptedData> {
         const localView = this.viewAdapter.localView(streamId)
         if (localView === undefined) {
             throw new Error('waiting for local view not supported yet')
