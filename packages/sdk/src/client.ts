@@ -2600,7 +2600,7 @@ export class Client
         return this.cryptoBackend.encryptGroupEvent(
             streamId,
             event.toBinary(),
-            event.getType().typeName,
+            event.getType().typeName.replace('river.', ''),
             algorithm,
         )
     }
