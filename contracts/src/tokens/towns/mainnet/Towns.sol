@@ -47,9 +47,6 @@ contract Towns is
   /// @dev initial supply is 10 billion tokens
   uint256 internal constant INITIAL_SUPPLY = 10_000_000_000 ether;
 
-  /// @dev whether the initial supply has been minted
-  bool internal initialSupplyMinted;
-
   /// @dev the role for the inflation caller
   uint256 public constant ROLE_INFLATION_MANAGER = 1;
 
@@ -58,6 +55,9 @@ contract Towns is
 
   /// @dev the initial mint time
   uint256 public immutable initialMintTime;
+
+  /// @dev whether the initial supply has been minted
+  bool internal initialSupplyMinted;
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           Constructor                      */
