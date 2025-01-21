@@ -47,6 +47,7 @@ func (s *Service) localAddEvent(
 				Msg:   riverError.Error(),
 				Funcs: riverError.Funcs,
 			},
+			NewEvents: newEvents,
 		}), nil
 	} else if err != nil {
 		return nil, AsRiverError(err).Func("localAddEvent")
@@ -130,19 +131,18 @@ func (s *Service) addParsedEvent(
 		}
 	}
 
-	newEvents := make([]*EventRef, 0)
+	var newParentEvents []*EventRef = nil
 
 	if sideEffects.RequiredParentEvent != nil {
-		parentNewEvents, err := s.AddEventPayload(
+		newParentEvents, err = s.AddEventPayload(
 			ctx,
 			sideEffects.RequiredParentEvent.StreamId,
 			sideEffects.RequiredParentEvent.Payload,
 			sideEffects.RequiredParentEvent.Tags,
 		)
 		if err != nil {
-			return nil, err
+			return newParentEvents, err
 		}
-		newEvents = append(newEvents, parentNewEvents...)
 	}
 
 	stream := &replicatedStream{
@@ -154,7 +154,13 @@ func (s *Service) addParsedEvent(
 
 	err = stream.AddEvent(ctx, parsedEvent)
 	if err != nil {
-		return newEvents, err
+		return newParentEvents, err
+	}
+
+	newEvents := make([]*EventRef, 0, len(newParentEvents)+1)
+
+	if newParentEvents != nil {
+		newEvents = append(newEvents, newParentEvents...)
 	}
 
 	newEvents = append(newEvents, &EventRef{
