@@ -93,6 +93,7 @@ describe('MlsAgentTests', () => {
             processor,
             queue,
             testClient.client,
+            testClient.client,
             makeMlsAgentOpts(testClient.nickname),
         )
         agent.queue.delegate = agent
