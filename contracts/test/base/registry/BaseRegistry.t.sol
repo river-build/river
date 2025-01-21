@@ -15,8 +15,8 @@ import {NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/No
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {EIP712Facet} from "@river-build/diamond/src/utils/cryptography/signature/EIP712Facet.sol";
 import {NodeOperatorFacet} from "contracts/src/base/registry/facets/operator/NodeOperatorFacet.sol";
-import {River} from "contracts/src/tokens/river/base/River.sol";
-import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/MainnetDelegation.sol";
+import {Towns} from "contracts/src/tokens/towns/base/Towns.sol";
+import {MainnetDelegation} from "contracts/src/base/registry/facets/mainnet/MainnetDelegation.sol";
 import {SpaceDelegationFacet} from "contracts/src/base/registry/facets/delegation/SpaceDelegationFacet.sol";
 import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistribution.sol";
 import {RewardsVerifier} from "./RewardsVerifier.t.sol";
@@ -40,7 +40,7 @@ abstract contract BaseRegistryTest is RewardsVerifier, BaseSetup {
 
     eip712Facet = EIP712Facet(baseRegistry);
     operatorFacet = NodeOperatorFacet(baseRegistry);
-    river = River(riverToken);
+    towns = Towns(townsToken);
     mainnetDelegationFacet = MainnetDelegation(baseRegistry);
     rewardsDistributionFacet = RewardsDistribution(baseRegistry);
     spaceDelegationFacet = SpaceDelegationFacet(baseRegistry);
@@ -190,26 +190,40 @@ abstract contract BaseRegistryTest is RewardsVerifier, BaseSetup {
 
   function toDyn(
     address[32] memory arr
-  ) internal returns (address[] memory res) {
+  ) internal view returns (address[] memory res) {
     assembly ("memory-safe") {
       res := mload(0x40)
       mstore(0x40, add(res, mul(33, 0x20)))
       mstore(res, 32)
       pop(
-        call(gas(), 0x04, 0, arr, mul(32, 0x20), add(res, 0x20), mul(32, 0x20))
+        staticcall(
+          gas(),
+          0x04,
+          arr,
+          mul(32, 0x20),
+          add(res, 0x20),
+          mul(32, 0x20)
+        )
       )
     }
   }
 
   function toDyn(
     uint256[32] memory arr
-  ) internal returns (uint256[] memory res) {
+  ) internal view returns (uint256[] memory res) {
     assembly ("memory-safe") {
       res := mload(0x40)
       mstore(0x40, add(res, mul(33, 0x20)))
       mstore(res, 32)
       pop(
-        call(gas(), 0x04, 0, arr, mul(32, 0x20), add(res, 0x20), mul(32, 0x20))
+        staticcall(
+          gas(),
+          0x04,
+          arr,
+          mul(32, 0x20),
+          add(res, 0x20),
+          mul(32, 0x20)
+        )
       )
     }
   }
@@ -217,6 +231,6 @@ abstract contract BaseRegistryTest is RewardsVerifier, BaseSetup {
   function bridgeTokensForUser(address user, uint256 amount) internal {
     vm.assume(user != address(0));
     vm.prank(bridge);
-    river.mint(user, amount);
+    towns.mint(user, amount);
   }
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 )
@@ -189,7 +189,7 @@ func (p *miniblockProducer) OnNewBlock(ctx context.Context, blockNum crypto.Bloc
 }
 
 func (p *miniblockProducer) scheduleCandidates(ctx context.Context, blockNum crypto.BlockNumber) []*mbJob {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	candidates := p.streamCache.GetMbCandidateStreams(ctx)
 
@@ -197,7 +197,7 @@ func (p *miniblockProducer) scheduleCandidates(ctx context.Context, blockNum cry
 
 	for _, stream := range candidates {
 		if !p.isLocalLeaderOnCurrentBlock(stream, blockNum) {
-			log.Debug(
+			log.Debugw(
 				"MiniblockProducer: OnNewBlock: Not a leader for stream",
 				"streamId",
 				stream.streamId,
@@ -209,13 +209,13 @@ func (p *miniblockProducer) scheduleCandidates(ctx context.Context, blockNum cry
 		j := p.trySchedule(ctx, stream)
 		if j != nil {
 			scheduled = append(scheduled, j)
-			log.Debug(
+			log.Debugw(
 				"MiniblockProducer: OnNewBlock: Scheduled miniblock production",
 				"streamId",
 				stream.streamId,
 			)
 		} else {
-			log.Debug(
+			log.Debugw(
 				"MiniblockProducer: OnNewBlock: Miniblock production already scheduled",
 				"streamId",
 				stream.streamId,
@@ -328,11 +328,11 @@ func combineProposals(
 	local *MiniblockProposal,
 	remote []*ProposeMiniblockResponse,
 ) (*MiniblockProposal, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 	// Filter remotes that don't match local prerequisites.
 	remote = slices.DeleteFunc(remote, func(p *ProposeMiniblockResponse) bool {
 		if p.Proposal.NewMiniblockNum != local.NewMiniblockNum {
-			log.Info(
+			log.Infow(
 				"combineProposals: ignoring remote proposal: mb number mismatch",
 				"remoteNum",
 				p.Proposal.NewMiniblockNum,
@@ -342,7 +342,7 @@ func combineProposals(
 			return true
 		}
 		if !bytes.Equal(p.Proposal.PrevMiniblockHash, local.PrevMiniblockHash) {
-			log.Info(
+			log.Infow(
 				"combineProposals: ignoring remote proposal: prev hash mismatch",
 				"remoteHash",
 				p.Proposal.PrevMiniblockHash,
@@ -598,8 +598,8 @@ func (p *miniblockProducer) jobStart(ctx context.Context, j *mbJob, forceSnapsho
 
 	candidate, replicated, err := mbProduceCandidate(ctx, p.streamCache.Params(), j.stream, forceSnapshot)
 	if err != nil {
-		dlog.FromCtx(ctx).
-			Error(
+		logging.FromCtx(ctx).
+			Errorw(
 				"MiniblockProducer: jobStart: Error creating new miniblock proposal",
 				"streamId",
 				j.stream.streamId,
@@ -621,12 +621,12 @@ func (p *miniblockProducer) jobStart(ctx context.Context, j *mbJob, forceSnapsho
 
 func (p *miniblockProducer) jobDone(ctx context.Context, j *mbJob) {
 	if !p.jobs.CompareAndDelete(j.stream.streamId, j) {
-		dlog.FromCtx(ctx).Error("MiniblockProducer: jobDone: job not found in jobs map", "streamId", j.stream.streamId)
+		logging.FromCtx(ctx).Errorw("MiniblockProducer: jobDone: job not found in jobs map", "streamId", j.stream.streamId)
 	}
 }
 
 func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals []*mbJob) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	if len(proposals) == 0 {
 		return
@@ -648,7 +648,7 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 		} else {
 			success = append(success, job.stream.streamId)
 
-			log.Debug("submitProposalBatch: skip miniblock registration",
+			log.Debugw("submitProposalBatch: skip miniblock registration",
 				"streamId", job.stream.streamId, "blocknum", job.candidate.Ref.Num)
 		}
 	}
@@ -673,14 +673,14 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 		if err == nil {
 			success = append(success, successRegistered...)
 			if len(failed) > 0 {
-				log.Error("processMiniblockProposalBatch: Failed to register some miniblocks", "failed", failed)
+				log.Errorw("processMiniblockProposalBatch: Failed to register some miniblocks", "failed", failed)
 			}
 		} else {
-			log.Error("processMiniblockProposalBatch: Error registering miniblock batch", "err", err)
+			log.Errorw("processMiniblockProposalBatch: Error registering miniblock batch", "err", err)
 		}
 	}
 
-	log.Info("processMiniblockProposalBatch: Submitted SetStreamLastMiniblockBatch",
+	log.Infow("processMiniblockProposalBatch: Submitted SetStreamLastMiniblockBatch",
 		"total", len(proposals),
 		"actualSubmitted", len(filteredProposals),
 		"success", len(success),
@@ -692,7 +692,7 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 		if slices.Contains(success, job.stream.streamId) {
 			err := job.stream.ApplyMiniblock(ctx, job.candidate)
 			if err != nil {
-				log.Error(
+				log.Errorw(
 					"processMiniblockProposalBatch: Error applying miniblock",
 					"streamId",
 					job.stream.streamId,

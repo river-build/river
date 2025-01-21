@@ -3,11 +3,11 @@ package rules
 import (
 	"bytes"
 	"context"
-	"log/slog"
 	"math/big"
 	"slices"
 	"time"
 
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/river-build/river/core/config"
@@ -23,8 +23,8 @@ import (
 
 	"github.com/river-build/river/core/node/auth"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
 )
@@ -92,12 +92,12 @@ type aeMlsInitializeGroupRules struct {
 }
 
 type aeMlsExternalJoinRules struct {
-	params          *aeParams
+	params       *aeParams
 	externalJoin *MemberPayload_Mls_ExternalJoin
 }
 
 type aeMlsEpochSecrets struct {
-	params *aeParams
+	params  *aeParams
 	secrets *MemberPayload_Mls_EpochSecrets
 }
 
@@ -153,7 +153,7 @@ type aeHideUserJoinLeaveEventsWrapperRules struct {
 
   - @return canAddEvent bool // true if the event can be added to the stream, will be false in case of duplictate state
 
-  - @return chainAuthArgsList *auth.ChainAuthArgs[] // a list of on chain requirements, such that, if defined, at least one must be satisfied in order to add the event to the stream
+  - @return verifications *AddEventVerifications // a list of on chain requirements, such that, if defined, at least one must be satisfied in order to add the event to the stream
 
   - @return sideEffects *AddEventSideEffects // side effects that need to be executed before adding the event to the stream or on failures
 
@@ -164,9 +164,9 @@ type aeHideUserJoinLeaveEventsWrapperRules struct {
 * (false, nil, nil, nil) // event cannot be added to the stream, but there is no error, state would remain the same
 * (false, nil, nil, error) // event cannot be added to the stream, but there is no error, state would remain the same
 * (true, nil, nil, nil) // event can be added to the stream
-* (true, nil, &IsStreamEvent_Payload, nil) // event can be added after parent event is added or verified
-* (true, chainAuthArgs, nil, nil) // event can be added if chainAuthArgs are satisfied
-* (true, chainAuthArgs, &IsStreamEvent_Payload, nil) // event can be added if chainAuthArgs are satisfied and parent event is added or verified
+* (true, nil, &AddEventSideEffects, nil) // event can be added after parent event is added or verified
+* (true, &AddEventVerifications, nil, nil) // event can be added if chainAuthArgs are satisfied
+* (true, &AddEventVerifications, &AddEventSideEffects, nil) // event can be added if chainAuthArgs are satisfied and parent event is added or verified
 */
 func CanAddEvent(
 	ctx context.Context,
@@ -218,7 +218,7 @@ func CanAddEvent(
 		streamView:            streamView,
 	}
 	builder := ru.canAddEvent()
-	ru.log().Debug("CanAddEvent", "builder", builder)
+	ru.log().Debugw("CanAddEvent", "builder", builder)
 	return builder.run()
 }
 
@@ -625,7 +625,7 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 			check(ru.validMlsInitializeGroup)
 	case *MemberPayload_Mls_ExternalJoin_:
 		ru := &aeMlsExternalJoinRules{
-			params: 	  params,
+			params:       params,
 			externalJoin: content.ExternalJoin,
 		}
 		return aeBuilder().
@@ -634,7 +634,7 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 			check(ru.validMlsExternalJoin)
 	case *MemberPayload_Mls_EpochSecrets_:
 		ru := &aeMlsEpochSecrets{
-			params: params,
+			params:  params,
 			secrets: content.EpochSecrets,
 		}
 		return aeBuilder().
@@ -665,7 +665,6 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 		return aeBuilder().
 			fail(unknownContentType(content))
 	}
-
 }
 
 func (params *aeParams) pass() (bool, error) {
@@ -1482,12 +1481,12 @@ func (ru *aeMlsExternalJoinRules) validMlsExternalJoin() (bool, error) {
 	}
 
 	externalJoinRequest := &mls_tools.ExternalJoinRequest{
-		GroupState: mlsGroupState,
-		ProposedExternalJoinCommit: ru.externalJoin.Commit,
+		GroupState:                      mlsGroupState,
+		ProposedExternalJoinCommit:      ru.externalJoin.Commit,
 		ProposedExternalJoinInfoMessage: ru.externalJoin.GroupInfoMessage,
-		SignaturePublicKey: ru.externalJoin.SignaturePublicKey,
+		SignaturePublicKey:              ru.externalJoin.SignaturePublicKey,
 	}
-	
+
 	resp, err := mls_service.ExternalJoinRequest(externalJoinRequest)
 	if err != nil {
 		return false, err
@@ -1522,10 +1521,10 @@ func (ru *aeMlsKeyPackageRules) validMlsKeyPackage() (bool, error) {
 		return false, err
 	}
 
-	keyPackageRequest := &mls_tools.KeyPackageRequest {
+	keyPackageRequest := &mls_tools.KeyPackageRequest{
 		GroupState: mlsGroupState,
 		KeyPackage: &mls_tools.KeyPackage{
-			KeyPackage: ru.keyPackage.KeyPackage,
+			KeyPackage:         ru.keyPackage.KeyPackage,
 			SignaturePublicKey: ru.keyPackage.SignaturePublicKey,
 		},
 	}
@@ -1550,13 +1549,13 @@ func (ru *aeMlsWelcomeMessageRules) validMlsWelcomeMessage() (bool, error) {
 	}
 
 	welcomeMessageRequest := &mls_tools.WelcomeMessageRequest{
-		GroupState: mlsGroupState,
-		SignaturePublicKeys: ru.welcomeMessage.SignaturePublicKeys,
-		GroupInfoMessage: ru.welcomeMessage.GroupInfoMessage,
-		WelcomeMessages: ru.welcomeMessage.WelcomeMessages,
+		GroupState:           mlsGroupState,
+		SignaturePublicKeys:  ru.welcomeMessage.SignaturePublicKeys,
+		GroupInfoMessage:     ru.welcomeMessage.GroupInfoMessage,
+		WelcomeMessages:      ru.welcomeMessage.WelcomeMessages,
 		WelcomeMessageCommit: ru.welcomeMessage.Commit,
 	}
-	
+
 	resp, err := mls_service.WelcomeMessageRequest(welcomeMessageRequest)
 	if err != nil {
 		return false, err
@@ -1998,8 +1997,8 @@ func (params *aeParams) isValidNode(addressOrId []byte) bool {
 	return false
 }
 
-func (params *aeParams) log() *slog.Logger {
-	return dlog.FromCtx(params.ctx)
+func (params *aeParams) log() *zap.SugaredLogger {
+	return logging.FromCtx(params.ctx)
 }
 
 func hasCommon(x, y []string) bool {
