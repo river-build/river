@@ -1,7 +1,7 @@
 import { EncryptedData } from '@river-build/proto'
 import { EncryptionAlgorithm, IEncryptionParams } from './base'
 import { GroupEncryptionAlgorithmId } from './olmLib'
-import { dlog } from '@river-build/dlog'
+import { bin_toHexString, check, dlog } from '@river-build/dlog'
 
 const log = dlog('csb:encryption:groupEncryption')
 
@@ -76,18 +76,23 @@ export class GroupEncryption extends EncryptionAlgorithm {
      *
      * @returns Promise which resolves to the new event body
      */
-    public async encrypt(streamId: string, payload: string): Promise<EncryptedData> {
+    public async encrypt(
+        streamId: string,
+        payload: Uint8Array,
+        dataType: string,
+    ): Promise<EncryptedData> {
         log('Starting to encrypt event')
-
+        check(dataType.length > 0, 'data type is required')
         await this.ensureOutboundSession(streamId)
 
-        const result = await this.device.encryptGroupMessage(payload, streamId)
+        const result = await this.device.encryptGroupMessage(bin_toHexString(payload), streamId)
 
         return new EncryptedData({
             algorithm: this.algorithm,
             senderKey: this.device.deviceCurve25519Key!,
             ciphertext: result.ciphertext,
             sessionId: result.sessionId,
+            dataType,
         })
     }
 }

@@ -94,17 +94,18 @@ export class HybridGroupEncryption extends EncryptionAlgorithm {
      *
      * @returns Promise which resolves to the new event body
      */
-    public async encrypt(streamId: string, payload: string | Uint8Array): Promise<EncryptedData> {
+    public async encrypt(
+        streamId: string,
+        payload: Uint8Array,
+        dataType: string,
+    ): Promise<EncryptedData> {
         log('Starting to encrypt event')
-
-        const payloadBytes =
-            typeof payload === 'string' ? new TextEncoder().encode(payload) : payload
 
         const sessionKey: HybridGroupSessionKey = await this._ensureOutboundSession(streamId)
 
         const key = await importAesGsmKeyBytes(sessionKey.key)
 
-        const { ciphertext, iv } = await encryptAesGcm(key, payloadBytes)
+        const { ciphertext, iv } = await encryptAesGcm(key, payload)
 
         return new EncryptedData({
             algorithm: this.algorithm,
@@ -112,6 +113,7 @@ export class HybridGroupEncryption extends EncryptionAlgorithm {
             sessionIdBytes: sessionKey.sessionId,
             ciphertextBytes: ciphertext,
             ivBytes: iv,
+            dataType,
         })
     }
 }

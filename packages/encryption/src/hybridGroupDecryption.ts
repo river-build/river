@@ -23,7 +23,7 @@ export class HybridGroupDecryption extends DecryptionAlgorithm {
      * decrypting, or rejects with an `algorithms.DecryptionError` if there is a
      * problem decrypting the event.
      */
-    public async decrypt(streamId: string, content: EncryptedData): Promise<string> {
+    public async decrypt(streamId: string, content: EncryptedData): Promise<Uint8Array> {
         if (
             !content.senderKey ||
             !content.sessionIdBytes ||
@@ -45,7 +45,7 @@ export class HybridGroupDecryption extends DecryptionAlgorithm {
 
         const key = await importAesGsmKeyBytes(session.key)
         const result = await decryptAesGcm(key, content.ciphertextBytes, content.ivBytes)
-        return new TextDecoder().decode(result) // TODO: what kind of string is actually expected here? TODO: convert to Uint8Array
+        return result
     }
 
     /**

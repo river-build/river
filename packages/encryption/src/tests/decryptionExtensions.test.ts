@@ -62,7 +62,8 @@ describe.concurrent('TestDecryptionExtensions', () => {
             // bob encrypts a message
             const encryptedData = await bobCrypto.encryptGroupEvent(
                 streamId,
-                bobsPlaintext,
+                new TextEncoder().encode(bobsPlaintext),
+                'foobar',
                 algorithm,
             )
             const sessionId = encryptedData.sessionId
@@ -95,7 +96,7 @@ describe.concurrent('TestDecryptionExtensions', () => {
             await aliceDex.stop()
 
             // assert
-            expect(decrypted).toBe(bobsPlaintext)
+            expect(new TextDecoder().decode(decrypted)).toBe(bobsPlaintext)
             expect(bobDex.seenStates).toContain(DecryptionStatus.respondingToKeyRequests)
             expect(aliceDex.seenStates).toContain(DecryptionStatus.processingNewGroupSessions)
         },
@@ -127,7 +128,8 @@ describe.concurrent('TestDecryptionExtensions', () => {
             // bob encrypts a message
             const encryptedData = await bobCrypto.encryptGroupEvent(
                 streamId,
-                bobsPlaintext,
+                new TextEncoder().encode(bobsPlaintext),
+                'foobar',
                 algorithm,
             )
             // alice doesn't have the session key
@@ -146,7 +148,7 @@ describe.concurrent('TestDecryptionExtensions', () => {
             await aliceDex.stop()
 
             // assert
-            expect(decrypted).toBe(bobsPlaintext)
+            expect(new TextDecoder().decode(decrypted)).toBe(bobsPlaintext)
         },
     )
 })

@@ -3,7 +3,7 @@ import type { GroupSessionExtraData } from './encryptionDevice'
 import { DecryptionAlgorithm, DecryptionError, IDecryptionParams } from './base'
 import { GroupEncryptionAlgorithmId, GroupEncryptionSession } from './olmLib'
 import { EncryptedData } from '@river-build/proto'
-import { dlog } from '@river-build/dlog'
+import { bin_fromHexString, dlog } from '@river-build/dlog'
 
 const log = dlog('csb:encryption:groupDecryption')
 
@@ -24,7 +24,7 @@ export class GroupDecryption extends DecryptionAlgorithm {
      * decrypting, or rejects with an `algorithms.DecryptionError` if there is a
      * problem decrypting the event.
      */
-    public async decrypt(streamId: string, content: EncryptedData): Promise<string> {
+    public async decrypt(streamId: string, content: EncryptedData): Promise<Uint8Array> {
         if (!content.senderKey || !content.sessionId || !content.ciphertext) {
             throw new DecryptionError('GROUP_DECRYPTION_MISSING_FIELDS', 'Missing fields in input')
         }
@@ -35,8 +35,16 @@ export class GroupDecryption extends DecryptionAlgorithm {
             throw new Error('Session not found')
         }
 
+        // for historical reasons, we return the plaintext as a string
         const result = session.decrypt(content.ciphertext)
-        return result.plaintext
+
+        if (content.dataType && content.dataType.length > 0) {
+            // v2 encrypted data, should be a hex string
+            return bin_fromHexString(result.plaintext)
+        } else {
+            // deprecated v1 - these were encoded with toJsonString()... return encoded for api reasons
+            return new TextEncoder().encode(result.plaintext)
+        }
     }
 
     /**
