@@ -14,9 +14,9 @@ import { MLS_ALGORITHM } from '../constants'
 
 type EpochSecretsMessage = PlainMessage<MemberPayload_Mls_EpochSecrets>
 
-export interface IEpochSecretServiceCoordinator {
-    newOpenEpochSecret(streamId: string, epoch: bigint): void
-    newSealedEpochSecret(streamId: string, epoch: bigint): void
+export interface EpochSecretServiceDelegate {
+    newOpenEpochSecret(openEpochSecret: EpochSecret): void
+    newSealedEpochSecret(sealedEpochSecret: EpochSecret): void
 }
 
 const defaultLogger = dlog('csb:mls:epochSecretService')
@@ -25,7 +25,7 @@ export class EpochSecretService {
     private epochSecretStore: IEpochSecretStore
     private cipherSuite: MlsCipherSuite
     private cache: Map<EpochSecretId, EpochSecret> = new Map()
-    private coordinator?: IEpochSecretServiceCoordinator
+    public delegate?: EpochSecretServiceDelegate
     private log: {
         error: DLogger
         debug: DLogger
@@ -34,12 +34,12 @@ export class EpochSecretService {
     public constructor(
         cipherSuite: MlsCipherSuite,
         epochSecretStore: IEpochSecretStore,
-        coordinator?: IEpochSecretServiceCoordinator,
+        coordinator?: EpochSecretServiceDelegate,
         opts?: { log: DLogger },
     ) {
         this.cipherSuite = cipherSuite
         this.epochSecretStore = epochSecretStore
-        this.coordinator = coordinator
+        this.delegate = coordinator
         const logger = opts?.log ?? defaultLogger
         this.log = {
             debug: logger.extend('debug'),
@@ -100,8 +100,8 @@ export class EpochSecretService {
             await this.cipherSuite.seal(publicKey_, epochKey.openEpochSecret)
         ).toBytes()
         const updatedEpochKey = { ...epochKey, sealedEpochSecret }
-        // TODO: Should this method store epochKey?
         await this.saveEpochSecret(updatedEpochKey)
+        this.delegate?.newSealedEpochSecret(updatedEpochKey)
     }
 
     // TODO: Refactor this one not to perform load
@@ -121,9 +121,8 @@ export class EpochSecretService {
         } else {
             epochSecret = { ...epochSecret, sealedEpochSecret, announced: true }
         }
-        // TODO: Should this method store epochKey?
         await this.saveEpochSecret(epochSecret)
-        this.coordinator?.newSealedEpochSecret(streamId, epoch)
+        this.delegate?.newSealedEpochSecret(epochSecret)
     }
 
     // TODO: Should this method persist the epoch secret?
@@ -157,7 +156,7 @@ export class EpochSecretService {
         }
         // TODO: Should this method store epochKey
         await this.saveEpochSecret(epochSecret)
-        this.coordinator?.newOpenEpochSecret(streamId, epoch)
+        this.delegate?.newOpenEpochSecret(epochSecret)
     }
 
     public async openSealedEpochSecret(
@@ -255,7 +254,6 @@ export class EpochSecretService {
                 epochSecret.epoch,
                 epochSecret.secret,
             )
-            this.coordinator?.newSealedEpochSecret(_streamId, epochSecret.epoch)
         }
     }
 
@@ -282,5 +280,16 @@ export class EpochSecretService {
         return (
             epochSecret.openEpochSecret === undefined && epochSecret.sealedEpochSecret !== undefined
         )
+    }
+
+    // TODO: How does annouce work here?
+    public canBeSealed(epochSecret: EpochSecret): boolean {
+        return (
+            epochSecret.openEpochSecret !== undefined && epochSecret.sealedEpochSecret === undefined
+        )
+    }
+
+    public canBeAnnounced(epochSecret: EpochSecret): boolean {
+        return epochSecret.sealedEpochSecret !== undefined && !epochSecret.announced
     }
 }

@@ -12,10 +12,10 @@ type InitializeGroupMessage = PlainMessage<MemberPayload_Mls_InitializeGroup>
 type ExternalJoinMessage = PlainMessage<MemberPayload_Mls_ExternalJoin>
 
 // Placeholder for a coordinator
-export interface IGroupServiceCoordinator {
+export interface GroupServiceDelegate {
     joinOrCreateGroup(streamId: string): void
     groupActive(streamId: string): void
-    newEpoch(streamId: string, epoch: bigint): void
+    newEpoch(streamId: string, epoch: bigint, epochSecret: Uint8Array): void
 }
 
 const defaultLogger = dlog('csb:mls:groupService')
@@ -30,17 +30,17 @@ export class GroupService {
     }
 
     private crypto: Crypto
-    private coordinator: IGroupServiceCoordinator | undefined
+    public delegate: GroupServiceDelegate | undefined
 
     constructor(
         groupStore: IGroupStore,
         crypto: Crypto,
-        coordinator?: IGroupServiceCoordinator,
+        coordinator?: GroupServiceDelegate,
         opts?: { log: DLogger },
     ) {
         this.groupStore = groupStore
         this.crypto = crypto
-        this.coordinator = coordinator
+        this.delegate = coordinator
 
         const logger = opts?.log ?? defaultLogger
 
@@ -48,6 +48,11 @@ export class GroupService {
             debug: logger.extend('debug'),
             error: logger.extend('error'),
         }
+    }
+
+    public async initialize(): Promise<void> {
+        this.log.debug('initialize')
+        await this.crypto.initialize()
     }
 
     public getGroup(streamId: string): Group | undefined {
@@ -99,17 +104,15 @@ export class GroupService {
         // TODO: Clear group in GroupStateStore
     }
 
-    // TODO: Should this throw an Error?
     public async handleInitializeGroup(group: Group, _message: InitializeGroupMessage) {
         this.log.debug('handleInitializeGroup', { streamId: group.streamId })
 
         const isGroupActive = group.status === 'GROUP_ACTIVE'
         if (isGroupActive) {
-            this.log.error('handleInitializeGroup: Group is already active', {
+            this.log.debug('handleInitializeGroup: Group is already active', {
                 streamId: group.streamId,
             })
-            // Report programmer error
-            throw new Error('Programmer error: Group is already active')
+            return
         }
 
         const wasInitializeGroupOurOwn =
@@ -120,16 +123,17 @@ export class GroupService {
 
         if (!wasInitializeGroupOurOwn) {
             await this.clearGroup(group.streamId)
-            this.coordinator?.joinOrCreateGroup(group.streamId)
+            this.delegate?.joinOrCreateGroup(group.streamId)
             return
         }
 
         const activeGroup = Group.activeGroup(group.streamId, group.group)
         await this.saveGroup(activeGroup)
 
-        this.coordinator?.groupActive(group.streamId)
+        this.delegate?.groupActive(group.streamId)
         const epoch = this.crypto.currentEpoch(group)
-        this.coordinator?.newEpoch(group.streamId, epoch)
+        const epochSecret = await this.crypto.exportEpochSecret(group)
+        this.delegate?.newEpoch(group.streamId, epoch, epochSecret)
     }
 
     public async handleExternalJoin(group: Group, message: ExternalJoinMessage) {
@@ -137,11 +141,7 @@ export class GroupService {
 
         const isGroupActive = group.status === 'GROUP_ACTIVE'
         if (isGroupActive) {
-            await this.crypto.processCommit(group, message.commit)
-            await this.saveGroup(group)
-            const epoch = this.crypto.currentEpoch(group)
-            this.coordinator?.newEpoch(group.streamId, epoch)
-            return
+            return this.processCommit(group, message.commit)
         }
 
         const wasExternalJoinOurOwn =
@@ -154,16 +154,30 @@ export class GroupService {
 
         if (!wasExternalJoinOurOwn) {
             await this.clearGroup(group.streamId)
-            this.coordinator?.joinOrCreateGroup(group.streamId)
+            this.delegate?.joinOrCreateGroup(group.streamId)
             return
         }
 
         const activeGroup = Group.activeGroup(group.streamId, group.group)
         await this.saveGroup(activeGroup)
 
-        this.coordinator?.groupActive(group.streamId)
+        this.delegate?.groupActive(group.streamId)
         const epoch = this.crypto.currentEpoch(group)
-        this.coordinator?.newEpoch(group.streamId, epoch)
+        const epochSecret = await this.crypto.exportEpochSecret(group)
+        this.delegate?.newEpoch(group.streamId, epoch, epochSecret)
+    }
+
+    private async processCommit(group: Group, commit: Uint8Array): Promise<void> {
+        this.log.debug('processCommit', { streamId: group.streamId })
+        try {
+            await this.crypto.processCommit(group, commit)
+            await this.saveGroup(group)
+            const epoch = this.crypto.currentEpoch(group)
+            const epochSecret = await this.crypto.exportEpochSecret(group)
+            this.delegate?.newEpoch(group.streamId, epoch, epochSecret)
+        } catch (e) {
+            this.log.error('processCommit', e)
+        }
     }
 
     public async initializeGroupMessage(streamId: string): Promise<InitializeGroupMessage> {
@@ -177,7 +191,7 @@ export class GroupService {
         const group = await this.crypto.createGroup(streamId)
         await this.saveGroup(group)
 
-        const externalGroupSnapshot = this.exportGroupSnapshot(group)
+        const externalGroupSnapshot = await this.exportGroupSnapshot(group)
 
         const signaturePublicKey = this.getSignaturePublicKey()
 
@@ -212,8 +226,8 @@ export class GroupService {
         }
     }
 
-    public exportGroupSnapshot(_group: Group): Uint8Array {
-        throw new Error('Not implemented')
+    public exportGroupSnapshot(group: Group): Promise<Uint8Array> {
+        return this.crypto.exportGroupSnapshot(group)
     }
 
     public currentEpoch(group: Group): bigint {

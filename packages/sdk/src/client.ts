@@ -157,7 +157,7 @@ import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from
 import { makeTags, makeTipTags } from './tags'
 import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
 import { extractMlsExternalGroup, ExtractMlsExternalGroupResult } from './mls/utils/mlsutils'
-import { MlsAdapter, MLS_ALGORITHM } from './mls'
+import { MlsAdapter, MLS_ALGORITHM, Coordinator, QueueService } from './mls'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -194,6 +194,7 @@ export class Client
     private readonly logError: DLogger
     private readonly logInfo: DLogger
     private readonly logDebug: DLogger
+    private readonly logMls: DLogger
 
     public cryptoBackend?: GroupEncryptionCrypto
     public cryptoStore: CryptoStore
@@ -256,6 +257,8 @@ export class Client
         this.logError = dlogError('csb:cl:error').extend(shortId)
         this.logInfo = dlog('csb:cl:info', { defaultEnabled: true }).extend(shortId)
         this.logDebug = dlog('csb:cl:debug').extend(shortId)
+        // TODO: refactor this to all debuggers that mls components need
+        this.logMls = dlog('csb:cl:mls').extend(shortId)
         this.cryptoStore = cryptoStore
 
         if (persistenceStoreName) {
@@ -296,6 +299,7 @@ export class Client
         this.logCall('stop')
         await this.decryptionExtensions?.stop()
         await this.syncedStreamsExtensions?.stop()
+        await this.mlsAdapter?.stop()
         await this.stopSync()
     }
 
@@ -2405,7 +2409,21 @@ export class Client
             return
         }
 
-        this.mlsAdapter = new MlsAdapter(this)
+        // Create and inject all the dependencies
+        const deviceKey = new TextEncoder().encode(this.userDeviceKey().deviceKey)
+        if (deviceKey.length <= 0) {
+            throw new Error('deviceKey must be set')
+        }
+
+        this.mlsAdapter = new MlsAdapter(
+            this.userId,
+            deviceKey,
+            this,
+            this.persistenceStore,
+            this,
+            this,
+            { log: this.logMls },
+        )
         await this.mlsAdapter.initialize()
     }
 

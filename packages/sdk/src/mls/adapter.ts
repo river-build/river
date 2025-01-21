@@ -1,35 +1,131 @@
 /// Adapter to hook MLS Coordinator to the client
 
-import { Client } from '../client'
 import { Message } from '@bufbuild/protobuf'
 import { EncryptedData } from '@river-build/proto'
 import { DLogger, dlog } from '@river-build/dlog'
 import { isMobileSafari } from '../utils'
-import { IQueueService } from './queue'
+import {
+    CoordinatorDelegateAdapter,
+    EpochSecretServiceCoordinatorAdapter,
+    GroupServiceCoordinatorAdapter,
+    QueueService,
+} from './queue'
+import { StreamEncryptionEvents, StreamStateEvents } from '../streamEvents'
+import TypedEmitter from 'typed-emitter'
+import { EncryptedContent } from '../encryptedContentTypes'
+import { Coordinator } from './coordinator'
+import { IPersistenceStore } from '../persistenceStore'
+import { Client } from '../client'
+import { addressFromUserId } from '../id'
+import { ExternalCrypto, ExternalGroupService } from './externalGroup'
+import { GroupService, Crypto, IGroupStore, InMemoryGroupStore } from './group'
+import { EpochSecretService, IEpochSecretStore, InMemoryEpochSecretStore } from './epoch'
+import { CipherSuite as MlsCipherSuite } from '@river-build/mls-rs-wasm'
+import { MlsInspector } from './utils/inspector'
 
-const defaultLogger = dlog('csb:mls:adapter')
+const defaultLogger = dlog('csb:mls')
 
 export class MlsAdapter {
-    private client: Client
-    private queueService?: IQueueService
-    private log!: {
+    protected readonly userId: string
+    protected readonly userAddress: Uint8Array
+    protected readonly deviceKey: Uint8Array
+    protected readonly client: Client
+    protected readonly persistenceStore: IPersistenceStore
+    protected readonly encryptionEmitter?: TypedEmitter<StreamEncryptionEvents>
+    protected readonly stateEmitter?: TypedEmitter<StreamStateEvents>
+
+    protected externalCrypto: ExternalCrypto
+    protected externalGroupService: ExternalGroupService
+    protected crypto: Crypto
+    protected groupStore: IGroupStore
+    protected groupService: GroupService
+    protected cipherSuite: MlsCipherSuite
+    protected epochSecretStore: IEpochSecretStore
+    protected epochSecretService: EpochSecretService
+    protected coordinator: Coordinator
+    protected queueService: QueueService
+
+    protected log: {
         error: DLogger
         debug: DLogger
     }
 
-    public constructor(client: Client, opts?: { log: DLogger }) {
-        this.client = client
+    // TODO: Refactor this to a separate factory class
+    public constructor(
+        userId: string,
+        deviceKey: Uint8Array,
+        client: Client,
+        persistenceStore: IPersistenceStore,
+        encryptionEmitter?: TypedEmitter<StreamEncryptionEvents>,
+        stateEmitter?: TypedEmitter<StreamStateEvents>,
+        opts?: { log: DLogger },
+    ) {
         const logger = opts?.log ?? defaultLogger
+        this.userId = userId
+        this.userAddress = addressFromUserId(userId)
+        this.deviceKey = deviceKey
+        this.client = client
+        this.persistenceStore = persistenceStore
+        this.encryptionEmitter = encryptionEmitter
+        this.stateEmitter = stateEmitter
+
+        // External Group Service
+        this.externalCrypto = new ExternalCrypto()
+        this.externalGroupService = new ExternalGroupService(this.externalCrypto, {
+            log: logger.extend('egs'),
+        })
+
+        // Group Service
+        this.crypto = new Crypto(this.userAddress, deviceKey, { log: logger.extend('crypto') })
+        this.groupStore = new InMemoryGroupStore()
+        this.groupService = new GroupService(this.groupStore, this.crypto, undefined, {
+            log: logger.extend('gs'),
+        })
+
+        // Epoch Secret Service
+        this.cipherSuite = new MlsCipherSuite()
+        this.epochSecretStore = new InMemoryEpochSecretStore()
+        this.epochSecretService = new EpochSecretService(
+            this.cipherSuite,
+            this.epochSecretStore,
+            undefined,
+            { log: logger.extend('ess') },
+        )
+
+        // Coordinator
+        this.coordinator = new Coordinator(
+            this.userAddress,
+            this.deviceKey,
+            this.client,
+            this.persistenceStore,
+            this.externalGroupService,
+            this.groupService,
+            this.epochSecretService,
+            undefined,
+            { log: logger.extend('coordinator') },
+        )
+
+        // Queue
+        this.queueService = new QueueService(this.coordinator, { log: logger.extend('queue') })
+
+        // Hook up delegates
+        this.coordinator.delegate = new CoordinatorDelegateAdapter(this.queueService)
+        this.groupService.delegate = new GroupServiceCoordinatorAdapter(this.queueService)
+        this.epochSecretService.delegate = new EpochSecretServiceCoordinatorAdapter(
+            this.queueService,
+        )
+
+        const adapterLogger = logger.extend('adapter')
         this.log = {
-            debug: logger.extend('debug'),
-            error: logger.extend('error'),
+            debug: adapterLogger.extend('debug'),
+            error: adapterLogger.extend('error'),
         }
     }
 
     // API exposed to the client
-    public initialize(): Promise<void> {
+    public async initialize(): Promise<void> {
         this.log.debug('initialize')
-        return Promise.resolve()
+        await this.coordinator?.initialize()
     }
 
     public start(): void {
@@ -41,6 +137,12 @@ export class MlsAdapter {
                 this.queueService.onMobileSafariPageVisibilityChanged,
             )
         }
+
+        this.encryptionEmitter?.on('mlsInitializeGroup', this.onMlsInitializeGroup)
+        this.encryptionEmitter?.on('mlsExternalJoin', this.onMlsExternalJoin)
+        this.encryptionEmitter?.on('mlsEpochSecrets', this.onMlsEpochSecrets)
+        this.encryptionEmitter?.on('mlsNewEncryptedContent', this.onMlsNewEncryptedContent)
+        this.stateEmitter?.on('streamEncryptionAlgorithmUpdated', this.onEncryptionAlgorithmUpdated)
     }
 
     public async stop(): Promise<void> {
@@ -52,13 +154,117 @@ export class MlsAdapter {
                 this.queueService.onMobileSafariPageVisibilityChanged,
             )
         }
+
+        this.encryptionEmitter?.off('mlsInitializeGroup', this.onMlsInitializeGroup)
+        this.encryptionEmitter?.off('mlsExternalJoin', this.onMlsExternalJoin)
+        this.encryptionEmitter?.off('mlsEpochSecrets', this.onMlsEpochSecrets)
+        this.encryptionEmitter?.off('mlsNewEncryptedContent', this.onMlsNewEncryptedContent)
+        this.stateEmitter?.off(
+            'streamEncryptionAlgorithmUpdated',
+            this.onEncryptionAlgorithmUpdated,
+        )
     }
 
     public async encryptGroupEventEpochSecret(
-        _streamId: string,
-        _event: Message,
+        streamId: string,
+        event: Message,
     ): Promise<EncryptedData> {
         this.log.debug('encryptGroupEventEpochSecret')
-        throw new Error('Not implemented')
+        if (this.coordinator === undefined) {
+            throw new Error('coordinator missing')
+        }
+        return this.coordinator.encryptGroupEventEpochSecret(streamId, event)
+    }
+
+    // Event handlers for encryptionEmitter
+    public readonly onMlsInitializeGroup = (
+        streamId: string,
+        groupInfoMessage: Uint8Array,
+        externalGroupSnapshot: Uint8Array,
+        signaturePublicKey: Uint8Array,
+    ) => {
+        this.log.debug('onMlsInitializeGroup')
+        this.queueService?.enqueueEvent({
+            tag: 'initializeGroup',
+            streamId,
+            message: {
+                groupInfoMessage,
+                externalGroupSnapshot,
+                signaturePublicKey,
+            },
+        })
+    }
+
+    public readonly onMlsExternalJoin = (
+        streamId: string,
+        signaturePublicKey: Uint8Array,
+        commit: Uint8Array,
+        groupInfoMessage: Uint8Array,
+    ) => {
+        this.log.debug('onMlsExternalJoin')
+        this.queueService?.enqueueEvent({
+            tag: 'externalJoin',
+            streamId,
+            message: {
+                signaturePublicKey,
+                commit,
+                groupInfoMessage,
+            },
+        })
+    }
+
+    public readonly onMlsEpochSecrets = (
+        streamId: string,
+        secrets: { epoch: bigint; secret: Uint8Array }[],
+    ) => {
+        this.log.debug('onMlsEpochSecrets')
+        this.queueService?.enqueueEvent({
+            tag: 'epochSecrets',
+            streamId,
+            message: {
+                secrets,
+            },
+        })
+    }
+
+    public readonly onMlsNewEncryptedContent = (
+        streamId: string,
+        eventId: string,
+        content: EncryptedContent,
+    ) => {
+        this.log.debug('onMlsNewEncryptedContent')
+        this.queueService?.enqueueEvent({
+            tag: 'encryptedContent',
+            streamId,
+            eventId,
+            message: content,
+        })
+    }
+
+    public readonly onEncryptionAlgorithmUpdated = (
+        streamId: string,
+        encryptionAlgorithm?: string,
+    ) => {
+        this.log.debug('onEncryptionAlgorithmUpdated', { streamId, encryptionAlgorithm })
+        this.queueService?.enqueueEvent({
+            tag: 'encryptionAlgorithmUpdated',
+            streamId,
+            encryptionAlgorithm,
+        })
+    }
+
+    public getInspector(): MlsInspector {
+        return new MlsInspector(
+            this.externalCrypto,
+            this.externalGroupService,
+            this.crypto,
+            this.groupStore,
+            this.groupService,
+            this.cipherSuite,
+            this.epochSecretStore,
+            this.epochSecretService,
+            this.coordinator,
+            this.queueService,
+        )
     }
 }

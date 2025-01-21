@@ -1,5 +1,6 @@
 import { check } from '@river-build/dlog'
 import { IStreamStateView } from '../../streamStateView'
+import { logNever } from '../../check'
 
 export type ExtractMlsExternalGroupResult = {
     externalGroupSnapshot: Uint8Array
@@ -10,11 +11,6 @@ export type ExtractMlsExternalGroupResult = {
 export function extractMlsExternalGroup(
     streamView: IStreamStateView,
 ): ExtractMlsExternalGroupResult | undefined {
-    // check if there is group info at all
-    if (streamView.snapshot?.members?.mls?.groupInfoMessage === undefined) {
-        return undefined
-    }
-
     const indexOfLastSnapshot = streamView.timeline.findLastIndex((event) => {
         const payload = event.remoteEvent?.event.payload
         if (payload?.case !== 'miniblockHeader') {
@@ -27,36 +23,63 @@ export function extractMlsExternalGroup(
     check(payload?.case === 'miniblockHeader', 'no snapshot found')
     const snapshot = payload.value.snapshot
     check(snapshot !== undefined, 'no snapshot found')
-    const externalGroupSnapshot = snapshot.members?.mls?.externalGroupSnapshot
-    check(externalGroupSnapshot !== undefined, 'no externalGroupSnapshot found')
-    const groupInfoMessage = snapshot.members?.mls?.groupInfoMessage
-    check(groupInfoMessage !== undefined, 'no groupInfoMessage found')
-    const commits: { commit: Uint8Array; groupInfoMessage: Uint8Array }[] = []
-    for (let i = indexOfLastSnapshot; i < streamView.timeline.length; i++) {
-        const event = streamView.timeline[i]
-        const payload = event.remoteEvent?.event.payload
-        if (payload?.case !== 'memberPayload') {
-            continue
-        }
-        if (payload?.value?.content.case !== 'mls') {
-            continue
-        }
 
-        const mlsPayload = payload.value.content.value
-        switch (mlsPayload.content.case) {
+    const relevantMlsEvents = streamView.timeline
+        .slice(indexOfLastSnapshot + 1)
+        .flatMap((event) => {
+            if (event?.remoteEvent?.event.payload?.value?.content.case === 'mls') {
+                return [event.remoteEvent.event.payload.value.content.value]
+            }
+            return []
+        })
+
+    let externalGroupSnapshot: Uint8Array | undefined = snapshot.members?.mls?.externalGroupSnapshot
+    let groupInfoMessage = snapshot.members?.mls?.groupInfoMessage
+    const commits: { commit: Uint8Array; groupInfoMessage: Uint8Array }[] = []
+
+    function checkMlsGroupIntialised() {
+        return (
+            externalGroupSnapshot !== undefined &&
+            externalGroupSnapshot.length > 0 &&
+            groupInfoMessage !== undefined &&
+            groupInfoMessage.length > 0
+        )
+    }
+
+    // select the first group info message from relevantMlsEvents
+    for (const event of relevantMlsEvents) {
+        switch (event.content.case) {
+            case 'initializeGroup':
+                if (!checkMlsGroupIntialised()) {
+                    externalGroupSnapshot = event.content.value.externalGroupSnapshot
+                    groupInfoMessage = event.content.value.groupInfoMessage
+                }
+                break
             case 'externalJoin':
             case 'welcomeMessage':
-                commits.push({
-                    commit: mlsPayload.content.value.commit,
-                    groupInfoMessage: mlsPayload.content.value.groupInfoMessage,
-                })
+                if (checkMlsGroupIntialised()) {
+                    commits.push({
+                        commit: event.content.value.commit,
+                        groupInfoMessage: event.content.value.groupInfoMessage,
+                    })
+                }
                 break
-
+            case 'epochSecrets':
+            case 'keyPackage':
             case undefined:
                 break
             default:
-                break
+                logNever(event.content)
         }
     }
-    return { externalGroupSnapshot, groupInfoMessage, commits: commits }
+
+    if (!checkMlsGroupIntialised()) {
+        return undefined
+    }
+
+    return {
+        externalGroupSnapshot: externalGroupSnapshot!,
+        groupInfoMessage: groupInfoMessage!,
+        commits,
+    }
 }
