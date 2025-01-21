@@ -3906,8 +3906,10 @@ type AddEventResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Error     *AddEventResponse_Error `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"` // only set if AddEventRequest.optional is true
-	NewEvents []*EventRef             `protobuf:"bytes,2,rep,name=new_events,json=newEvents,proto3" json:"new_events,omitempty"`
+	// error thrown during this request, only set if AddEventRequest.optional is true, otherwise the request will fail with this error
+	Error *AddEventResponse_Error `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"`
+	// all events created during this request including parent events
+	NewEvents []*EventRef `protobuf:"bytes,2,rep,name=new_events,json=newEvents,proto3" json:"new_events,omitempty"`
 }
 
 func (x *AddEventResponse) Reset() {
