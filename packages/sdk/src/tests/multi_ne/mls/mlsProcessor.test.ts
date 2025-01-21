@@ -18,7 +18,7 @@ type TestClient = {
     mlsClient: MlsClient
 }
 
-const log = dlog('test:mls:viewAdapter')
+const log = dlog('test:mls:processor')
 
 describe('MlsProcessorTests', () => {
     const clients: TestClientWithProcessor[] = []
@@ -201,6 +201,55 @@ describe('MlsProcessorTests', () => {
             await tryJoin()
             await waitUntilClientsObserve(clients, { accepted: 3 })
             expect(howManyActive()).toBe(3)
+        })
+    })
+
+    const tryJoin = (c: TestClientWithProcessor) => c.processor.initializeOrJoinGroup(c.stream)
+
+    const tryAnnounceSecrets = (c: TestClientWithProcessor) =>
+        c.processor.announceEpochSecrets(c.stream)
+
+    describe('announceEpochSecrets', () => {
+        it('alice announces keys to bob', async () => {
+            await tryJoin(alice)
+            await waitUntilClientsObserve([bob], { accepted: 1 })
+            await tryJoin(bob)
+            await waitUntilClientsObserve([alice, bob], { accepted: 2 })
+            await tryAnnounceSecrets(alice)
+            await waitUntilClientsObserve([alice, bob], { accepted: 3 })
+            expect(bob.stream.onChainView.sealedEpochSecrets.size).toBe(1)
+            expect(bob.stream.localView?.epochSecrets.size).toBe(2)
+        })
+
+        it('bob announces keys to charlie', async () => {
+            await tryJoin(alice)
+            await waitUntilClientsObserve([bob], { accepted: 1 })
+            await tryJoin(bob)
+            await waitUntilClientsObserve([charlie], { accepted: 2 })
+            await tryJoin(charlie)
+            await waitUntilClientsObserve([bob], { accepted: 3 })
+            await tryAnnounceSecrets(bob)
+            await waitUntilClientsObserve([charlie], { accepted: 4 })
+            expect(charlie.stream.onChainView.sealedEpochSecrets.size).toBe(1)
+            expect(charlie.stream.localView?.epochSecrets.size).toBe(2)
+        })
+
+        it('alice announces keys then bob announces keys', async () => {
+            await tryJoin(alice)
+            await waitUntilClientsObserve([bob], { accepted: 1 })
+            await tryJoin(bob)
+            await waitUntilClientsObserve([alice], { accepted: 2 })
+            await tryAnnounceSecrets(alice)
+            await waitUntilClientsObserve([charlie], { accepted: 3 })
+            await tryJoin(charlie)
+            await waitUntilClientsObserve([alice], { accepted: 4 })
+            await tryAnnounceSecrets(alice)
+            await waitUntilClientsObserve([alice, bob, charlie], { accepted: 5 })
+
+            expect(bob.stream.onChainView.sealedEpochSecrets.size).toBe(2)
+            expect(bob.stream.localView?.epochSecrets.size).toBe(3)
+            expect(charlie.stream.onChainView.sealedEpochSecrets.size).toBe(2)
+            expect(charlie.stream.localView?.epochSecrets.size).toBe(3)
         })
     })
 })

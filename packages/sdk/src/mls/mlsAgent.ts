@@ -88,6 +88,7 @@ export class MlsAgent {
         if (this.enabledStreams.has(streamId) && mlsStream !== undefined) {
             await mlsStream.handleStreamUpdate()
             await this.processor.initializeOrJoinGroup(mlsStream)
+            await this.processor.announceEpochSecrets(mlsStream)
         }
     }
 }

@@ -182,10 +182,11 @@ export class LocalView {
         }
 
         const secret = await this.crypto.open(nextEpochSecret.derivedKeys, sealedSecret)
+        const derivedKeys = await this.crypto.deriveKeys(secret)
         this.epochSecrets.set(epoch, {
             epoch,
             secret,
-            derivedKeys: nextEpochSecret.derivedKeys,
+            derivedKeys,
         })
     }
 }

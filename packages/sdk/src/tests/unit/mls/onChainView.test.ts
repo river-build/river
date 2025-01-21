@@ -119,6 +119,22 @@ describe('onChainViewTests', () => {
         })
     })
 
+    describe('AnnounceEpochSecrets', () => {
+        it('accepts announced epoch secrets', async () => {
+            const secret = randomBytes(32)
+            const confirmedEpochSecret = confirmMlsEvent({
+                case: 'epochSecrets',
+                value: {
+                    secrets: [{ secret, epoch: 0n }],
+                },
+            })
+            await view.processConfirmedMlsEvent(confirmedEpochSecret)
+            expect(view.accepted.size).toBe(1)
+            expect(view.sealedEpochSecrets.size).toBe(1)
+            expect(view.sealedEpochSecrets.get(0n)).toStrictEqual(secret)
+        })
+    })
+
     describe('Snapshot', () => {
         it('can be loaded from snapshot', () => {})
     })

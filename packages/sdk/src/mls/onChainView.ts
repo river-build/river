@@ -303,6 +303,8 @@ export class OnChainView {
     }
 
     private processEpochSecrets(event: ConfirmedEpochSecrets): void {
+        this.accepted.set(event.eventId, event)
+
         event.value.secrets.forEach((secret) => {
             this.sealedEpochSecrets.set(secret.epoch, secret.secret)
         })

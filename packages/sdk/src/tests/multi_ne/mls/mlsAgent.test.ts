@@ -142,6 +142,17 @@ describe('MlsAgentTests', () => {
         clients.length = 0
     })
 
+    const howManyActive = () =>
+        clients.filter(
+            (client) => client.agent.streams.get(streamId)?.localView?.status === 'active',
+        ).length
+
+    const howManyOpenKeys = (client: TestClientWithAgent) =>
+        client.agent.streams.get(streamId)?.localView?.epochSecrets.size
+
+    const howManySealedKeys = (client: TestClientWithAgent) =>
+        client.agent.streams.get(streamId)?.onChainView.sealedEpochSecrets.size
+
     describe('enableAndParticipate', () => {
         test('alice can participate', async () => {
             // manually seed the viewAdapter
@@ -153,14 +164,70 @@ describe('MlsAgentTests', () => {
                 .toBe('active')
         })
 
+        test('alice starts with one epoch secret', async () => {
+            // manually seed the viewAdapter
+            await alice.agent.enableAndParticipate(streamId)
+            await expect
+                .poll(() => howManyOpenKeys(alice), {
+                    timeout: 10_000,
+                })
+                .toBe(1)
+        })
+
+        test('alice generates new epoch secret after bob participates', async () => {
+            await alice.agent.enableAndParticipate(streamId)
+            await expect.poll(() => howManyActive(), { timeout: 10_000 }).toBe(1)
+            await bob.agent.enableAndParticipate(streamId)
+            await expect
+                .poll(() => howManyOpenKeys(alice), {
+                    timeout: 10_000,
+                })
+                .toBe(2)
+        })
+
         test('eventually all clients will be able to join the group', async () => {
             await Promise.all(clients.map((client) => client.agent.enableAndParticipate(streamId)))
 
-            const howManyActive = () =>
-                clients.filter(
-                    (client) => client.agent.streams.get(streamId)?.localView?.status === 'active',
-                ).length
             await expect.poll(() => howManyActive(), { timeout: 10_000 }).toBe(3)
+        })
+    })
+
+    describe('announceEpochSecrets', () => {
+        test('alice announces her keys after bob participates', async () => {
+            await alice.agent.enableAndParticipate(streamId)
+            await expect.poll(() => howManyActive(), { timeout: 10_000 }).toBe(1)
+            await bob.agent.enableAndParticipate(streamId)
+            await expect
+                .poll(() => howManySealedKeys(bob), {
+                    timeout: 10_000,
+                })
+                .toBe(1)
+        })
+
+        test('bob opens keys that alice announced', async () => {
+            await alice.agent.enableAndParticipate(streamId)
+            await expect.poll(() => howManyActive(), { timeout: 10_000 }).toBe(1)
+            await bob.agent.enableAndParticipate(streamId)
+            await expect
+                .poll(() => howManyOpenKeys(bob), {
+                    timeout: 10_000,
+                })
+                .toBe(2)
+        })
+
+        test('eventually all clients will get all the keys', async () => {
+            await Promise.all(clients.map((client) => client.agent.enableAndParticipate(streamId)))
+
+            await Promise.all([
+                ...clients.map((c) =>
+                    expect.poll(() => howManyOpenKeys(c), { timeout: 10_000 }).toBe(clients.length),
+                ),
+                ...clients.map((c) =>
+                    expect
+                        .poll(() => howManySealedKeys(c), { timeout: 10_000 })
+                        .toBe(clients.length - 1),
+                ),
+            ])
         })
     })
 })
