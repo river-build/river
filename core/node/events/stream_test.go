@@ -297,7 +297,7 @@ func TestCandidatePromotionCandidateIsDelayed(t *testing.T) {
 
 	view = getView(t, ctx, stream)
 	require.Equal(2, view.minipool.size())
-	candidate1, err := tt.instances[0].makeMbCandidate(ctx, stream)
+	candidate1, err := tt.instances[0].makeMbCandidateForView(ctx, view)
 	require.NoError(err)
 	require.NotNil(candidate1)
 	require.Len(candidate1.Events(), 2)
@@ -325,7 +325,7 @@ func TestCandidatePromotionCandidateIsDelayed(t *testing.T) {
 		view1 := getView(t, ctx, stream)
 		view1 = addEventToView(t, params, view1, fmt.Sprintf("%d", i+3), view1.LastBlock().Ref)
 
-		candidate2, err := tt.instances[0].makeMbCandidate(ctx, stream)
+		candidate2, err := tt.instances[0].makeMbCandidateForView(ctx, view1)
 		require.NoError(err)
 		require.NotNil(candidate2)
 		require.Equal(int64(i*3+2), candidate2.headerEvent.Event.GetMiniblockHeader().MiniblockNum)
@@ -337,7 +337,7 @@ func TestCandidatePromotionCandidateIsDelayed(t *testing.T) {
 		view2 = addEventToView(t, params, view2, "4", view2.LastBlock().Ref)
 		view2 = addEventToView(t, params, view2, "5", view2.LastBlock().Ref)
 
-		candidate3, err := tt.instances[0].makeMbCandidate(ctx, stream)
+		candidate3, err := tt.instances[0].makeMbCandidateForView(ctx, view2)
 		require.NoError(err)
 		require.NotNil(candidate3)
 		require.Equal(int64(i*3+3), candidate3.headerEvent.Event.GetMiniblockHeader().MiniblockNum)
@@ -349,7 +349,7 @@ func TestCandidatePromotionCandidateIsDelayed(t *testing.T) {
 		view3 = addEventToView(t, params, view3, "6", view3.LastBlock().Ref)
 		view3 = addEventToView(t, params, view3, "7", view3.LastBlock().Ref)
 
-		candidate4, err := tt.instances[0].makeMbCandidate(ctx, stream)
+		candidate4, err := tt.instances[0].makeMbCandidateForView(ctx, view3)
 		require.NoError(err)
 		require.NotNil(candidate4)
 		require.Equal(int64(i*3+4), candidate4.headerEvent.Event.GetMiniblockHeader().MiniblockNum)

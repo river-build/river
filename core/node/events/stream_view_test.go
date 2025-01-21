@@ -181,7 +181,8 @@ func TestLoad(t *testing.T) {
 	proposal, _ = view.ProposeNextMiniblock(ctx, cfg, false)
 	mbCandidate, err = view.makeMiniblockCandidate(ctx, params, mbProposalFromProto(proposal))
 	require.NoError(t, err)
-	assert.NotNil(t, mbCandidate.headerEvent.Event.GetMiniblockHeader().Snapshot)
+	miniblockHeader = mbCandidate.headerEvent.Event.GetMiniblockHeader()
+	assert.NotNil(t, miniblockHeader.Snapshot)
 
 	// check count2
 	count2 := 0

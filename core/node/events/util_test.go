@@ -435,3 +435,15 @@ func (i *cacheTestInstance) makeMbCandidate(
 	}
 	return j.candidate, nil
 }
+
+func (i *cacheTestInstance) makeMbCandidateForView(
+	ctx context.Context,
+	view *streamViewImpl,
+) (*MiniblockInfo, error) {
+	proposal := view.proposeNextMiniblock(ctx, i.params.ChainConfig.Get(), false)
+	mbCandidate, err := view.makeMiniblockCandidate(ctx, i.params, proposal)
+	if err != nil {
+		return nil, err
+	}
+	return mbCandidate, nil
+}
