@@ -69,31 +69,66 @@ func TestCreateMediaStream(t *testing.T) {
 		tt.require.Equal(connect.CodeNotFound, connect.CodeOf(err))
 	})
 
-	// Add the rest of the media chunks
-	mediaChunks := make([][]byte, chunks)
-	for i := 0; i < chunks; i++ {
-		// Create media chunk event
-		mediaChunks[i] = []byte("chunk " + fmt.Sprint(i))
-		mp := events.Make_MediaPayload_Chunk(mediaChunks[i], int32(i))
-		envelope, err := events.MakeEnvelopeWithPayload(alice.wallet, mp, mb)
-		tt.require.NoError(err)
+	t.Run("AddMediaEvent passed for ephemeral media streams", func(t *testing.T) {
+		// Add the rest of the media chunks
+		mediaChunks := make([][]byte, chunks)
+		for i := 0; i < chunks; i++ {
+			// Create media chunk event
+			mediaChunks[i] = []byte("chunk " + fmt.Sprint(i))
+			mp := events.Make_MediaPayload_Chunk(mediaChunks[i], int32(i))
+			envelope, err := events.MakeEnvelopeWithPayload(alice.wallet, mp, mb)
+			tt.require.NoError(err)
+			fmt.Println(i, i == chunks-1)
+			// Add media chunk event
+			aeResp, err := alice.client.AddMediaEvent(alice.ctx, connect.NewRequest(&protocol.AddMediaEventRequest{
+				Event:          envelope,
+				CreationCookie: creationCookie,
+				Last:           i == chunks-1,
+			}))
+			tt.require.NoError(err)
 
-		// Add media chunk event
-		aeResp, err := alice.client.AddMediaEvent(alice.ctx, connect.NewRequest(&protocol.AddMediaEventRequest{
-			Event:          envelope,
-			CreationCookie: creationCookie,
-		}))
-		tt.require.NoError(err)
+			mb.Hash = common.BytesToHash(aeResp.Msg.CreationCookie.PrevMiniblockHash)
+			mb.Num++
+			creationCookie = aeResp.Msg.CreationCookie
+		}
 
-		mb.Hash = common.BytesToHash(aeResp.Msg.CreationCookie.PrevMiniblockHash)
-		mb.Num++
-		creationCookie = aeResp.Msg.CreationCookie
-	}
+		// Make sure all replicas have the stream sealed
+		for i, client := range tt.newTestClients(5) {
+			t.Run(fmt.Sprintf("Stream sealed in node %d", i), func(t *testing.T) {
+				t.Parallel()
 
-	// No events in storage since the stream still ephemeral.
-	// The first miniblock is the stream creation miniblock, the rest 10 are media chunks.
-	// TODO: Make sure the stream is sealed in the next PR
-	tt.compareStreamDataInStorage(t, mediaStreamId, 11, 0)
+				// Get Miniblocks for the given media stream
+				resp, err := client.client.GetMiniblocks(alice.ctx, connect.NewRequest(&protocol.GetMiniblocksRequest{
+					StreamId:      mediaStreamId[:],
+					FromInclusive: 0,
+					ToExclusive:   chunks * 2, // adding a threshold to make sure there are no unexpected events
+				}))
+				tt.require.NoError(err)
+				tt.require.NotNil(resp)
+				tt.require.Len(resp.Msg.GetMiniblocks(), chunks+1) // The first miniblock is the stream creation one
+
+				mbs := resp.Msg.GetMiniblocks()
+
+				// The first miniblock is the stream creation one
+				tt.require.Len(mbs[0].GetEvents(), 1)
+				pe, err := events.ParseEvent(mbs[0].GetEvents()[0])
+				tt.require.NoError(err)
+				mp, ok := pe.Event.GetPayload().(*protocol.StreamEvent_MediaPayload)
+				tt.require.True(ok)
+				tt.require.Equal(int32(chunks), mp.MediaPayload.GetInception().GetChunkCount())
+
+				// The rest of the miniblocks are the media chunks
+				for i, mb := range mbs[1:] {
+					tt.require.Len(mb.GetEvents(), 1)
+					pe, err = events.ParseEvent(mb.GetEvents()[0])
+					tt.require.NoError(err)
+					mp, ok = pe.Event.GetPayload().(*protocol.StreamEvent_MediaPayload)
+					tt.require.True(ok)
+					tt.require.Equal(mediaChunks[i], mp.MediaPayload.GetChunk().Data)
+				}
+			})
+		}
+	})
 }
 
 // TestCreateMediaStream_Legacy tests creating a media stream using endpoints for a non-media streams

@@ -875,6 +875,7 @@ message AddEventResponse {
 message AddMediaEventRequest {
     Envelope event = 1;
     CreationCookie creation_cookie = 2;
+    bool last = 3;
 }
 
 message AddMediaEventResponse {
