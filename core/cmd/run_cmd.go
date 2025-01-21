@@ -40,6 +40,7 @@ func runServices(ctx context.Context, cfg *config.Config, stream bool, xchain bo
 		if r := recover(); r != nil {
 			fmt.Printf("Panic occurred: %v\n", r)
 			debug.PrintStack() // Print the stack trace
+			panic(r)
 		}
 	}()
 
