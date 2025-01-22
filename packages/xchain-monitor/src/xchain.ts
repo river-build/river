@@ -34,6 +34,10 @@ export interface XChainRequest {
     // checkResult will be defined for requests that had a result post. If a result was not posted,
     // then the entitlement gated failed to acheive quorum for any role id.
     checkResult: boolean | undefined
+
+    // For tracing in basescan, the transaction hash of the transaction that emitted the
+    // event for each role id.
+    txHashes: { [roleId: number]: Hex }
 }
 
 var blockCache: {
@@ -241,16 +245,18 @@ export async function scanBlockchainForXchainEvents(
                         roleId,
                         transactionId,
                     },
-                    '',
+                    'request for the same roleId already emitted',
                 )
             }
             request.requestedNodes[roleId] = selectedNodes
+            request.txHashes[roleId] = log.transactionHash
         } else {
             request = {
                 callerAddress: log.args.callerAddress,
                 contractAddress: log.args.contractAddress,
                 transactionId: transactionId,
                 requestedNodes: { [roleId]: selectedNodes },
+                txHashes: { [roleId]: log.transactionHash },
                 blockNumber,
                 responses: await scanForPostResults(
                     publicClient,
