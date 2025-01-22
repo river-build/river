@@ -3,7 +3,7 @@ import { Client } from '../client'
 import { DLogger, dlog, check } from '@river-build/dlog'
 import { LocalEpochSecret, LocalView } from './localView'
 import { MlsLogger } from './logger'
-import { IValueAwaiter, IndefiniteValueAwaiter } from './awaiter'
+import { IValueAwaiter, awaiter } from './awaiter'
 import { MlsEncryptedContentItem } from './types'
 import { DecryptedContent, EncryptedContent, toDecryptedContent } from '../encryptedContentTypes'
 import { MLS_ALGORITHM } from './constants'
@@ -71,7 +71,7 @@ export class MlsStream {
         this._localView = undefined
     }
 
-    public awaitActiveLocalView(): Promise<LocalView> {
+    public awaitActiveLocalView(timeoutMS?: number): Promise<LocalView> {
         if (this._localView?.status === 'active') {
             return Promise.resolve(this._localView)
         }
@@ -81,7 +81,7 @@ export class MlsStream {
         }
 
         if (this.awaitingActiveLocalView === undefined) {
-            const internalAwaiter: IndefiniteValueAwaiter<LocalView> = new IndefiniteValueAwaiter()
+            const internalAwaiter: IValueAwaiter<LocalView> = awaiter(timeoutMS)
             const promise = internalAwaiter.promise.finally(() => {
                 this.awaitingActiveLocalView = undefined
             })

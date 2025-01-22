@@ -85,6 +85,19 @@ export class MlsQueue {
         streamUpdate.confirmedEvents.push(event)
     }
 
+    public enqueueStreamUpdate(streamId: string) {
+        const existingStreamUpdate = this.streamUpdates.get(streamId)
+        if (existingStreamUpdate !== undefined) {
+            return
+        }
+        const emptyStreamUpdate = {
+            streamId,
+            snapshots: [],
+            confirmedEvents: [],
+        }
+        this.streamUpdates.set(streamId, emptyStreamUpdate)
+    }
+
     // Dequeue streams in round-robin fashion
     // Dequeue first stream that got inserted
     // TODO: Add limit for draining in one go

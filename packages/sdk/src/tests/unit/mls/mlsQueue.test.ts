@@ -17,6 +17,14 @@ describe('MlsQueueTests', () => {
         expect(queue.dequeueStreamUpdate()).toBeUndefined()
     })
 
+    it('should enqueue an empty stream update', () => {
+        queue.enqueueStreamUpdate(streamId)
+        expect(queue.dequeueStreamUpdate()).toMatchObject({
+            streamId,
+        })
+        expect(queue.dequeueStreamUpdate()).toBeUndefined()
+    })
+
     it('should enqueue a confirmed event', () => {
         const event = Symbol('event')
 

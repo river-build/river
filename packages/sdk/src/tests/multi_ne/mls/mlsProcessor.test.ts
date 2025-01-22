@@ -5,7 +5,7 @@
 import { makeTestClient } from '../../testUtils'
 import { Client } from '../../../client'
 import { Client as MlsClient, ClientOptions as MlsClientOptions } from '@river-build/mls-rs-wasm'
-import { dlog } from '@river-build/dlog'
+import { dlog, DLogger } from '@river-build/dlog'
 import { beforeEach, describe, expect } from 'vitest'
 import { MlsStream } from '../../../mls/mlsStream'
 import { MlsProcessor, MlsProcessorOpts } from '../../../mls/mlsProcessor'
@@ -65,6 +65,7 @@ describe('MlsProcessorTests', () => {
         processor: MlsProcessor
         queue: MlsQueue
         stream: MlsStream
+        log: DLogger
     }
 
     let alice: TestClientWithProcessor
@@ -86,6 +87,7 @@ describe('MlsProcessorTests', () => {
             stream,
             processor,
             queue,
+            log: log.extend(testClient.nickname),
         }
     }
 
@@ -312,18 +314,19 @@ describe('MlsProcessorTests', () => {
     })
 
     describe('encryptMessage', () => {
-        const encryptText = (c: TestClientWithProcessor, message: string) =>
+        const encryptText = (c: TestClientWithProcessor, message: string, timeout?: number) =>
             c.processor.encryptMessage(
                 alice.stream,
                 new ChannelMessage_Post_Content_Text({
                     body: message,
                 }),
+                timeout,
             )
 
         it('alice can encrypt message after manually waiting to join', async () => {
             await tryJoin(alice)
             await wait([alice], counts({ accepted: 1 }))
-            const encrypted = await encryptText(alice, 'hello')
+            const encrypted = await encryptText(alice, 'hello', 3_000)
 
             expect(encrypted.algorithm).toBe(MLS_ALGORITHM)
             expect(encrypted.mls?.ciphertext.length).toBeGreaterThan(0)
@@ -332,7 +335,7 @@ describe('MlsProcessorTests', () => {
 
         it('alice can encrypt message without joining', { timeout: 10_000 }, async () => {
             const [encrypted] = await Promise.all([
-                encryptText(alice, 'hello'),
+                encryptText(alice, 'hello', 3_000),
                 wait([alice], counts({ accepted: 1 })),
             ])
 
@@ -346,7 +349,6 @@ describe('MlsProcessorTests', () => {
             { timeout: 10_000 },
             async () => {
                 const perClient = async (c: TestClientWithProcessor) => {
-                    log.extend(c.nickname)('joining')
                     await expect
                         .poll(
                             async () => {
@@ -359,7 +361,7 @@ describe('MlsProcessorTests', () => {
                         .toBeTruthy()
                     await vi.waitFor(
                         () => {
-                            return encryptText(c, `hello from ${c.nickname}`)
+                            return encryptText(c, `hello from ${c.nickname}`, 3_000)
                         },
                         { timeout: 5_000 },
                     )
@@ -367,5 +369,31 @@ describe('MlsProcessorTests', () => {
                 await Promise.all(clients.map(perClient))
             },
         )
+
+        // TODO: Needs some work
+        it.skip('everyone can encrypt message without joining', { timeout: 20_000 }, async () => {
+            // const perClient = (c: TestClientWithProcessor) => {
+            //
+            //     return vi.waitFor(
+            //         async () => {
+            //             c.log('encrypting')
+            //             await c.stream
+            //                 .handleStreamUpdate()
+            //                 .then(() => encryptText(c`hello from ${c.nickname}`))
+            //                 .finally(() => c.log('done'))
+            //             // try {
+            //             //     await encryptText(c, `hello from ${c.nickname}`, 15_000)
+            //             // } catch (e) {
+            //             //     c.log('error', e)
+            //             //     throw e
+            //             // }
+            //             c.log('done')
+            //         },
+            //         { timeout: 20_000 },
+            //     )
+            // }
+            // const data = await Promise.all(clients.map(perClient))
+            // expect(data.length).toBe(3)
+        })
     })
 })

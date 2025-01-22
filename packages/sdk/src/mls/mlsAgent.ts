@@ -36,6 +36,7 @@ export class MlsAgent {
     private readonly enabledStreams: Set<string> = new Set<string>()
 
     private log: MlsLogger
+    private started: boolean = false
 
     public constructor(
         client: Client,
@@ -64,6 +65,7 @@ export class MlsAgent {
             'streamEncryptionAlgorithmUpdated',
             this.onStreamEncryptionAlgorithmUpdated,
         )
+        this.started = true
     }
 
     public stop(): void {
@@ -73,11 +75,7 @@ export class MlsAgent {
             'streamEncryptionAlgorithmUpdated',
             this.onStreamEncryptionAlgorithmUpdated,
         )
-    }
-
-    public enableAndParticipate(streamId: string): Promise<void> {
-        this.enableStream(streamId)
-        return this.handleStreamUpdate(streamId)
+        this.started = false
     }
 
     public enableStream(streamId: string) {
@@ -85,6 +83,7 @@ export class MlsAgent {
         if (!this.streams.has(streamId)) {
             this.streams.set(streamId, new MlsStream(streamId, this.client))
         }
+        this.queue.enqueueStreamUpdate(streamId)
     }
 
     public disableStream(streamId: string) {
@@ -118,6 +117,11 @@ export class MlsAgent {
             await mlsStream.handleStreamUpdate()
             await this.processor.initializeOrJoinGroup(mlsStream)
             await this.processor.announceEpochSecrets(mlsStream)
+        }
+
+        // TODO: This should not be needed
+        if (this.enabledStreams.has(streamId) && this.started) {
+            this.queue.enqueueStreamUpdate(streamId)
         }
     }
 }

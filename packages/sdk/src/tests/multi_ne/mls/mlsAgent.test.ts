@@ -153,7 +153,7 @@ describe('MlsAgentTests', () => {
     describe('enableAndParticipate', () => {
         test('alice can participate', async () => {
             // manually seed the viewAdapter
-            await alice.agent.enableAndParticipate(streamId)
+            alice.agent.enableStream(streamId)
             await expect
                 .poll(() => alice.agent.streams.get(streamId)?.localView?.status, {
                     timeout: 10_000,
@@ -163,7 +163,7 @@ describe('MlsAgentTests', () => {
 
         test('alice starts with one epoch secret', async () => {
             // manually seed the viewAdapter
-            await alice.agent.enableAndParticipate(streamId)
+            alice.agent.enableStream(streamId)
             await expect
                 .poll(() => howManyOpenKeys(alice), {
                     timeout: 10_000,
@@ -172,9 +172,9 @@ describe('MlsAgentTests', () => {
         })
 
         test('alice generates new epoch secret after bob participates', async () => {
-            await alice.agent.enableAndParticipate(streamId)
+            alice.agent.enableStream(streamId)
             await expect.poll(() => howManyActive(), { timeout: 10_000 }).toBe(1)
-            await bob.agent.enableAndParticipate(streamId)
+            bob.agent.enableStream(streamId)
             await expect
                 .poll(() => howManyOpenKeys(alice), {
                     timeout: 10_000,
@@ -183,7 +183,7 @@ describe('MlsAgentTests', () => {
         })
 
         test('eventually all clients will be able to join the group', async () => {
-            await Promise.all(clients.map((client) => client.agent.enableAndParticipate(streamId)))
+            clients.forEach((client) => client.agent.enableStream(streamId))
 
             await expect.poll(() => howManyActive(), { timeout: 10_000 }).toBe(3)
         })
@@ -191,9 +191,9 @@ describe('MlsAgentTests', () => {
 
     describe('announceEpochSecrets', () => {
         test('alice announces her keys after bob participates', async () => {
-            await alice.agent.enableAndParticipate(streamId)
+            alice.agent.enableStream(streamId)
             await expect.poll(() => howManyActive(), { timeout: 10_000 }).toBe(1)
-            await bob.agent.enableAndParticipate(streamId)
+            bob.agent.enableStream(streamId)
             await expect
                 .poll(() => howManySealedKeys(bob), {
                     timeout: 10_000,
@@ -202,9 +202,9 @@ describe('MlsAgentTests', () => {
         })
 
         test('bob opens keys that alice announced', async () => {
-            await alice.agent.enableAndParticipate(streamId)
+            alice.agent.enableStream(streamId)
             await expect.poll(() => howManyActive(), { timeout: 10_000 }).toBe(1)
-            await bob.agent.enableAndParticipate(streamId)
+            bob.agent.enableStream(streamId)
             await expect
                 .poll(() => howManyOpenKeys(bob), {
                     timeout: 10_000,
@@ -213,7 +213,7 @@ describe('MlsAgentTests', () => {
         })
 
         test('eventually all clients will get all the keys', async () => {
-            await Promise.all(clients.map((client) => client.agent.enableAndParticipate(streamId)))
+            clients.forEach((client) => client.agent.enableStream(streamId))
 
             await Promise.all([
                 ...clients.map((c) =>
