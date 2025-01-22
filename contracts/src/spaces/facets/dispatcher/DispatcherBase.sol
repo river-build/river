@@ -24,8 +24,9 @@ abstract contract DispatcherBase is IDispatcherBase {
   }
 
   function _captureValue(bytes32 transactionId, uint256 value) internal {
-    if (value == 0) revert Dispatcher__InvalidValue();
-    if (msg.value != value) revert Dispatcher__InvalidValue();
+    if (value == 0) CustomRevert.revertWith(Dispatcher__InvalidValue.selector);
+    if (msg.value != value)
+      CustomRevert.revertWith(Dispatcher__InvalidValue.selector);
 
     DispatcherStorage.Layout storage ds = DispatcherStorage.layout();
     ds.transactionBalance[transactionId] += value;
@@ -85,7 +86,7 @@ abstract contract DispatcherBase is IDispatcherBase {
 
     // revert if the transaction already exists
     if (_getCapturedData(transactionId).length > 0) {
-      revert Dispatcher__TransactionAlreadyExists();
+      CustomRevert.revertWith(Dispatcher__TransactionAlreadyExists.selector);
     }
 
     _captureData(transactionId, data);

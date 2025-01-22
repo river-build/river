@@ -132,7 +132,8 @@ abstract contract MembershipJoin is
   function _validatePayment() internal view {
     if (msg.value > 0) {
       uint256 requiredAmount = _getRequiredAmount();
-      if (msg.value != requiredAmount) revert Membership__InvalidPayment();
+      if (msg.value != requiredAmount)
+        CustomRevert.revertWith(Membership__InvalidPayment.selector);
     }
   }
 
@@ -143,9 +144,7 @@ abstract contract MembershipJoin is
     if (referral.userReferral != address(0)) {
       if (
         referral.userReferral == receiver || referral.userReferral == msg.sender
-      ) {
-        revert Membership__InvalidAddress();
-      }
+      ) CustomRevert.revertWith(Membership__InvalidAddress.selector);
     }
   }
 
@@ -225,7 +224,8 @@ abstract contract MembershipJoin is
   /// @param transactionId The unique identifier for this join transaction
   function _chargeForJoinSpace(bytes32 transactionId) internal {
     uint256 payment = _getCapturedValue(transactionId);
-    if (payment == 0) revert Membership__InsufficientPayment();
+    if (payment == 0)
+      CustomRevert.revertWith(Membership__InsufficientPayment.selector);
 
     (bytes4 selector, address sender, address receiver, ) = abi.decode(
       _getCapturedData(transactionId),
@@ -233,7 +233,7 @@ abstract contract MembershipJoin is
     );
 
     if (selector != IMembership.joinSpace.selector) {
-      revert Membership__InvalidTransactionType();
+      CustomRevert.revertWith(Membership__InvalidTransactionType.selector);
     }
 
     uint256 protocolFee = _collectProtocolFee(sender, payment);
@@ -253,7 +253,8 @@ abstract contract MembershipJoin is
   /// @param transactionId The unique identifier for this join transaction
   function _chargeForJoinSpaceWithReferral(bytes32 transactionId) internal {
     uint256 payment = _getCapturedValue(transactionId);
-    if (payment == 0) revert Membership__InsufficientPayment();
+    if (payment == 0)
+      CustomRevert.revertWith(Membership__InsufficientPayment.selector);
 
     (
       bytes4 selector,
@@ -266,7 +267,7 @@ abstract contract MembershipJoin is
       );
 
     if (selector != IMembership.joinSpaceWithReferral.selector) {
-      revert Membership__InvalidTransactionType();
+      CustomRevert.revertWith(Membership__InvalidTransactionType.selector);
     }
 
     ReferralTypes memory referral = abi.decode(referralData, (ReferralTypes));
@@ -346,11 +347,12 @@ abstract contract MembershipJoin is
   /// @notice Validates if a user can join the space
   /// @param receiver The address that will receive the membership token
   function _validateJoinSpace(address receiver) internal view {
-    if (receiver == address(0)) revert Membership__InvalidAddress();
+    if (receiver == address(0))
+      CustomRevert.revertWith(Membership__InvalidAddress.selector);
     if (
       _getMembershipSupplyLimit() != 0 &&
       _totalSupply() >= _getMembershipSupplyLimit()
-    ) revert Membership__MaxSupplyReached();
+    ) CustomRevert.revertWith(Membership__MaxSupplyReached.selector);
   }
 
   /// @notice Refunds the balance to the sender if necessary

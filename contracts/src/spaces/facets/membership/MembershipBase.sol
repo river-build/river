@@ -100,7 +100,8 @@ abstract contract MembershipBase is IMembershipBase {
 
     // Calculate the amount of tokens transferred
     uint256 finalAmount = balanceAfter - balanceBefore;
-    if (finalAmount != amount) revert Membership__InsufficientPayment();
+    if (finalAmount != amount)
+      CustomRevert.revertWith(Membership__InsufficientPayment.selector);
 
     ds.tokenBalance += finalAmount;
     return finalAmount;
@@ -128,10 +129,11 @@ abstract contract MembershipBase is IMembershipBase {
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function _verifyPricingModule(address pricingModule) internal view {
-    if (pricingModule == address(0)) revert Membership__InvalidPricingModule();
+    if (pricingModule == address(0))
+      CustomRevert.revertWith(Membership__InvalidPricingModule.selector);
 
     if (!IPricingModules(_getSpaceFactory()).isPricingModule(pricingModule))
-      revert Membership__InvalidPricingModule();
+      CustomRevert.revertWith(Membership__InvalidPricingModule.selector);
   }
 
   function _setPricingModule(address newPricingModule) internal {
@@ -149,7 +151,8 @@ abstract contract MembershipBase is IMembershipBase {
   function _verifyPrice(uint256 newPrice) internal view {
     uint256 minFee = IPlatformRequirements(_getSpaceFactory())
       .getMembershipFee();
-    if (newPrice < minFee) revert Membership__PriceTooLow();
+    if (newPrice < minFee)
+      CustomRevert.revertWith(Membership__PriceTooLow.selector);
   }
 
   /// @dev Makes it virtual to allow other pricing strategies
@@ -206,7 +209,7 @@ abstract contract MembershipBase is IMembershipBase {
     if (
       newAllocation >
       IPlatformRequirements(ds.spaceFactory).getMembershipMintLimit()
-    ) revert Membership__InvalidFreeAllocation();
+    ) CustomRevert.revertWith(Membership__InvalidFreeAllocation.selector);
   }
 
   function _setMembershipFreeAllocation(uint256 newAllocation) internal {
@@ -233,7 +236,8 @@ abstract contract MembershipBase is IMembershipBase {
     uint256 totalSupply
   ) internal pure {
     // if the new limit is less than the current total supply, revert
-    if (newLimit < totalSupply) revert Membership__InvalidMaxSupply();
+    if (newLimit < totalSupply)
+      CustomRevert.revertWith(Membership__InvalidMaxSupply.selector);
   }
 
   function _setMembershipSupplyLimit(uint256 newLimit) internal {

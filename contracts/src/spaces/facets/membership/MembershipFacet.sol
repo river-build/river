@@ -26,13 +26,15 @@ contract MembershipFacet is
 
   /// @inheritdoc IMembership
   function withdraw(address account) external onlyOwner nonReentrant {
-    if (account == address(0)) revert Membership__InvalidAddress();
+    if (account == address(0))
+      CustomRevert.revertWith(Membership__InvalidAddress.selector);
 
     // get the balance
     uint256 balance = _getCreatorBalance();
 
     // verify the balance is not 0
-    if (balance == 0) revert Membership__InsufficientPayment();
+    if (balance == 0)
+      CustomRevert.revertWith(Membership__InsufficientPayment.selector);
 
     // reset the balance
     _setCreatorBalance(0);
@@ -76,12 +78,13 @@ contract MembershipFacet is
   function renewMembership(uint256 tokenId) external payable nonReentrant {
     address receiver = _ownerOf(tokenId);
 
-    if (receiver == address(0)) revert Membership__InvalidAddress();
+    if (receiver == address(0))
+      CustomRevert.revertWith(Membership__InvalidAddress.selector);
 
     // validate if the current expiration is 365 or more
     uint256 expiration = _expiresAt(tokenId);
     if (expiration - block.timestamp >= _getMembershipDuration())
-      revert Membership__NotExpired();
+      CustomRevert.revertWith(Membership__NotExpired.selector);
 
     // allocate protocol and membership fees
     uint256 membershipPrice = _getMembershipRenewalPrice(
@@ -169,7 +172,7 @@ contract MembershipFacet is
 
     // verify newLimit is not more than the max supply limit
     if (currentSupplyLimit != 0 && newAllocation > currentSupplyLimit)
-      revert Membership__InvalidFreeAllocation();
+      CustomRevert.revertWith(Membership__InvalidFreeAllocation.selector);
 
     // verify newLimit is not more than the allowed platform limit
     _verifyFreeAllocation(newAllocation);
