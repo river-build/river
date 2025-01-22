@@ -19,9 +19,9 @@ contract MembershipFacet is
   ReentrancyGuard,
   Facet
 {
-  // =============================================================
-  //                           Funds
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                            FUNDS                           */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   /// @inheritdoc IMembership
   function withdraw(address account) external onlyOwner nonReentrant {
@@ -49,9 +49,9 @@ contract MembershipFacet is
     return _getCreatorBalance();
   }
 
-  // =============================================================
-  //                           Join
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                            JOIN                            */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   /// @inheritdoc IMembership
   function joinSpace(address receiver) external payable nonReentrant {
@@ -67,9 +67,9 @@ contract MembershipFacet is
     _joinSpaceWithReferral(receiver, referral);
   }
 
-  // =============================================================
-  //                           Renewal
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           RENEWAL                          */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   /// @inheritdoc IMembership
   function renewMembership(uint256 tokenId) external payable nonReentrant {
@@ -102,18 +102,19 @@ contract MembershipFacet is
     return _expiresAt(tokenId);
   }
 
-  // =============================================================
-  //                           Duration
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                          DURATION                          */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   /// @inheritdoc IMembership
   function getMembershipDuration() external view returns (uint64) {
     return _getMembershipDuration();
   }
 
-  // =============================================================
-  //                        Pricing Module
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                       PRICING MODULE                       */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   /// @inheritdoc IMembership
   function setMembershipPricingModule(
     address pricingModule
@@ -127,9 +128,9 @@ contract MembershipFacet is
     return _getPricingModule();
   }
 
-  // =============================================================
-  //                           Pricing
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           PRICING                          */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   /// @inheritdoc IMembership
   function setMembershipPrice(uint256 newPrice) external onlyOwner {
@@ -154,9 +155,10 @@ contract MembershipFacet is
     return _getProtocolFee(_getMembershipPrice(_totalSupply()));
   }
 
-  // =============================================================
-  //                           Allocation
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                         ALLOCATION                         */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   /// @inheritdoc IMembership
   function setMembershipFreeAllocation(
     uint256 newAllocation
@@ -178,9 +180,9 @@ contract MembershipFacet is
     return _getMembershipFreeAllocation();
   }
 
-  // =============================================================
-  //                    Token Max Supply Limit
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                        SUPPLY LIMIT                        */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   /// @inheritdoc IMembership
   function setMembershipLimit(uint256 newLimit) external onlyOwner {
@@ -193,18 +195,19 @@ contract MembershipFacet is
     return _getMembershipSupplyLimit();
   }
 
-  // =============================================================
-  //                           Currency
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                          CURRENCY                          */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   /// @inheritdoc IMembership
   function getMembershipCurrency() external view returns (address) {
     return _getMembershipCurrency();
   }
 
-  // =============================================================
-  //                           Image
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                            IMAGE                           */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   function setMembershipImage(string calldata newImage) external onlyOwner {
     _setMembershipImage(newImage);
   }
@@ -213,9 +216,9 @@ contract MembershipFacet is
     return _getMembershipImage();
   }
 
-  // =============================================================
-  //                           Factory
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           FACTORY                          */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   /// @inheritdoc IMembership
   function getSpaceFactory() external view returns (address) {

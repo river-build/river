@@ -40,9 +40,9 @@ abstract contract MembershipBase is IMembershipBase {
     }
   }
 
-  // =============================================================
-  //                           Membership
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                         MEMBERSHIP                         */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function _collectProtocolFee(
     address buyer,
@@ -113,17 +113,19 @@ abstract contract MembershipBase is IMembershipBase {
     MembershipStorage.layout().tokenBalance = newBalance;
   }
 
-  // =============================================================
-  //                           Duration
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                          DURATION                          */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   function _getMembershipDuration() internal view returns (uint64) {
     MembershipStorage.Layout storage ds = MembershipStorage.layout();
     return IPlatformRequirements(ds.spaceFactory).getMembershipDuration();
   }
 
-  // =============================================================
-  //                        Pricing Module
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                       PRICING MODULE                       */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   function _verifyPricingModule(address pricingModule) internal view {
     if (pricingModule == address(0)) revert Membership__InvalidPricingModule();
 
@@ -139,9 +141,10 @@ abstract contract MembershipBase is IMembershipBase {
     return MembershipStorage.layout().pricingModule;
   }
 
-  // =============================================================
-  //                           Pricing
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           PRICING                          */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   function _verifyPrice(uint256 newPrice) internal view {
     uint256 minFee = IPlatformRequirements(_getSpaceFactory())
       .getMembershipFee();
@@ -185,15 +188,16 @@ abstract contract MembershipBase is IMembershipBase {
   ) internal view returns (uint256) {
     MembershipStorage.Layout storage ds = MembershipStorage.layout();
 
-    if (ds.renewalPriceByTokenId[tokenId] > 0)
-      return ds.renewalPriceByTokenId[tokenId];
+    uint256 renewalPrice = ds.renewalPriceByTokenId[tokenId];
+    if (renewalPrice != 0) return renewalPrice;
 
     return _getMembershipPrice(totalSupply);
   }
 
-  // =============================================================
-  //                           Allocation
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                         ALLOCATION                         */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   function _verifyFreeAllocation(uint256 newAllocation) internal view {
     MembershipStorage.Layout storage ds = MembershipStorage.layout();
 
@@ -219,9 +223,10 @@ abstract contract MembershipBase is IMembershipBase {
     return IPlatformRequirements(ds.spaceFactory).getMembershipMintLimit();
   }
 
-  // =============================================================
-  //                   Token Max Supply Limits
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                        SUPPLY LIMIT                        */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   function _verifyMaxSupply(
     uint256 newLimit,
     uint256 totalSupply
@@ -238,23 +243,26 @@ abstract contract MembershipBase is IMembershipBase {
     return MembershipStorage.layout().membershipMaxSupply;
   }
 
-  // =============================================================
-  //                           Currency
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                          CURRENCY                          */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   function _getMembershipCurrency() internal view returns (address) {
     return MembershipStorage.layout().membershipCurrency;
   }
 
-  // =============================================================
-  //                           Factory
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           FACTORY                          */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   function _getSpaceFactory() internal view returns (address) {
     return MembershipStorage.layout().spaceFactory;
   }
 
-  // =============================================================
-  //                           Image
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                            IMAGE                           */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   function _getMembershipImage() internal view returns (string memory) {
     return MembershipStorage.layout().membershipImage;
   }
