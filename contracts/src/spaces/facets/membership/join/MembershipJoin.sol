@@ -8,13 +8,14 @@ import {IImplementationRegistry} from "contracts/src/factory/facets/registry/IIm
 import {IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.sol";
-import {ITownsPointsBase} from "contracts/src/airdrop/points/ITownsPoints.sol";
+import {ITownsPoints, ITownsPointsBase} from "contracts/src/airdrop/points/ITownsPoints.sol";
 
 // libraries
-import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
-import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
-import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
+import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
+import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
+import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 
 // contracts
 import {MembershipBase} from "contracts/src/spaces/facets/membership/MembershipBase.sol";
@@ -24,7 +25,6 @@ import {Entitled} from "contracts/src/spaces/facets/Entitled.sol";
 import {PrepayBase} from "contracts/src/spaces/facets/prepay/PrepayBase.sol";
 import {ReferralsBase} from "contracts/src/spaces/facets/referrals/ReferralsBase.sol";
 import {EntitlementGatedBase} from "contracts/src/spaces/facets/gated/EntitlementGatedBase.sol";
-import {TownsPoints} from "contracts/src/airdrop/points/TownsPoints.sol";
 
 /// @title MembershipJoin
 /// @notice Handles the logic for joining a space, including entitlement checks and payment processing
@@ -41,7 +41,7 @@ abstract contract MembershipJoin is
   PrepayBase
 {
   /// @notice Constant representing the permission to join a space
-  bytes32 constant JOIN_SPACE =
+  bytes32 internal constant JOIN_SPACE =
     bytes32(abi.encodePacked(Permissions.JoinSpace));
 
   /// @notice Encodes data for joining a space
@@ -310,7 +310,7 @@ abstract contract MembershipJoin is
     _captureData(transactionId, "");
 
     // calculate points and credit them
-    TownsPoints pointsToken = TownsPoints(
+    ITownsPoints pointsToken = ITownsPoints(
       IImplementationRegistry(_getSpaceFactory()).getLatestImplementation(
         bytes32("RiverAirdrop")
       )

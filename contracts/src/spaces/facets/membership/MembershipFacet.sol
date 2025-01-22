@@ -7,11 +7,12 @@ import {IMembershipPricing} from "./pricing/IMembershipPricing.sol";
 
 // libraries
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
+import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 
 // contracts
+import {Facet} from "@river-build/diamond/src/facets/Facet.sol";
 import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
 import {MembershipJoin} from "./join/MembershipJoin.sol";
-import {Facet} from "@river-build/diamond/src/facets/Facet.sol";
 
 contract MembershipFacet is
   IMembership,

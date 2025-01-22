@@ -5,6 +5,7 @@ pragma solidity ^0.8.23;
 import {IDispatcherBase} from "./IDispatcher.sol";
 
 // libraries
+import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 
 // contracts
 import {DispatcherStorage} from "./DispatcherStorage.sol";

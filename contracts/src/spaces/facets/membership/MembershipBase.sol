@@ -10,10 +10,11 @@ import {IPricingModules} from "contracts/src/factory/facets/architect/pricing/IP
 
 // libraries
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
+import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
+import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 import {MembershipStorage} from "./MembershipStorage.sol";
 
 // contracts
-import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 
 abstract contract MembershipBase is IMembershipBase {
   function __MembershipBase_init(
