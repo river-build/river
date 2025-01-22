@@ -90,12 +90,12 @@ type aeMlsInitializeGroupRules struct {
 }
 
 type aeMlsExternalJoinRules struct {
-	params          *aeParams
+	params       *aeParams
 	externalJoin *MemberPayload_Mls_ExternalJoin
 }
 
 type aeMlsEpochSecrets struct {
-	params *aeParams
+	params  *aeParams
 	secrets *MemberPayload_Mls_EpochSecrets
 }
 
@@ -607,7 +607,7 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 			check(ru.validMlsInitializeGroup)
 	case *MemberPayload_Mls_ExternalJoin_:
 		ru := &aeMlsExternalJoinRules{
-			params: 	  params,
+			params:       params,
 			externalJoin: content.ExternalJoin,
 		}
 		return aeBuilder().
@@ -616,7 +616,7 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 			check(ru.validMlsExternalJoin)
 	case *MemberPayload_Mls_EpochSecrets_:
 		ru := &aeMlsEpochSecrets{
-			params: params,
+			params:  params,
 			secrets: content.EpochSecrets,
 		}
 		return aeBuilder().
