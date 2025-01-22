@@ -39,6 +39,12 @@ export interface XChainRequest {
 var blockCache: {
     [blockNumString: string]: BlockType
 } = {}
+
+// scanForPostResults will search for all result post calls for a particular transaction id starting at
+// requestBlockNum, not just for the posts related to a particular role id. This is fine because we expect
+// all requests for all role ids for a particular transaction to be emitted in the same block, so we can
+// always expect to see all responses after this block number. It only needs to be called once per transactionId,
+// not once per request event.
 async function scanForPostResults(
     client: PublicClientType,
     resolverAddress: Address,
@@ -48,7 +54,8 @@ async function scanForPostResults(
     var summary: PostResultSummary = {}
 
     for (
-        var i = requestBlockNum;
+        // Expect responses after the request block
+        var i = requestBlockNum + BigInt(1);
         i < requestBlockNum + BigInt(config.transactionValidBlocks);
         i++
     ) {
