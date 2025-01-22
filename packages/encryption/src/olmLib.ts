@@ -22,14 +22,14 @@ export function isGroupEncryptionAlgorithmId(value: string): value is GroupEncry
     return Object.values(GroupEncryptionAlgorithmId).includes(value as GroupEncryptionAlgorithmId)
 }
 
-type Unset = { kind: 'unset' }
+type Unset = { kind: 'unset'; value: GroupEncryptionAlgorithmId.GroupEncryption }
 type Matched = { kind: 'matched'; value: GroupEncryptionAlgorithmId }
 type Unrecognized = { kind: 'unrecognized'; value: string }
 
 export function parseGroupEncryptionAlgorithmId(value: string): Matched | Unset | Unrecognized {
     if (value === '') {
         // for backwards compatibility, historically there were places where this was not defined
-        return { kind: 'unset' }
+        return { kind: 'unset', value: GroupEncryptionAlgorithmId.GroupEncryption }
     }
     if (isGroupEncryptionAlgorithmId(value)) {
         return { kind: 'matched', value: value as GroupEncryptionAlgorithmId }
