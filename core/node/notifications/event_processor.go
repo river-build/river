@@ -47,7 +47,7 @@ const MaxWebPushAllowedNotificationStreamEventPayloadSize = 3 * 1024
 // Note: this value is too high. When APN returns a http 413 the notification is sent again
 // with the stream event dropped. This is a limit that we know will fail due to this error
 // and immediately strip the stream event from the notification payload before trying it.
-const MaxAPNAllowedNotificationStreamEventPayloadSize = 4000
+const MaxAPNAllowedNotificationStreamEventPayloadSize = 4096
 
 // MessageToNotificationsProcessor implements events.StreamEventListener and for each stream event determines
 // if it needs to send a notification, to who and sends it.
@@ -179,7 +179,7 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 			return false
 		}
 
-		switch event.Event.Payload.(type) {
+		switch payload := event.Event.Payload.(type) {
 		case *StreamEvent_DmChannelPayload:
 			if p.onDMChannelPayload(channelID, participant, pref, event) {
 				usersToNotify[participant] = pref
@@ -199,6 +199,29 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 				recipients.Add(participant)
 			} else {
 				p.log.Errorw("Space channel misses spaceID", "channel", channelID)
+			}
+		case *StreamEvent_MemberPayload:
+			switch payload.MemberPayload.Content.(type) {
+			// for member payloads we need to figure out what kind of stream we're in before we can check prefs
+			case *MemberPayload_MemberBlockchainTransaction_:
+				if spaceID != nil && shared.ValidChannelStreamId(&channelID) {
+					if p.onSpaceChannelPayload(*spaceID, channelID, participant, pref, event) {
+						usersToNotify[participant] = pref
+					}
+					recipients.Add(participant)
+				} else if shared.ValidDMChannelStreamId(&channelID) {
+					if p.onDMChannelPayload(channelID, participant, pref, event) {
+						usersToNotify[participant] = pref
+					}
+					recipients.Add(participant)
+				} else if shared.ValidGDMChannelStreamId(&channelID) {
+					if p.onGDMChannelPayload(channelID, participant, pref, event) {
+						usersToNotify[participant] = pref
+					}
+					recipients.Add(participant)
+				} else {
+					p.log.Error("Unexpected stream ID", "channel", channelID)
+				}
 			}
 		}
 
@@ -530,7 +553,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 				continue
 			}
 
-			subscriptionExpired, statusCode, err := p.sendAPNNotification(channelID, sub, event, apnPayload)
+			subscriptionExpired, statusCode, err := p.sendAPNNotification(channelID, sub, event, apnPayload, sub.PushVersion)
 
 			// APN can return an error that the payload is too large, drop the (stream)event from the payload and retry.
 			// The client can handle notifications with no (stream)event and doesn't show a preview to the user.
@@ -538,7 +561,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 				if _, exists := apnPayload["event"]; exists {
 					delete(apnPayload, "event")
 					p.log.Infow("Payload too large, retry notification with event stripped", "event", event.Hash)
-					subscriptionExpired, _, err = p.sendAPNNotification(channelID, sub, event, apnPayload)
+					subscriptionExpired, _, err = p.sendAPNNotification(channelID, sub, event, apnPayload, sub.PushVersion)
 				}
 			}
 
@@ -593,6 +616,7 @@ func (p *MessageToNotificationsProcessor) sendAPNNotification(
 	sub *types.APNPushSubscription,
 	event *events.ParsedEvent,
 	content map[string]interface{},
+	payloadVersion NotificationPushVersion,
 ) (bool, int, error) {
 	// lint:ignore context.Background() is fine here
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -612,5 +636,8 @@ func (p *MessageToNotificationsProcessor) sendAPNNotification(
 			"notification", notificationPayload)
 	}
 
-	return p.notifier.SendApplePushNotification(ctx, sub, event.Hash, notificationPayload)
+	_, containsStreamEvent := content["event"]
+
+	return p.notifier.SendApplePushNotification(
+		ctx, sub, event.Hash, notificationPayload, containsStreamEvent)
 }
