@@ -10,6 +10,8 @@ import { beforeEach, describe, expect } from 'vitest'
 import { MlsStream } from '../../../mls/mlsStream'
 import { MlsProcessor, MlsProcessorOpts } from '../../../mls/mlsProcessor'
 import { MlsQueue } from '../../../mls/mlsQueue'
+import { ChannelMessage_Post_Content_Text } from '@river-build/proto'
+import { MLS_ALGORITHM } from '../../../mls'
 
 const encoder = new TextEncoder()
 
@@ -141,37 +143,68 @@ describe('MlsProcessorTests', () => {
         processed?: number
     }
 
-    function waitUntilClientsObserve(
+    const counts = (c: Counts) => {
+        const accepted = c.accepted ?? -1
+        const rejected = c.rejected ?? -1
+        const processed = c.rejected ?? -1
+
+        return (s: MlsStream) =>
+            s.onChainView.accepted.size >= accepted &&
+            s.onChainView.rejected.size >= rejected &&
+            s.onChainView.processedCount >= processed
+    }
+
+    async function check(
+        client: TestClientWithProcessor,
+        pred: (v: MlsStream, nickname: string) => boolean,
+    ): Promise<boolean> {
+        await client.stream.handleStreamUpdate()
+        return pred(client.stream, client.nickname)
+    }
+
+    async function joinAndCheck(
+        client: TestClientWithProcessor,
+        pred: (v: MlsStream, nickname: string) => boolean,
+    ): Promise<boolean> {
+        await client.processor.initializeOrJoinGroup(client.stream)
+        await client.stream.handleStreamUpdate()
+        return pred(client.stream, client.nickname)
+    }
+
+    const sealedSecrets = (n: number) => (s: MlsStream, _nickname: string) =>
+        s.onChainView.sealedEpochSecrets.size >= n
+
+    const openSecrets = (n: number) => (s: MlsStream, _nickname: string) => {
+        const openSecrets = s.localView?.epochSecrets.size ?? -1
+        return openSecrets >= n
+    }
+
+    function wait(
         clients: TestClientWithProcessor[],
-        counts: Counts,
+        pred: (v: MlsStream, nickname: string) => boolean,
         opts = { timeout: 10_000 },
     ): Promise<void> {
-        const accepted = counts.accepted ?? -1
-        const rejected = counts.rejected ?? -1
-        const processed = counts.rejected ?? -1
+        return expect
+            .poll(async () => {
+                const results = await Promise.all(clients.map((client) => check(client, pred)))
+                return results.every((x) => x)
+            }, opts)
+            .toBeTruthy()
+    }
 
-        const perClient = async (client: TestClientWithProcessor) => {
-            // Manually tick the queue
-            await client.stream.handleStreamUpdate()
-            const view = client.stream.onChainView
-            // log.extend(client.nickname)(
-            //     'view',
-            //     view.accepted.size,
-            //     view.rejected.size,
-            //     view.processedCount,
-            // )
-            return (
-                view.accepted.size >= accepted &&
-                view.rejected.size >= rejected &&
-                view.processedCount >= processed
-            )
-        }
-
-        const promise = Promise.all(
-            clients.map((client) => expect.poll(() => perClient(client), opts).toBe(true)),
-        )
-
-        return expect(promise).resolves.not.toThrow()
+    function joinAndWait(
+        clients: TestClientWithProcessor[],
+        pred: (v: MlsStream, nickname: string) => boolean,
+        opts = { timeout: 10_000 },
+    ): Promise<void> {
+        return expect
+            .poll(async () => {
+                const results = await Promise.all(
+                    clients.map((client) => joinAndCheck(client, pred)),
+                )
+                return results.every((x) => x)
+            }, opts)
+            .toBeTruthy()
     }
 
     describe('initializeOrJoinGroup', () => {
@@ -180,7 +213,6 @@ describe('MlsProcessorTests', () => {
             await expect
                 .poll(
                     async () => {
-                        log('alice polls')
                         await alice.stream.handleStreamUpdate()
                         return alice.stream.onChainView
                     },
@@ -189,26 +221,26 @@ describe('MlsProcessorTests', () => {
                 .toBeDefined()
 
             await alice.processor.initializeOrJoinGroup(alice.stream)
-            await waitUntilClientsObserve(clients, { accepted: 1, processed: 1, rejected: 0 })
+            await wait(clients, counts({ accepted: 1, processed: 1, rejected: 0 }))
             expect(alice.stream.localView?.status).toBe('active')
         })
 
         test('only one client will be able to join the group', async () => {
-            await waitUntilClientsObserve(clients, { accepted: 0, processed: 0, rejected: 0 })
+            await wait(clients, counts({ accepted: 0, processed: 0, rejected: 0 }))
             const results = await Promise.allSettled(
                 clients.map((client) => client.processor.initializeOrJoinGroup(client.stream)),
             )
             const howManySucceeded = results.filter((r) => r.status === 'fulfilled').length
             expect(howManySucceeded).toBeGreaterThan(0)
 
-            await waitUntilClientsObserve(clients, { accepted: 1 })
+            await wait(clients, counts({ accepted: 1 }))
             const statuses = clients.map((client) => client.stream.localView?.status)
             const howManyActive = statuses.filter((s) => s === 'active').length
             expect(howManyActive).toBe(1)
         })
 
         test('eventually all clients will be able to join the group', async () => {
-            await waitUntilClientsObserve(clients, { accepted: 0, processed: 0, rejected: 0 })
+            await wait(clients, counts({ accepted: 0, processed: 0, rejected: 0 }))
 
             const tryJoin = () => {
                 return Promise.allSettled(
@@ -222,13 +254,13 @@ describe('MlsProcessorTests', () => {
                 clients.filter((client) => client.stream.localView?.status === 'active').length
 
             await tryJoin()
-            await waitUntilClientsObserve(clients, { accepted: 1 })
+            await wait(clients, counts({ accepted: 1 }))
             expect(howManyActive()).toBe(1)
             await tryJoin()
-            await waitUntilClientsObserve(clients, { accepted: 2 })
+            await wait(clients, counts({ accepted: 2 }))
             expect(howManyActive()).toBe(2)
             await tryJoin()
-            await waitUntilClientsObserve(clients, { accepted: 3 })
+            await wait(clients, counts({ accepted: 3 }))
             expect(howManyActive()).toBe(3)
         })
     })
@@ -241,44 +273,99 @@ describe('MlsProcessorTests', () => {
     describe('announceEpochSecrets', () => {
         it('alice announces keys to bob', async () => {
             await tryJoin(alice)
-            await waitUntilClientsObserve([bob], { accepted: 1 })
+            await wait([bob], counts({ accepted: 1 }))
             await tryJoin(bob)
-            await waitUntilClientsObserve([alice, bob], { accepted: 2 })
+            await wait([alice, bob], counts({ accepted: 2 }))
             await tryAnnounceSecrets(alice)
-            await waitUntilClientsObserve([alice, bob], { accepted: 3 })
+            await wait([alice, bob], sealedSecrets(1))
+            await wait([alice, bob], openSecrets(2))
             expect(bob.stream.onChainView.sealedEpochSecrets.size).toBe(1)
             expect(bob.stream.localView?.epochSecrets.size).toBe(2)
         })
 
         it('bob announces keys to charlie', async () => {
             await tryJoin(alice)
-            await waitUntilClientsObserve([bob], { accepted: 1 })
+            await wait([bob], counts({ accepted: 1 }))
             await tryJoin(bob)
-            await waitUntilClientsObserve([charlie], { accepted: 2 })
+            await wait([charlie], counts({ accepted: 2 }))
             await tryJoin(charlie)
-            await waitUntilClientsObserve([bob], { accepted: 3 })
+            await wait([bob], counts({ accepted: 3 }))
             await tryAnnounceSecrets(bob)
-            await waitUntilClientsObserve([charlie], { accepted: 4 })
+            await wait([charlie], counts({ accepted: 4 }))
             expect(charlie.stream.onChainView.sealedEpochSecrets.size).toBe(1)
             expect(charlie.stream.localView?.epochSecrets.size).toBe(2)
         })
 
         it('alice announces keys then bob announces keys', async () => {
             await tryJoin(alice)
-            await waitUntilClientsObserve([bob], { accepted: 1 })
+            await wait([bob], counts({ accepted: 1 }))
             await tryJoin(bob)
-            await waitUntilClientsObserve([alice], { accepted: 2 })
+            await wait([alice], counts({ accepted: 2 }))
             await tryAnnounceSecrets(alice)
-            await waitUntilClientsObserve([charlie], { accepted: 3 })
+            await wait([charlie], sealedSecrets(1))
             await tryJoin(charlie)
-            await waitUntilClientsObserve([alice], { accepted: 4 })
+            await wait([alice], counts({ accepted: 4 }))
             await tryAnnounceSecrets(alice)
-            await waitUntilClientsObserve([alice, bob, charlie], { accepted: 5 })
-
-            expect(bob.stream.onChainView.sealedEpochSecrets.size).toBe(2)
-            expect(bob.stream.localView?.epochSecrets.size).toBe(3)
-            expect(charlie.stream.onChainView.sealedEpochSecrets.size).toBe(2)
-            expect(charlie.stream.localView?.epochSecrets.size).toBe(3)
+            await wait([alice, bob, charlie], sealedSecrets(2))
+            await wait([alice, bob, charlie], openSecrets(3))
         })
+    })
+
+    describe('encryptMessage', () => {
+        const encryptText = (c: TestClientWithProcessor, message: string) =>
+            c.processor.encryptMessage(
+                alice.stream,
+                new ChannelMessage_Post_Content_Text({
+                    body: message,
+                }),
+            )
+
+        it('alice can encrypt message after manually waiting to join', async () => {
+            await tryJoin(alice)
+            await wait([alice], counts({ accepted: 1 }))
+            const encrypted = await encryptText(alice, 'hello')
+
+            expect(encrypted.algorithm).toBe(MLS_ALGORITHM)
+            expect(encrypted.mls?.ciphertext.length).toBeGreaterThan(0)
+            expect(encrypted.mls?.epoch).toBe(0n)
+        })
+
+        it('alice can encrypt message without joining', { timeout: 10_000 }, async () => {
+            const [encrypted] = await Promise.all([
+                encryptText(alice, 'hello'),
+                wait([alice], counts({ accepted: 1 })),
+            ])
+
+            expect(encrypted.algorithm).toBe(MLS_ALGORITHM)
+            expect(encrypted.mls?.ciphertext.length).toBeGreaterThan(0)
+            expect(encrypted.mls?.epoch).toBe(0n)
+        })
+
+        it(
+            'everyone can encrypt message after manually waiting to join',
+            { timeout: 10_000 },
+            async () => {
+                const perClient = async (c: TestClientWithProcessor) => {
+                    log.extend(c.nickname)('joining')
+                    await expect
+                        .poll(
+                            async () => {
+                                await c.stream.handleStreamUpdate()
+                                await tryJoin(c)
+                                return c.stream.localView?.status === 'active'
+                            },
+                            { timeout: 10_000 },
+                        )
+                        .toBeTruthy()
+                    await vi.waitFor(
+                        () => {
+                            return encryptText(c, `hello from ${c.nickname}`)
+                        },
+                        { timeout: 5_000 },
+                    )
+                }
+                await Promise.all(clients.map(perClient))
+            },
+        )
     })
 })

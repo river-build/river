@@ -57,14 +57,8 @@ export class MlsProcessor {
     // API needed by the client
     // TODO: How long will be the timeout here?
     public async encryptMessage(mlsStream: MlsStream, event: Message): Promise<EncryptedData> {
-        const localView = mlsStream.localView
-        if (localView === undefined) {
-            throw new Error('waiting for local view not supported yet')
-        }
-
-        if (localView.status !== 'active') {
-            throw new Error('unsupported operation for pending local view')
-        }
+        await this.initializeOrJoinGroup(mlsStream)
+        const localView = await mlsStream.awaitActiveLocalView()
 
         const lastEpochSecret = localView.latestEpochSecret()
         if (lastEpochSecret === undefined) {
