@@ -7,11 +7,16 @@ import { BlockType, createCustomPublicClient, PublicClientType } from './client'
 
 const logger = getLogger('xchain')
 
+// NodeVoteStatus maps to the type used by the contract to denote the node's evaluation
+// of the entitlement check. Subtlety to note here is that the 0 value is invalid in
+// any response post, and a result of false is actually enum value 2.
 enum NodeVoteStatus {
     Passed = 1,
     Failed,
 }
 
+// A single transaction may initiate several xchain requests according to each role that
+// must be checked, and each role is going to have
 type PostResultSummary = { [roleId: number]: RoleResultSummary }
 type RoleResultSummary = { [nodeAddress: string]: boolean }
 
@@ -19,9 +24,8 @@ export interface XChainRequest {
     callerAddress: Address
     contractAddress: Address
     transactionId: Hex
-    roleIds: bigint[]
     blockNumber: bigint
-    requestedNodes: Address[]
+    requestedNodes: { [roleId: number]: Address[] }
     // Nodes that have responded are recorded in this map of maps along with the response the
     // node gave for reach roleId - did the request pass or fail? If a node did not respond for
     // a particular role id, the map will be missing an entry for that node.
@@ -40,13 +44,8 @@ async function scanForPostResults(
     resolverAddress: Address,
     transactionId: Hex,
     requestBlockNum: bigint,
-    expectedNodes: Address[],
 ): Promise<PostResultSummary> {
     var summary: PostResultSummary = {}
-
-    const normalizedExpectedNodes = expectedNodes.map((address: Address): Address => {
-        return address.toLowerCase() as Address
-    })
 
     for (
         var i = requestBlockNum;
@@ -88,21 +87,6 @@ async function scanForPostResults(
                         continue
                     }
 
-                    const sender = tx.from.toLowerCase() as Address
-                    if (!normalizedExpectedNodes.includes(sender)) {
-                        logger.error(
-                            {
-                                expectedNodes,
-                                transactionId,
-                                txnHash: tx.hash,
-                                blockNumber: tx.blockNumber,
-                                sender,
-                            },
-                            'postEntitlementCheckResult was from an unexpected address',
-                        )
-                        continue
-                    }
-
                     if (
                         nodeVoteStatus !== NodeVoteStatus.Passed &&
                         nodeVoteStatus !== NodeVoteStatus.Failed
@@ -130,6 +114,7 @@ async function scanForPostResults(
 
                     const roleResult = summary[roleIdAsNumber]
 
+                    const sender = tx.from.toLowerCase() as Address
                     if (sender in roleResult) {
                         logger.error(
                             'postEntitlementCheckResult called twice by the same sender',
@@ -183,6 +168,12 @@ export async function scanBlockchainForXchainEvents(
     // role ids to check.
     const requests: { [transactionId: Hex]: XChainRequest } = {}
     for (const log of requestLogs) {
+        // We can cast as a number here because these start from 0 and it's unlikely that a
+        // space will have very big role ids.
+        const roleId = Number(log.args.roleId)
+        const transactionId = log.args.transactionId
+        const selectedNodes = [...log.args.selectedNodes]
+        const blockNumber = log.blockNumber
         var result: boolean | undefined
 
         const responseLogs = await publicClient.getContractEvents({
@@ -192,7 +183,7 @@ export async function scanBlockchainForXchainEvents(
             fromBlock: log.blockNumber,
             toBlock: log.blockNumber + BigInt(config.transactionValidBlocks),
             args: {
-                transactionId: log.args.transactionId,
+                transactionId,
             },
             strict: true,
         })
@@ -201,7 +192,7 @@ export async function scanBlockchainForXchainEvents(
             logger.error(
                 'Multiple results posted for the same entitlement request',
                 'transactionId',
-                log.args.transactionId,
+                transactionId,
                 'resolverContract',
                 log.args.contractAddress,
                 'callerAddress',
@@ -209,6 +200,8 @@ export async function scanBlockchainForXchainEvents(
             )
         }
         if (responseLogs.length >= 1) {
+            // Just take the first response if more than one exists - this should not happen
+            // and will cause an error log
             const response = responseLogs[0]
             if (response.args.result === NodeVoteStatus.Passed) {
                 result = true
@@ -220,9 +213,9 @@ export async function scanBlockchainForXchainEvents(
                     'transactionHash',
                     response.transactionHash,
                     'requestTransactionId',
-                    log.args.transactionId,
+                    transactionId,
                     'requestBlockNumber',
-                    log.blockNumber,
+                    blockNumber,
                     'responseBlockNumber',
                     response.blockNumber,
                 )
@@ -230,31 +223,43 @@ export async function scanBlockchainForXchainEvents(
         }
 
         var request: XChainRequest
-        if (log.args.transactionId in requests) {
-            request = requests[log.args.transactionId]
-            request.roleIds.push(log.args.roleId)
+
+        // If we've seen this request issued before, validate that we have not yet seen this
+        // role id and add the expected nodes for it.
+        if (transactionId in requests) {
+            request = requests[transactionId]
+            if (roleId in request.requestedNodes) {
+                logger.error(
+                    {
+                        roleId,
+                        transactionId,
+                    },
+                    '',
+                )
+            }
+            request.requestedNodes[roleId] = selectedNodes
         } else {
             request = {
                 callerAddress: log.args.callerAddress,
                 contractAddress: log.args.contractAddress,
-                transactionId: log.args.transactionId,
-                roleIds: [log.args.roleId],
-                requestedNodes: [...log.args.selectedNodes],
-                blockNumber: log.blockNumber,
+                transactionId: transactionId,
+                requestedNodes: { [roleId]: selectedNodes },
+                blockNumber,
                 responses: await scanForPostResults(
                     publicClient,
                     log.args.contractAddress,
-                    log.args.transactionId,
-                    log.blockNumber,
-                    [...log.args.selectedNodes],
+                    transactionId,
+                    blockNumber,
                 ),
                 checkResult: result,
             }
-            requests[request.transactionId] = request
+            requests[transactionId] = request
         }
         // TODO:
-        // - Validate that role ids appearing in responses match role ids at top level, emit error
+        // - Validate that role ids appearing in responses match role ids in expectedNodes, emit error
         // if not.
+        // validate that set of selected nodes for each roleId response is a subset of the set of
+        // expectedNodes for that roleId
         // - Validate that results for each role id are consistent, emit warning if not.
     }
 
