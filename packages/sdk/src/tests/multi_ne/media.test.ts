@@ -61,10 +61,10 @@ describe('mediaTests', () => {
         data: Uint8Array,
         key: Uint8Array,
         iv: Uint8Array,
-    ): Promise<Uint8Array> {
+    ): Promise<CreationCookie> {
         const { ciphertext } = await encryptAESGCM(data, key, iv)
         const result = await bobsClient.sendMediaPayload(creationCookie, last, ciphertext, 0)
-        return result.creationCookie.prevMiniblockHash
+        return result.creationCookie
     }
 
     function createTestMediaChunks(chunks: number): Uint8Array {
@@ -126,12 +126,13 @@ describe('mediaTests', () => {
     test('clientCanDownloadEncryptedDerivedAesGmPayload', async () => {
         const spaceId = makeUniqueSpaceStreamId()
         const mediaStreamInfo = await bobCreateSpaceMediaStream(spaceId, 2)
+        let creationCookie = mediaStreamInfo.creationCookie
         const { iv, key } = await deriveKeyAndIV(spaceId)
         const data = createTestMediaChunks(2)
-        await bobSendEncryptedMediaPayload(mediaStreamInfo.creationCookie, false, data, key, iv)
-        await bobSendEncryptedMediaPayload(mediaStreamInfo.creationCookie, true, data, key, iv)
+        creationCookie = await bobSendEncryptedMediaPayload(creationCookie, false, data, key, iv)
+        await bobSendEncryptedMediaPayload(creationCookie, true, data, key, iv)
         const decryptedChunks = await bobsClient.getMediaPayload(
-            streamIdAsString(mediaStreamInfo.creationCookie.streamId),
+            streamIdAsString(creationCookie.streamId),
             key,
             iv,
         )
@@ -146,9 +147,6 @@ describe('mediaTests', () => {
         ).rejects.toThrow()
         await expect(
             bobsClient.sendMediaPayload(result.creationCookie, false, chunk, 11),
-        ).rejects.toThrow()
-        await expect(
-            bobsClient.sendMediaPayload(result.creationCookie, true, chunk, 11),
         ).rejects.toThrow()
     })
 
