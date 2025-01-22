@@ -1,10 +1,9 @@
 import EntitlementCheckerAbi from '@river-build/generated/dev/abis/IEntitlementChecker.abi'
 import EntitlementGatedAbi from '@river-build/generated/dev/abis/IEntitlementGated.abi'
-
-import { base } from 'viem/chains'
-import { createPublicClient, http, Address, Hex } from 'viem'
+import { Address, Hex, decodeFunctionData } from 'viem'
 import { config } from './environment'
 import { getLogger } from './logger'
+import { BlockType, createCustomPublicClient, PublicClientType } from './client'
 
 const logger = getLogger('xchain')
 
@@ -12,6 +11,9 @@ enum NodeVoteStatus {
     Passed = 1,
     Failed,
 }
+
+type PostResultSummary = { [roleId: number]: RoleResultSummary }
+type RoleResultSummary = { [nodeAddress: string]: boolean }
 
 export interface XChainRequest {
     callerAddress: Address
@@ -23,29 +25,149 @@ export interface XChainRequest {
     // Nodes that have responded are recorded in this map of maps along with the response the
     // node gave for reach roleId - did the request pass or fail? If a node did not respond for
     // a particular role id, the map will be missing an entry for that node.
-    responses: { [roleId: number]: { [nodeAddress: string]: boolean } }
+    responses: PostResultSummary
 
     // checkResult will be defined for requests that had a result post. If a result was not posted,
     // then the entitlement gated failed to acheive quorum for any role id.
     checkResult: boolean | undefined
 }
 
+var blockCache: {
+    [blockNumString: string]: BlockType
+} = {}
+async function scanForPostResults(
+    client: PublicClientType,
+    resolverAddress: Address,
+    transactionId: Hex,
+    requestBlockNum: bigint,
+    expectedNodes: Address[],
+): Promise<PostResultSummary> {
+    var summary: PostResultSummary = {}
+
+    const normalizedExpectedNodes = expectedNodes.map((address: Address): Address => {
+        return address.toLowerCase() as Address
+    })
+
+    for (
+        var i = requestBlockNum;
+        i < requestBlockNum + BigInt(config.transactionValidBlocks);
+        i++
+    ) {
+        if (!(i.toString() in blockCache)) {
+            blockCache[i.toString()] = await client.getBlock({
+                blockNumber: i,
+                includeTransactions: true,
+            })
+            const block = blockCache[i.toString()]
+
+            for (const tx of block.transactions) {
+                // Skip txns that are not method calls to our contract
+                if (
+                    tx.to?.toLowerCase() !== resolverAddress.toLowerCase() ||
+                    !tx.input ||
+                    tx.input === '0x'
+                ) {
+                    continue
+                }
+
+                try {
+                    // This decode may fail, as the resolver address may receive calls outside of
+                    // what is defined by the ABI, especially if it is a diamond with many facets.
+                    const decoded = decodeFunctionData({
+                        abi: EntitlementGatedAbi,
+                        data: tx.input,
+                    })
+                    const { functionName, args } = decoded
+
+                    if (functionName !== 'postEntitlementCheckResult') {
+                        continue
+                    }
+
+                    const [txTransactionId, roleId, nodeVoteStatus] = args
+                    if (txTransactionId.toLowerCase() !== transactionId.toLowerCase()) {
+                        continue
+                    }
+
+                    const sender = tx.from.toLowerCase() as Address
+                    if (!normalizedExpectedNodes.includes(sender)) {
+                        logger.error(
+                            {
+                                expectedNodes,
+                                transactionId,
+                                txnHash: tx.hash,
+                                blockNumber: tx.blockNumber,
+                                sender,
+                            },
+                            'postEntitlementCheckResult was from an unexpected address',
+                        )
+                        continue
+                    }
+
+                    if (
+                        nodeVoteStatus !== NodeVoteStatus.Passed &&
+                        nodeVoteStatus !== NodeVoteStatus.Failed
+                    ) {
+                        logger.error(
+                            'postEntitlementCheckResult with unexpected nodeVoteStatus',
+                            'nodeVoteStatus',
+                            nodeVoteStatus,
+                            'transactionId',
+                            transactionId,
+                            'txHash',
+                            tx.hash,
+                            'blockNumber',
+                            tx.blockNumber,
+                            'from',
+                            tx.from,
+                        )
+                    }
+
+                    // Initialize summary results for roleId if needed
+                    const roleIdAsNumber = Number(roleId)
+                    if (!(roleIdAsNumber in summary)) {
+                        summary[roleIdAsNumber] = {}
+                    }
+
+                    const roleResult = summary[roleIdAsNumber]
+
+                    if (sender in roleResult) {
+                        logger.error(
+                            'postEntitlementCheckResult called twice by the same sender',
+                            'from',
+                            sender,
+                            'nodeVoteStatus',
+                            nodeVoteStatus,
+                            'transactionId',
+                            transactionId,
+                            'txHash',
+                            tx.hash,
+                            'blockNumber',
+                            tx.blockNumber,
+                            'existingResult',
+                            roleResult[sender],
+                        )
+                        continue
+                    }
+
+                    roleResult[sender] = nodeVoteStatus === NodeVoteStatus.Passed
+                } catch (err) {
+                    continue
+                }
+            }
+        }
+    }
+
+    return summary
+}
+
 export async function scanBlockchainForXchainEvents(
     initialBlockNum: BigInt,
-    transactionValidBlocks: number,
     blocksToScan: number,
 ): Promise<XChainRequest[]> {
-    const publicClient = createPublicClient({
-        chain: {
-            ...base,
-            rpcUrls: {
-                default: {
-                    http: [config.baseProviderUrl],
-                },
-            },
-        },
-        transport: http(),
-    })
+    // Reset block cache
+    blockCache = {}
+
+    const publicClient = createCustomPublicClient()
 
     const requestLogs = await publicClient.getContractEvents({
         address: config.web3Config.base.addresses.baseRegistry,
@@ -63,13 +185,12 @@ export async function scanBlockchainForXchainEvents(
     for (const log of requestLogs) {
         var result: boolean | undefined
 
-        var responses: { [address: string]: boolean } = {}
         const responseLogs = await publicClient.getContractEvents({
             address: log.args.contractAddress,
             abi: EntitlementGatedAbi,
             eventName: 'EntitlementCheckResultPosted',
             fromBlock: log.blockNumber,
-            toBlock: log.blockNumber + BigInt(transactionValidBlocks),
+            toBlock: log.blockNumber + BigInt(config.transactionValidBlocks),
             args: {
                 transactionId: log.args.transactionId,
             },
@@ -120,12 +241,21 @@ export async function scanBlockchainForXchainEvents(
                 roleIds: [log.args.roleId],
                 requestedNodes: [...log.args.selectedNodes],
                 blockNumber: log.blockNumber,
-                responses: {},
+                responses: await scanForPostResults(
+                    publicClient,
+                    log.args.contractAddress,
+                    log.args.transactionId,
+                    log.blockNumber,
+                    [...log.args.selectedNodes],
+                ),
                 checkResult: result,
             }
-
             requests[request.transactionId] = request
         }
+        // TODO:
+        // - Validate that role ids appearing in responses match role ids at top level, emit error
+        // if not.
+        // - Validate that results for each role id are consistent, emit warning if not.
     }
 
     return Object.values(requests)

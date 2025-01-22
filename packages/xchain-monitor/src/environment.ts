@@ -21,6 +21,7 @@ const envMainSchema = z.object({
     LOG_LEVEL: z.string().optional().default('info'),
     LOG_PRETTY: BoolFromStringSchema.optional().default('true'),
     DD_GIT_COMMIT_SHA: z.string().optional(),
+    BLOCK_SCAN_CHUNK_SIZE: NumberFromIntStringSchema.optional().default('10000'),
 })
 
 function makeConfig() {
@@ -29,12 +30,14 @@ function makeConfig() {
     const initialBlockNum = envMain.INITIAL_BLOCK_NUM
     const transactionValidBlocks = envMain.TRANSACTION_VALID_BLOCKS
     const baseProviderUrl = envMain.BASE_PROVIDER_URL
+    const blockScanChunkSize = envMain.BLOCK_SCAN_CHUNK_SIZE
 
     return {
         web3Config,
         initialBlockNum,
         transactionValidBlocks,
         baseProviderUrl,
+        blockScanChunkSize,
         log: {
             pretty: envMain.LOG_PRETTY,
             level: envMain.LOG_LEVEL,
