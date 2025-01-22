@@ -1,8 +1,6 @@
 package protocol
 
 import (
-	"bytes"
-
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -26,24 +24,6 @@ func (cc *CreationCookie) NodeAddresses() []common.Address {
 	addresses := make([]common.Address, len(cc.Nodes))
 	for i, node := range cc.Nodes {
 		addresses[i] = common.BytesToAddress(node)
-	}
-
-	return addresses
-}
-
-// RemoteNodeAddresses returns the addresses of the nodes in the CreationCookie, excluding the local node.
-func (cc *CreationCookie) RemoteNodeAddresses(local common.Address) []common.Address {
-	if cc == nil {
-		return nil
-	}
-
-	addresses := make([]common.Address, 0, len(cc.Nodes))
-	for _, node := range cc.Nodes {
-		if bytes.Equal(node, local.Bytes()) {
-			continue
-		}
-
-		addresses = append(addresses, common.BytesToAddress(node))
 	}
 
 	return addresses
