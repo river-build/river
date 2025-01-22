@@ -162,12 +162,6 @@ export interface ParsedStreamAndCookie {
     events: ParsedEvent[]
 }
 
-export interface ParsedCreationCookie {
-    nextSyncCookie: SyncCookie
-    miniblocks: ParsedMiniblock[]
-    events: ParsedEvent[]
-}
-
 export interface ParsedStreamResponse {
     snapshot: Snapshot
     streamAndCookie: ParsedStreamAndCookie
