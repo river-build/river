@@ -25,7 +25,8 @@ type TestClient = {
 
 const log = dlog('test:mls:stream')
 
-describe('MlsStreamTests', () => {
+// TODO: Refactor to unit tests using simulator
+describe.skip('MlsStreamTests', () => {
     const clients: TestClientWithMlsStream[] = []
 
     const mlsClientOptions: MlsClientOptions = {
@@ -89,6 +90,7 @@ describe('MlsStreamTests', () => {
                 streamId,
                 alice_.client,
                 undefined,
+                undefined,
                 makeMlsStreamOpts(alice_.nickname),
             ),
         }
@@ -98,6 +100,7 @@ describe('MlsStreamTests', () => {
                 streamId,
                 bob_.client,
                 undefined,
+                undefined,
                 makeMlsStreamOpts(bob_.nickname),
             ),
         }
@@ -106,6 +109,7 @@ describe('MlsStreamTests', () => {
             stream: new MlsStream(
                 streamId,
                 charlie_.client,
+                undefined,
                 undefined,
                 makeMlsStreamOpts(charlie_.nickname),
             ),

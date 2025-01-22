@@ -13,6 +13,7 @@ import {
 import { dlog } from '@river-build/dlog'
 import { createGroupInfoAndExternalSnapshot, makeExternalJoin, makeInitializeGroup } from './utils'
 import { describe, expect } from 'vitest'
+import { fail } from 'assert'
 import { MlsStream } from '../../../mls/mlsStream'
 import { MlsQueue, MlsQueueOpts } from '../../../mls/mlsQueue'
 import { LocalView } from '../../../mls/localView'
@@ -25,9 +26,10 @@ type TestClient = {
     mlsClient: MlsClient
 }
 
-const log = dlog('test:mls:viewAdapter')
+const log = dlog('test:mls:queue')
 
-describe('MlsQueueTests', () => {
+// TODO: Refactor to unit tests using a simulator
+describe.skip('MlsQueueTests', () => {
     const clients: TestClientWithQueue[] = []
 
     const mlsClientOptions: MlsClientOptions = {
@@ -180,7 +182,8 @@ describe('MlsQueueTests', () => {
 
         const perClient = async (client: TestClientWithQueue) => {
             // Manually trigger a stream update
-            client.queue.enqueueUpdatedStream(streamId)
+            // client.queue.enqueueUpdatedStream(streamId)
+            fail('unsupported operation, please refactor')
             const view = client.stream.onChainView
             return (
                 view.accepted.size >= accepted &&

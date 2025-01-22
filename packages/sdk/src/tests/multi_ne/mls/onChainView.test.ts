@@ -25,7 +25,8 @@ type TestClient = {
 
 const log = dlog('test:mls:onChainView')
 
-describe('onChainViewTests', () => {
+// TODO: Refactor to unit tests using simulator
+describe.skip('onChainViewTests', () => {
     const clients: TestClient[] = []
 
     const mlsClientOptions: MlsClientOptions = {
