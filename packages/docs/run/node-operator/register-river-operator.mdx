@@ -1,25 +1,25 @@
 ---
 title: Register Operator
-description: The following guide illustrates how to register a new Node Operator to begin onboarding nodes. This guide uses Testnet as an example. The Mainnet guide follows from this guide with modifications to contract addresses and rpc url for River Chain.
+description: The following guide illustrates how to register a new Node Operator to begin onboarding nodes. This guide uses Testnet as an example. The Mainnet guide follows from this guide with modifications to contract addresses and rpc url for Towns Chain.
 ---
 
 ### Requirements & Dependencies
 
 - Foundry Toolkit: To install follow [this](https://book.getfoundry.sh/getting-started/installation) guide.
-- Node Operator delegation: address migrated to River Chain by DAO (see below).
+- Node Operator delegation: address migrated to Towns Chain by DAO (see below).
 - Warm wallet access to Node Operator wallet.
-- Sufficient gas on Node Operator wallet on both Base and River Chain to register
+- Sufficient gas on Node Operator wallet on both Base and Towns Chain to register
 
 <Note>
   The node operator wallet registered on Base must
-  be bridged to River Chain by the DAO prior to proceeding with node registration. Furthermore, the node operator needs warm access to this
+  be bridged to Towns Chain by the DAO prior to proceeding with node registration. Furthermore, the node operator needs warm access to this
   wallet to perform node operations to register, and update a fleet of node instances.
 </Note>
 
 
 All contract addresses for testnet and mainnet needed to register operator can be found in the [contracts](/run/contracts) section.
 
-<Note>When referencing contract methods in the below guide, keep in mind that our contracts are deployed using the [Diamond Standard](https://www.quicknode.com/guides/ethereum-development/smart-contracts/the-diamond-standard-eip-2535-explained-part-1) pattern. This means for practical purposes that when interacting with contracts on Base or River Chain, you will be calling each method on the associated diamond contract.</Note>
+<Note>When referencing contract methods in the below guide, keep in mind that our contracts are deployed using the [Diamond Standard](https://www.quicknode.com/guides/ethereum-development/smart-contracts/the-diamond-standard-eip-2535-explained-part-1) pattern. This means for practical purposes that when interacting with contracts on Base or Towns Chain, you will be calling each method on the associated diamond contract.</Note>
 
 
 ### Registration Outline 
@@ -48,5 +48,5 @@ on Base with the address of the wallet that they wish to claim rewards with. Not
 2. Node Operator should call `setCommissionRate(uint256)` on the BaseRegistry contract to set the commission rate for the operator. Ensure the commission rate is passed in using basis point notation (e.g. 10000 for 100%). Conversely, Node Operator can call the view, `getCommissionRate(address)` passing in their operator address to check their current commission rate.
 
 3. After Node Operator receives at least `100m` RVR tokens delegated,
-   the DAO can approve it to enter into River Chain. The same address will be added
-   to River Registry on River Chain in order to begin configuring Nodes.
+   the DAO can approve it to enter into Towns Chain. The same address will be added
+   to River Registry on Towns Chain in order to begin configuring Nodes.

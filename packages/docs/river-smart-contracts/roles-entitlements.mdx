@@ -3,11 +3,11 @@ title: Roles and Entitlements
 description: ""
 ---
 
-## Understanding Roles, Entitlements, and Permissions in the River System
+## Understanding Roles, Entitlements, and Permissions in Towns Protocol
 
 ### Overview of Permissions
 
-In the River ecosystem, `Permissions` are defined actions that users can undertake within a `Space`. These permissions are fundamental to governing user interactions and activities within the ecosystem. The River system includes a range of permissions, each tailored to specific functionalities:
+In the Towns ecosystem, `Permissions` are defined actions that users can undertake within a `Space`. These permissions are fundamental to governing user interactions and activities within the ecosystem. The Towns system includes a range of permissions, each tailored to specific functionalities:
 
 - `ModifyChannels`: This permission allows those who hold to to create, delete, edit, and assign roles to a given channel within a Space.
 - `ModifyRoles`: This permission enables users to create and modify roles and entitlements within a Space.
@@ -17,7 +17,7 @@ In the River ecosystem, `Permissions` are defined actions that users can underta
 
 ### Concept of Roles
 
-`Roles` in the River system are aggregations of the aforementioned `Permissions`. By combining different permissions into distinct roles, the system simplifies the management of user capabilities and access within a Space.
+`Roles` in the Towns system are aggregations of the aforementioned `Permissions`. By combining different permissions into distinct roles, the system simplifies the management of user capabilities and access within a Space.
 
 ### Functionality of Entitlements
 
@@ -25,18 +25,18 @@ In the River ecosystem, `Permissions` are defined actions that users can underta
 
 ### Implementation of Entitlement Modules
 
-`Entitlement Modules` are instrumental in defining the requirements for Entitlements. These modules are akin to pricing modules, allowing for the deployment of bespoke smart contracts on the chain. To be incorporated into the River system, these contracts must adhere to the `IEntitlement` Interface and be deployed to Base, with their settings adjusted for each Space.
+`Entitlement Modules` are instrumental in defining the requirements for Entitlements. These modules are akin to pricing modules, allowing for the deployment of bespoke smart contracts on the chain. To be incorporated into the Towns system, these contracts must adhere to the `IEntitlement` Interface and be deployed to Base, with their settings adjusted for each Space.
 
 ### Default Settings in Spaces
 
-Upon the minting of a new Space, the River system automatically deploys two standard Entitlement Modules:
+Upon the minting of a new Space, the Towns system automatically deploys two standard Entitlement Modules:
 
 1. **UserEntitlementModule**: This module enables the assignment of Roles based on specific addresses or ENS. For instance, "vitalik.eth" could be assigned the Moderator Role, while "0x44..ccbb" might receive a Read-Only Role.
 2. **TokenEntitlementModule**: It facilitates the assignment of Roles based on the ownership of certain assets on-chain. An example would be assigning a Special Role to users holding a Cryptopunk or a Whale Role to those with at least .1 ETH.
 
 ### Default Roles in Newly Minted Spaces
 
-Each newly minted Space in the River system is initialized with two predefined Roles:
+Each newly minted Space in the Towns system is initialized with two predefined Roles:
 
 - Owner:
 

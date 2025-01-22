@@ -1,13 +1,13 @@
 ---
 title: "Delegation"
-description: River tokens follow the [ERC20Votes](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20Votes) standard and can be delegated to Node Operators on Base or Ethereum Mainnet to participate in rewards [distribution](distribution).
+description: Towns tokens follow the [ERC20Votes](https://docs.openzeppelin.com/contracts/4.x/api/token/erc20#ERC20Votes) standard and can be delegated to Node Operators on Base or Ethereum Mainnet to participate in rewards [distribution](distribution).
 ---
 
 ## Base Mainnet
 
-River tokens are used in the Node Operator Registry and River DAO contracts on [Base](https://base.org).
+Towns tokens are used in the Node Operator Registry and Towns DAO contracts on [Base](https://base.org).
 
-River tokens can be delegated by calling the `delegate()` function on the Base [River.sol](https://github.com/river-build/river/blob/main/contracts/src/tokens/river/base/River.sol) contract. An interface is provided at https://river.build/delegate.
+Towns tokens can be delegated by calling the `delegate()` function on the Base [Towns.sol](https://github.com/river-build/river/blob/main/contracts/src/tokens/river/base/Towns.sol) contract. An interface is provided at https://river.build/delegate.
 
 ![delegate](../images/delegate.png)
 
@@ -21,7 +21,7 @@ Any tokens received from network operation will be claimable by calling the `cla
 
 ## Ethereum Mainnet
 
-River tokens held on Ethereum mainnet can also be delegated at https://river.build/delegate.
+Towns tokens held on Ethereum mainnet can also be delegated at https://river.build/delegate.
 
 Post-delegation, the details (such as delegating wallet, operator wallet, token quantity) are bridged to the Base network and referenced in the Node Operator Registry using the [L1CrossDomainMessenger](https://docs.optimism.io/builders/app-developers/bridging/messaging) contract.
 

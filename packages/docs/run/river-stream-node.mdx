@@ -1,11 +1,11 @@
 ---
-title: Local River Stream Node
-description: River Stream Nodes can run remotely or locally depending on the operator's preferences. The following guide illustrates how to build and run a River Stream Node locally for development purposes. Diagnostic tools to gauge the health of local and remote nodes are also discussed here. It is assumed that the node is free standing and therefore not connected to the River protocol remote node registry on Base.
+title: Local Towns Stream Node
+description: Towns Stream Nodes can run remotely or locally depending on the operator's preferences. The following guide illustrates how to build and run a Towns Stream Node locally for development purposes. Diagnostic tools to gauge the health of local and remote nodes are also discussed here. It is assumed that the node is free standing and therefore not connected to the Towns protocol remote node registry on Base.
 ---
 
-## Running a River Stream Node in Development
+## Running a Towns Stream Node in Development
 
-Running a River Stream Node from source is easy to do with [Go](https://go.dev/doc/install), [Docker](https://docs.docker.com/engine/install/), and [Foundry](https://github.com/foundry-rs/foundry) Ethereum toolkit installed. The following tutorial will show you how to run a River Stream Node with a Postgres backend.
+Running a Towns Stream Node from source is easy to do with [Go](https://go.dev/doc/install), [Docker](https://docs.docker.com/engine/install/), and [Foundry](https://github.com/foundry-rs/foundry) Ethereum toolkit installed. The following tutorial will show you how to run a Towns Stream Node with a Postgres backend.
 
 ### Requirements
 
@@ -25,7 +25,7 @@ Once you've installed Docker, Go, protobuf, Anvil, and buf, you can proceed to s
 git clone https://github.com/river-build/river.git
 ```
 
-### Run a River Stream Node Locally from Source using VSCode
+### Run a Towns Stream Node Locally from Source using VSCode
 
 There's a VSCode task in [tasks.json](https://github.com/river-build/river/blob/main/.vscode/tasks.json#L21) that is recommended to be used to multiple local stream nodes with attached postgres and local base, river chains, respectively running in different anvil ports.
 
@@ -37,7 +37,7 @@ Running `~Start Local Dev~` command from the river repo in VSCode will do the fo
 <Step title="Run yarn install"></Step>
 <Step title="Build protobufs"></Step>
 <Step title="Start Base Chain in anvil"></Step>
-<Step title="Start River Chain in anvil"></Step>
+<Step title="Start Towns Chain in anvil"></Step>
 <Step title="Configure stream nodes"></Step>
 <Step title="Start stream nodes with and without entitlements (on separate ports)"></Step>
 <Step title="Start xchain binary"></Step>
@@ -58,7 +58,7 @@ After the command completes, pick a `river_node` process running from localhost 
 "dev_local/main/mainnet/2024-06-25-1-34-g522b463"
 "2024-06-27T19:03:31Z"
 "2m14.955190042s"
-"River Node welcomes you!"
+"Towns Node welcomes you!"
 {
   "result": "OK",
   "chain_id": 31338,
@@ -188,9 +188,9 @@ You can also ping health of nodes using `/debug/multi` and `/debug/multi/json` e
 ```
 
 
-### Run a River Stream Node in Info Mode against testnet or mainnet
+### Run a Towns Stream Node in Info Mode against testnet or mainnet
 
-<Note>To run a stream node within the remote testnet or mainnet networks, the node needs to be first registered on River Chain. See onboarding instructions [here](/run/node-operator/system-requirements-installation).</Note>
+<Note>To run a stream node within the remote testnet or mainnet networks, the node needs to be first registered on Towns Chain. See onboarding instructions [here](/run/node-operator/system-requirements-installation).</Note>
 
 
 ### Running a stream node in info mode to obtain diagnostics

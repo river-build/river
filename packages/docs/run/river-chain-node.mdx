@@ -1,13 +1,13 @@
 ---
-title: Local River Chain Node
-description: For local development purposes, it may be useful to run the River protocol components. One such component is the River Chain which manages the stream and node registries. This guide shows how to easily setup a local River Chain for development purposes.
+title: Local Towns Chain Node
+description: For local development purposes, it may be useful to run the Towns protocol components. One such component is the Towns Chain which manages the stream and node registries. This guide shows how to easily setup a local Towns Chain for development purposes.
 ---
 
-## Running River Chain from Source
+## Running Towns Chain from Source
 
-Running an instance of River Chain from source can be accomplished using [Foundry](https://github.com/foundry-rs/foundry) Ethereum toolkit. An `anvil` instance is created where the `StreamRegistry` contract is deployed.
+Running an instance of Towns Chain from source can be accomplished using [Foundry](https://github.com/foundry-rs/foundry) Ethereum toolkit. An `anvil` instance is created where the `StreamRegistry` contract is deployed.
 
-River Nodes deployed locally connect to River Chain on port 8546 (distinct from `BaseChain`, which also runs an anvil instance on port 8545) to read from the `StreamRegistry` and publish top-chain transactions.
+Towns Nodes deployed locally connect to Towns Chain on port 8546 (distinct from `BaseChain`, which also runs an anvil instance on port 8545) to read from the `StreamRegistry` and publish top-chain transactions.
 
 ### Requirements
 
@@ -28,7 +28,7 @@ git clone https://github.com/HereNotThere/harmony.git
 brew install libusb
 ```
 
-### Run Anvil to start River Chain
+### Run Anvil to start Towns Chain
 
 ```bash
 ./scripts/start-local-riverchain.sh

@@ -1,11 +1,11 @@
 ---
-title: River Encryption Protocol
-description: "How the River encryption and decryption protocol works."
+title: Towns Encryption Protocol
+description: "How the Towns encryption and decryption protocol works."
 ---
 
-### What is the River Encryption Protocol?
+### What is the Towns Encryption Protocol?
 
-The River protocol supports end-to-end encryption and decryption between
+The Towns protocol supports end-to-end encryption and decryption between
 a group of user devices. When a user (Bob) wants to send a new message to a
 group of users, Bob's device first creates a new group session. Using the
 outbound session key, it encrypts the message. Then the encrypted message is
@@ -27,7 +27,7 @@ Before diving into the `key solicitation`, `key fulfillment`, and `key sharing`
 algorithms, let's first take a look at the core entities in the group encryption
 protocol.
 
-### Core entities in the River Encryption Protocol
+### Core entities in the Towns Encryption Protocol
 
 **`GroupEncryptionCrypto`** : The main interface of the protocol. It
 initializes the **`EncryptionDelegate`**. This class "delegates" the
@@ -35,7 +35,7 @@ encryption and decryption operations to the
 [`olm` library from the Matrix.org foundation](<https://www.npmjs.com/package/@matrix-org/olm>).
 This library implements the Double Ratchet algorithm. See notes on [supported algorithm](#supported-algorithm) for future plans.
 
-The River Encryption Protocol uses this libray to create a group session, and
+The Towns Encryption Protocol uses this libray to create a group session, and
 perform device-to-device encryption using the session keys.
 
 The `GroupEncryptionCrypto` creates a `GroupEncryption`, a
@@ -126,7 +126,7 @@ Thus, Alice's device is able to get the required session keys for decryption.
 
 ## Build
 
-See [river-tutorials/encryption-import](https://github.com/river-build/river-tutorials/tree/main/encryption-import) for a tutorial on how to import the River Encryption
+See [towns-tutorials/encryption-import](https://github.com/river-build/towns-tutorials/tree/main/encryption-import) for a tutorial on how to import the Towns Encryption
 npm package.
 
 ---
@@ -135,7 +135,7 @@ npm package.
 
 ### Supported algorithm
 
-> The River Encryption Protocol is designed to support new algorithms. There is
+> The Towns Encryption Protocol is designed to support new algorithms. There is
 an `algorithm` field in the protocol definition. The current value is
 `r.group-encryption.v1.aes-sha2`. This means that the protocol is using the
 `olm` Double Ratchet library for device-to-device session encryption.

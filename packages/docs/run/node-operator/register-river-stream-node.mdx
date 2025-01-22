@@ -1,18 +1,18 @@
 ---
 title: Register Node
-description: The following guide illustrates how to register a new Stream Node instance on River Chain. This guide uses Testnet as an example. The Mainnet guide follows from this guide with modifications to contract addresses and rpc url for River Chain.
+description: The following guide illustrates how to register a new Stream Node instance on Towns Chain. This guide uses Testnet as an example. The Mainnet guide follows from this guide with modifications to contract addresses and rpc url for Towns Chain.
 ---
 
 ### Requirements & Dependencies
 
 - Foundry Toolkit: To install follow [this](https://book.getfoundry.sh/getting-started/installation) guide.
-- Node Operator delegation: address migrated to River Chain by DAO (see below).
+- Node Operator delegation: address migrated to Towns Chain by DAO (see below).
 - Warm wallet access to Node Operator wallet.
 - Node URL pointing via DNS to Node FE attached to Node Storage.
 - Access to Base over RPC endpoint
-- Access to River Chain over RPC endpoint
-- Sufficient gas on Node Operator wallet on both Base and River Chain to register
-- Sufficient gas on Node FE wallet on River Chain and Base for validation and cross-chain transactions once node is operational.
+- Access to Towns Chain over RPC endpoint
+- Sufficient gas on Node Operator wallet on both Base and Towns Chain to register
+- Sufficient gas on Node FE wallet on Towns Chain and Base for validation and cross-chain transactions once node is operational.
 
 <Note>
   Node FE's are stateful and as such require consistent resolution of hostnames
@@ -23,14 +23,14 @@ description: The following guide illustrates how to register a new Stream Node i
 
 <Note>
   The node operator wallet registered on Base must
-  be bridged to River Chain by the DAO prior to proceeding with node registration. Furthermore, the node operator needs warm access to this
+  be bridged to Towns Chain by the DAO prior to proceeding with node registration. Furthermore, the node operator needs warm access to this
   wallet to perform node operations to register, and update a fleet of node instances.
 </Note>
 
 
 All contract addresses for testnet and mainnet needed to register nodes can be found in the [contracts](/run/contracts) section.
 
-<Note>When referencing contract methods in the below guide, keep in mind that our contracts are deployed using the [Diamond Standard](https://www.quicknode.com/guides/ethereum-development/smart-contracts/the-diamond-standard-eip-2535-explained-part-1) pattern. This means for practical purposes that when interacting with contracts on Base or River Chain, you will be calling each method on the associated diamond contract.</Note>
+<Note>When referencing contract methods in the below guide, keep in mind that our contracts are deployed using the [Diamond Standard](https://www.quicknode.com/guides/ethereum-development/smart-contracts/the-diamond-standard-eip-2535-explained-part-1) pattern. This means for practical purposes that when interacting with contracts on Base or Towns Chain, you will be calling each method on the associated diamond contract.</Note>
 
 
 ### Registration Outline 
@@ -43,24 +43,24 @@ Please ensure you have completed [Node Operator registration](/run/node-operator
 
 <Steps>
 <Step title="Start Stream Node in Info Mode">Operator should start the stream node process in [info](https://github.com/river-build/river/tree/main/core/node#checking-on-gamma-status-from-local-host) mode and additionally ensure DNS, TLS, and network are configured correctly.</Step>
-<Step title="Register Node in River Chain">Operator calls [registerNode](https://github.com/river-build/river/blob/main/contracts/src/river/registry/facets/node/NodeRegistry.sol) on the [RiverRegistry](https://github.com/river-build/river/blob/main/contracts/deployments/gamma/river/addresses/riverRegistry.json) diamond contract deployed on River Chain once health checks pass.</Step>
+<Step title="Register Node in Towns Chain">Operator calls [registerNode](https://github.com/river-build/river/blob/main/contracts/src/river/registry/facets/node/NodeRegistry.sol) on the [RiverRegistry](https://github.com/river-build/river/blob/main/contracts/deployments/gamma/river/addresses/riverRegistry.json) diamond contract deployed on Towns Chain once health checks pass.</Step>
 <Step title="Register Node in Base">Operator calls [registerNode](https://github.com/river-build/river/blob/main/contracts/src/base/registry/facets/checker/EntitlementChecker.sol) on the BaseRegistry diamond contract to support cross-chain checks.</Step>
-<Step title="Start Stream Node">Operator starts the stream node by running the docker image to enter River Chain network once registered.</Step>
+<Step title="Start Stream Node">Operator starts the stream node by running the docker image to enter Towns Chain network once registered.</Step>
 </Steps>
 
 ### Node FE Registration
 
-Once a node operator has registered their operator address on River Chain, they can proceed to register their nodes. Nodes are registered individually on River Chain and Base.
+Once a node operator has registered their operator address on Towns Chain, they can proceed to register their nodes. Nodes are registered individually on Towns Chain and Base.
 
 <Warning>
-  Node Operator addresses must be registered on River Chain before below actions
-  can be undertaken to register a new stream node. DAO will migrate operator address to River Chain
+  Node Operator addresses must be registered on Towns Chain before below actions
+  can be undertaken to register a new stream node. DAO will migrate operator address to Towns Chain
   once sufficient delegations are received.
 </Warning>
 
-Once a node is setup, attached to postgres storage, network configured with a public IP, and passing health checks (see [System Requirements & Installation](/run/node-operator/system-requirements-installation)), the node is ready to enter the River Network and begin accepting stream writes.
+Once a node is setup, attached to postgres storage, network configured with a public IP, and passing health checks (see [System Requirements & Installation](/run/node-operator/system-requirements-installation)), the node is ready to enter the Towns Network and begin accepting stream writes.
 
-Registering a node on River Chain, can be accomplished by calling the `registerNode(address,string,uint8)` method on the RiverRegistry diamond contract.
+Registering a node on Towns Chain, can be accomplished by calling the `registerNode(address,string,uint8)` method on the RiverRegistry diamond contract.
 
 <Warning>
   Registering a node and operating a stream node in general requires that the
@@ -103,8 +103,8 @@ The below steps describe how to register a new node URL in `Operational` status 
     <Warning>Private Key needed for cast call is Node Operator's not Node FE's. It is up to Node Operator how they decide to secure this key and make it available to perform cast calls to register nodes.</Warning>
 
   </Step>
-  <Step title="Register Node on Base and River Chain">
-  Using `cast` let's register our new node. First let's check that the Node FE does not already exist. Node FE's are identified in River Registry by their address so let's check `getNode` to ensure the view reverts with `NODE_NOT_FOUND` before proceeding.
+  <Step title="Register Node on Base and Towns Chain">
+  Using `cast` let's register our new node. First let's check that the Node FE does not already exist. Node FE's are identified in Towns Registry by their address so let's check `getNode` to ensure the view reverts with `NODE_NOT_FOUND` before proceeding.
   ```bash
   cast call --rpc-url $RPC_URL \                         
     $RIVER_REGISTRY_ADDRESS \
@@ -113,7 +113,7 @@ The below steps describe how to register a new node URL in `Operational` status 
   ```
   Assuming the above reverts with `NODE_NOT_FOUND`, let's proceed to register the new node with the Node Operator's wallet.
   <br />
-  <Note>Registering a new node is a write transaction that will require the Node Operator wallet on River Chain and Base has Eth. To monitor River Chain transactions, you can use the [explorer](https://explorer.river.build/).</Note>
+  <Note>Registering a new node is a write transaction that will require the Node Operator wallet on Towns Chain and Base has Eth. To monitor Towns Chain transactions, you can use the [explorer](https://explorer.river.build/).</Note>
   ```bash
   # Register a new node with EntitlementChecker in Base to ensure xchain entitlements are in place when running stream node.
   # Note: EntitlementChecker is a facet and so call it's interface from Base Registry diamond contract (for address see baseRegistry.json under packages/generated/deployments in river repo).
@@ -128,7 +128,7 @@ The below steps describe how to register a new node URL in `Operational` status 
   ```
   <br />
   ```bash
-   # Register a new node in Operational (2) Status in River Chain to signal to the network the node is ready to accept reads and writes.
+   # Register a new node in Operational (2) Status in Towns Chain to signal to the network the node is ready to accept reads and writes.
    cast send \
      --rpc-url $RPC_URL \
      --private-key $PRIVATE_KEY \
@@ -140,7 +140,7 @@ The below steps describe how to register a new node URL in `Operational` status 
   ```
   <Warning>When registering node, make sure you pass in the node url including the schema of the url, which must be https://. For example, for node referenced by domain name, river-operator-1.xyz, you would pass in the node url to registerNode call as https://river-operator-1.xyz.
   Therefore, prior to calling registerNode using Operational status, you must ensure the node url resolves from the public internet.</Warning>
-  When the above transactions succeed and have been mined in a block on River Chain, you can re-run `getNode(address)` to confirm the node now exists in the network.
+  When the above transactions succeed and have been mined in a block on Towns Chain, you can re-run `getNode(address)` to confirm the node now exists in the network.
 </Step>
 <Step title="Check Node Health from Debug Multi Dashboard">
   To check that your node is included in the network and healthy, you can navigate to:
