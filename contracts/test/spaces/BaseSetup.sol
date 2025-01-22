@@ -13,10 +13,11 @@ import {IEntitlementChecker} from "contracts/src/base/registry/facets/checker/IE
 import {IImplementationRegistry} from "contracts/src/factory/facets/registry/IImplementationRegistry.sol";
 import {IWalletLink} from "contracts/src/factory/facets/wallet-link/IWalletLink.sol";
 import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
-import {IMainnetDelegation} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
+import {IMainnetDelegation} from "contracts/src/base/registry/facets/mainnet/IMainnetDelegation.sol";
 import {INodeOperator} from "contracts/src/base/registry/facets/operator/INodeOperator.sol";
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {ICreateSpace} from "contracts/src/factory/facets/create/ICreateSpace.sol";
+import {ITowns} from "contracts/src/tokens/towns/mainnet/ITowns.sol";
 
 // libraries
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
@@ -36,7 +37,7 @@ import {ISpaceDelegation} from "contracts/src/base/registry/facets/delegation/IS
 
 // deployments
 import {DeploySpaceFactory} from "contracts/scripts/deployments/diamonds/DeploySpaceFactory.s.sol";
-import {DeployRiverBase} from "contracts/scripts/deployments/utils/DeployRiverBase.s.sol";
+import {DeployTownsBase} from "contracts/scripts/deployments/utils/DeployTownsBase.s.sol";
 import {DeployProxyBatchDelegation} from "contracts/scripts/deployments/utils/DeployProxyBatchDelegation.s.sol";
 import {DeployBaseRegistry} from "contracts/scripts/deployments/diamonds/DeployBaseRegistry.s.sol";
 import {DeployRiverAirdrop} from "contracts/scripts/deployments/diamonds/DeployRiverAirdrop.s.sol";
@@ -57,7 +58,7 @@ contract BaseSetup is TestUtils, SpaceHelper {
 
   DeployBaseRegistry internal deployBaseRegistry = new DeployBaseRegistry();
   DeploySpaceFactory internal deploySpaceFactory = new DeploySpaceFactory();
-  DeployRiverBase internal deployRiverTokenBase = new DeployRiverBase();
+  DeployTownsBase internal deployTokenBase = new DeployTownsBase();
   DeployProxyBatchDelegation internal deployProxyBatchDelegation =
     new DeployProxyBatchDelegation();
   DeployRiverAirdrop internal deployRiverAirdrop = new DeployRiverAirdrop();
@@ -78,7 +79,7 @@ contract BaseSetup is TestUtils, SpaceHelper {
   address internal spaceOwner;
 
   address internal baseRegistry;
-  address internal riverToken;
+  address internal townsToken;
   address internal bridge;
   address internal association;
   address internal vault;
@@ -116,10 +117,10 @@ contract BaseSetup is TestUtils, SpaceHelper {
     );
 
     // River Token
-    riverToken = deployRiverTokenBase.deploy(deployer);
+    townsToken = deployTokenBase.deploy(deployer);
 
     // Base Registry
-    deployBaseRegistry.setDependencies({riverToken_: riverToken});
+    deployBaseRegistry.setDependencies({riverToken_: townsToken});
     baseRegistry = deployBaseRegistry.deploy(deployer);
     entitlementChecker = IEntitlementChecker(baseRegistry);
     nodeOperator = INodeOperator(baseRegistry);
@@ -131,9 +132,13 @@ contract BaseSetup is TestUtils, SpaceHelper {
       messenger_: address(messenger)
     });
     mainnetProxyDelegation = deployProxyBatchDelegation.deploy(deployer);
-    mainnetRiverToken = deployProxyBatchDelegation.riverToken();
+    mainnetRiverToken = deployProxyBatchDelegation.townsToken();
     vault = deployProxyBatchDelegation.vault();
     claimers = deployProxyBatchDelegation.claimers();
+
+    // Mint initial supply
+    vm.prank(vault);
+    ITowns(mainnetRiverToken).mintInitialSupply(vault);
 
     // Space Factory Diamond
     spaceFactory = deploySpaceFactory.deploy(deployer);
@@ -153,14 +158,14 @@ contract BaseSetup is TestUtils, SpaceHelper {
     riverAirdrop = deployRiverAirdrop.deploy(deployer);
 
     // Base Registry Diamond
-    bridge = deployRiverTokenBase.bridgeBase();
+    bridge = deployTokenBase.bridgeBase();
 
     // POST DEPLOY
     vm.startPrank(deployer);
     ISpaceOwner(spaceOwner).setFactory(spaceFactory);
     IImplementationRegistry(spaceFactory).addImplementation(baseRegistry);
     IImplementationRegistry(spaceFactory).addImplementation(riverAirdrop);
-    ISpaceDelegation(baseRegistry).setRiverToken(riverToken);
+    ISpaceDelegation(baseRegistry).setRiverToken(townsToken);
     ISpaceDelegation(baseRegistry).setMainnetDelegation(baseRegistry);
     IMainnetDelegation(baseRegistry).setProxyDelegation(mainnetProxyDelegation);
     ISpaceDelegation(baseRegistry).setSpaceFactory(spaceFactory);

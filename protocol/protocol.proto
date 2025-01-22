@@ -167,6 +167,8 @@ message MemberPayload {
             map<string, Member> members = 3;
             map<uint64, bytes> epoch_secrets = 4;
             map<string, KeyPackage> pending_key_packages = 5;
+            repeated bytes commits_since_last_snapshot = 6;
+            map<string, int64> welcome_messages_miniblock_num = 7;
         }
 
         message Member {
@@ -514,6 +516,7 @@ message UserInboxPayload {
         repeated string session_ids = 3;
         // deviceKey: per device ciphertext of encrypted session keys that match session_ids 
         map<string, string> ciphertexts = 4;
+        string algorithm = 5;
     }
 
     message Ack {
@@ -737,7 +740,8 @@ message EncryptedData {
     */
     string sender_key = 3;
     /**
-    * The ID of the session used to encrypt the message.
+    * The ID of the session used to encrypt the message in some protocols, 
+    * deprecated in favor of session_id_bytes.
     */
     string session_id = 4;
 
@@ -760,6 +764,15 @@ message EncryptedData {
     }
 
     optional Mls mls = 7;
+
+    // Used if algorithm is set to 'grpaes'
+    bytes ciphertext_bytes = 8;
+
+    // Used if algorithm is set to 'grpaes'
+    bytes iv_bytes = 9;
+
+    // Used if algorithm is set to 'grpaes'
+    bytes session_id_bytes = 10;
 }
 
 message WrappedEncryptedData {
@@ -820,6 +833,8 @@ message CreateStreamRequest {
 message CreateStreamResponse {
     // all events in current minipool and cookie allowing to sync from the end of the stream
     StreamAndCookie stream = 1;
+    // derived events created in other streams when this stream was created
+    repeated EventRef derived_events = 2;
 }
 
 message GetStreamRequest {
@@ -868,7 +883,10 @@ message AddEventResponse {
         string msg = 2;
         repeated string funcs = 3;
     }
-    Error error = 1; // only set if AddEventRequest.optional is true
+    // error thrown during this request, only set if AddEventRequest.optional is true, otherwise the request will fail with this error
+    Error error = 1; 
+    // all events created during this request including parent events
+    repeated EventRef new_events = 2;
 }
 
 // SyncStreamsRequest is a request to start a streams sync session.
@@ -971,12 +989,22 @@ message InfoResponse {
     string version = 3;
 }
 
+message GetMiniblockHeaderRequest {
+    bytes stream_id = 1;
+    int64 miniblock_num = 2;
+}
+
+message GetMiniblockHeaderResponse {
+    Envelope header = 1;
+}
+
 service StreamService {
     rpc CreateStream(CreateStreamRequest) returns (CreateStreamResponse);
     rpc GetStream(GetStreamRequest) returns (GetStreamResponse);
     rpc GetStreamEx(GetStreamExRequest) returns (stream GetStreamExResponse);
     rpc GetMiniblocks(GetMiniblocksRequest) returns (GetMiniblocksResponse);
     rpc GetLastMiniblockHash(GetLastMiniblockHashRequest) returns (GetLastMiniblockHashResponse);
+    rpc GetMiniblockHeader(GetMiniblockHeaderRequest) returns (GetMiniblockHeaderResponse);
     rpc AddEvent(AddEventRequest) returns (AddEventResponse);
     rpc SyncStreams(SyncStreamsRequest) returns (stream SyncStreamsResponse);
     rpc AddStreamToSync(AddStreamToSyncRequest) returns (AddStreamToSyncResponse);

@@ -17,7 +17,7 @@ import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {OwnableFacet} from "@river-build/diamond/src/facets/ownable/OwnableFacet.sol";
 import {IntrospectionFacet} from "@river-build/diamond/src/facets/introspection/IntrospectionFacet.sol";
 import {ERC721A} from "contracts/src/diamond/facets/token/ERC721A/ERC721A.sol";
-import {River} from "contracts/src/tokens/river/base/River.sol";
+import {Towns} from "contracts/src/tokens/towns/base/Towns.sol";
 
 contract NodeOperatorFacetTest is
   BaseSetup,
@@ -28,7 +28,7 @@ contract NodeOperatorFacetTest is
 {
   OwnableFacet internal ownable;
   IntrospectionFacet internal introspection;
-  River internal riverFacet;
+  Towns internal towns;
   ERC721A internal erc721;
   INodeOperator internal operator;
 
@@ -43,7 +43,7 @@ contract NodeOperatorFacetTest is
     ownable = OwnableFacet(address(baseRegistry));
     introspection = IntrospectionFacet(address(baseRegistry));
     erc721 = ERC721A(address(baseRegistry));
-    riverFacet = River(riverToken);
+    towns = Towns(townsToken);
   }
 
   function test_initialization() public view {
@@ -56,7 +56,8 @@ contract NodeOperatorFacetTest is
   //                           registerOperator
   // =============================================================
   modifier givenOperatorIsRegistered(address _operator) {
-    vm.assume(address(_operator) != address(0));
+    vm.assume(_operator != address(0));
+    vm.assume(_operator != ZERO_SENTINEL);
     vm.assume(!nodeOperator.isOperator(_operator));
 
     vm.expectEmit();
@@ -190,6 +191,9 @@ contract NodeOperatorFacetTest is
     address _operator,
     NodeOperatorStatus _newStatus
   ) {
+    vm.assume(_operator != address(0));
+    vm.assume(_operator != ZERO_SENTINEL);
+
     vm.prank(deployer);
     vm.expectEmit();
     emit OperatorStatusChanged(_operator, _newStatus);
@@ -199,16 +203,23 @@ contract NodeOperatorFacetTest is
 
   modifier givenCallerHasBridgedTokens(address caller, uint256 amount) {
     vm.assume(caller != address(0));
+    vm.assume(caller != ZERO_SENTINEL);
     amount = bound(amount, stakeRequirement, stakeRequirement * 10);
 
     vm.prank(bridge);
-    riverFacet.mint(caller, amount);
+    towns.mint(caller, amount);
     _;
   }
 
   modifier givenNodeOperatorHasStake(address delegator, address _operator) {
+    vm.assume(delegator != address(0));
+    vm.assume(delegator != ZERO_SENTINEL);
+    vm.assume(_operator != address(0));
+    vm.assume(_operator != ZERO_SENTINEL);
+    vm.assume(_operator != delegator);
+
     vm.prank(delegator);
-    riverFacet.delegate(_operator);
+    towns.delegate(_operator);
     _;
   }
 
@@ -259,6 +270,9 @@ contract NodeOperatorFacetTest is
       NodeOperatorStatus.Approved
     )
   {
+    vm.assume(randomOperator != address(0));
+    vm.assume(randomOperator != ZERO_SENTINEL);
+
     assertTrue(
       nodeOperator.getOperatorStatus(randomOperator) ==
         NodeOperatorStatus.Approved
@@ -302,6 +316,9 @@ contract NodeOperatorFacetTest is
       NodeOperatorStatus.Exiting
     )
   {
+    vm.assume(randomOperator != address(0));
+    vm.assume(randomOperator != ZERO_SENTINEL);
+
     vm.prank(deployer);
     vm.expectRevert(NodeOperator__InvalidStatusTransition.selector);
     nodeOperator.setOperatorStatus(randomOperator, NodeOperatorStatus.Approved);
@@ -325,6 +342,9 @@ contract NodeOperatorFacetTest is
       NodeOperatorStatus.Exiting
     )
   {
+    vm.assume(randomOperator != address(0));
+    vm.assume(randomOperator != ZERO_SENTINEL);
+
     assertTrue(
       nodeOperator.getOperatorStatus(randomOperator) ==
         NodeOperatorStatus.Exiting

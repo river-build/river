@@ -1316,6 +1316,19 @@
         "inputs": [],
         "stateMutability": "view",
         "type": "function",
+        "name": "getProtocolFee",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ]
+      },
+      {
+        "inputs": [],
+        "stateMutability": "view",
+        "type": "function",
         "name": "getSpaceFactory",
         "outputs": [
           {
@@ -1520,6 +1533,11 @@
             "_0": "The membership renewal price"
           }
         },
+        "getProtocolFee()": {
+          "returns": {
+            "_0": "The protocol fee"
+          }
+        },
         "getSpaceFactory()": {
           "returns": {
             "_0": "The space factory"
@@ -1604,6 +1622,9 @@
         "getMembershipRenewalPrice(uint256)": {
           "notice": "Get the membership renewal price"
         },
+        "getProtocolFee()": {
+          "notice": "Get the protocol fee"
+        },
         "getSpaceFactory()": {
           "notice": "Get the space factory"
         },
@@ -1674,18 +1695,18 @@
       "license": "MIT"
     },
     "contracts/src/airdrop/points/ITownsPoints.sol": {
-      "keccak256": "0xf507ad2a91ab58166c2e850b93085320bc483e12a3fe2aef808c0b254a0b656e",
+      "keccak256": "0xb15ce8486f1b99d5035a7d52fecdee87ee0ac737e16e01eb8a570697b6b3a320",
       "urls": [
-        "bzz-raw://5dc159159e4cbe755e18661831ce80a4ca183a43edc21a01504585e73e595ebc",
-        "dweb:/ipfs/QmUELy6xZ8fpcpYfV1VV7oGbF5UAButoYteUNMX1ZAUsj7"
+        "bzz-raw://d74a62b45e362bbf7b2da8408eb487d2a6437b1f94338371da0ae286e5a3ac31",
+        "dweb:/ipfs/QmcQHcDeeYmmLbFq4CzZX9FoSRUcEG1ZcfBgsUnnc5Y79T"
       ],
       "license": "MIT"
     },
     "contracts/src/airdrop/points/TownsPoints.sol": {
-      "keccak256": "0x946df87486a5c9dc357d1ed6dd66a5910b058e3f39ee1406772788751cfc5adf",
+      "keccak256": "0xbdccdbcdc42d51ff23e6167366f5c6e1b77619d9ce1fd50dc51856a05d326c0b",
       "urls": [
-        "bzz-raw://418a07b0b0cddc9780b72a4efdf8af04210770ab0ecc504e8ec97beff58fe6f3",
-        "dweb:/ipfs/QmPKzX3Ep18KZ7LqXKummvb2Jkvc1Weperpp8e6wBKckNU"
+        "bzz-raw://fddb6f34ef89afb65a1af261ac6f8d0ea607c44b95e05220688e14f202aab452",
+        "dweb:/ipfs/QmP7GhYcafeXC8zntLbSn2rtL83iEdepQd8eRunisbvzjC"
       ],
       "license": "MIT"
     },
@@ -1962,10 +1983,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/membership/IMembership.sol": {
-      "keccak256": "0x6d8bcc1f344f237bebd1e28ef60b98b6f293f3c516092f43b15fbe50c349da5b",
+      "keccak256": "0xbbba6bf5f9e7075719c89910e88b9b17a9b8814da8b7a37c6d48d8335ebde9a7",
       "urls": [
-        "bzz-raw://911d4dde9f4fdef6744095f3fdb1bbd9063fd6031ee7d20a591679b02fec29d6",
-        "dweb:/ipfs/QmYCk5AWkqk4TA63aKvupBiPG4ynuRpRExMGgohKZQrG84"
+        "bzz-raw://44476a805573fd5d9fb3e6da0a21dfade23ffd0d785103f1a5cb49a354dd4c55",
+        "dweb:/ipfs/QmQTxP1bJuiXVPTprKTL8w5XNXrZCxYVtF6HTkFk8ovssD"
       ],
       "license": "MIT"
     },
@@ -1978,10 +1999,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/membership/MembershipFacet.sol": {
-      "keccak256": "0x131bfb10e19e8fdcf6880723f1d0395c14a224f6d7e1aec26fde86dfaf1ca7cb",
+      "keccak256": "0xb3c93b5835b47a7e265401604913762b5415592d7dc41ce1f4164a8a5335544f",
       "urls": [
-        "bzz-raw://2aededc4332470f7e993eb3b2a27b6f83c179bc5667f8c60c172d424e2c89ec3",
-        "dweb:/ipfs/QmfPzTtSH9ScPWk84jAjW3R1p8FzNPVphYedEYPkBkxfNf"
+        "bzz-raw://be4b1e53b768365f5698eef3f744f747d0f7df3dcdf170bcf4e807b7464b781d",
+        "dweb:/ipfs/QmZCZAZMoXCgVRHSHZSLALcxxmJaCgWFhvuQh9WDg9vu8G"
       ],
       "license": "MIT"
     },
@@ -2010,10 +2031,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/owner/ISpaceOwner.sol": {
-      "keccak256": "0x7baa36238144aae1068d9df8b28c6741cbcf1f26e53c0e429fc62c351623c1f4",
+      "keccak256": "0xb911df0bd675db51765e301c652efde6863e7f9b56734c26229fc97d578ac5ef",
       "urls": [
-        "bzz-raw://4d702b63539e714f343482f80de3f342d7870647cbeb01b42abab7dc9805683a",
-        "dweb:/ipfs/QmcTDjumaJfXvAoyT6G38meixc7omy6MUuX33FrRuc8hNw"
+        "bzz-raw://5fcbd59464b2aca01f810e14ec533101d8ea33825fbe9e242771c894883304ff",
+        "dweb:/ipfs/QmfARNFQtn3upbwj5GMGBZGkktLRYQmbg2DrVHUM4hqwtn"
       ],
       "license": "MIT"
     },

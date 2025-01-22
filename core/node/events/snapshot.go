@@ -594,7 +594,10 @@ func update_Snapshot_Member(
 		snapshot.Pins = snapPins
 		return nil
 	case *MemberPayload_EncryptionAlgorithm_:
-		snapshot.EncryptionAlgorithm.Algorithm = content.EncryptionAlgorithm.Algorithm
+		if content.EncryptionAlgorithm == nil {
+			return RiverError(Err_INVALID_ARGUMENT, "member payload encryption algorithm not set")
+		}
+		snapshot.EncryptionAlgorithm = content.EncryptionAlgorithm
 		return nil
 	case *MemberPayload_MemberBlockchainTransaction_:
 		switch transactionContent := content.MemberBlockchainTransaction.Transaction.Content.(type) {
@@ -615,7 +618,7 @@ func update_Snapshot_Member(
 			return RiverError(Err_INVALID_ARGUMENT, fmt.Sprintf("unknown member blockchain transaction type %T", transactionContent))
 		}
 	case *MemberPayload_Mls_:
-		return update_Snapshot_Mls(iSnapshot, content.Mls, creatorAddress)
+		return update_Snapshot_Mls(iSnapshot, content.Mls, miniblockNum, creatorAddress)
 	default:
 		return RiverError(Err_INVALID_ARGUMENT, fmt.Sprintf("unknown membership payload type %T", memberPayload.Content))
 	}
@@ -624,6 +627,7 @@ func update_Snapshot_Member(
 func update_Snapshot_Mls(
 	iSnapshot *Snapshot,
 	mlsPayload *MemberPayload_Mls,
+	miniblockNum int64,
 	creatorAddress []byte,
 ) error {
 	if iSnapshot.Members.GetMls() == nil {
@@ -643,6 +647,10 @@ func update_Snapshot_Mls(
 
 	if snapshot.PendingKeyPackages == nil {
 		snapshot.PendingKeyPackages = make(map[string]*MemberPayload_KeyPackage)
+	}
+
+	if snapshot.WelcomeMessagesMiniblockNum == nil {
+		snapshot.WelcomeMessagesMiniblockNum = make(map[string]int64)
 	}
 
 	addSignaturePublicKey := func(userAddress []byte, signaturePublicKey []byte) {
@@ -669,6 +677,7 @@ func update_Snapshot_Mls(
 		return nil
 	case *MemberPayload_Mls_ExternalJoin_:
 		addSignaturePublicKey(creatorAddress, content.ExternalJoin.SignaturePublicKey)
+		snapshot.CommitsSinceLastSnapshot = append(snapshot.CommitsSinceLastSnapshot, content.ExternalJoin.Commit)
 		return nil
 	case *MemberPayload_Mls_EpochSecrets_:
 		for _, secret := range content.EpochSecrets.Secrets {
@@ -688,7 +697,9 @@ func update_Snapshot_Mls(
 				addSignaturePublicKey(keyPackage.UserAddress, keyPackage.SignaturePublicKey)
 			}
 			delete(snapshot.PendingKeyPackages, signatureKey)
+			snapshot.WelcomeMessagesMiniblockNum[signatureKey] = miniblockNum
 		}
+		snapshot.CommitsSinceLastSnapshot = append(snapshot.CommitsSinceLastSnapshot, content.WelcomeMessage.Commit)
 		return nil
 	default:
 		return RiverError(Err_INVALID_ARGUMENT, fmt.Sprintf("unknown MLS payload type %T", mlsPayload.Content))
