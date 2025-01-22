@@ -1735,7 +1735,7 @@ async function wrapTransaction(
     txFn: () => Promise<ContractTransaction>,
     txnOpts?: TransactionOpts,
 ): Promise<ContractTransaction> {
-    const retryLimit = txnOpts?.retryCount ?? isTestEnv() ? 3 : 0
+    const retryLimit = txnOpts?.retryCount ?? isTestEnv() ? 5 : 0
 
     const runTx = async () => {
         let retryCount = 0
@@ -1763,7 +1763,7 @@ async function wrapTransaction(
                 }
                 logger.error('Transaction submission failed, retrying...', { error, retryCount })
                 await new Promise((resolve) =>
-                    setTimeout(resolve, (1000 + Math.random() * 500) * retryCount),
+                    setTimeout(resolve, (750 + Math.random() * 500) * retryCount),
                 )
             }
         }
