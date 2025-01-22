@@ -173,6 +173,7 @@ export class GroupEncryptionCrypto {
      * Rejects with an error if there is a problem decrypting the event.
      */
     public async decryptGroupEvent(streamId: string, content: EncryptedData) {
+        // parse the algorithm, if value is not set, parsing function will throw
         const algorithm = parseGroupEncryptionAlgorithmId(content.algorithm)
         if (algorithm.kind === 'unrecognized') {
             throw new DecryptionError('GROUP_DECRYPTION_UNKNOWN_ALGORITHM', content.algorithm)

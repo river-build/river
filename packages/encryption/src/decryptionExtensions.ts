@@ -528,8 +528,11 @@ export abstract class BaseDecryptionExtensions {
             return
         }
         this.log.debug('processNewGroupSession', session)
-        // check if it contains any keys we need
-        const parsed = parseGroupEncryptionAlgorithmId(session.algorithm)
+        // check if it contains any keys we need, default to GroupEncryption if the algorithm is not set
+        const parsed = parseGroupEncryptionAlgorithmId(
+            session.algorithm,
+            GroupEncryptionAlgorithmId.GroupEncryption,
+        )
         if (parsed.kind === 'unrecognized') {
             // todo dispatch event to update the error message
             this.log.error('skipping, invalid algorithm', session.algorithm)
