@@ -39,6 +39,9 @@ func (j *mbJob) produceCandidate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if j.candidate == nil {
+		return nil
+	}
 
 	err = j.saveCandidate(ctx)
 	if err != nil {
@@ -60,6 +63,9 @@ func (j *mbJob) makeCandidate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if prop == nil {
+		return nil
+	}
 
 	j.candidate, err = view.makeMiniblockCandidate(ctx, j.params, prop)
 	if err != nil {
@@ -79,7 +85,7 @@ func (j *mbJob) makeReplicatedProposal(ctx context.Context) (*mbProposal, *strea
 
 	proposals = append(proposals, localProposal)
 
-	combined, err := j.combineProposals(ctx, proposals)
+	combined, err := j.combineProposals(proposals)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -93,7 +99,14 @@ func (j *mbJob) makeLocalProposal(ctx context.Context) (*mbProposal, *streamView
 		return nil, nil, err
 	}
 
-	return view.proposeNextMiniblock(ctx, j.params.ChainConfig.Get(), j.forceSnapshot), view, nil
+	prop := view.proposeNextMiniblock(ctx, j.params.ChainConfig.Get(), j.forceSnapshot)
+
+	// Is there anything to do?
+	if len(prop.eventHashes) == 0 && !prop.shouldSnapshot {
+		return nil, view, nil
+	}
+
+	return prop, view, nil
 }
 
 func (j *mbJob) processRemoteProposals(ctx context.Context) ([]*mbProposal, *streamViewImpl, error) {
@@ -106,6 +119,7 @@ func (j *mbJob) processRemoteProposals(ctx context.Context) ([]*mbProposal, *str
 		StreamId:           j.stream.streamId[:],
 		DebugForceSnapshot: j.forceSnapshot,
 		NewMiniblockNum:    view.minipool.generation,
+		PrevMiniblockHash:  view.LastBlock().Ref.Hash[:],
 		LocalEventHashes:   view.minipool.eventHashesAsBytes(),
 	}
 
@@ -157,10 +171,7 @@ func (j *mbJob) processRemoteProposals(ctx context.Context) ([]*mbProposal, *str
 	return nil, nil, RiverError(Err_INTERNAL, "mbJob.processRemoteProposals: no proposals and no errors")
 }
 
-func (j *mbJob) combineProposals(
-	ctx context.Context,
-	proposals []*mbProposal,
-) (*mbProposal, error) {
+func (j *mbJob) combineProposals(proposals []*mbProposal) (*mbProposal, error) {
 	// Sanity check: all proposals must have the same miniblock number and prev hash.
 	for _, p := range proposals {
 		if p.newMiniblockNum != proposals[0].newMiniblockNum || p.prevMiniblockHash != proposals[0].prevMiniblockHash {
@@ -196,6 +207,11 @@ func (j *mbJob) combineProposals(
 		if c >= quorumNum {
 			events = append(events, h)
 		}
+	}
+
+	// Is there anything to do?
+	if len(events) == 0 && !shouldSnapshot {
+		return nil, nil
 	}
 
 	return &mbProposal{

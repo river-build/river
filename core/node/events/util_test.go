@@ -303,19 +303,16 @@ func (ctc *cacheTestContext) GetMbProposal(
 		return nil, err
 	}
 
-	view, err := stream.getViewIfLocal(ctx)
+	view, err := stream.getView(ctx)
 	if err != nil {
 		return nil, err
-	}
-	if view == nil {
-		return nil, RiverError(Err_INTERNAL, "GetMbProposal: stream is not local")
 	}
 
-	proposal, err := view.ProposeNextMiniblock(ctx, inst.params.ChainConfig.Get(), request.DebugForceSnapshot)
+	resp, err := view.ProposeNextMiniblock(ctx, inst.params.ChainConfig.Get(), request)
 	if err != nil {
 		return nil, err
 	}
-	return &ProposeMiniblockResponse{Proposal: proposal}, nil
+	return resp, nil
 }
 
 func (ctc *cacheTestContext) SaveMbCandidate(

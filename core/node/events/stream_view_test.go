@@ -154,8 +154,14 @@ func TestLoad(t *testing.T) {
 	assert.Equal(t, false, view.shouldSnapshot(cfg))
 
 	// and miniblocks should have nil snapshots
-	proposal, _ := view.ProposeNextMiniblock(ctx, cfg, false)
-	mbCandidate, err := view.makeMiniblockCandidate(ctx, params, mbProposalFromProto(proposal))
+	resp, err := view.ProposeNextMiniblock(ctx, cfg, &ProposeMiniblockRequest{
+		StreamId:          streamId[:],
+		NewMiniblockNum:   view.minipool.generation,
+		PrevMiniblockHash: view.LastBlock().Ref.Hash[:],
+	})
+	require.NoError(t, err)
+	require.Len(t, resp.MissingEvents, view.minipool.events.Len())
+	mbCandidate, err := view.makeMiniblockCandidate(ctx, params, mbProposalFromProto(resp.Proposal))
 	require.NoError(t, err)
 	assert.Nil(t, mbCandidate.headerEvent.Event.GetMiniblockHeader().Snapshot)
 
@@ -176,10 +182,17 @@ func TestLoad(t *testing.T) {
 	assert.Equal(t, true, view.shouldSnapshot(cfg))
 	assert.Equal(t, 1, len(view.blocks))
 	assert.Equal(t, 2, len(view.blocks[0].Events()))
-	// and miniblocks should have non - nil snapshots
 
-	proposal, _ = view.ProposeNextMiniblock(ctx, cfg, false)
-	mbCandidate, err = view.makeMiniblockCandidate(ctx, params, mbProposalFromProto(proposal))
+	// and miniblocks should have non - nil snapshots
+	resp, err = view.ProposeNextMiniblock(ctx, cfg, &ProposeMiniblockRequest{
+		StreamId:          streamId[:],
+		NewMiniblockNum:   view.minipool.generation,
+		PrevMiniblockHash: view.LastBlock().Ref.Hash[:],
+		LocalEventHashes:  view.minipool.eventHashesAsBytes(),
+	})
+	require.NoError(t, err)
+	require.Len(t, resp.MissingEvents, 0)
+	mbCandidate, err = view.makeMiniblockCandidate(ctx, params, mbProposalFromProto(resp.Proposal))
 	require.NoError(t, err)
 	miniblockHeader = mbCandidate.headerEvent.Event.GetMiniblockHeader()
 	assert.NotNil(t, miniblockHeader.Snapshot)

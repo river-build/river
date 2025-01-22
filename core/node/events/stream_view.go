@@ -52,8 +52,8 @@ type StreamView interface {
 	ProposeNextMiniblock(
 		ctx context.Context,
 		cfg *crypto.OnChainSettings,
-		forceSnapshot bool,
-	) (*MiniblockProposal, error)
+		req *ProposeMiniblockRequest,
+	) (*ProposeMiniblockResponse, error)
 	IsMember(userAddress []byte) (bool, error)
 	CopyAndPrependMiniblocks(mbs []*MiniblockInfo) (StreamView, error)
 	AllEvents() iter.Seq[*ParsedEvent]
@@ -243,17 +243,76 @@ func (r *streamViewImpl) Blocks() []*MiniblockInfo {
 	return r.blocks
 }
 
-// TODO: still needed?
 func (r *streamViewImpl) ProposeNextMiniblock(
 	ctx context.Context,
 	cfg *crypto.OnChainSettings,
-	forceSnapshot bool,
-) (*MiniblockProposal, error) {
-	return &MiniblockProposal{
-		Hashes:            r.minipool.eventHashesAsBytes(),
-		NewMiniblockNum:   r.minipool.generation,
-		PrevMiniblockHash: r.LastBlock().headerEvent.Hash[:],
-		ShouldSnapshot:    forceSnapshot || r.shouldSnapshot(cfg),
+	req *ProposeMiniblockRequest,
+) (*ProposeMiniblockResponse, error) {
+	if !bytes.Equal(req.StreamId, r.streamId[:]) {
+		return nil, RiverError(
+			Err_BAD_STREAM_ID,
+			"can't create proposal: stream id mismatch",
+			"requestedStreamId",
+			req.StreamId,
+			"actualStreamId",
+			r.streamId[:],
+		)
+	}
+
+	if req.NewMiniblockNum > r.minipool.generation {
+		return nil, RiverError(
+			Err_MINIBLOCK_TOO_NEW,
+			"can't create proposal: local replica is behind stream head",
+			"localMbNum",
+			r.minipool.generation,
+			"requestedMbNum",
+			req.NewMiniblockNum,
+		)
+	}
+
+	if req.NewMiniblockNum < r.minipool.generation {
+		return nil, RiverError(
+			Err_MINIBLOCK_TOO_OLD,
+			"can't create proposal: stream advanced past requested miniblock",
+			"localMbNum",
+			r.minipool.generation,
+			"requestedMbNum",
+			req.NewMiniblockNum,
+		)
+	}
+
+	if !bytes.Equal(req.PrevMiniblockHash, r.LastBlock().Ref.Hash[:]) {
+		return nil, RiverError(
+			Err_BAD_PREV_MINIBLOCK_HASH,
+			"can't create proposal: prev miniblock hash mismatch",
+			"requestedMbNum",
+			req.NewMiniblockNum,
+			"requestedPrevMbHash",
+			req.PrevMiniblockHash,
+			"actualPrevMbHash",
+			r.LastBlock().Ref.Hash,
+		)
+	}
+
+	remoteHashes := make(map[common.Hash]bool)
+	for _, h := range req.LocalEventHashes {
+		remoteHashes[common.BytesToHash(h)] = true
+	}
+	var missingEvents []*Envelope
+	for _, e := range r.minipool.events.Values {
+		if !remoteHashes[e.Hash] {
+			missingEvents = append(missingEvents, e.Envelope)
+		}
+	}
+
+	return &ProposeMiniblockResponse{
+		Proposal: &MiniblockProposal{
+			Hashes:            r.minipool.eventHashesAsBytes(),
+			NewMiniblockNum:   r.minipool.generation,
+			PrevMiniblockHash: r.LastBlock().Ref.Hash[:],
+			ShouldSnapshot:    req.DebugForceSnapshot || r.shouldSnapshot(cfg),
+		},
+		MissingEvents: missingEvents,
 	}, nil
 }
 
