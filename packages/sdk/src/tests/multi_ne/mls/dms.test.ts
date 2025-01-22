@@ -4,6 +4,8 @@
 
 import { Client } from '../../../client'
 import { makeTestClient } from '../../testUtils'
+import { MLS_ALGORITHM } from '../../../mls'
+import { checkTimelineContainsAll } from './utils'
 // import { MLS_ALGORITHM } from '../../../mls'
 // import { checkTimelineContainsAll } from './utils'
 
@@ -27,7 +29,7 @@ async function makeInitAndStartClient(nickname?: string) {
     return client
 }
 
-describe.skip('dmsMlsTests', () => {
+describe('dmsMlsTests', () => {
     let aliceClient!: Client
     let bobClient!: Client
     let streamId!: string
@@ -55,50 +57,33 @@ describe.skip('dmsMlsTests', () => {
         expect(streamId).toBeDefined()
     })
 
-    // it('clientsCanEnableMls', async () => {
-    //     let aliceEnabledMls = false
-    //     let bobEnabledMls = false
-    //
-    //     aliceClient.once('streamEncryptionAlgorithmUpdated', (updatedStreamId, value) => {
-    //         expect(updatedStreamId).toBe(streamId)
-    //         expect(value).toBe(MLS_ALGORITHM)
-    //         aliceEnabledMls = true
-    //     })
-    //
-    //     bobClient.once('streamEncryptionAlgorithmUpdated', (updatedStreamId, value) => {
-    //         expect(updatedStreamId).toBe(streamId)
-    //         expect(value).toBe(MLS_ALGORITHM)
-    //         bobEnabledMls = true
-    //     })
-    //
-    //     await aliceClient.setStreamEncryptionAlgorithm(streamId, MLS_ALGORITHM)
-    //
-    //     // Wait for both of them to enable MLS
-    //     await expect
-    //         .poll(() => aliceEnabledMls && bobEnabledMls, {
-    //             timeout: 5_000,
-    //         })
-    //         .toBe(true)
-    //
-    //     await aliceClient.sendMessage(streamId, 'hello bob')
-    //
-    //     await expect
-    //         .poll(
-    //             () =>
-    //                 checkTimelineContainsAll(
-    //                     ['hello bob'],
-    //                     bobClient.streams.get(streamId)!.view.timeline,
-    //                 ),
-    //             { timeout: 10_000 },
-    //         )
-    //         .toBe(true)
-    //
-    //     await expect
-    //         .poll(
-    //             () =>
-    //                 getCurrentEpoch(aliceClient, streamId) === getCurrentEpoch(bobClient, streamId),
-    //             { timeout: 10_000 },
-    //         )
-    //         .toBeTruthy()
-    // }, 10_000)
+    it('clientsCanEnableMls', { timeout: 10_000 }, async () => {
+        await aliceClient.setStreamEncryptionAlgorithm(streamId, MLS_ALGORITHM)
+
+        await expect
+            .poll(
+                () => aliceClient.mlsExtensions?.agent?.streams.get(streamId)?.localView?.status,
+                { timeout: 10_000 },
+            )
+            .toBe('active')
+
+        await expect
+            .poll(() => bobClient.mlsExtensions?.agent?.streams.get(streamId)?.localView?.status, {
+                timeout: 10_000,
+            })
+            .toBe('active')
+
+        await aliceClient.sendMessage(streamId, 'hello bob')
+
+        await expect
+            .poll(
+                () =>
+                    checkTimelineContainsAll(
+                        ['hello bob'],
+                        bobClient.streams.get(streamId)!.view.timeline,
+                    ),
+                { timeout: 10_000 },
+            )
+            .toBe(true)
+    })
 })

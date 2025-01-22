@@ -1,6 +1,7 @@
 import { dlog } from '@river-build/dlog'
 import { MlsLogger } from './logger'
-import { MlsConfirmedEvent, MlsConfirmedSnapshot } from './types'
+import { MlsConfirmedEvent, MlsConfirmedSnapshot, MlsEncryptedContentItem } from './types'
+import { EncryptedContent } from '../encryptedContentTypes'
 
 const defaultLogger = dlog('csb:mls:queue')
 
@@ -22,6 +23,7 @@ export type MlsQueueDelegate = {
         streamId: string,
         snapshots: MlsConfirmedSnapshot[],
         confirmedEvents: MlsConfirmedEvent[],
+        encryptedContentItems: MlsEncryptedContentItem[],
     ): Promise<void>
 }
 
@@ -29,6 +31,7 @@ type StreamUpdate = {
     streamId: string
     snapshots: MlsConfirmedSnapshot[]
     confirmedEvents: MlsConfirmedEvent[]
+    encryptedContentItems: MlsEncryptedContentItem[]
 }
 
 export class MlsQueue {
@@ -53,49 +56,60 @@ export class MlsQueue {
 
     // # Queue-related operations #
 
-    public enqueueConfirmedSnapshot(streamId: string, snapshot: MlsConfirmedSnapshot) {
-        this.log.debug?.('enqueueConfirmedSnapshot', streamId, snapshot)
-
+    private getEnqueuedStreamUpdate(streamId: string): StreamUpdate {
         let streamUpdate = this.streamUpdates.get(streamId)
         if (!streamUpdate) {
             streamUpdate = {
                 streamId,
                 snapshots: [],
                 confirmedEvents: [],
+                encryptedContentItems: [],
             }
             this.streamUpdates.set(streamId, streamUpdate)
         }
+        return streamUpdate
+    }
 
+    public enqueueConfirmedSnapshot(streamId: string, snapshot: MlsConfirmedSnapshot) {
+        this.log.debug?.('enqueueConfirmedSnapshot', streamId, snapshot)
+
+        const streamUpdate = this.getEnqueuedStreamUpdate(streamId)
         streamUpdate.snapshots.push(snapshot)
     }
 
     public enqueueConfirmedEvent(streamId: string, event: MlsConfirmedEvent) {
         this.log.debug?.('enqueueConfirmedEvent', streamId, event)
 
-        let streamUpdate = this.streamUpdates.get(streamId)
-        if (!streamUpdate) {
-            streamUpdate = {
-                streamId,
-                snapshots: [],
-                confirmedEvents: [],
-            }
-            this.streamUpdates.set(streamId, streamUpdate)
-        }
-
+        const streamUpdate = this.getEnqueuedStreamUpdate(streamId)
         streamUpdate.confirmedEvents.push(event)
     }
 
     public enqueueStreamUpdate(streamId: string) {
-        const existingStreamUpdate = this.streamUpdates.get(streamId)
-        if (existingStreamUpdate !== undefined) {
-            return
-        }
-        const emptyStreamUpdate = {
+        this.log.debug?.('enqueueStreamUpdate', streamId)
+
+        this.getEnqueuedStreamUpdate(streamId)
+    }
+
+    public enqueueNewEncryptedContent(
+        streamId: string,
+        eventId: string,
+        encryptedContent: EncryptedContent,
+    ) {
+        this.log.debug?.('enqueueNewEncryptedContent', streamId, eventId, encryptedContent)
+
+        const kind = encryptedContent.kind
+        const encryptedData = encryptedContent.content
+        const epoch = encryptedData.mls?.epoch ?? -1n
+        const ciphertext = encryptedData.mls?.ciphertext ?? new Uint8Array()
+        const streamUpdate = this.getEnqueuedStreamUpdate(streamId)
+
+        streamUpdate.encryptedContentItems.push({
             streamId,
-            snapshots: [],
-            confirmedEvents: [],
-        }
-        this.streamUpdates.set(streamId, emptyStreamUpdate)
+            eventId,
+            kind,
+            epoch,
+            ciphertext,
+        })
     }
 
     // Dequeue streams in round-robin fashion
@@ -194,6 +208,7 @@ export class MlsQueue {
                 streamUpdate.streamId,
                 streamUpdate.snapshots,
                 streamUpdate.confirmedEvents,
+                streamUpdate.encryptedContentItems,
             )
         }
     }

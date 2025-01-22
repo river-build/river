@@ -4,12 +4,10 @@ import { DLogger, dlog, check } from '@river-build/dlog'
 import { LocalEpochSecret, LocalView } from './localView'
 import { MlsLogger } from './logger'
 import { IValueAwaiter, awaiter } from './awaiter'
-import { MlsEncryptedContentItem } from './types'
-import { DecryptedContent, EncryptedContent, toDecryptedContent } from '../encryptedContentTypes'
-import { MLS_ALGORITHM } from './constants'
+import { MlsConfirmedEvent, MlsConfirmedSnapshot, MlsEncryptedContentItem } from './types'
+import { DecryptedContent, toDecryptedContent } from '../encryptedContentTypes'
 import { IPersistenceStore } from '../persistenceStore'
 import { isDefined } from '../check'
-import { EncryptedData } from '@river-build/proto'
 import { MlsMessages } from './messages'
 
 export type MlsStreamOpts = {
@@ -124,7 +122,12 @@ export class MlsStream {
     }
 
     // TODO: Update not to depend on client
-    public async handleStreamUpdate(): Promise<void> {
+    public async handleStreamUpdate(
+        _streamId: string,
+        _snapshots: MlsConfirmedSnapshot[],
+        _confirmedEvents: MlsConfirmedEvent[],
+        mlsEncryptedContentItems: MlsEncryptedContentItem[],
+    ): Promise<void> {
         this.log.debug?.('handleStreamUpdate', this.streamId)
         const stream = this.client?.stream(this.streamId)
         if (stream === undefined) {
@@ -139,29 +142,20 @@ export class MlsStream {
             await this._localView.processOnChainView(this._onChainView)
             this.checkAndResolveActiveLocalView()
         }
+
+        for (const mlsEncryptedContentItem of mlsEncryptedContentItems) {
+            await this.processMlsEncryptedContentItem(mlsEncryptedContentItem)
+        }
     }
 
-    public async handleEncryptedContent(
-        streamId: string,
-        eventId: string,
-        message: EncryptedContent,
+    public async processMlsEncryptedContentItem(
+        mlsEncryptedContentItem: MlsEncryptedContentItem,
     ): Promise<void> {
-        const encryptedData = message.content
-        const kind = message.kind
-        const epoch = encryptedData.mls?.epoch
-        const ciphertext = encryptedData.mls?.ciphertext
-
-        if (epoch === undefined) {
-            throw new Error('epoch not found')
-        }
-
-        if (ciphertext === undefined) {
-            throw new Error('ciphertext not found')
-        }
-
-        if (encryptedData.algorithm == MLS_ALGORITHM) {
-            throw new Error(`unknown algorithm: ${encryptedData.algorithm}`)
-        }
+        const streamId = mlsEncryptedContentItem.streamId
+        const eventId = mlsEncryptedContentItem.eventId
+        const kind = mlsEncryptedContentItem.kind
+        const epoch = mlsEncryptedContentItem.epoch
+        const ciphertext = mlsEncryptedContentItem.ciphertext
 
         const clearText = await this.persistenceStore?.getCleartext(eventId)
         if (clearText !== undefined) {
@@ -174,7 +168,7 @@ export class MlsStream {
 
         const epochSecret = this.localView?.getEpochSecret(epoch)
         if (epochSecret === undefined) {
-            return this.decryptionFailure(streamId, eventId, epoch, kind, encryptedData)
+            return this.decryptionFailure(mlsEncryptedContentItem)
         }
 
         const decryptedContent = await MlsMessages.decryptEpochSecretMessage(
@@ -196,19 +190,14 @@ export class MlsStream {
         stream.updateDecryptedContent(eventId, content)
     }
 
-    private decryptionFailure(
-        streamId: string,
-        eventId: string,
-        epoch: bigint,
-        kind: EncryptedContent['kind'],
-        encryptedData: EncryptedData,
-    ) {
+    private decryptionFailure(mlsEncryptedContentItem: MlsEncryptedContentItem) {
+        const epoch = mlsEncryptedContentItem.epoch
         let perEpoch = this.decryptionFailures.get(epoch)
         if (!perEpoch) {
             perEpoch = []
             this.decryptionFailures.set(epoch, perEpoch)
         }
 
-        perEpoch.push({ streamId, eventId, epoch, kind, encryptedData })
+        perEpoch.push(mlsEncryptedContentItem)
     }
 }

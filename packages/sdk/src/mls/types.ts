@@ -59,6 +59,6 @@ export type MlsEncryptedContentItem = {
     streamId: string
     eventId: string
     kind: EncryptedContent['kind']
-    encryptedData: EncryptedData
     epoch: bigint
+    ciphertext: Uint8Array
 }

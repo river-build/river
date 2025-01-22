@@ -56,7 +56,11 @@ export class MlsProcessor {
 
     // API needed by the client
     // TODO: How long will be the timeout here?
-    public async encryptMessage(mlsStream: MlsStream, event: Message, timeoutMS?: number): Promise<EncryptedData> {
+    public async encryptMessage(
+        mlsStream: MlsStream,
+        event: Message,
+        timeoutMS?: number,
+    ): Promise<EncryptedData> {
         await this.initializeOrJoinGroup(mlsStream)
         const localView = await mlsStream.awaitActiveLocalView(timeoutMS)
 

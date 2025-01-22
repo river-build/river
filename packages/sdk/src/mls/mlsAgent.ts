@@ -7,6 +7,8 @@ import { MlsStream } from './mlsStream'
 import { MlsProcessor } from './mlsProcessor'
 import { Client } from '../client'
 import { MLS_ALGORITHM } from './constants'
+import { EncryptedContent } from '../encryptedContentTypes'
+import {MlsConfirmedEvent, MlsConfirmedSnapshot, MlsEncryptedContentItem} from "./types";
 
 const defaultLogger = dlog('csb:mls:agent')
 
@@ -61,6 +63,7 @@ export class MlsAgent {
     public start(): void {
         this.encryptionEmitter?.on('mlsQueueConfirmedEvent', this.onConfirmedEvent)
         this.encryptionEmitter?.on('mlsQueueSnapshot', this.onSnapshot)
+        this.encryptionEmitter?.on('mlsNewEncryptedContent', this.onNewEncryptedContent)
         this.stateEmitter?.on(
             'streamEncryptionAlgorithmUpdated',
             this.onStreamEncryptionAlgorithmUpdated,
@@ -71,6 +74,7 @@ export class MlsAgent {
     public stop(): void {
         this.encryptionEmitter?.off('mlsQueueConfirmedEvent', this.onConfirmedEvent)
         this.encryptionEmitter?.off('mlsQueueSnapshot', this.onSnapshot)
+        this.encryptionEmitter?.off('mlsNewEncryptedContent', this.onNewEncryptedContent)
         this.stateEmitter?.off(
             'streamEncryptionAlgorithmUpdated',
             this.onStreamEncryptionAlgorithmUpdated,
@@ -111,10 +115,28 @@ export class MlsAgent {
         }
     }
 
-    public async handleStreamUpdate(streamId: string): Promise<void> {
+    public readonly onNewEncryptedContent: StreamEncryptionEvents['mlsNewEncryptedContent'] = (
+        streamId: string,
+        eventId: string,
+        content: EncryptedContent,
+    ): void => {
+        this.queue.enqueueNewEncryptedContent(streamId, eventId, content)
+    }
+
+    public async handleStreamUpdate(
+        streamId: string,
+        snapshots: MlsConfirmedSnapshot[],
+        confirmedEvents: MlsConfirmedEvent[],
+        encryptedContentItems: MlsEncryptedContentItem[],
+    ): Promise<void> {
         const mlsStream = this.streams.get(streamId)
         if (this.enabledStreams.has(streamId) && mlsStream !== undefined) {
-            await mlsStream.handleStreamUpdate()
+            await mlsStream.handleStreamUpdate(
+                streamId,
+                snapshots,
+                confirmedEvents,
+                encryptedContentItems,
+            )
             await this.processor.initializeOrJoinGroup(mlsStream)
             await this.processor.announceEpochSecrets(mlsStream)
         }

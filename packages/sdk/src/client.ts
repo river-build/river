@@ -156,6 +156,7 @@ import { makeTags, makeTipTags } from './tags'
 import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
 import { MLS_ALGORITHM } from './mls'
 import { MlsClientExtensions } from './mls/mlsClientExtensions'
+import { randomBytes } from 'crypto'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -205,7 +206,7 @@ export class Client
     private entitlementsDelegate: EntitlementsDelegate
     private decryptionExtensions?: BaseDecryptionExtensions
     private syncedStreamsExtensions?: SyncedStreamsExtension
-    private mlsExtensions?: MlsClientExtensions
+    public mlsExtensions?: MlsClientExtensions
     private persistenceStore: IPersistenceStore
     private validatedEvents: Record<string, { isValid: boolean; reason?: string }> = {}
     private defaultGroupEncryptionAlgorithm: GroupEncryptionAlgorithmId
@@ -2407,13 +2408,11 @@ export class Client
         }
 
         // Create and inject all the dependencies
-        const deviceKey = new TextEncoder().encode(this.userDeviceKey().deviceKey)
-        if (deviceKey.length <= 0) {
-            throw new Error('deviceKey must be set')
-        }
+        // generate random device key
+        const deviceKey = randomBytes(32)
 
-        this.mlsExtensions = new MlsClientExtensions()
-        await this.mlsExtensions.initialize()
+        this.mlsExtensions = new MlsClientExtensions(this, this.persistenceStore)
+        await this.mlsExtensions.initialize(deviceKey)
     }
 
     /**
