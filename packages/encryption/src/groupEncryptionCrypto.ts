@@ -1,5 +1,10 @@
 import { EncryptedData } from '@river-build/proto'
-import { GroupEncryptionAlgorithmId, GroupEncryptionSession, parseGroupEncryptionAlgorithmId, UserDevice } from './olmLib'
+import {
+    GroupEncryptionAlgorithmId,
+    GroupEncryptionSession,
+    parseGroupEncryptionAlgorithmId,
+    UserDevice,
+} from './olmLib'
 
 import { CryptoStore } from './cryptoStore'
 import {

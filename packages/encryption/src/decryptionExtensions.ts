@@ -1,5 +1,5 @@
 import TypedEmitter from 'typed-emitter'
-import { checkNever, Permission } from '@river-build/web3'
+import { Permission } from '@river-build/web3'
 import {
     AddEventResponse_Error,
     EncryptedData,
@@ -535,7 +535,7 @@ export abstract class BaseDecryptionExtensions {
             this.log.error('skipping, invalid algorithm', session.algorithm)
             return
         }
-        let algorithm: GroupEncryptionAlgorithmId = parsed.value
+        const algorithm: GroupEncryptionAlgorithmId = parsed.value
 
         const neededKeyIndexs = []
         for (let i = 0; i < session.sessionIds.length; i++) {
