@@ -14,12 +14,13 @@ const NumberFromIntStringSchema = IntStringSchema.transform((str) => parseInt(st
 const BoolFromStringSchema = BoolStringSchema.transform((str) => str === 'true')
 
 const envMainSchema = z.object({
-   RIVER_ENV: z.string(),
-   INITIAL_BLOCK_NUM: z.string().transform((str) => BigInt(str)),
-   TRANSACTION_VALID_BLOCKS: NumberFromIntStringSchema.optional().default("20"),
-   BASE_PROVIDER_URL: z.string(),
-   LOG_LEVEL: z.string().optional().default('info'),
-   LOG_PRETTY: BoolFromStringSchema.optional().default('true'),
+    RIVER_ENV: z.string(),
+    INITIAL_BLOCK_NUM: z.string().transform((str) => BigInt(str)),
+    TRANSACTION_VALID_BLOCKS: NumberFromIntStringSchema.optional().default('20'),
+    BASE_PROVIDER_URL: z.string(),
+    LOG_LEVEL: z.string().optional().default('info'),
+    LOG_PRETTY: BoolFromStringSchema.optional().default('true'),
+    DD_GIT_COMMIT_SHA: z.string().optional(),
 })
 
 function makeConfig() {
@@ -38,10 +39,11 @@ function makeConfig() {
             pretty: envMain.LOG_PRETTY,
             level: envMain.LOG_LEVEL,
         },
-		instance: {
-			id: v4(),
-			deployedAt: new Date().toISOString(),
-		},
+        instance: {
+            id: v4(),
+            deployedAt: new Date().toISOString(),
+        },
+        version: envMain.DD_GIT_COMMIT_SHA,
     }
 }
 
