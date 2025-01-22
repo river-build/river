@@ -32,21 +32,21 @@ func (s *Service) localAddMediaEvent(
 		return nil, AsRiverError(err).Func("localAddMediaEvent")
 	}
 
-	genesisStreamEvent, err := s.getGenesisStreamEvent(ctx, streamId)
+	genesisEvent, err := s.getGenesisMediaEvent(ctx, streamId)
 	if err != nil {
 		return nil, AsRiverError(err).Func("localAddMediaEvent")
 	}
 
-	genesisInception := genesisStreamEvent.GetMediaPayload().GetInception()
+	genesisInception := genesisEvent.GetMediaPayload().GetInception()
 	chunk := parsedEvent.Event.GetMediaPayload().GetChunk()
 
 	// Make sure only stream creator can add a media chunk
-	if !bytes.Equal(parsedEvent.Event.CreatorAddress, genesisStreamEvent.CreatorAddress) {
+	if !bytes.Equal(parsedEvent.Event.CreatorAddress, genesisEvent.CreatorAddress) {
 		return nil, RiverError(
 			Err_PERMISSION_DENIED,
 			"media event creator is not a creator of the media stream",
 			"creatorAddress",
-			common.BytesToAddress(genesisStreamEvent.CreatorAddress),
+			common.BytesToAddress(genesisEvent.CreatorAddress),
 			"streamId",
 			streamId,
 		)
@@ -88,20 +88,28 @@ func (s *Service) localAddMediaEvent(
 	}), nil
 }
 
-func (s *Service) getGenesisStreamEvent(ctx context.Context, streamId StreamId) (*StreamEvent, error) {
-	genesisMbData, err := s.storage.ReadGenesisMiniblock(ctx, streamId)
+func (s *Service) getGenesisMediaEvent(ctx context.Context, streamId StreamId) (*StreamEvent, error) {
+	mbs, err := s.storage.ReadMiniblocks(ctx, streamId, 0, 1)
 	if err != nil {
 		return nil, err
 	}
 
-	var genesisMb Miniblock
-	if err = proto.Unmarshal(genesisMbData, &genesisMb); err != nil {
+	if len(mbs) == 0 {
+		return nil, RiverError(Err_NOT_FOUND, "Genesis miniblock not found")
+	}
+
+	var mb Miniblock
+	if err = proto.Unmarshal(mbs[0], &mb); err != nil {
 		return nil, err
 	}
 
 	var mediaEvent StreamEvent
-	if err = proto.Unmarshal(genesisMb.GetEvents()[0].Event, &mediaEvent); err != nil {
+	if err = proto.Unmarshal(mb.GetEvents()[0].Event, &mediaEvent); err != nil {
 		return nil, RiverError(Err_INTERNAL, "Failed to decode stream event from genesis miniblock")
+	}
+
+	if mediaEvent.GetMediaPayload().GetInception() == nil {
+		return nil, RiverError(Err_INTERNAL, "Genesis stream event does not have a media inception")
 	}
 
 	return &mediaEvent, nil

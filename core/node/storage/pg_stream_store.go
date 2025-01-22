@@ -1142,52 +1142,6 @@ func (s *PostgresStreamStore) readMiniblocksByStreamTx(
 	return err
 }
 
-// ReadGenesisMiniblock returns the genesis miniblock for the given stream ID.
-func (s *PostgresStreamStore) ReadGenesisMiniblock(ctx context.Context, streamId StreamId) ([]byte, error) {
-	var miniblock []byte
-	err := s.txRunner(
-		ctx,
-		"ReadGenesisMiniblock",
-		pgx.ReadWrite,
-		func(ctx context.Context, tx pgx.Tx) error {
-			var err error
-			miniblock, err = s.readGenesisMiniblockTx(ctx, tx, streamId)
-			return err
-		},
-		nil,
-		"streamId", streamId,
-	)
-	return miniblock, err
-}
-
-func (s *PostgresStreamStore) readGenesisMiniblockTx(
-	ctx context.Context,
-	tx pgx.Tx,
-	streamId StreamId,
-) ([]byte, error) {
-	_, err := s.lockStream(ctx, tx, streamId, false)
-	if err != nil {
-		return nil, err
-	}
-
-	var miniblock []byte
-	err = tx.QueryRow(
-		ctx,
-		s.sqlForStream(
-			"SELECT blockdata FROM {{miniblocks}} WHERE stream_id = $1 AND seq_num = 0",
-			streamId,
-		),
-		streamId,
-	).Scan(&miniblock)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, RiverError(Err_NOT_FOUND, "Genesis miniblock not found")
-		}
-		return nil, err
-	}
-	return miniblock, nil
-}
-
 // WriteMiniblockCandidate adds a miniblock proposal candidate. When the miniblock is finalized, the node will promote the
 // candidate with the correct hash.
 func (s *PostgresStreamStore) WriteMiniblockCandidate(
