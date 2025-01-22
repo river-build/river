@@ -30741,6 +30741,7 @@ __metadata:
   resolution: "xchain-monitor@workspace:packages/xchain-monitor"
   dependencies:
     "@river-build/generated": "workspace:^"
+    "@river-build/web3": "workspace:^"
     tsx: ^4.19.2
     typescript: ^5.7.3
     viem: ^2.22.8
