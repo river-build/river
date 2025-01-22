@@ -160,7 +160,13 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
         })
 
         if (snapshot.members.mls) {
-            this.mls.applySnapshot(snapshot.members.mls, encryptionEmitter)
+            const confirmedSnapshot = {
+                eventId,
+                confirmedEventNum: 0n,
+                miniblockNum: 0n,
+                ...snapshot.members.mls,
+            }
+            this.mls.applySnapshot(confirmedSnapshot, encryptionEmitter)
         }
         this.tips = { ...snapshot.members.tips }
         this.encryptionAlgorithm = snapshot.members.encryptionAlgorithm?.algorithm

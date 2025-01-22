@@ -8,8 +8,9 @@ import { Client as MlsClient, ClientOptions as MlsClientOptions } from '@river-b
 import { dlog } from '@river-build/dlog'
 import { beforeEach, describe, expect } from 'vitest'
 import { MlsProcessor, MlsProcessorOpts } from '../../../mls/mlsProcessor'
-import { MlsQueue } from '../../../mls/mlsQueue'
+import { MlsQueue, MlsQueueOpts } from '../../../mls/mlsQueue'
 import { MlsAgent, MlsAgentOpts } from '../../../mls/mlsAgent'
+import { fromSingle } from '../../../mls/logger'
 
 const encoder = new TextEncoder()
 
@@ -30,14 +31,8 @@ describe('MlsAgentTests', () => {
     }
 
     function makeMlsProcessorOpts(nickname: string): MlsProcessorOpts {
-        const log_ = log.extend(nickname)
         return {
-            log: {
-                info: log_.extend('info'),
-                debug: log_.extend('debug'),
-                error: log_.extend('error'),
-                warn: log_.extend('warn'),
-            },
+            log: fromSingle(log.extend(nickname)),
             sendingOptions: {
                 method: 'mls',
             },
@@ -45,14 +40,15 @@ describe('MlsAgentTests', () => {
     }
 
     function makeMlsAgentOpts(nickname: string): MlsAgentOpts {
-        const log_ = log.extend(nickname)
         return {
-            log: {
-                info: log_.extend('info'),
-                debug: log_.extend('debug'),
-                error: log_.extend('error'),
-                warn: log_.extend('warn'),
-            },
+            log: fromSingle(log.extend(nickname)),
+        }
+    }
+
+    function makeMlsQueueOpts(nickname: string): MlsQueueOpts {
+        return {
+            log: fromSingle(log.extend(nickname)),
+            delayMs: 15,
         }
     }
 
@@ -81,7 +77,7 @@ describe('MlsAgentTests', () => {
     let streamId: string
 
     function makeClient(testClient: TestClient): TestClientWithAgent {
-        const queue = new MlsQueue()
+        const queue = new MlsQueue(undefined, makeMlsQueueOpts(testClient.nickname))
         const processor = new MlsProcessor(
             testClient.client,
             testClient.mlsClient,

@@ -1,5 +1,6 @@
 import { dlog } from '@river-build/dlog'
 import { MlsLogger } from './logger'
+import { MlsConfirmedEvent, MlsConfirmedSnapshot } from './types'
 
 const defaultLogger = dlog('csb:mls:queue')
 
@@ -17,11 +18,21 @@ const defaultMlsQueueOpts = {
 }
 
 export type MlsQueueDelegate = {
-    handleStreamUpdate(streamId: string): Promise<void>
+    handleStreamUpdate(
+        streamId: string,
+        snapshots: MlsConfirmedSnapshot[],
+        confirmedEvents: MlsConfirmedEvent[],
+    ): Promise<void>
+}
+
+type StreamUpdate = {
+    streamId: string
+    snapshots: MlsConfirmedSnapshot[]
+    confirmedEvents: MlsConfirmedEvent[]
 }
 
 export class MlsQueue {
-    private updatedStreams: Set<string> = new Set()
+    private streamUpdates: Map<string, StreamUpdate> = new Map()
 
     private delayMs = 15
     private started: boolean = false
@@ -42,27 +53,48 @@ export class MlsQueue {
 
     // # Queue-related operations #
 
-    // Queue-related fields
-    // private commandQueue: Set<QueueCommand> = new Set()
+    public enqueueConfirmedSnapshot(streamId: string, snapshot: MlsConfirmedSnapshot) {
+        this.log.debug?.('enqueueConfirmedSnapshot', streamId, snapshot)
 
-    public enqueueUpdatedStream(streamId: string) {
-        this.log.debug?.('enqueueUpdatedStream', { streamId })
+        let streamUpdate = this.streamUpdates.get(streamId)
+        if (!streamUpdate) {
+            streamUpdate = {
+                streamId,
+                snapshots: [],
+                confirmedEvents: [],
+            }
+            this.streamUpdates.set(streamId, streamUpdate)
+        }
 
-        this.updatedStreams.add(streamId)
-        // TODO: Is this needed when we tick after start
-        this.checkStartTicking()
+        streamUpdate.snapshots.push(snapshot)
+    }
+
+    public enqueueConfirmedEvent(streamId: string, event: MlsConfirmedEvent) {
+        this.log.debug?.('enqueueConfirmedEvent', streamId, event)
+
+        let streamUpdate = this.streamUpdates.get(streamId)
+        if (!streamUpdate) {
+            streamUpdate = {
+                streamId,
+                snapshots: [],
+                confirmedEvents: [],
+            }
+            this.streamUpdates.set(streamId, streamUpdate)
+        }
+
+        streamUpdate.confirmedEvents.push(event)
     }
 
     // Dequeue streams in round-robin fashion
     // Dequeue first stream that got inserted
     // TODO: Add limit for draining in one go
-    public dequeueConfirmedStream(): string | undefined {
-        const firstStream = this.updatedStreams.keys().next()
+    public dequeueStreamUpdate(): StreamUpdate | undefined {
+        const firstStream = this.streamUpdates.entries().next()
         if (firstStream.done) {
             return undefined
         }
-        this.updatedStreams.delete(firstStream.value)
-        return firstStream.value
+        this.streamUpdates.delete(firstStream.value[0])
+        return firstStream.value[1]
     }
 
     getDelayMs(): number {
@@ -139,9 +171,17 @@ export class MlsQueue {
 
     // TODO: Figure out how to schedule this...
     public async tick(): Promise<void> {
-        const streamId = this.dequeueConfirmedStream()
-        if (streamId !== undefined) {
-            await this.delegate?.handleStreamUpdate(streamId)
+        this.log.debug?.('tick')
+
+        const streamUpdate = this.dequeueStreamUpdate()
+        this.log.debug?.('tick: streamUpdate', streamUpdate)
+        if (streamUpdate !== undefined) {
+            this.log.debug?.('handlingStreamUpdate', streamUpdate)
+            await this.delegate?.handleStreamUpdate(
+                streamUpdate.streamId,
+                streamUpdate.snapshots,
+                streamUpdate.confirmedEvents,
+            )
         }
     }
 

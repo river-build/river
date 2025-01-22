@@ -58,8 +58,8 @@ export class MlsAgent {
     }
 
     public start(): void {
-        this.encryptionEmitter?.on('mlsQueueConfirmedEvent', this.onStreamUpdated)
-        this.encryptionEmitter?.on('mlsQueueSnapshot', this.onStreamUpdated)
+        this.encryptionEmitter?.on('mlsQueueConfirmedEvent', this.onConfirmedEvent)
+        this.encryptionEmitter?.on('mlsQueueSnapshot', this.onSnapshot)
         this.stateEmitter?.on(
             'streamEncryptionAlgorithmUpdated',
             this.onStreamEncryptionAlgorithmUpdated,
@@ -67,8 +67,8 @@ export class MlsAgent {
     }
 
     public stop(): void {
-        this.encryptionEmitter?.off('mlsQueueConfirmedEvent', this.onStreamUpdated)
-        this.encryptionEmitter?.off('mlsQueueSnapshot', this.onStreamUpdated)
+        this.encryptionEmitter?.off('mlsQueueConfirmedEvent', this.onConfirmedEvent)
+        this.encryptionEmitter?.off('mlsQueueSnapshot', this.onSnapshot)
         this.stateEmitter?.off(
             'streamEncryptionAlgorithmUpdated',
             this.onStreamEncryptionAlgorithmUpdated,
@@ -91,8 +91,14 @@ export class MlsAgent {
         this.enabledStreams.delete(streamId)
     }
 
-    public readonly onStreamUpdated = (streamId: string): void => {
-        this.queue.enqueueUpdatedStream(streamId)
+    public readonly onConfirmedEvent: StreamEncryptionEvents['mlsQueueConfirmedEvent'] = (
+        ...args
+    ): void => {
+        this.queue.enqueueConfirmedEvent(...args)
+    }
+
+    public readonly onSnapshot: StreamEncryptionEvents['mlsQueueSnapshot'] = (...args): void => {
+        this.queue.enqueueConfirmedSnapshot(...args)
     }
 
     public readonly onStreamEncryptionAlgorithmUpdated = (

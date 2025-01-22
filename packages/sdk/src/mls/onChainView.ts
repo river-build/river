@@ -16,6 +16,8 @@ import { dlog } from '@river-build/dlog'
 import { logNever } from '../check'
 import { IStreamStateView } from '../streamStateView'
 import { MlsLogger } from './logger'
+import { StreamTimelineEvent } from '../types'
+import { MemberPayload_Snapshot_Mls } from '@river-build/proto'
 
 const defaultLogger = dlog('csb:mls:onChainView')
 
@@ -39,6 +41,102 @@ export type ExternalInfo = {
     exportedTree: Uint8Array
     latestGroupInfo: Uint8Array
     epoch: bigint
+}
+
+export type SnapshotAndConfirmedEvents = {
+    snapshot: MlsSnapshot
+    confirmedEvents: MlsConfirmedEvent[]
+}
+
+function extractLastConfirmedMlsSnapshot(timeline: StreamTimelineEvent[]): MlsConfirmedSnapshot {
+    let lastConfirmedSnapshot = {
+        confirmedEventNum: -1n,
+        miniblockNum: -1n,
+        eventId: '',
+        ...new MemberPayload_Snapshot_Mls(),
+    }
+    timeline.forEach((event) => {
+        if (event.confirmedEventNum === undefined) {
+            return
+        }
+
+        if (event.miniblockNum === undefined) {
+            return
+        }
+
+        if (event.remoteEvent?.event.payload?.case !== 'miniblockHeader') {
+            return
+        }
+
+        const mlsSnapshot = event.remoteEvent?.event.payload?.value.snapshot?.members?.mls
+        if (mlsSnapshot === undefined) {
+            return
+        }
+
+        if (event.confirmedEventNum > lastConfirmedSnapshot.confirmedEventNum) {
+            lastConfirmedSnapshot = {
+                confirmedEventNum: event.confirmedEventNum,
+                miniblockNum: event.miniblockNum,
+                eventId: event.remoteEvent.hashStr,
+                ...mlsSnapshot,
+            }
+        }
+    })
+    return lastConfirmedSnapshot
+}
+
+export function extractConfirmedEvents(
+    timeline: StreamTimelineEvent[],
+    snapshotConfirmedEventNum = 1n,
+): MlsConfirmedEvent[] {
+    const confirmedMlsEvents: MlsConfirmedEvent[] = []
+
+    timeline.forEach((event) => {
+        if (event.confirmedEventNum === undefined) {
+            return
+        }
+
+        if (event.miniblockNum === undefined) {
+            return
+        }
+
+        if (event.remoteEvent?.event.payload?.case !== 'memberPayload') {
+            return
+        }
+
+        const payload = event.remoteEvent?.event.payload?.value.content
+        if (payload?.case !== 'mls') {
+            return
+        }
+
+        const confirmedMlsEvent = {
+            confirmedEventNum: event.confirmedEventNum,
+            miniblockNum: event.miniblockNum,
+            eventId: event.remoteEvent.hashStr,
+            ...payload.value.content,
+        }
+
+        if (confirmedMlsEvent.confirmedEventNum > snapshotConfirmedEventNum) {
+            confirmedMlsEvents.push(confirmedMlsEvent)
+        }
+    })
+
+    // Sort numerically in ascending order
+    confirmedMlsEvents.sort((a, b) => {
+        const d = a.confirmedEventNum - b.confirmedEventNum
+        return d > 0n ? 1 : d < 0n ? -1 : 0
+    })
+
+    return confirmedMlsEvents
+}
+
+export function extractFromTimeLine(timeline: StreamTimelineEvent[]): SnapshotAndConfirmedEvents {
+    const snapshot = extractLastConfirmedMlsSnapshot(timeline)
+    const confirmedEvents = extractConfirmedEvents(timeline, snapshot.confirmedEventNum)
+    return {
+        snapshot,
+        confirmedEvents,
+    }
 }
 
 /// Class to represent on-chain view of MLS
@@ -213,91 +311,12 @@ export class OnChainView {
         streamView: IStreamStateView,
         opts: OnChainViewOpts = defaultOnChainViewOpts,
     ): Promise<OnChainView> {
+        const { snapshot, confirmedEvents } = extractFromTimeLine(streamView.timeline)
+
         const onChainView = new OnChainView(opts)
-
-        let lastConfirmedMlsSnapshot: MlsConfirmedSnapshot | undefined
-        streamView.timeline.forEach((event) => {
-            if (event.confirmedEventNum === undefined) {
-                return
-            }
-
-            if (event.miniblockNum === undefined) {
-                return
-            }
-
-            if (event.remoteEvent?.event.payload?.case !== 'miniblockHeader') {
-                return
-            }
-
-            const mlsSnapshot = event.remoteEvent?.event.payload?.value.snapshot?.members?.mls
-            if (mlsSnapshot === undefined) {
-                return
-            }
-
-            const confirmedMlsSnapshot = {
-                confirmedEventNum: event.confirmedEventNum,
-                miniblockNum: event.miniblockNum,
-                eventId: event.remoteEvent.hashStr,
-                ...mlsSnapshot,
-            }
-
-            if (
-                confirmedMlsSnapshot.confirmedEventNum >
-                (lastConfirmedMlsSnapshot?.confirmedEventNum ?? BigInt(-1))
-            ) {
-                lastConfirmedMlsSnapshot = confirmedMlsSnapshot
-            }
-        })
-
-        const snapshotConfirmedEventNum = lastConfirmedMlsSnapshot?.confirmedEventNum ?? BigInt(-1)
-        const confirmedMlsEvents: MlsConfirmedEvent[] = []
-
-        streamView.timeline.forEach((event) => {
-            if (event.confirmedEventNum === undefined) {
-                return
-            }
-
-            if (event.miniblockNum === undefined) {
-                return
-            }
-
-            if (event.remoteEvent?.event.payload?.case !== 'memberPayload') {
-                return
-            }
-
-            const payload = event.remoteEvent?.event.payload?.value.content
-            if (payload?.case !== 'mls') {
-                return
-            }
-
-            const confirmedMlsEvent = {
-                confirmedEventNum: event.confirmedEventNum,
-                miniblockNum: event.miniblockNum,
-                eventId: event.remoteEvent.hashStr,
-                ...payload.value.content,
-            }
-
-            if (confirmedMlsEvent.confirmedEventNum > snapshotConfirmedEventNum) {
-                confirmedMlsEvents.push(confirmedMlsEvent)
-            }
-        })
-
-        confirmedMlsEvents.sort((a, b) => {
-            const difference = a.confirmedEventNum - b.confirmedEventNum
-            if (difference > 0n) {
-                return 1
-            }
-            if (difference < 0n) {
-                return -1
-            }
-            return 0
-        })
-
-        if (lastConfirmedMlsSnapshot !== undefined) {
-            await onChainView.processSnapshot(lastConfirmedMlsSnapshot)
-        }
-        for (const confirmedMlsEvent of confirmedMlsEvents) {
-            await onChainView.processConfirmedMlsEvent(confirmedMlsEvent)
+        await onChainView.processSnapshot(snapshot)
+        for (const confirmedEvent of confirmedEvents) {
+            await onChainView.processConfirmedMlsEvent(confirmedEvent)
         }
         return onChainView
     }

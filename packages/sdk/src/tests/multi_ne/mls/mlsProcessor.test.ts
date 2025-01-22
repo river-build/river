@@ -9,6 +9,7 @@ import { dlog } from '@river-build/dlog'
 import { beforeEach, describe, expect } from 'vitest'
 import { MlsStream } from '../../../mls/mlsStream'
 import { MlsProcessor, MlsProcessorOpts } from '../../../mls/mlsProcessor'
+import { MlsQueue } from '../../../mls/mlsQueue'
 
 const encoder = new TextEncoder()
 
@@ -60,6 +61,7 @@ describe('MlsProcessorTests', () => {
 
     type TestClientWithProcessor = TestClient & {
         processor: MlsProcessor
+        queue: MlsQueue
         stream: MlsStream
     }
 
@@ -76,10 +78,12 @@ describe('MlsProcessorTests', () => {
             undefined,
             makeMlsProcessorOpts(testClient.nickname),
         )
+        const queue = new MlsQueue({ handleStreamUpdate: () => stream.handleStreamUpdate() })
         return {
             ...testClient,
             stream,
             processor,
+            queue,
         }
     }
 
@@ -113,6 +117,24 @@ describe('MlsProcessorTests', () => {
         clients.length = 0
     })
 
+    // attaching and detaching the queue
+    // beforeEach(() => {
+    //     const cleanups = clients.map((client) => {
+    //         const onQueueSnapshot: StreamEncryptionEvents['mlsQueueSnapshot'] = (...args) => client.queue.enqueueConfirmedSnapshot(...args)
+    //         client.client.on('mlsQueueSnapshot', onQueueSnapshot)
+    //         const onConfirmedEvent: StreamEncryptionEvents['mlsQueueConfirmedEvent'] = (...args) => client.queue.enqueueConfirmedEvent(...args)
+    //         client.client.on('mlsQueueConfirmedEvent', onConfirmedEvent)
+    //         return () => {
+    //             client.client.off('mlsQueueSnapshot', onQueueSnapshot)
+    //             client.client.off('mlsQueueConfirmedEvent', onConfirmedEvent)
+    //         }
+    //     })
+    //     // enqueue removing listeners
+    //     afterEach(() => {
+    //         cleanups.forEach((cleanup) => cleanup())
+    //     })
+    // })
+
     type Counts = {
         accepted?: number
         rejected?: number
@@ -129,9 +151,15 @@ describe('MlsProcessorTests', () => {
         const processed = counts.rejected ?? -1
 
         const perClient = async (client: TestClientWithProcessor) => {
-            // Manually trigger a stream update
+            // Manually tick the queue
             await client.stream.handleStreamUpdate()
             const view = client.stream.onChainView
+            // log.extend(client.nickname)(
+            //     'view',
+            //     view.accepted.size,
+            //     view.rejected.size,
+            //     view.processedCount,
+            // )
             return (
                 view.accepted.size >= accepted &&
                 view.rejected.size >= rejected &&
@@ -152,6 +180,7 @@ describe('MlsProcessorTests', () => {
             await expect
                 .poll(
                     async () => {
+                        log('alice polls')
                         await alice.stream.handleStreamUpdate()
                         return alice.stream.onChainView
                     },
