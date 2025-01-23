@@ -47,6 +47,8 @@ const (
 	shortenHexCharsPartLen = shortenHexChars/2 - 2
 )
 
+// formatString will optionally shorten strings if they are determined to be parsable as
+// hex and are past a threshold length.
 func formatString(s string) string {
 	hex, hasPrefix := IsHexString(s)
 	if hex {
