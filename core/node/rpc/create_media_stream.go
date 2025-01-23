@@ -48,7 +48,7 @@ func (s *Service) createMediaStream(ctx context.Context, req *CreateMediaStreamR
 		return nil, err
 	}
 
-	log.Debug("createStream", "parsedEvents", parsedEvents)
+	log.Debugw("createStream", "parsedEvents", parsedEvents)
 
 	csRules, err := rules.CanCreateStream(
 		ctx,

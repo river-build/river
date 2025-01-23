@@ -66,7 +66,7 @@ func (s *Service) localAddMediaEvent(
 			s.chainConfig.Get().MediaMaxChunkSize)
 	}
 
-	log.Debug("localAddMediaEvent", "parsedEvent", parsedEvent, "creationCookie", creationCookie)
+	log.Debugw("localAddMediaEvent", "parsedEvent", parsedEvent, "creationCookie", creationCookie)
 
 	stream := &replicatedStream{
 		streamId: streamId,
