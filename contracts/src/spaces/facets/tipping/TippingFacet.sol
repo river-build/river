@@ -4,11 +4,15 @@ pragma solidity ^0.8.23;
 // interfaces
 import {ITipping} from "./ITipping.sol";
 import {ITownsPointsBase} from "contracts/src/airdrop/points/ITownsPoints.sol";
+import {IPlatformRequirements} from "contracts/src/factory/facets/platform/requirements/IPlatformRequirements.sol";
+
 // libraries
 import {TippingBase} from "./TippingBase.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {PointsProxyLib} from "contracts/src/spaces/facets/points/PointsProxyLib.sol";
-
+import {MembershipStorage} from "contracts/src/spaces/facets/membership/MembershipStorage.sol";
+import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
+import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
 // contracts
 import {ERC721ABase} from "contracts/src/diamond/facets/token/ERC721A/ERC721ABase.sol";
 import {Facet} from "@river-build/diamond/src/facets/Facet.sol";
@@ -28,12 +32,19 @@ contract TippingFacet is ITipping, ERC721ABase, Facet, ReentrancyGuard {
       tipRequest.amount
     );
 
+    uint256 tipAmount = tipRequest.amount;
+
+    if (tipRequest.currency == CurrencyTransfer.NATIVE_TOKEN) {
+      uint256 protocolFee = _payProtocol(msg.sender, tipRequest.amount);
+      tipAmount = tipRequest.amount - protocolFee;
+    }
+
     TippingBase.tip(
       msg.sender,
       tipRequest.receiver,
       tipRequest.tokenId,
       tipRequest.currency,
-      tipRequest.amount
+      tipAmount
     );
 
     PointsProxyLib.mintTipping(msg.sender, tipRequest.amount);
@@ -109,5 +120,25 @@ contract TippingFacet is ITipping, ERC721ABase, Facet, ReentrancyGuard {
       CustomRevert.revertWith(CurrencyIsZero.selector);
     if (sender == receiver) CustomRevert.revertWith(CannotTipSelf.selector);
     if (amount == 0) CustomRevert.revertWith(AmountIsZero.selector);
+  }
+
+  function _payProtocol(
+    address sender,
+    uint256 amount
+  ) internal returns (uint256) {
+    MembershipStorage.Layout storage ds = MembershipStorage.layout();
+    IPlatformRequirements platform = IPlatformRequirements(ds.spaceFactory);
+
+    address platformRecipient = platform.getFeeRecipient();
+    uint256 protocolFee = BasisPoints.calculate(amount, 100); // 1%
+
+    CurrencyTransfer.transferCurrency(
+      CurrencyTransfer.NATIVE_TOKEN,
+      sender,
+      platformRecipient,
+      protocolFee
+    );
+
+    return protocolFee;
   }
 }

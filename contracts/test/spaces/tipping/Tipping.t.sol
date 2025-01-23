@@ -6,9 +6,11 @@ import {ITippingBase} from "contracts/src/spaces/facets/tipping/ITipping.sol";
 import {IERC721AQueryable} from "contracts/src/diamond/facets/token/ERC721A/extensions/IERC721AQueryable.sol";
 import {IERC721ABase} from "contracts/src/diamond/facets/token/ERC721A/IERC721A.sol";
 import {ITownsPoints, ITownsPointsBase} from "contracts/src/airdrop/points/ITownsPoints.sol";
+import {IPlatformRequirements} from "contracts/src/factory/facets/platform/requirements/IPlatformRequirements.sol";
 // libraries
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 
 // contracts
 import {TippingFacet} from "contracts/src/spaces/facets/tipping/TippingFacet.sol";
@@ -30,6 +32,8 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
   MockERC20 internal mockERC20;
   ITownsPoints internal points;
 
+  address internal platformRecipient;
+
   function setUp() public override {
     super.setUp();
 
@@ -39,6 +43,7 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     token = IERC721AQueryable(everyoneSpace);
     mockERC20 = MockERC20(deployERC20.deploy(deployer));
     points = ITownsPoints(riverAirdrop);
+    platformRecipient = IPlatformRequirements(spaceFactory).getFeeRecipient();
   }
 
   modifier givenUsersAreMembers(address sender, address receiver) {
@@ -71,6 +76,9 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     uint256[] memory tokens = token.tokensOfOwner(receiver);
     uint256 tokenId = tokens[0];
 
+    uint256 protocolFee = BasisPoints.calculate(amount, 100); // 1%
+    uint256 tipAmount = amount - protocolFee;
+
     hoax(sender, amount);
     vm.expectEmit(address(tipping));
     emit Tip(
@@ -96,16 +104,17 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     uint256 gasUsed = vm.stopSnapshotGas();
 
     assertLt(gasUsed, 400_000);
-    assertEq(receiver.balance - initialBalance, amount);
+    assertEq(receiver.balance - initialBalance, tipAmount);
+    assertEq(platformRecipient.balance, protocolFee);
     assertEq(sender.balance, 0);
     assertEq(
       tipping.tipsByCurrencyAndTokenId(tokenId, CurrencyTransfer.NATIVE_TOKEN),
-      amount
+      tipAmount
     );
     assertEq(tipping.totalTipsByCurrency(CurrencyTransfer.NATIVE_TOKEN), 1);
     assertEq(
       tipping.tipAmountByCurrency(CurrencyTransfer.NATIVE_TOKEN),
-      amount
+      tipAmount
     );
     assertContains(tipping.tippingCurrencies(), CurrencyTransfer.NATIVE_TOKEN);
   }
