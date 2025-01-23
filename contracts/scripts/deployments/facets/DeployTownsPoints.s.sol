@@ -28,6 +28,11 @@ contract DeployTownsPoints is Deployer, FacetHelper {
     addSelector(TownsPoints.checkIn.selector);
     addSelector(TownsPoints.getCurrentStreak.selector);
     addSelector(TownsPoints.getLastCheckIn.selector);
+
+    // Tipping
+    addSelector(TownsPoints.getTippingLastResetDay.selector);
+    addSelector(TownsPoints.getTippingDailyPoints.selector);
+    addSelector(TownsPoints.mintTippingPoints.selector);
   }
 
   // Deploying

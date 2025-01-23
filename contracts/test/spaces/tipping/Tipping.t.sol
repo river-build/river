@@ -5,9 +5,10 @@ pragma solidity ^0.8.23;
 import {ITippingBase} from "contracts/src/spaces/facets/tipping/ITipping.sol";
 import {IERC721AQueryable} from "contracts/src/diamond/facets/token/ERC721A/extensions/IERC721AQueryable.sol";
 import {IERC721ABase} from "contracts/src/diamond/facets/token/ERC721A/IERC721A.sol";
-
+import {ITownsPoints, ITownsPointsBase} from "contracts/src/airdrop/points/ITownsPoints.sol";
 // libraries
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // contracts
 import {TippingFacet} from "contracts/src/spaces/facets/tipping/TippingFacet.sol";
@@ -27,14 +28,17 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
   MembershipFacet internal membership;
   IERC721AQueryable internal token;
   MockERC20 internal mockERC20;
+  ITownsPoints internal points;
 
   function setUp() public override {
     super.setUp();
+
     tipping = TippingFacet(everyoneSpace);
     introspection = IntrospectionFacet(everyoneSpace);
     membership = MembershipFacet(everyoneSpace);
     token = IERC721AQueryable(everyoneSpace);
     mockERC20 = MockERC20(deployERC20.deploy(deployer));
+    points = ITownsPoints(riverAirdrop);
   }
 
   modifier givenUsersAreMembers(address sender, address receiver) {
@@ -61,11 +65,12 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     bytes32 messageId,
     bytes32 channelId
   ) external givenUsersAreMembers(sender, receiver) {
-    amount = bound(amount, 0.01 ether, 1 ether);
+    amount = bound(amount, 0.0003 ether, 1 ether);
 
     uint256 initialBalance = receiver.balance;
     uint256[] memory tokens = token.tokensOfOwner(receiver);
     uint256 tokenId = tokens[0];
+
     hoax(sender, amount);
     vm.expectEmit(address(tipping));
     emit Tip(
@@ -90,7 +95,7 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     );
     uint256 gasUsed = vm.stopSnapshotGas();
 
-    assertLt(gasUsed, 200_000);
+    assertLt(gasUsed, 400_000);
     assertEq(receiver.balance - initialBalance, amount);
     assertEq(sender.balance, 0);
     assertEq(
@@ -145,7 +150,7 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     uint256 gasUsed = vm.stopSnapshotGas();
     vm.stopPrank();
 
-    assertLt(gasUsed, 200_000);
+    assertLt(gasUsed, 300_000);
     assertEq(mockERC20.balanceOf(sender), 0);
     assertEq(mockERC20.balanceOf(receiver), amount);
     assertEq(
@@ -156,28 +161,6 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     assertEq(tipping.tipAmountByCurrency(address(mockERC20)), amount);
     assertContains(tipping.tippingCurrencies(), address(mockERC20));
   }
-
-  // function test_revertWhenTokenDoesNotExist(
-  //   uint256 tokenId,
-  //   uint256 amount,
-  //   address receiver,
-  //   bytes32 messageId,
-  //   bytes32 channelId
-  // ) external {
-  //   vm.assume(tokenId != 0); // tokenId cannot be 0 because that would be the founder token id
-
-  //   vm.expectRevert(OwnerQueryForNonexistentToken.selector);
-  //   tipping.tip(
-  //     TipRequest({
-  //       receiver: receiver,
-  //       tokenId: tokenId,
-  //       currency: CurrencyTransfer.NATIVE_TOKEN,
-  //       amount: amount,
-  //       messageId: messageId,
-  //       channelId: channelId
-  //     })
-  //   );
-  // }
 
   function test_revertWhenCurrencyIsZero(
     address sender,
@@ -244,5 +227,102 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
         channelId: channelId
       })
     );
+  }
+
+  // =============================================================
+  //                           Points
+  // =============================================================
+  function test_getPoints(
+    address sender,
+    address receiver
+  ) external givenUsersAreMembers(sender, receiver) {
+    vm.assume(points.getTippingLastResetDay(receiver) == 0);
+
+    uint256 tipAmount = 0.0003 ether;
+    uint256 dailyPoints = points.getTippingDailyPoints(receiver);
+    uint256 currentDay = block.timestamp;
+    uint256 lastResetDay = points.getTippingLastResetDay(receiver);
+
+    // first tip of the day
+    uint256 calculatedPoints = points.getPoints(
+      ITownsPointsBase.Action.Tip,
+      abi.encode(tipAmount, dailyPoints, currentDay, lastResetDay)
+    );
+    assertEq(calculatedPoints, 1);
+
+    // tipping max
+    tipAmount = 1 ether;
+    calculatedPoints = points.getPoints(
+      ITownsPointsBase.Action.Tip,
+      abi.encode(tipAmount, dailyPoints, currentDay, lastResetDay)
+    );
+    assertEq(calculatedPoints, 10);
+
+    // tip after daily limit
+    tipAmount = 0.0003 ether;
+    dailyPoints = 10;
+    lastResetDay = currentDay;
+    calculatedPoints = points.getPoints(
+      ITownsPointsBase.Action.Tip,
+      abi.encode(tipAmount, dailyPoints, currentDay, lastResetDay)
+    );
+    assertEq(calculatedPoints, 0);
+
+    // reset daily points
+    lastResetDay = currentDay - 1 days;
+    dailyPoints = 10;
+    calculatedPoints = points.getPoints(
+      ITownsPointsBase.Action.Tip,
+      abi.encode(tipAmount, dailyPoints, currentDay, lastResetDay)
+    );
+    assertEq(calculatedPoints, 1);
+
+    // tip after reset
+    lastResetDay = currentDay - 1 days;
+    dailyPoints = 10;
+    tipAmount = 1 ether;
+    calculatedPoints = points.getPoints(
+      ITownsPointsBase.Action.Tip,
+      abi.encode(tipAmount, dailyPoints, currentDay, lastResetDay)
+    );
+    assertEq(calculatedPoints, 10);
+  }
+
+  function test_fuzz_getPoints(
+    address sender,
+    address receiver,
+    uint256 amount,
+    uint256 timestamp
+  ) external givenUsersAreMembers(sender, receiver) {
+    amount = bound(amount, 0.0003 ether, 1 ether);
+    timestamp = bound(timestamp, block.timestamp - 1 days, block.timestamp);
+
+    uint256 tokenId = token.tokensOfOwner(receiver)[0];
+
+    vm.warp(timestamp);
+
+    (uint256 dailyPoints, uint256 lastResetDay) = (
+      points.getTippingDailyPoints(receiver),
+      points.getTippingLastResetDay(receiver)
+    );
+
+    uint256 calculatedPoints = points.getPoints(
+      ITownsPointsBase.Action.Tip,
+      abi.encode(amount, dailyPoints, timestamp, lastResetDay)
+    );
+
+    hoax(sender, amount);
+    tipping.tip{value: amount}(
+      TipRequest({
+        receiver: receiver,
+        tokenId: tokenId,
+        currency: CurrencyTransfer.NATIVE_TOKEN,
+        amount: amount,
+        messageId: "test",
+        channelId: "test"
+      })
+    );
+
+    assertEq(IERC20(riverAirdrop).balanceOf(sender), calculatedPoints);
   }
 }
