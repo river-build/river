@@ -2,7 +2,11 @@ import { StreamStateView_AbstractContent } from './streamStateView_AbstractConte
 import TypedEmitter from 'typed-emitter'
 import { ConfirmedTimelineEvent, RemoteTimelineEvent } from './types'
 import { StreamEncryptionEvents, StreamStateEvents } from './streamEvents'
-import { MemberPayload_KeyPackage, MemberPayload_Snapshot_Mls_Member } from '@river-build/proto'
+import {
+    MemberPayload_KeyPackage,
+    MemberPayload_Snapshot_Mls,
+    MemberPayload_Snapshot_Mls_Member,
+} from '@river-build/proto'
 import { check } from '@river-build/dlog'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { logNever } from './check'
@@ -24,19 +28,13 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
         this.streamId = streamId
     }
 
-    applySnapshot(
-        content: MlsConfirmedSnapshot & {
-            pendingKeyPackages: { [key: string]: MemberPayload_KeyPackage }
-        },
-        encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
-    ): void {
+    applySnapshot(content: MemberPayload_Snapshot_Mls): void {
         this.externalGroupSnapshot = content.externalGroupSnapshot
         this.groupInfoMessage = content.groupInfoMessage
         this.members = content.members
         this.epochSecrets = content.epochSecrets
         this.pendingKeyPackages = content.pendingKeyPackages
         this.welcomeMessagesMiniblockNum = content.welcomeMessagesMiniblockNum
-        encryptionEmitter?.emit('mlsQueueSnapshot', this.streamId, content)
     }
 
     appendEvent(

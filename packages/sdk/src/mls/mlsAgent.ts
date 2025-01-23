@@ -1,6 +1,6 @@
 import TypedEmitter from 'typed-emitter'
-import { StreamEncryptionEvents, StreamStateEvents } from '../streamEvents'
-import { MlsQueue } from './mlsQueue'
+import { StreamEncryptionEvents, StreamStateEvents, SyncedStreamEvents } from '../streamEvents'
+import { MlsQueue, MlsQueueDelegate, StreamUpdate } from './mlsQueue'
 import { dlog } from '@river-build/dlog'
 import { MlsLogger } from './logger'
 import { MlsStream } from './mlsStream'
@@ -8,12 +8,13 @@ import { MlsProcessor } from './mlsProcessor'
 import { Client } from '../client'
 import { MLS_ALGORITHM } from './constants'
 import { EncryptedContent } from '../encryptedContentTypes'
-import {MlsConfirmedEvent, MlsConfirmedSnapshot, MlsEncryptedContentItem} from "./types";
+import { Stream } from '../stream'
 
 const defaultLogger = dlog('csb:mls:agent')
 
 export type MlsAgentOpts = {
     log: MlsLogger
+    mlsAlwaysEnabled: boolean
 }
 
 const defaultMlsAgentOpts = {
@@ -21,11 +22,12 @@ const defaultMlsAgentOpts = {
         info: defaultLogger.extend('info'),
         error: defaultLogger.extend('error'),
     },
+    mlsAlwaysEnabled: false,
     delayMs: 15,
     sendingOptions: {},
 }
 
-export class MlsAgent {
+export class MlsAgent implements MlsQueueDelegate {
     private readonly client: Client
     // private readonly mlsClient: MlsClient
     // private readonly persistenceStore?: IPersistenceStore
@@ -35,10 +37,10 @@ export class MlsAgent {
     public readonly streams: Map<string, MlsStream> = new Map()
     public readonly processor: MlsProcessor
     public readonly queue: MlsQueue
-    private readonly enabledStreams: Set<string> = new Set<string>()
 
     private log: MlsLogger
     private started: boolean = false
+    public mlsAlwaysEnabled: boolean = false
 
     public constructor(
         client: Client,
@@ -58,6 +60,7 @@ export class MlsAgent {
         this.processor = processor
         this.queue = queue
         this.log = opts.log
+        this.mlsAlwaysEnabled = opts.mlsAlwaysEnabled
     }
 
     public start(): void {
@@ -68,6 +71,7 @@ export class MlsAgent {
             'streamEncryptionAlgorithmUpdated',
             this.onStreamEncryptionAlgorithmUpdated,
         )
+        this.stateEmitter?.on('streamInitialized', this.onStreamInitialized)
         this.started = true
     }
 
@@ -75,6 +79,7 @@ export class MlsAgent {
         this.encryptionEmitter?.off('mlsQueueConfirmedEvent', this.onConfirmedEvent)
         this.encryptionEmitter?.off('mlsQueueSnapshot', this.onSnapshot)
         this.encryptionEmitter?.off('mlsNewEncryptedContent', this.onNewEncryptedContent)
+        this.stateEmitter?.off('streamInitialized', this.onStreamInitialized)
         this.stateEmitter?.off(
             'streamEncryptionAlgorithmUpdated',
             this.onStreamEncryptionAlgorithmUpdated,
@@ -82,25 +87,22 @@ export class MlsAgent {
         this.started = false
     }
 
-    public enableStream(streamId: string) {
-        this.enabledStreams.add(streamId)
-        if (!this.streams.has(streamId)) {
-            this.streams.set(streamId, new MlsStream(streamId, this.client))
-        }
+    public readonly onStreamInitialized: StreamStateEvents['streamInitialized'] = (
+        streamId: string,
+    ): void => {
+        this.log.debug?.('agent: onStreamInitialized', streamId)
         this.queue.enqueueStreamUpdate(streamId)
-    }
-
-    public disableStream(streamId: string) {
-        this.enabledStreams.delete(streamId)
     }
 
     public readonly onConfirmedEvent: StreamEncryptionEvents['mlsQueueConfirmedEvent'] = (
         ...args
     ): void => {
+        this.log.debug?.('agent: onConfirmedEvent', args)
         this.queue.enqueueConfirmedEvent(...args)
     }
 
     public readonly onSnapshot: StreamEncryptionEvents['mlsQueueSnapshot'] = (...args): void => {
+        this.log.debug?.('agent: onSnapshot', args)
         this.queue.enqueueConfirmedSnapshot(...args)
     }
 
@@ -108,10 +110,9 @@ export class MlsAgent {
         streamId: string,
         encryptionAlgorithm?: string,
     ): void => {
+        this.log.debug?.('agent: onStreamEncryptionAlgorithmUpdated', streamId, encryptionAlgorithm)
         if (encryptionAlgorithm === MLS_ALGORITHM) {
-            this.enableStream(streamId)
-        } else {
-            this.disableStream(streamId)
+            this.queue.enqueueStreamUpdate(streamId)
         }
     }
 
@@ -120,30 +121,97 @@ export class MlsAgent {
         eventId: string,
         content: EncryptedContent,
     ): void => {
+        this.log.debug?.('agent: onNewEncryptedContent', streamId, eventId, content)
         this.queue.enqueueNewEncryptedContent(streamId, eventId, content)
     }
 
-    public async handleStreamUpdate(
+    public readonly onStreamRemovedFromSync: SyncedStreamEvents['streamRemovedFromSync'] = (
         streamId: string,
-        snapshots: MlsConfirmedSnapshot[],
-        confirmedEvents: MlsConfirmedEvent[],
-        encryptedContentItems: MlsEncryptedContentItem[],
-    ): Promise<void> {
-        const mlsStream = this.streams.get(streamId)
-        if (this.enabledStreams.has(streamId) && mlsStream !== undefined) {
-            await mlsStream.handleStreamUpdate(
-                streamId,
-                snapshots,
-                confirmedEvents,
-                encryptedContentItems,
-            )
-            await this.processor.initializeOrJoinGroup(mlsStream)
-            await this.processor.announceEpochSecrets(mlsStream)
+    ): void => {
+        this.log.debug?.('agent: onStreamRemovedFromSync', streamId)
+        // TODO: Persist MLS stuff
+        this.streams.delete(streamId)
+    }
+
+    // This potentially involves loading from storage
+    public async initStream(stream: Stream): Promise<MlsStream> {
+        this.log.debug?.('agent: initStream', stream.streamId)
+
+        if (this.streams.has(stream.streamId)) {
+            throw new Error('stream already initialized')
         }
 
-        // TODO: This should not be needed
-        if (this.enabledStreams.has(streamId) && this.started) {
-            this.queue.enqueueStreamUpdate(streamId)
+        const mlsStream = new MlsStream(stream.streamId, stream)
+        this.streams.set(stream.streamId, mlsStream)
+
+        return mlsStream
+    }
+
+    public async handleStreamUpdate(streamUpdate: StreamUpdate): Promise<void> {
+        // this.log.debug?.('agent: handleStreamUpdate', streamId, snapshots, confirmedEvents)
+        // const mlsStream = this.streams.get(streamId)
+        // const mlsEnabled =
+        //     mlsStream?.stream.view.snapshot?.members?.encryptionAlgorithm?.algorithm ===
+        //         MLS_ALGORITHM || this.mlsAlwaysEnabled
+        const streamId = streamUpdate.streamId
+        const stream = this.client.streams.get(streamId)
+        if (stream === undefined) {
+            throw new Error('stream not initialized')
+        }
+
+        const encryptionAlgorithm = stream.view.membershipContent.encryptionAlgorithm
+        this.log.debug?.('algorithm', encryptionAlgorithm)
+
+        const mlsEnabled = encryptionAlgorithm === MLS_ALGORITHM || this.mlsAlwaysEnabled
+
+        let mlsStream = this.streams.get(streamId)
+        if (mlsStream === undefined) {
+            // need to initialize Mls stream
+            mlsStream = await this.initStream(stream)
+        }
+
+        this.log.debug?.('agent: mlsEnabled', streamId, mlsEnabled)
+
+        if (mlsEnabled) {
+            // this.log.debug?.('agent: updated onchain view', streamId, mlsStream.onChainView)
+            await mlsStream.handleStreamUpdate(streamUpdate)
+            // TODO: this is potentially slow
+            await mlsStream.retryDecryptionFailures()
+
+            this.log.debug?.('agent: ', {
+                status: mlsStream.localView?.status ?? 'missing',
+                onChain: {
+                    accepted: mlsStream.onChainView.accepted.size,
+                    rejected: mlsStream.onChainView.rejected.size,
+                    commits: mlsStream.onChainView.commits.size,
+                    sealed: mlsStream.onChainView.sealedEpochSecrets.keys(),
+                },
+                local: {
+                    secrets: mlsStream.localView?.epochSecrets.keys() ?? [],
+                },
+            })
+
+            if (mlsStream.localView?.status === 'active') {
+                this.log.debug?.('agent: active', streamId)
+                // TODO: welcome new Clients
+            } else {
+                this.log.debug?.('agent: inactive', streamId)
+                // are there any pending encrypts or decrypts?
+                const areTherePendingEncryptsOrDecrypts =
+                    mlsStream.decryptionFailures.size > 0 ||
+                    mlsStream.awaitingActiveLocalView !== undefined
+                if (mlsEnabled || areTherePendingEncryptsOrDecrypts) {
+                    this.log.debug?.('agent: initializeOrJoinGroup', streamId)
+                    try {
+                        await this.processor.initializeOrJoinGroup(mlsStream)
+                    } catch (e) {
+                        this.log.error?.('agent: initializeOrJoinGroup error', streamId)
+                        this.log.error?.('enqueue retry')
+                        this.queue.enqueueStreamUpdate(streamId)
+                    }
+                }
+            }
+            await this.processor.announceEpochSecrets(mlsStream)
         }
     }
 }

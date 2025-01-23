@@ -19,19 +19,28 @@ const defaultMlsQueueOpts = {
 }
 
 export type MlsQueueDelegate = {
-    handleStreamUpdate(
-        streamId: string,
-        snapshots: MlsConfirmedSnapshot[],
-        confirmedEvents: MlsConfirmedEvent[],
-        encryptedContentItems: MlsEncryptedContentItem[],
-    ): Promise<void>
+    handleStreamUpdate(streamUpdate: StreamUpdate): Promise<void>
 }
 
-type StreamUpdate = {
-    streamId: string
-    snapshots: MlsConfirmedSnapshot[]
-    confirmedEvents: MlsConfirmedEvent[]
-    encryptedContentItems: MlsEncryptedContentItem[]
+export class StreamUpdate {
+    constructor(
+        public readonly streamId: string,
+        public readonly snapshots: MlsConfirmedSnapshot[] = [],
+        public readonly confirmedEvents: MlsConfirmedEvent[] = [],
+        public readonly encryptedContentItems: MlsEncryptedContentItem[] = [],
+    ) {}
+
+    public enqueueMlsEncryptedContentItem(mlsEncryptedContentItem: MlsEncryptedContentItem) {
+        this.encryptedContentItems.push(mlsEncryptedContentItem)
+    }
+
+    public enqueueMlsConfirmedSnapshot(snapshot: MlsConfirmedSnapshot) {
+        this.snapshots.push(snapshot)
+    }
+
+    public enqueueMlsConfirmedEvent(event: MlsConfirmedEvent) {
+        this.confirmedEvents.push(event)
+    }
 }
 
 export class MlsQueue {
@@ -56,38 +65,43 @@ export class MlsQueue {
 
     // # Queue-related operations #
 
-    private getEnqueuedStreamUpdate(streamId: string): StreamUpdate {
+    private streamUpdatePerStream(streamId: string): StreamUpdate {
         let streamUpdate = this.streamUpdates.get(streamId)
         if (!streamUpdate) {
-            streamUpdate = {
-                streamId,
-                snapshots: [],
-                confirmedEvents: [],
-                encryptedContentItems: [],
-            }
+            streamUpdate = new StreamUpdate(streamId)
             this.streamUpdates.set(streamId, streamUpdate)
         }
         return streamUpdate
     }
 
     public enqueueConfirmedSnapshot(streamId: string, snapshot: MlsConfirmedSnapshot) {
-        this.log.debug?.('enqueueConfirmedSnapshot', streamId, snapshot)
+        this.log.debug?.('enqueueConfirmedSnapshot', streamId, snapshot.confirmedEventNum)
 
-        const streamUpdate = this.getEnqueuedStreamUpdate(streamId)
-        streamUpdate.snapshots.push(snapshot)
+        // const streamUpdate = this.getEnqueuedStreamUpdate(streamId)
+        // streamUpdate.snapshots.push(snapshot)
+        const streamUpdate = this.streamUpdatePerStream(streamId)
+        streamUpdate.enqueueMlsConfirmedSnapshot(snapshot)
+
+        this.checkStartTicking()
     }
 
     public enqueueConfirmedEvent(streamId: string, event: MlsConfirmedEvent) {
-        this.log.debug?.('enqueueConfirmedEvent', streamId, event)
+        this.log.debug?.('enqueueConfirmedEvent', streamId, event.confirmedEventNum)
 
-        const streamUpdate = this.getEnqueuedStreamUpdate(streamId)
-        streamUpdate.confirmedEvents.push(event)
+        // const streamUpdate = this.getEnqueuedStreamUpdate(streamId)
+        // streamUpdate.confirmedEvents.push(event)
+        const streamUpdate = this.streamUpdatePerStream(streamId)
+        streamUpdate.enqueueMlsConfirmedEvent(event)
+
+        this.checkStartTicking()
     }
 
     public enqueueStreamUpdate(streamId: string) {
         this.log.debug?.('enqueueStreamUpdate', streamId)
 
-        this.getEnqueuedStreamUpdate(streamId)
+        this.streamUpdatePerStream(streamId)
+
+        this.checkStartTicking()
     }
 
     public enqueueNewEncryptedContent(
@@ -101,15 +115,18 @@ export class MlsQueue {
         const encryptedData = encryptedContent.content
         const epoch = encryptedData.mls?.epoch ?? -1n
         const ciphertext = encryptedData.mls?.ciphertext ?? new Uint8Array()
-        const streamUpdate = this.getEnqueuedStreamUpdate(streamId)
 
-        streamUpdate.encryptedContentItems.push({
+        const streamUpdate = this.streamUpdatePerStream(streamId)
+
+        streamUpdate.enqueueMlsEncryptedContentItem({
             streamId,
             eventId,
             kind,
             epoch,
             ciphertext,
         })
+
+        this.checkStartTicking()
     }
 
     // Dequeue streams in round-robin fashion
@@ -145,7 +162,8 @@ export class MlsQueue {
     }
 
     private shouldPauseTicking(): boolean {
-        return this.isMobileSafariBackgrounded
+        const nothingToDo = this.streamUpdates.size === 0
+        return this.isMobileSafariBackgrounded || nothingToDo
     }
 
     private checkStartTicking() {
@@ -160,6 +178,7 @@ export class MlsQueue {
         }
 
         if (this.shouldPauseTicking()) {
+            this.log.debug?.('pausing ticking')
             return
         }
 
@@ -201,15 +220,14 @@ export class MlsQueue {
         this.log.debug?.('tick')
 
         const streamUpdate = this.dequeueStreamUpdate()
-        this.log.debug?.('tick: streamUpdate', streamUpdate)
         if (streamUpdate !== undefined) {
-            this.log.debug?.('handlingStreamUpdate', streamUpdate)
-            await this.delegate?.handleStreamUpdate(
-                streamUpdate.streamId,
-                streamUpdate.snapshots,
-                streamUpdate.confirmedEvents,
-                streamUpdate.encryptedContentItems,
-            )
+            this.log.debug?.('handlingStreamUpdate', {
+                streamId: streamUpdate.streamId,
+                snapshots: streamUpdate.snapshots.length,
+                confirmedEvents: streamUpdate.confirmedEvents.length,
+                encryptedContentItems: streamUpdate.encryptedContentItems.length,
+            })
+            await this.delegate?.handleStreamUpdate(streamUpdate)
         }
     }
 

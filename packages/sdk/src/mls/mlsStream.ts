@@ -1,14 +1,14 @@
 import { OnChainView } from './onChainView'
-import { Client } from '../client'
-import { DLogger, dlog, check } from '@river-build/dlog'
+import { DLogger, dlog } from '@river-build/dlog'
 import { LocalEpochSecret, LocalView } from './localView'
 import { MlsLogger } from './logger'
 import { IValueAwaiter, awaiter } from './awaiter'
-import { MlsConfirmedEvent, MlsConfirmedSnapshot, MlsEncryptedContentItem } from './types'
-import { DecryptedContent, toDecryptedContent } from '../encryptedContentTypes'
+import { MlsEncryptedContentItem } from './types'
+import { toDecryptedContent } from '../encryptedContentTypes'
 import { IPersistenceStore } from '../persistenceStore'
-import { isDefined } from '../check'
 import { MlsMessages } from './messages'
+import { Stream } from '../stream'
+import { MlsQueueDelegate, StreamUpdate } from './mlsQueue'
 
 export type MlsStreamOpts = {
     log: MlsLogger
@@ -23,15 +23,14 @@ const defaultMlsStreamOpts = {
     },
 }
 
-export class MlsStream {
+export class MlsStream implements MlsQueueDelegate {
     public readonly streamId: string
     private _onChainView = new OnChainView()
     private _localView?: LocalView
-    private awaitingActiveLocalView?: IValueAwaiter<LocalView>
-    // cheating
-    private client: Client
+    public awaitingActiveLocalView?: IValueAwaiter<LocalView>
+    public readonly stream: Stream
     private persistenceStore?: IPersistenceStore
-    private decryptionFailures: Map<bigint, MlsEncryptedContentItem[]> = new Map()
+    public readonly decryptionFailures: Map<bigint, MlsEncryptedContentItem[]> = new Map()
     private log: {
         info?: DLogger
         debug?: DLogger
@@ -41,14 +40,14 @@ export class MlsStream {
 
     public constructor(
         streamId: string,
-        client: Client,
+        stream: Stream,
         persistenceStore?: IPersistenceStore,
         localView?: LocalView,
         opts: MlsStreamOpts = defaultMlsStreamOpts,
     ) {
         this.streamId = streamId
         this._localView = localView
-        this.client = client
+        this.stream = stream
         this.persistenceStore = persistenceStore
         this.log = opts.log
     }
@@ -107,6 +106,11 @@ export class MlsStream {
             }
         })
 
+        this.log.debug?.(
+            'unannounced secrets',
+            unannouncedSecrets.map((s) => s.epoch),
+        )
+
         const sealedSecrets: { epoch: bigint; secret: Uint8Array }[] = []
         for (const unnannouncedSecret of unannouncedSecrets) {
             const sealedSecret = await this._localView?.sealEpochSecret(unnannouncedSecret)
@@ -122,36 +126,24 @@ export class MlsStream {
     }
 
     // TODO: Update not to depend on client
-    public async handleStreamUpdate(
-        _streamId: string,
-        _snapshots: MlsConfirmedSnapshot[],
-        _confirmedEvents: MlsConfirmedEvent[],
-        mlsEncryptedContentItems: MlsEncryptedContentItem[],
-    ): Promise<void> {
-        this.log.debug?.('handleStreamUpdate', this.streamId)
-        const stream = this.client?.stream(this.streamId)
-        if (stream === undefined) {
-            this.log.debug?.('streamUpdated: stream not found', this.streamId)
-            return
-        }
-
-        const view = stream.view
+    public async handleStreamUpdate(streamUpdate: StreamUpdate): Promise<void> {
+        const view = this.stream.view
         this._onChainView = await OnChainView.loadFromStreamStateView(view, { log: this.log })
-        // try updaing your local view
+
+        // try updating your local view
         if (this._localView !== undefined) {
             await this._localView.processOnChainView(this._onChainView)
             this.checkAndResolveActiveLocalView()
         }
 
-        for (const mlsEncryptedContentItem of mlsEncryptedContentItems) {
-            await this.processMlsEncryptedContentItem(mlsEncryptedContentItem)
+        for (const encryptedContentItem of streamUpdate.encryptedContentItems) {
+            await this.processMlsEncryptedContentItem(encryptedContentItem)
         }
     }
 
     public async processMlsEncryptedContentItem(
         mlsEncryptedContentItem: MlsEncryptedContentItem,
     ): Promise<void> {
-        const streamId = mlsEncryptedContentItem.streamId
         const eventId = mlsEncryptedContentItem.eventId
         const kind = mlsEncryptedContentItem.kind
         const epoch = mlsEncryptedContentItem.epoch
@@ -159,11 +151,8 @@ export class MlsStream {
 
         const clearText = await this.persistenceStore?.getCleartext(eventId)
         if (clearText !== undefined) {
-            return this.updateDecryptedContent(
-                streamId,
-                eventId,
-                toDecryptedContent(kind, clearText),
-            )
+            this.stream.updateDecryptedContent(eventId, toDecryptedContent(kind, clearText))
+            return
         }
 
         const epochSecret = this.localView?.getEpochSecret(epoch)
@@ -177,17 +166,7 @@ export class MlsStream {
             ciphertext,
         )
 
-        return this.updateDecryptedContent(streamId, eventId, decryptedContent)
-    }
-
-    public async updateDecryptedContent(
-        streamId: string,
-        eventId: string,
-        content: DecryptedContent,
-    ): Promise<void> {
-        const stream = this.client?.stream(streamId)
-        check(isDefined(stream), 'stream not found')
-        stream.updateDecryptedContent(eventId, content)
+        this.stream.updateDecryptedContent(eventId, decryptedContent)
     }
 
     private decryptionFailure(mlsEncryptedContentItem: MlsEncryptedContentItem) {
@@ -199,5 +178,37 @@ export class MlsStream {
         }
 
         perEpoch.push(mlsEncryptedContentItem)
+    }
+
+    public async retryDecryptionFailures() {
+        const openEpochs: Map<bigint, LocalEpochSecret> = this._localView?.epochSecrets ?? new Map()
+
+        if (this.decryptionFailures.size === 0 || openEpochs.size === 0) {
+            return
+        }
+
+        // TODO: This could be optimised
+        for (const [epoch, mlsEncryptedContentItems] of this.decryptionFailures.entries()) {
+            const epochSecret = openEpochs.get(epoch)
+            if (epochSecret === undefined) {
+                continue
+            }
+
+            for (const mlsEncryptedContentItem of mlsEncryptedContentItems) {
+                const eventId = mlsEncryptedContentItem.eventId
+                const kind = mlsEncryptedContentItem.kind
+                const ciphertext = mlsEncryptedContentItem.ciphertext
+
+                const decryptedContent = await MlsMessages.decryptEpochSecretMessage(
+                    epochSecret.derivedKeys,
+                    kind,
+                    ciphertext,
+                )
+
+                this.stream.updateDecryptedContent(eventId, decryptedContent)
+            }
+
+            this.decryptionFailures.delete(epoch)
+        }
     }
 }

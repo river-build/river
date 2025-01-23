@@ -155,7 +155,7 @@ import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from
 import { makeTags, makeTipTags } from './tags'
 import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
 import { MLS_ALGORITHM } from './mls'
-import { MlsClientExtensions } from './mls/mlsClientExtensions'
+import { MlsClientExtensions, MlsClientExtensionsOpts } from './mls/mlsClientExtensions'
 import { randomBytes } from 'crypto'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
@@ -193,7 +193,6 @@ export class Client
     private readonly logError: DLogger
     private readonly logInfo: DLogger
     private readonly logDebug: DLogger
-    private readonly logMls: DLogger
 
     public cryptoBackend?: GroupEncryptionCrypto
     public cryptoStore: CryptoStore
@@ -210,6 +209,7 @@ export class Client
     private persistenceStore: IPersistenceStore
     private validatedEvents: Record<string, { isValid: boolean; reason?: string }> = {}
     private defaultGroupEncryptionAlgorithm: GroupEncryptionAlgorithmId
+    private mlsClientExtensionsOpts?: MlsClientExtensionsOpts
 
     constructor(
         signerContext: SignerContext,
@@ -221,7 +221,7 @@ export class Client
         highPriorityStreamIds?: string[],
         unpackEnvelopeOpts?: UnpackEnvelopeOpts,
         defaultGroupEncryptionAlgorithm?: GroupEncryptionAlgorithmId,
-        userNickname?: string,
+        mlsClientExtensionsOpts?: MlsClientExtensionsOpts,
     ) {
         super()
         if (logNamespaceFilter) {
@@ -245,7 +245,7 @@ export class Client
             defaultGroupEncryptionAlgorithm ?? GroupEncryptionAlgorithmId.GroupEncryption
 
         const shortId =
-            userNickname ??
+            mlsClientExtensionsOpts?.nickname ??
             shortenHexString(this.userId.startsWith('0x') ? this.userId.slice(2) : this.userId)
 
         this.logCall = dlog('csb:cl:call').extend(shortId)
@@ -257,7 +257,7 @@ export class Client
         this.logInfo = dlog('csb:cl:info', { defaultEnabled: true }).extend(shortId)
         this.logDebug = dlog('csb:cl:debug').extend(shortId)
         // TODO: refactor this to all debuggers that mls components need
-        this.logMls = dlog('csb:cl:mls').extend(shortId)
+        this.mlsClientExtensionsOpts = mlsClientExtensionsOpts
         this.cryptoStore = cryptoStore
 
         if (persistenceStoreName) {
@@ -2411,7 +2411,11 @@ export class Client
         // generate random device key
         const deviceKey = randomBytes(32)
 
-        this.mlsExtensions = new MlsClientExtensions(this, this.persistenceStore)
+        this.mlsExtensions = new MlsClientExtensions(
+            this,
+            this.persistenceStore,
+            this.mlsClientExtensionsOpts,
+        )
         await this.mlsExtensions.initialize(deviceKey)
     }
 

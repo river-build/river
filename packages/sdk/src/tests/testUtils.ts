@@ -88,6 +88,7 @@ import {
 } from '../sync-agent/timeline/models/timeline-types'
 import { SyncState } from '../syncedStreamsLoop'
 import { RpcOptions } from '../rpcCommon'
+import { MlsClientExtensionsOpts } from '../mls/mlsClientExtensions'
 
 const log = dlog('csb:test:util')
 
@@ -258,7 +259,7 @@ export interface TestClientOpts {
     context?: SignerContext
     entitlementsDelegate?: EntitlementsDelegate
     deviceId?: string
-    nickname?: string
+    mlsOpts?: MlsClientExtensionsOpts
 }
 
 export const makeTestClient = async (opts?: TestClientOpts): Promise<Client> => {
@@ -268,7 +269,7 @@ export const makeTestClient = async (opts?: TestClientOpts): Promise<Client> => 
     const userId = userIdFromAddress(context.creatorAddress)
     const dbName = `database-${userId}${deviceId}`
     const persistenceDbName = `persistence-${userId}${deviceId}`
-    const nickname = opts?.nickname
+    const mlsOpts = opts?.mlsOpts
 
     // create a new client with store(s)
     const cryptoStore = RiverDbManager.getCryptoDb(userId, dbName)
@@ -283,7 +284,7 @@ export const makeTestClient = async (opts?: TestClientOpts): Promise<Client> => 
         undefined,
         undefined,
         undefined,
-        nickname,
+        mlsOpts,
     )
 }
 

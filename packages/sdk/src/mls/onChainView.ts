@@ -18,6 +18,7 @@ import { IStreamStateView } from '../streamStateView'
 import { MlsLogger } from './logger'
 import { StreamTimelineEvent } from '../types'
 import { MemberPayload_Snapshot_Mls } from '@river-build/proto'
+import { MlsQueueDelegate, StreamUpdate } from './mlsQueue'
 
 const defaultLogger = dlog('csb:mls:onChainView')
 
@@ -140,7 +141,7 @@ export function extractFromTimeLine(timeline: StreamTimelineEvent[]): SnapshotAn
 }
 
 /// Class to represent on-chain view of MLS
-export class OnChainView {
+export class OnChainView implements MlsQueueDelegate {
     // for bookkeeping
     private lastConfirmedEventNumFor = {
         mlsEvent: BigInt(-1),
@@ -162,6 +163,15 @@ export class OnChainView {
 
     public constructor(opts: OnChainViewOpts = defaultOnChainViewOpts) {
         this.log = opts.log
+    }
+
+    public async handleStreamUpdate(streamUpdate: StreamUpdate): Promise<void> {
+        for (const snapshot of streamUpdate.snapshots) {
+            await this.processSnapshot(snapshot)
+        }
+        for (const confirmedEvent of streamUpdate.confirmedEvents) {
+            await this.processConfirmedMlsEvent(confirmedEvent)
+        }
     }
 
     get processedCount(): number {

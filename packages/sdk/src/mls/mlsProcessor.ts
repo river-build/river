@@ -61,7 +61,6 @@ export class MlsProcessor {
         event: Message,
         timeoutMS?: number,
     ): Promise<EncryptedData> {
-        await this.initializeOrJoinGroup(mlsStream)
         const localView = await mlsStream.awaitActiveLocalView(timeoutMS)
 
         const lastEpochSecret = localView.latestEpochSecret()
@@ -98,6 +97,7 @@ export class MlsProcessor {
                 streamId: mlsStream.streamId,
                 e,
             })
+            throw e
         }
     }
 
@@ -114,6 +114,7 @@ export class MlsProcessor {
         const epochSecretsMessage = MlsMessages.epochSecretsMessage(epochSecrets)
 
         try {
+            this.log.debug?.('sending epoch secrets', { secrets: epochSecrets.map((s) => s.epoch) })
             await this.client.makeEventAndAddToStream(
                 mlsStream.streamId,
                 make_MemberPayload_Mls(epochSecretsMessage),
