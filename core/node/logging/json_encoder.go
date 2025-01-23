@@ -587,7 +587,7 @@ func safeAppendStringLike[S []byte | string](
 }
 
 // Note: this is another place we wrote custom changes.
-var byteType = reflect.TypeOf(byte(0))    // a cached reflect.Type for 'byte'
+var byteType = reflect.TypeOf(byte(0)) // a cached reflect.Type for 'byte'
 
 // addFields looks for protos, Addresses, and byte arrays.
 // It hex-encodes addreses and byte arrays, and marshals the proto into a json-friendly
@@ -637,7 +637,7 @@ func addFields(enc zapcore.ObjectEncoder, fields []zapcore.Field) {
 			// Byte array
 			if reflectType.Kind() == reflect.Array && reflectType.Elem() == byteType {
 				value := reflect.ValueOf(field.Interface)
-		     	// Allocate a new []byte of the same length.
+			 	// Allocate a new []byte of the same length.
 				// (The value here is difficult to extract an unsafe pointer from to use
 				// in the construction of a new slice, because it is considered unaddressible.)
 				b := make([]byte, value.Len())
