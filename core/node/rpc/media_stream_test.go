@@ -92,7 +92,7 @@ func TestCreateMediaStream(t *testing.T) {
 			mp := events.Make_MediaPayload_Chunk(mediaChunks[i], int32(i))
 			envelope, err := events.MakeEnvelopeWithPayload(alice.wallet, mp, mb)
 			tt.require.NoError(err)
-			fmt.Println(i, i == chunks-1)
+
 			// Add media chunk event
 			aeResp, err := alice.client.AddMediaEvent(alice.ctx, connect.NewRequest(&protocol.AddMediaEventRequest{
 				Event:          envelope,

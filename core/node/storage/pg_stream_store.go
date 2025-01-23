@@ -1558,20 +1558,20 @@ func (s *PostgresStreamStore) writeEphemeralMiniblockTx(
 	streamId StreamId,
 	miniblock *WriteMiniblockData,
 ) error {
-	_, err := s.lockEphemeralStream(ctx, tx, streamId, true)
-	if err != nil {
-		return err
+	// Query to insert a new ephemeral miniblock
+	query := s.sqlForStream("INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, $2, $3);", streamId)
+
+	// Lock the ephemeral stream to ensure that the stream exists and is ephemeral.
+	if _, err := s.lockEphemeralStream(ctx, tx, streamId, true); err != nil {
+		// If the given ephemeral stream does not exist, create one by adding an extra query.
+		if IsRiverErrorCode(err, Err_NOT_FOUND) {
+			query += `INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated, ephemeral) VALUES ($1, 0, true, true);`
+		} else {
+			return err
+		}
 	}
 
-	_, err = tx.Exec(
-		ctx,
-		s.sqlForStream(
-			"INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, $2, $3)",
-			streamId,
-		),
-		streamId,
-		miniblock.Number,
-		miniblock.Data)
+	_, err := tx.Exec(ctx, query, streamId, miniblock.Number, miniblock.Data)
 	return err
 }
 
@@ -2199,14 +2199,19 @@ func (s *PostgresStreamStore) normalizeEphemeralStreamTx(
 	tx pgx.Tx,
 	streamId StreamId,
 ) (common.Hash, error) {
-	_, err := s.lockEphemeralStream(ctx, tx, streamId, true)
-	if err != nil {
-		return common.Hash{}, err
+	if _, err := s.lockEphemeralStream(ctx, tx, streamId, true); err != nil {
+		// Ignore a case when an ephemeral stream does not exist. A new record will be inserted.
+		// There might be a situation when a request to create an ephemeral stream failed,
+		// but the rest of ephemeral miniblocks were processed.
+		// In this case, the stream does not exist in the table so a new record must be inserted.
+		if !IsRiverErrorCode(err, Err_NOT_FOUND) {
+			return common.Hash{}, err
+		}
 	}
 
 	// Read the genesis miniblock for the given streeam
 	genesisMbData := make([]byte, 0)
-	if err = tx.QueryRow(
+	if err := tx.QueryRow(
 		ctx,
 		s.sqlForStream("SELECT blockdata FROM {{miniblocks}} WHERE stream_id = $1 AND seq_num = 0", streamId),
 		streamId,
@@ -2215,12 +2220,12 @@ func (s *PostgresStreamStore) normalizeEphemeralStreamTx(
 	}
 
 	var genesisMb Miniblock
-	if err = proto.Unmarshal(genesisMbData, &genesisMb); err != nil {
+	if err := proto.Unmarshal(genesisMbData, &genesisMb); err != nil {
 		return common.Hash{}, err
 	}
 
 	var mediaEvent StreamEvent
-	if err = proto.Unmarshal(genesisMb.GetEvents()[0].Event, &mediaEvent); err != nil {
+	if err := proto.Unmarshal(genesisMb.GetEvents()[0].Event, &mediaEvent); err != nil {
 		return common.Hash{}, RiverError(Err_INTERNAL, "Failed to decode stream event from genesis miniblock")
 	}
 
@@ -2262,27 +2267,19 @@ func (s *PostgresStreamStore) normalizeEphemeralStreamTx(
 		return common.Hash{}, RiverError(Err_INTERNAL, "The ephemeral stream can not be normalized due to missing miniblocks")
 	}
 
+	// Remove ephemeral flag from the given stream.
 	// Update generation in the minipools table
-	_, err = tx.Exec(
+	if _, err = tx.Exec(
 		ctx,
 		s.sqlForStream(
-			"INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, $2, -1)",
+			`INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated, ephemeral) 
+					VALUES ($1, 0, true, false) ON CONFLICT (stream_id) DO UPDATE SET ephemeral = false;
+				 INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, $2, -1);`,
 			streamId,
 		),
 		streamId,
 		seqNum+1,
-	)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	// Remove ephemeral flag from the given stream.
-	_, err = tx.Exec(
-		ctx,
-		`UPDATE es SET ephemeral = false WHERE stream_id = $1`,
-		streamId,
-	)
-	if err != nil {
+	); err != nil {
 		return common.Hash{}, err
 	}
 
