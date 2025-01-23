@@ -70,6 +70,7 @@ message AllocateEphemeralStreamResponse {
 message SaveEphemeralMiniblockRequest {
     bytes stream_id = 1;
     Miniblock miniblock = 2;
+    bool last = 3;
 }
 
 message SaveEphemeralMiniblockResponse {

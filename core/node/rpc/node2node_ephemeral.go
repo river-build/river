@@ -95,6 +95,8 @@ func (s *Service) saveEphemeralMiniblock(
 		return nil, err
 	}
 
+	// Save the ephemeral miniblock.
+	// Here we are sure that the record of the stream exists in the storage.
 	err = s.storage.WriteEphemeralMiniblock(ctx, streamId, &storage.WriteMiniblockData{
 		Number:   mbInfo.Ref.Num,
 		Hash:     mbInfo.Ref.Hash,
@@ -103,6 +105,41 @@ func (s *Service) saveEphemeralMiniblock(
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	// Normalize stream if this is the last miniblock of the ephemeral stream
+	if req.GetLast() {
+		if _, err = s.storage.NormalizeEphemeralStream(ctx, streamId); err != nil {
+			if IsRiverErrorCode(err, Err_NOT_FOUND) {
+				// Something is missing in the stream, so we can't normalize it.
+				// Run the process to fetch missing data from replicas.
+
+				// Get existing miniblock numbers of the given ephemeral stream
+				existingMbs, err := s.storage.ReadEphemeralMiniblockNums(ctx, streamId)
+				if err != nil {
+					return nil, err
+				}
+
+				existingMbsMap := make(map[int64]struct{}, len(existingMbs))
+				for _, num := range existingMbs {
+					existingMbsMap[int64(num)] = struct{}{}
+				}
+
+				// Detect missing miniblocks of the given stream.
+				// Do not fetch the last miniblock, as it is already saved.
+				missingMbs := make([]int64, 0, mbInfo.Ref.Num)
+				for num := int64(0); num < mbInfo.Ref.Num; num++ {
+					if _, ok := existingMbsMap[num]; ok {
+						continue
+					}
+					missingMbs = append(missingMbs, num)
+				}
+
+				// TODO: Fetch missing miniblocks from replicas.
+			}
+
+			return nil, err
+		}
 	}
 
 	return &SaveEphemeralMiniblockResponse{}, nil

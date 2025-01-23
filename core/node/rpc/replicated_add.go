@@ -115,36 +115,18 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 			return err
 		}
 
-		if _, err = stub.SaveEphemeralMiniblock(
+		_, err = stub.SaveEphemeralMiniblock(
 			ctx,
 			connect.NewRequest[SaveEphemeralMiniblockRequest](
 				&SaveEphemeralMiniblockRequest{
 					StreamId:  r.streamId[:],
 					Miniblock: ephemeralMb,
+					Last:      last,
 				},
 			),
-		); err != nil {
-			return err
-		}
+		)
 
-		// Return here if there are more chunks to upload.
-		if !last {
-			return nil
-		}
-
-		// Seal ephemeral stream in remotes
-		if _, err = stub.SealEphemeralStream(
-			ctx,
-			connect.NewRequest[SealEphemeralStreamRequest](
-				&SealEphemeralStreamRequest{
-					StreamId: r.streamId[:],
-				},
-			),
-		); err != nil {
-			return err
-		}
-
-		return nil
+		return err
 	})
 
 	if err = sender.Wait(); err != nil {

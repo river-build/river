@@ -49,6 +49,9 @@ type StreamStorage interface {
 		onEachMb func(blockdata []byte, seqNum int) error,
 	) error
 
+	// ReadEphemeralMiniblockNums returns the list of ephemeral miniblock numbers for the given ephemeral stream.
+	ReadEphemeralMiniblockNums(ctx context.Context, streamId StreamId) ([]int, error)
+
 	// WriteEvent adds event to the given minipool.
 	// Current generation of minipool should match minipoolGeneration,
 	// and there should be exactly minipoolSlot events in the minipool.

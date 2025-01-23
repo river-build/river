@@ -1147,6 +1147,56 @@ func (s *PostgresStreamStore) readMiniblocksByStreamTx(
 	return err
 }
 
+// ReadEphemeralMiniblockNums returns ephemeral miniblock numbers stream by the given stream ID.
+func (s *PostgresStreamStore) ReadEphemeralMiniblockNums(
+	ctx context.Context,
+	streamId StreamId,
+) ([]int, error) {
+	var nums []int
+	err := s.txRunner(
+		ctx,
+		"ReadEphemeralMiniblockNums",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) (err error) {
+			nums, err = s.readEphemeralMiniblockNumsTx(ctx, tx, streamId)
+			return err
+		},
+		nil,
+		"streamId", streamId,
+	)
+	return nums, err
+}
+
+func (s *PostgresStreamStore) readEphemeralMiniblockNumsTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	streamId StreamId,
+) ([]int, error) {
+	if _, err := s.lockEphemeralStream(ctx, tx, streamId, false); err != nil {
+		return nil, err
+	}
+
+	rows, err := tx.Query(
+		ctx,
+		s.sqlForStream(
+			"SELECT seq_num FROM {{miniblocks}} WHERE stream_id = $1 ORDER BY seq_num",
+			streamId,
+		),
+		streamId,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var nums []int
+	var seqNum int
+	_, err = pgx.ForEachRow(rows, []any{&seqNum}, func() error {
+		nums = append(nums, seqNum)
+		return nil
+	})
+	return nums, err
+}
+
 // WriteMiniblockCandidate adds a miniblock proposal candidate. When the miniblock is finalized, the node will promote the
 // candidate with the correct hash.
 func (s *PostgresStreamStore) WriteMiniblockCandidate(
@@ -2198,6 +2248,7 @@ func (s *PostgresStreamStore) normalizeEphemeralStreamTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
+	onMissingMiniblock func(),
 ) (common.Hash, error) {
 	if _, err := s.lockEphemeralStream(ctx, tx, streamId, true); err != nil {
 		// Ignore a case when an ephemeral stream does not exist. A new record will be inserted.
