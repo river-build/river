@@ -17,7 +17,7 @@ interface IEntitlementGatedBase {
   }
 
   struct Transaction {
-    bool hasBenSet;
+    bool finalized;
     address clientAddress;
     mapping(uint256 => NodeVote[]) nodeVotesArray;
     mapping(uint256 => bool) isCompleted;
@@ -32,8 +32,16 @@ interface IEntitlementGatedBase {
   error EntitlementGated_NodeNotFound();
   error EntitlementGated_NodeAlreadyVoted();
   error EntitlementGated_OnlyEntitlementChecker();
+  error EntitlementGated_InvalidEntitlement();
+
   event EntitlementCheckResultPosted(
     bytes32 indexed transactionId,
+    NodeVoteStatus result
+  );
+
+  event EntitlementCheckResultPostedV2(
+    bytes32 indexed transactionId,
+    address indexed sender,
     NodeVoteStatus result
   );
 }

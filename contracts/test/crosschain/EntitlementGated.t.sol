@@ -17,6 +17,8 @@ import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 
 import {Vm} from "forge-std/Test.sol";
 
+import {console} from "forge-std/console.sol";
+
 contract EntitlementGatedTest is
   EntitlementTestUtils,
   BaseSetup,
@@ -36,7 +38,7 @@ contract EntitlementGatedTest is
   // =============================================================
   //                  Request Entitlement Check
   // =============================================================
-  function test_requestEntitlementCheckV2() external {
+  function test_requestEntitlementCheckV3() external {
     bytes32 transactionHash = keccak256(
       abi.encodePacked(tx.origin, block.number)
     );
@@ -49,16 +51,14 @@ contract EntitlementGatedTest is
     vm.deal(caller, 1 ether);
 
     vm.recordLogs();
-
     vm.prank(caller);
     bytes32 realRequestId = gated.requestEntitlementCheckV3{value: 1 ether}(
       roleIds,
       RuleEntitlementUtil.getMockERC721RuleData()
     );
-    Vm.Log[] memory requestLogs = vm.getRecordedLogs(); // Retrieve the recorded logs
-
+    Vm.Log[] memory requestLogs = vm.getRecordedLogs();
     (
-      ,
+      address walletAddress,
       address spaceAddress,
       address resolverAddress,
       bytes32 transactionId,
@@ -66,17 +66,23 @@ contract EntitlementGatedTest is
       address[] memory selectedNodes
     ) = _getEntitlementEventData(requestLogs);
 
+    assertEq(walletAddress, caller);
     assertEq(realRequestId, transactionHash);
     assertEq(spaceAddress, address(gated));
     assertEq(resolverAddress, address(entitlementChecker));
 
     for (uint256 i; i < 3; ++i) {
-      vm.prank(selectedNodes[i]);
+      vm.startPrank(selectedNodes[i]);
+      if (i == 2) {
+        vm.expectEmit(address(spaceAddress));
+        emit EntitlementCheckResultPosted(transactionId, NodeVoteStatus.PASSED);
+      }
       IEntitlementGated(resolverAddress).postEntitlementCheckResult(
         transactionId,
         roleId,
         NodeVoteStatus.PASSED
       );
+      vm.stopPrank();
     }
 
     assertEq(address(gated).balance, 1 ether);

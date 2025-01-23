@@ -728,6 +728,13 @@ message StreamSettings {
  */
 message EncryptedData {
     /**
+     * Encrypted payload when algorithm is set to mls_0.0.1
+     */
+     message Mls {
+        uint64 epoch = 1;
+        bytes ciphertext = 2;
+      }
+    /**
     * Ciphertext of the encryption envelope.
     */
     string ciphertext = 1;
@@ -758,11 +765,6 @@ message EncryptedData {
     /**
      * Encrypted payload when algorithm is set to mls_0.0.1
      */
-    message Mls {
-      uint64 epoch = 1;
-      bytes ciphertext = 2;
-    }
-
     optional Mls mls = 7;
 
     // Used if algorithm is set to 'grpaes'
@@ -773,6 +775,9 @@ message EncryptedData {
 
     // Used if algorithm is set to 'grpaes'
     bytes session_id_bytes = 10;
+
+    // used to parse data after it's decrypted
+    EncryptedDataVersion version = 11; 
 }
 
 message WrappedEncryptedData {
@@ -833,6 +838,8 @@ message CreateStreamRequest {
 message CreateStreamResponse {
     // all events in current minipool and cookie allowing to sync from the end of the stream
     StreamAndCookie stream = 1;
+    // derived events created in other streams when this stream was created
+    repeated EventRef derived_events = 2;
 }
 
 message GetStreamRequest {
@@ -881,7 +888,10 @@ message AddEventResponse {
         string msg = 2;
         repeated string funcs = 3;
     }
-    Error error = 1; // only set if AddEventRequest.optional is true
+    // error thrown during this request, only set if AddEventRequest.optional is true, otherwise the request will fail with this error
+    Error error = 1; 
+    // all events created during this request including parent events
+    repeated EventRef new_events = 2;
 }
 
 // SyncStreamsRequest is a request to start a streams sync session.
@@ -1051,6 +1061,11 @@ enum MessageInteractionType {
 enum GroupMentionType {
     GROUP_MENTION_TYPE_UNSPECIFIED = 0;
     GROUP_MENTION_TYPE_AT_CHANNEL = 1;
+}
+
+enum EncryptedDataVersion {
+    ENCRYPTED_DATA_VERSION_0 = 0;
+    ENCRYPTED_DATA_VERSION_1 = 1;
 }
 
 // Codes from 1 to 16 match gRPC/Connect codes.

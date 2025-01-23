@@ -10,13 +10,14 @@ import {IImplementationRegistry} from "contracts/src/factory/facets/registry/IIm
 // libraries
 import {EntitlementGatedStorage} from "./EntitlementGatedStorage.sol";
 import {MembershipStorage} from "contracts/src/spaces/facets/membership/MembershipStorage.sol";
+import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 
 abstract contract EntitlementGatedBase is IEntitlementGatedBase {
   modifier onlyEntitlementChecker() {
     if (
       msg.sender != address(EntitlementGatedStorage.layout().entitlementChecker)
     ) {
-      revert EntitlementGated_OnlyEntitlementChecker();
+      CustomRevert.revertWith(EntitlementGated_OnlyEntitlementChecker.selector);
     }
     _;
   }
@@ -33,12 +34,13 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
     IRuleEntitlement entitlement,
     uint256 roleId
   ) internal {
+    if (callerAddress == address(0))
+      CustomRevert.revertWith(EntitlementGated_InvalidAddress.selector);
+
     EntitlementGatedStorage.Layout storage ds = EntitlementGatedStorage
       .layout();
-
     Transaction storage transaction = ds.transactions[transactionId];
-
-    if (transaction.hasBenSet) {
+    if (transaction.finalized) {
       uint256 _length = transaction.roleIds.length;
       for (uint256 i; i < _length; ++i) {
         if (transaction.roleIds[i] == roleId) {
@@ -54,8 +56,8 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
 
     address[] memory selectedNodes = ds.entitlementChecker.getRandomNodes(5);
 
-    if (!transaction.hasBenSet) {
-      transaction.hasBenSet = true;
+    if (!transaction.finalized) {
+      transaction.finalized = true;
       transaction.entitlement = entitlement;
       transaction.clientAddress = callerAddress;
     }
@@ -88,7 +90,7 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
     Transaction storage transaction = ds.transactions[transactionId];
 
     if (
-      transaction.clientAddress == address(0) || transaction.hasBenSet == false
+      transaction.clientAddress == address(0) || transaction.finalized == false
     ) {
       revert EntitlementGated_TransactionNotRegistered();
     }
@@ -164,31 +166,32 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
     IRuleEntitlement entitlement,
     uint256 requestId
   ) internal {
+    if (walletAddress == address(0))
+      CustomRevert.revertWith(EntitlementGated_InvalidAddress.selector);
+    if (address(entitlement) == address(0))
+      CustomRevert.revertWith(EntitlementGated_InvalidEntitlement.selector);
+
     EntitlementGatedStorage.Layout storage ds = EntitlementGatedStorage
       .layout();
-
     Transaction storage transaction = ds.transactions[transactionId];
 
-    if (transaction.hasBenSet) {
-      uint256 _length = transaction.roleIds.length;
-      for (uint256 i; i < _length; ++i) {
-        if (transaction.roleIds[i] == requestId) {
-          revert EntitlementGated_TransactionCheckAlreadyRegistered();
-        }
-      }
-    }
+    if (transaction.isCompleted[requestId])
+      CustomRevert.revertWith(
+        EntitlementGated_TransactionCheckAlreadyRegistered.selector
+      );
 
     // if the entitlement checker has not been set, set it
     if (address(ds.entitlementChecker) == address(0)) {
       _setFallbackEntitlementChecker();
     }
 
-    if (!transaction.hasBenSet) {
-      transaction.hasBenSet = true;
+    if (!transaction.finalized) {
+      transaction.finalized = true;
       transaction.entitlement = entitlement;
+      transaction.roleIds.push(requestId);
+    } else {
+      transaction.roleIds.push(requestId);
     }
-
-    transaction.roleIds.push(requestId);
 
     ds.entitlementChecker.requestEntitlementCheckV2{value: msg.value}(
       walletAddress,
@@ -206,25 +209,28 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
       .layout();
     Transaction storage transaction = ds.transactions[transactionId];
 
-    if (transaction.hasBenSet == false) {
-      revert EntitlementGated_TransactionNotRegistered();
-    }
-
-    if (transaction.isCompleted[roleId]) {
-      revert EntitlementGated_TransactionCheckAlreadyCompleted();
+    // Combine checks to save gas
+    if (!transaction.finalized || transaction.isCompleted[roleId]) {
+      transaction.finalized
+        ? CustomRevert.revertWith(
+          EntitlementGated_TransactionCheckAlreadyCompleted.selector
+        )
+        : CustomRevert.revertWith(
+          EntitlementGated_TransactionNotRegistered.selector
+        );
     }
 
     transaction.isCompleted[roleId] = true;
 
     bool allRoleIdsCompleted = _checkAllRoleIdsCompleted(transactionId);
 
-    if (allRoleIdsCompleted) {
-      _removeTransaction(transactionId);
-    }
-
     if (result == NodeVoteStatus.PASSED || allRoleIdsCompleted) {
       _onEntitlementCheckResultPosted(transactionId, result);
       emit EntitlementCheckResultPosted(transactionId, result);
+    }
+
+    if (allRoleIdsCompleted) {
+      _removeTransaction(transactionId);
     }
   }
 
@@ -270,7 +276,7 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
 
     Transaction storage transaction = ds.transactions[transactionId];
 
-    if (!transaction.hasBenSet) {
+    if (!transaction.finalized) {
       revert EntitlementGated_TransactionNotRegistered();
     }
 
