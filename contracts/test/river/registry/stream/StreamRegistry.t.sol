@@ -143,7 +143,7 @@ contract StreamRegistryTest is
   function test_fuzz_addStream(
     address nodeOperator,
     TestStream memory testStream,
-    TestNode[] memory nodes
+    TestNode[100] memory nodes
   )
     external
     givenNodeOperatorIsApproved(nodeOperator)
