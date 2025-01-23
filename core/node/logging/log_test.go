@@ -10,7 +10,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zapcore"
 
+	"github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/testutils"
@@ -182,9 +184,8 @@ func TestShortHex(t *testing.T) {
 }
 
 
-func TestProtoBinaryStrings(t *testing.T) {
-	// The byte string renders sanely, but the proto is missing nested brackets in the
-	// final log response.
+func TestLogProtoWithBinaryStrings(t *testing.T) {
+	// The byte string here will render as b64, which is fine. It's a proto.
 	envelope := &Envelope{
 		Hash: []byte("2346ad27d7568ba9896f1b7da6b5991251debdf2"),
 	}
@@ -194,8 +195,8 @@ func TestProtoBinaryStrings(t *testing.T) {
 
 	logger.Infow("Logging envelope", "envelope", envelope)
 
-	logOutput := buffer.String()
-	logOutput = testutils.RemoveJsonTimestamp(string(logOutput))
+	logOutput := testutils.RemoveJsonTimestamp(buffer.String())
+	// Uncomment to write file
 	// os.WriteFile("testdata/envelope_json.txt", []byte(logOutput), 0644)
 
 	expectedBytes, err := os.ReadFile("testdata/envelope_json.txt")
@@ -203,7 +204,46 @@ func TestProtoBinaryStrings(t *testing.T) {
 	expected := string(expectedBytes[:])
 
 	// Compare the output with the expected output
-	// The expected output contains a b64-encoded string of the Hash field above.
-	fmt.Print(logOutput)
+	require.Equal(t, expected, logOutput)
+}
+
+func TestLogRiverError(t *testing.T) {
+	riverErr := base.AsRiverError(fmt.Errorf("test"), Err_DB_OPERATION_FAILURE).
+		Message("this is the error message").
+		Tag("tagA", "a").
+		Tag("tagB", "b").
+		Func("firstFunction").
+		Func("secondFunction")
+
+	// Create a new logging logger that logs to a temp file in JSON format
+	logger, buffer := testutils.ZapJsonLogger()
+
+	logger.Infow("Logging river error", "river_error", riverErr)
+
+	logOutput := testutils.RemoveJsonTimestamp(buffer.String())
+	// Uncomment to write file
+	// os.WriteFile("testdata/river_error_json.txt", []byte(logOutput), 0644)
+
+	expectedBytes, err := os.ReadFile("testdata/river_error_json.txt")
+	require.NoError(t, err)
+	expected := string(expectedBytes[:])
+
+	// Compare the output with the expected output
+	require.Equal(t, expected, logOutput)
+
+	// Test again with the error's inbuilt logging.
+	logger, buffer = testutils.ZapJsonLogger()
+	_ = riverErr.LogWithLevel(logger, zapcore.InfoLevel)
+
+	// Validate that the LogInfo method produces sane output. The output here
+	// is a bit different because we are able to add tags as fields to the log
+	// object and use the error message as the log message directly.
+	logOutput = testutils.RemoveJsonTimestamp(buffer.String())
+	// Uncomment to write file
+	// os.WriteFile("testdata/river_error_log_with_level_json.txt", []byte(logOutput), 0644)
+
+	expectedBytes, err = os.ReadFile("testdata/river_error_log_with_level_json.txt")
+	expected = string(expectedBytes[:])
+	require.NoError(t, err)
 	require.Equal(t, expected, logOutput)
 }

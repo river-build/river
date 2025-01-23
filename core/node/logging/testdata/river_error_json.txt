@@ -1,0 +1,1 @@
+{"level":"INFO","timestamp":"[TIMESTAMP]","msg":"Logging river error","river_error":{"tagA":"a","tagB":"b","message":"secondFunction: firstFunction: (47:DB_OPERATION_FAILURE) this is the error message base_error: test"}}
