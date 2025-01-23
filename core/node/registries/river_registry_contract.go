@@ -249,7 +249,7 @@ func (c *RiverRegistryContract) AddStream(
 	lastMiniblockNum int64,
 	isSealed bool,
 ) error {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	var flags StreamFlag
 	if isSealed {
@@ -269,7 +269,7 @@ func (c *RiverRegistryContract) AddStream(
 					Nodes:             addresses,
 				})
 			if err == nil {
-				log.Debug(
+				log.Debugw(
 					"RiverRegistryContract: prepared transaction",
 					"name", "AddStream",
 					"streamId", streamId,
