@@ -94,8 +94,8 @@ contract MembershipFacet is
 
     if (membershipPrice > 0) {
       uint256 protocolFee = _collectProtocolFee(receiver, membershipPrice);
-      uint256 surplus = membershipPrice - protocolFee;
-      if (surplus > 0) _transferIn(receiver, surplus);
+      uint256 remainingDue = membershipPrice - protocolFee;
+      if (remainingDue > 0) _transferIn(receiver, remainingDue);
     }
 
     _renewSubscription(tokenId, _getMembershipDuration());

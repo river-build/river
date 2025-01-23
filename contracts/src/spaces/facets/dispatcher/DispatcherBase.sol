@@ -74,8 +74,7 @@ abstract contract DispatcherBase is IDispatcherBase {
 
   function _registerTransaction(
     address sender,
-    bytes memory data,
-    uint256 value
+    bytes memory data
   ) internal returns (bytes32) {
     bytes32 keyHash = keccak256(abi.encodePacked(sender, block.number));
 
@@ -90,8 +89,8 @@ abstract contract DispatcherBase is IDispatcherBase {
     }
 
     _captureData(transactionId, data);
-    if (value != 0) {
-      _captureValue(transactionId, value);
+    if (msg.value != 0) {
+      _captureValue(transactionId, msg.value);
     }
 
     return transactionId;

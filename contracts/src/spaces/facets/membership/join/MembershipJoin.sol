@@ -69,7 +69,6 @@ abstract contract MembershipJoin is
     _validateJoinSpace(receiver);
     _validatePayment();
     _validateUserReferral(receiver, referral);
-    address sender = msg.sender;
     bool isNotReferral = _isNotReferral(referral);
 
     bytes memory referralData = isNotReferral
@@ -82,8 +81,7 @@ abstract contract MembershipJoin is
 
     bytes32 transactionId = _registerTransaction(
       receiver,
-      _encodeJoinSpaceData(selector, sender, receiver, referralData),
-      msg.value
+      _encodeJoinSpaceData(selector, msg.sender, receiver, referralData)
     );
 
     (bool isEntitled, bool isCrosschainPending) = _checkEntitlement(
@@ -101,13 +99,13 @@ abstract contract MembershipJoin is
             _chargeForJoinSpaceWithReferral(transactionId);
           }
         } else {
-          _refundBalance(transactionId, sender);
+          _refundBalance(transactionId, msg.sender);
         }
 
         _issueToken(receiver);
       } else {
         _captureData(transactionId, "");
-        _refundBalance(transactionId, sender);
+        _refundBalance(transactionId, msg.sender);
         emit MembershipTokenRejected(receiver);
       }
     }
@@ -174,11 +172,11 @@ abstract contract MembershipJoin is
 
     uint256 totalRoles = roles.length;
 
-    for (uint256 i = 0; i < totalRoles; i++) {
+    for (uint256 i; i < totalRoles; ++i) {
       Role memory role = roles[i];
       if (role.disabled) continue;
 
-      for (uint256 j = 0; j < role.entitlements.length; j++) {
+      for (uint256 j; j < role.entitlements.length; ++j) {
         IEntitlement entitlement = IEntitlement(role.entitlements[j]);
 
         if (entitlement.isEntitled(IN_TOWN, linkedWallets, JOIN_SPACE)) {
@@ -237,14 +235,14 @@ abstract contract MembershipJoin is
     }
 
     uint256 protocolFee = _collectProtocolFee(sender, payment);
-    uint256 surplus = payment - protocolFee;
+    uint256 remainingDue = payment - protocolFee;
 
     _afterChargeForJoinSpace(
       transactionId,
       sender,
       receiver,
       payment,
-      surplus,
+      remainingDue,
       protocolFee
     );
   }
@@ -283,29 +281,27 @@ abstract contract MembershipJoin is
       payment
     );
 
-    uint256 surplus = payment - protocolFee - partnerFee - referralFee;
+    uint256 remainingDue = payment - protocolFee - partnerFee - referralFee;
 
     _afterChargeForJoinSpace(
       transactionId,
       sender,
       receiver,
       payment,
-      surplus,
+      remainingDue,
       protocolFee
     );
   }
 
   function _afterChargeForJoinSpace(
     bytes32 transactionId,
-    address sender,
+    address payer,
     address receiver,
     uint256 payment,
-    uint256 surplus,
+    uint256 remainingDue,
     uint256 protocolFee
   ) internal {
-    if (surplus > 0) {
-      _transferIn(sender, surplus);
-    }
+    if (remainingDue != 0) _transferIn(payer, remainingDue);
 
     _releaseCapturedValue(transactionId, payment);
     _captureData(transactionId, "");
@@ -349,10 +345,9 @@ abstract contract MembershipJoin is
   function _validateJoinSpace(address receiver) internal view {
     if (receiver == address(0))
       CustomRevert.revertWith(Membership__InvalidAddress.selector);
-    if (
-      _getMembershipSupplyLimit() != 0 &&
-      _totalSupply() >= _getMembershipSupplyLimit()
-    ) CustomRevert.revertWith(Membership__MaxSupplyReached.selector);
+    uint256 membershipSupplyLimit = _getMembershipSupplyLimit();
+    if (membershipSupplyLimit != 0 && _totalSupply() >= membershipSupplyLimit)
+      CustomRevert.revertWith(Membership__MaxSupplyReached.selector);
   }
 
   /// @notice Refunds the balance to the sender if necessary
@@ -372,59 +367,57 @@ abstract contract MembershipJoin is
   }
 
   /// @notice Collects the referral fee if applicable
-  /// @param sender The address of the sender
+  /// @param payer The address of the payer
   /// @param referralCode The referral code used
   /// @param membershipPrice The price of the membership
-  /// @return The amount of referral fee collected
+  /// @return referralFee The amount of referral fee collected
   function _collectReferralCodeFee(
-    address sender,
+    address payer,
     address userReferral,
     string memory referralCode,
     uint256 membershipPrice
-  ) internal returns (uint256) {
-    uint256 referralFeeBps;
-
+  ) internal returns (uint256 referralFee) {
     if (bytes(referralCode).length != 0) {
       Referral memory referral = _referralInfo(referralCode);
 
       if (referral.recipient == address(0) || referral.basisPoints == 0)
         return 0;
 
-      uint256 referralFee = referral.basisPoints;
-      referralFeeBps = BasisPoints.calculate(membershipPrice, referralFee);
+      referralFee = BasisPoints.calculate(
+        membershipPrice,
+        referral.basisPoints
+      );
 
       CurrencyTransfer.transferCurrency(
         _getMembershipCurrency(),
-        sender,
+        payer,
         referral.recipient,
-        referralFeeBps
+        referralFee
       );
     } else if (userReferral != address(0)) {
-      if (userReferral == sender) return 0;
+      if (userReferral == payer) return 0;
 
-      referralFeeBps = BasisPoints.calculate(membershipPrice, _defaultBpsFee());
+      referralFee = BasisPoints.calculate(membershipPrice, _defaultBpsFee());
 
       CurrencyTransfer.transferCurrency(
         _getMembershipCurrency(),
-        sender,
+        payer,
         userReferral,
-        referralFeeBps
+        referralFee
       );
     }
-
-    return referralFeeBps;
   }
 
   /// @notice Collects the partner fee if applicable
-  /// @param sender The address of the sender
+  /// @param payer The address of the payer
   /// @param partner The address of the partner
   /// @param membershipPrice The price of the membership
-  /// @return The amount of partner fee collected
+  /// @return partnerFee The amount of partner fee collected
   function _collectPartnerFee(
-    address sender,
+    address payer,
     address partner,
     uint256 membershipPrice
-  ) internal returns (uint256) {
+  ) internal returns (uint256 partnerFee) {
     if (partner == address(0)) return 0;
 
     Partner memory partnerInfo = IPartnerRegistry(_getSpaceFactory())
@@ -432,18 +425,13 @@ abstract contract MembershipJoin is
 
     if (partnerInfo.fee == 0) return 0;
 
-    // Use existing partner info
-    uint256 partnerFee = partnerInfo.fee;
-    address recipient = partnerInfo.recipient;
-    uint256 partnerFeeBps = BasisPoints.calculate(membershipPrice, partnerFee);
+    partnerFee = BasisPoints.calculate(membershipPrice, partnerInfo.fee);
 
     CurrencyTransfer.transferCurrency(
       _getMembershipCurrency(),
-      sender,
-      recipient,
-      partnerFeeBps
+      payer,
+      partnerInfo.recipient,
+      partnerFee
     );
-
-    return partnerFeeBps;
   }
 }
