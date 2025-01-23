@@ -302,13 +302,10 @@ jobs:
               working-directory: core
               run: just RUN_ENV=multi_ne config-and-start
 
-            # TODO: bring this back when we start caching our tests
-            # - name: Run SDK Tests (without entitlements)
-            #   run: DEBUG=pipeline yarn turbo run test:ci:multi:ne --filter=@river-build/sdk
-
             - name: Run River Tests (without entitlements)
               working-directory: packages/sdk
               run: yarn run test:ci:multi:ne
+              timeout-minutes: 5
 
             - name: Run Stream Metadata Nodes
               run: |
