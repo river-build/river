@@ -17,6 +17,7 @@ import type {
 } from './storeTypes'
 import { HybridGroupSessionKey } from '@river-build/proto'
 import { exportAesGsmKeyBytes, generateNewAesGcmKey } from './cryptoAesGcm'
+import { Dexie } from 'dexie'
 
 const log = dlog('csb:encryption:encryptionDevice')
 
@@ -650,12 +651,13 @@ export class EncryptionDevice {
         if (bin_toHexString(session.sessionId) !== sessionId) {
             throw new Error(`Session ID mismatch for hybrid group session ${sessionId}`)
         }
-        const expectedSessionId = await hybridSessionKeyHash(
+        const expectedSessionPromise = hybridSessionKeyHash(
             session.streamId,
             session.key,
             session.miniblockNum,
             session.miniblockHash,
         )
+        const expectedSessionId = await Dexie.waitFor(expectedSessionPromise)
         if (!bin_equal(expectedSessionId, bin_fromHexString(sessionId))) {
             throw new Error(
                 `Session ID mismatch for hybrid group session ${sessionId} expected ${bin_toHexString(

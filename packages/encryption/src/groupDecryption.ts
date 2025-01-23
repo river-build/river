@@ -3,7 +3,7 @@ import type { GroupSessionExtraData } from './encryptionDevice'
 import { DecryptionAlgorithm, DecryptionError, IDecryptionParams } from './base'
 import { GroupEncryptionAlgorithmId, GroupEncryptionSession } from './olmLib'
 import { EncryptedData, EncryptedDataVersion } from '@river-build/proto'
-import { bin_fromBase64, dlog, dlogError } from '@river-build/dlog'
+import { bin_fromBase64, dlogError } from '@river-build/dlog'
 
 const logError = dlogError('csb:encryption:groupDecryption')
 

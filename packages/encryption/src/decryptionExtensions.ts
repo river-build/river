@@ -588,7 +588,7 @@ export abstract class BaseDecryptionExtensions {
         } catch (e) {
             // don't re-enqueue to prevent infinite loops if this session is truely corrupted
             // we will keep requesting it on each boot until it goes out of the scroll window
-            console.error('failed to import sessions', { sessionItem, error: e })
+            this.log.error('failed to import sessions', { sessionItem, error: e })
         }
         // if we processed them all, ack the stream
         if (this.queues.newGroupSession.length === 0) {
