@@ -9,8 +9,8 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/rules"
@@ -32,7 +32,7 @@ func (s *Service) createMediaStreamImpl(
 }
 
 func (s *Service) createMediaStream(ctx context.Context, req *CreateMediaStreamRequest) (*CreationCookie, error) {
-	log := dlog.FromCtx(ctx)
+	log := logging.FromCtx(ctx)
 
 	streamId, err := StreamIdFromBytes(req.StreamId)
 	if err != nil {
@@ -64,13 +64,11 @@ func (s *Service) createMediaStream(ctx context.Context, req *CreateMediaStreamR
 	}
 
 	// check that streams exist for derived events that will be added later
-	if csRules.DerivedEvents != nil {
-		for _, event := range csRules.DerivedEvents {
-			streamIdBytes := event.StreamId
-			stream, err := s.cache.GetStreamNoWait(ctx, streamIdBytes)
-			if err != nil || stream == nil {
-				return nil, RiverError(Err_PERMISSION_DENIED, "stream does not exist", "streamId", streamIdBytes)
-			}
+	for _, event := range csRules.DerivedEvents {
+		streamIdBytes := event.StreamId
+		stream, err := s.cache.GetStreamNoWait(ctx, streamIdBytes)
+		if err != nil || stream == nil {
+			return nil, RiverError(Err_PERMISSION_DENIED, "stream does not exist", "streamId", streamIdBytes)
 		}
 	}
 
@@ -132,12 +130,10 @@ func (s *Service) createMediaStream(ctx context.Context, req *CreateMediaStreamR
 	}
 
 	// add derived events
-	if csRules.DerivedEvents != nil {
-		for _, de := range csRules.DerivedEvents {
-			err := s.AddEventPayload(ctx, de.StreamId, de.Payload)
-			if err != nil {
-				return nil, RiverError(Err_INTERNAL, "failed to add derived event", "err", err)
-			}
+	for _, de := range csRules.DerivedEvents {
+		_, err = s.AddEventPayload(ctx, de.StreamId, de.Payload, de.Tags)
+		if err != nil {
+			return nil, RiverError(Err_INTERNAL, "failed to add derived event", "err", err)
 		}
 	}
 
