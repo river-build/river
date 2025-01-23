@@ -395,19 +395,15 @@ func (e *RiverErrorImpl) LogLevel(l *zap.SugaredLogger, level zapcore.Level) *Ri
 func (e *RiverErrorImpl) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	var err error
 	e.ForEachTag(func(name string, value any) bool {
-		// This is inefficient, but it supports the any type and hopefully errors comprise
-		// a small proportion of our log messages
-		if err = enc.AddReflected(name, value); err != nil {
-			return false
-		}
-
+		zap.Any(name, value).AddTo(enc)
 		return true
 	})
 	if err != nil {
 		return err
 	}
 	
-	return enc.AddReflected("message", e.GetMessage())
+	enc.AddString("message", e.GetMessage())
+	return nil
 }
 
 func ToConnectError(err error) *connect.Error {
