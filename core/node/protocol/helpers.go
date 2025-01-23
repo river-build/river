@@ -1,6 +1,8 @@
 package protocol
 
-import "github.com/ethereum/go-ethereum/common"
+import (
+	"github.com/ethereum/go-ethereum/common"
+)
 
 func (e *StreamEvent) GetStreamSettings() *StreamSettings {
 	if e == nil {

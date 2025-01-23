@@ -53,7 +53,7 @@ func (s *Service) localAddMediaEvent(
 	}
 
 	// Make sure the given chunk index is within the bounds of the genesis inception
-	if chunk.GetChunkIndex() > genesisInception.GetChunkCount() {
+	if chunk.GetChunkIndex() < 0 || chunk.GetChunkIndex() > genesisInception.GetChunkCount() {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "chunk index out of bounds")
 	}
 

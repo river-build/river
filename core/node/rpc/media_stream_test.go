@@ -69,6 +69,20 @@ func TestCreateMediaStream(t *testing.T) {
 		tt.require.Equal(connect.CodeNotFound, connect.CodeOf(err))
 	})
 
+	t.Run("AddMediaEvent failed to add event with out of range chunk index", func(t *testing.T) {
+		mp := events.Make_MediaPayload_Chunk([]byte("chunk"), chunks+1)
+		envelope, err := events.MakeEnvelopeWithPayload(alice.wallet, mp, mb)
+		tt.require.NoError(err)
+
+		aeResp, err := alice.client.AddMediaEvent(alice.ctx, connect.NewRequest(&protocol.AddMediaEventRequest{
+			Event:          envelope,
+			CreationCookie: creationCookie,
+		}))
+		tt.require.Nil(aeResp)
+		tt.require.Error(err)
+		tt.require.Equal(connect.CodeInvalidArgument, connect.CodeOf(err))
+	})
+
 	t.Run("AddMediaEvent passed for ephemeral media streams", func(t *testing.T) {
 		// Add the rest of the media chunks
 		mediaChunks := make([][]byte, chunks)

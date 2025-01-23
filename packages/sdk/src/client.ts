@@ -29,6 +29,7 @@ import {
     Tags,
     BlockchainTransaction,
     MemberPayload_Mls,
+    CreationCookie,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -747,7 +748,7 @@ export class Client
         userId: string | undefined,
         chunkCount: number,
         streamSettings?: PlainMessage<StreamSettings>,
-    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array }> {
+    ): Promise<{ creationCookie: CreationCookie }> {
         assert(this.userStreamId !== undefined, 'userStreamId must be set')
         if (!channelId && !spaceId && !userId) {
             throw Error('channelId, spaceId or userId must be set')
@@ -782,28 +783,17 @@ export class Client
             }),
         )
 
-        const response = await this.rpcClient.createStream({
+        const response = await this.rpcClient.createMediaStream({
             events: [inceptionEvent],
             streamId: streamIdAsBytes(streamId),
         })
 
-        const unpackedResponse = await unpackStream(response.stream, this.unpackEnvelopeOpts)
-        const streamView = new StreamStateView(this.userId, streamId)
-        streamView.initialize(
-            unpackedResponse.streamAndCookie.nextSyncCookie,
-            unpackedResponse.streamAndCookie.events,
-            unpackedResponse.snapshot,
-            unpackedResponse.streamAndCookie.miniblocks,
-            [],
-            unpackedResponse.prevSnapshotMiniblockNum,
-            undefined,
-            [],
-            undefined,
+        check(
+            response?.nextCreationCookie !== undefined,
+            'nextCreationCookie was expected but was not returned in response',
         )
 
-        check(isDefined(streamView.prevMiniblockHash), 'prevMiniblockHash must be defined')
-
-        return { streamId: streamId, prevMiniblockHash: streamView.prevMiniblockHash }
+        return { creationCookie: response.nextCreationCookie }
     }
 
     async updateChannel(
@@ -1633,16 +1623,16 @@ export class Client
     }
 
     async sendMediaPayload(
-        streamId: string,
+        creationCookie: CreationCookie,
+        last: boolean,
         data: Uint8Array,
         chunkIndex: number,
-        prevMiniblockHash: Uint8Array,
-    ): Promise<{ prevMiniblockHash: Uint8Array; eventId: string }> {
+    ): Promise<{ creationCookie: CreationCookie }> {
         const payload = make_MediaPayload_Chunk({
             data: data,
             chunkIndex: chunkIndex,
         })
-        return this.makeEventWithHashAndAddToStream(streamId, payload, prevMiniblockHash)
+        return this.makeMediaEventWithHashAndAddToMediaStream(creationCookie, last, payload)
     }
 
     async getMediaPayload(
@@ -2283,6 +2273,29 @@ export class Client
                 throw err
             }
         }
+    }
+
+    // makeMediaEventWithHashAndAddToMediaStream is used for uploading media chunks to the media stream.
+    // This function uses media stream specific RPC endpoints to upload media chunks.
+    // These endpoints are optimized for media uploads and are not used for general stream events.
+    async makeMediaEventWithHashAndAddToMediaStream(
+        creationCookie: CreationCookie,
+        last: boolean,
+        payload: PlainMessage<StreamEvent>['payload'],
+    ): Promise<{ creationCookie: CreationCookie }> {
+        const streamIdStr = streamIdAsString(creationCookie.streamId)
+        check(isDefined(streamIdStr) && streamIdStr !== '', 'streamId must be defined')
+        const event = await makeEvent(this.signerContext, payload, creationCookie.prevMiniblockHash)
+
+        const resp = await this.rpcClient.addMediaEvent({
+            event,
+            creationCookie,
+            last,
+        })
+
+        check(isDefined(resp.creationCookie), 'creationCookie not found in response')
+
+        return { creationCookie: resp.creationCookie }
     }
 
     async getStreamLastMiniblockHash(streamId: string | Uint8Array): Promise<Uint8Array> {
