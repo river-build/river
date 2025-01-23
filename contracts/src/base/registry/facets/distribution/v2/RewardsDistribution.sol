@@ -50,7 +50,6 @@ contract RewardsDistribution is
     address rewardToken,
     uint256 rewardDuration
   ) external onlyInitializing {
-    _addInterface(type(IRewardsDistribution).interfaceId);
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     StakingRewards.Layout storage staking = ds.staking;
@@ -60,6 +59,12 @@ contract RewardsDistribution is
       rewardDuration
     );
     __UpgradeableBeacon_init_unchained(address(new DelegationProxy()));
+
+    uint256 nextDepositId = staking.nextDepositId;
+    for (uint256 i; i < nextDepositId; ++i) {
+      address proxy = ds.proxyById[i];
+      if (proxy != address(0)) DelegationProxy(proxy).reinitialize(stakeToken);
+    }
 
     emit RewardsDistributionInitialized(
       stakeToken,

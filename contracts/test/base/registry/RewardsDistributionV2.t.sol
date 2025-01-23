@@ -2,6 +2,9 @@
 pragma solidity ^0.8.23;
 
 // interfaces
+import {IDiamond} from "@river-build/diamond/src/IDiamond.sol";
+import {IDiamondCut} from "@river-build/diamond/src/facets/cut/IDiamondCut.sol";
+import {IDiamondLoupe} from "@river-build/diamond/src/facets/loupe/IDiamondLoupe.sol";
 import {IOwnableBase} from "@river-build/diamond/src/facets/ownable/IERC173.sol";
 
 // libraries
@@ -12,11 +15,13 @@ import {StakingRewards} from "contracts/src/base/registry/facets/distribution/v2
 import {RewardsDistributionStorage} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistributionStorage.sol";
 
 // contracts
+import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+import {DeployRewardsDistributionV2} from "contracts/scripts/deployments/facets/DeployRewardsDistributionV2.s.sol";
 import {EIP712Utils} from "contracts/test/utils/EIP712Utils.sol";
 import {Towns} from "contracts/src/tokens/towns/base/Towns.sol";
-
 import {DelegationProxy} from "contracts/src/base/registry/facets/distribution/v2/DelegationProxy.sol";
 import {UpgradeableBeaconBase} from "contracts/src/diamond/facets/beacon/UpgradeableBeacon.sol";
+import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistribution.sol";
 import {BaseRegistryTest} from "./BaseRegistry.t.sol";
 
 contract RewardsDistributionV2Test is
@@ -30,6 +35,9 @@ contract RewardsDistributionV2Test is
     keccak256(
       "Stake(uint96 amount,address delegatee,address beneficiary,address owner,uint256 nonce,uint256 deadline)"
     );
+
+  DeployRewardsDistributionV2 internal distributionV2Helper =
+    new DeployRewardsDistributionV2();
 
   function test_storageSlot() public pure {
     bytes32 slot = keccak256(
@@ -78,6 +86,38 @@ contract RewardsDistributionV2Test is
     rewardsDistributionFacet.setPeriodRewardAmount(reward);
 
     assertEq(rewardsDistributionFacet.getPeriodRewardAmount(), reward);
+  }
+
+  function test_reinitialize() public {
+    uint256 depositId = test_stake();
+
+    address newTowns = deployTokenBase.deploy(deployer);
+
+    address implementation = address(new RewardsDistribution());
+    IDiamond.FacetCut memory cut = distributionV2Helper.makeCut(
+      implementation,
+      IDiamond.FacetCutAction.Replace
+    );
+    IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](1);
+    cuts[0] = cut;
+    bytes memory initData = distributionV2Helper.makeInitData(
+      newTowns,
+      newTowns,
+      14 days
+    );
+
+    vm.prank(deployer);
+    IDiamondCut(baseRegistry).diamondCut(cuts, implementation, initData);
+
+    address proxy = rewardsDistributionFacet.delegationProxyById(depositId);
+
+    assertEq(DelegationProxy(proxy).factory(), baseRegistry);
+    assertEq(DelegationProxy(proxy).stakeToken(), newTowns);
+    assertEq(ERC20Votes(newTowns).delegates(proxy), OPERATOR);
+    assertEq(
+      ERC20Votes(newTowns).allowance(proxy, baseRegistry),
+      type(uint256).max
+    );
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/

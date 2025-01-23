@@ -15,6 +15,7 @@ contract DelegationProxyTest is TestUtils {
   address internal deployer;
   address internal towns;
   address internal beacon;
+  address internal proxy;
 
   function setUp() public {
     deployer = getDeployer();
@@ -22,10 +23,10 @@ contract DelegationProxyTest is TestUtils {
     beacon = address(
       new UpgradeableBeacon(deployer, address(new DelegationProxy()))
     );
+    proxy = LibClone.deployERC1967BeaconProxy(beacon);
   }
 
   function test_initialize_revertIf_alreadyInitialized() public {
-    address proxy = LibClone.deployERC1967BeaconProxy(beacon);
     DelegationProxy(proxy).initialize(towns, deployer);
 
     vm.expectRevert(
@@ -41,7 +42,6 @@ contract DelegationProxyTest is TestUtils {
 
   function test_fuzz_initialize(address delegatee) public {
     vm.assume(delegatee != address(0));
-    address proxy = LibClone.deployERC1967BeaconProxy(beacon);
 
     vm.prank(deployer);
     DelegationProxy(proxy).initialize(towns, delegatee);
@@ -52,12 +52,34 @@ contract DelegationProxyTest is TestUtils {
     assertEq(ERC20Votes(towns).allowance(proxy, deployer), type(uint256).max);
   }
 
-  function test_fuzz_redelegate_revertIf_notFactory(address caller) public {
+  function test_fuzz_reinitialize_revertIf_notFactory(address caller) public {
     vm.assume(caller != deployer);
-    address proxy = LibClone.deployERC1967BeaconProxy(beacon);
+
+    test_fuzz_initialize(deployer);
+
+    vm.prank(caller);
+    vm.expectRevert();
+    DelegationProxy(proxy).reinitialize(towns);
+  }
+
+  function test_fuzz_reinitialize(address delegatee) public {
+    test_fuzz_initialize(delegatee);
+
+    address token = deployTownsTokenBase.deploy(deployer);
 
     vm.prank(deployer);
-    DelegationProxy(proxy).initialize(towns, deployer);
+    DelegationProxy(proxy).reinitialize(token);
+
+    assertEq(DelegationProxy(proxy).factory(), deployer);
+    assertEq(DelegationProxy(proxy).stakeToken(), token);
+    assertEq(ERC20Votes(token).delegates(proxy), delegatee);
+    assertEq(ERC20Votes(token).allowance(proxy, deployer), type(uint256).max);
+  }
+
+  function test_fuzz_redelegate_revertIf_notFactory(address caller) public {
+    vm.assume(caller != deployer);
+
+    test_fuzz_initialize(deployer);
 
     vm.prank(caller);
     vm.expectRevert();
@@ -68,12 +90,9 @@ contract DelegationProxyTest is TestUtils {
     address delegatee,
     address newDelegatee
   ) public {
-    vm.assume(delegatee != address(0));
     vm.assume(delegatee != newDelegatee);
-    address proxy = LibClone.deployERC1967BeaconProxy(beacon);
 
-    vm.prank(deployer);
-    DelegationProxy(proxy).initialize(towns, delegatee);
+    test_fuzz_initialize(delegatee);
 
     vm.prank(deployer);
     DelegationProxy(proxy).redelegate(newDelegatee);
@@ -82,10 +101,7 @@ contract DelegationProxyTest is TestUtils {
   }
 
   function test_upgradeBeacon() public {
-    address proxy = LibClone.deployERC1967BeaconProxy(beacon);
-
-    vm.prank(deployer);
-    DelegationProxy(proxy).initialize(towns, deployer);
+    test_fuzz_initialize(deployer);
 
     DelegationProxy newImpl = new DelegationProxy();
 
