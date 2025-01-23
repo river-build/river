@@ -12,6 +12,7 @@ import {
     SnapshotCaseType,
     SyncStreamsResponse,
     SyncOp,
+    EncryptedDataVersion,
 } from '@river-build/proto'
 import { Entitlements } from '../sync-agent/entitlements/entitlements'
 import { PlainMessage } from '@bufbuild/protobuf'
@@ -152,9 +153,13 @@ export const makeEvent_test = async (
 
 export const TEST_ENCRYPTED_MESSAGE_PROPS: PlainMessage<EncryptedData> = {
     sessionId: '',
+    sessionIdBytes: new Uint8Array(0),
     ciphertext: '',
     algorithm: '',
     senderKey: '',
+    ciphertextBytes: new Uint8Array(0),
+    ivBytes: new Uint8Array(0),
+    version: EncryptedDataVersion.ENCRYPTED_DATA_VERSION_1,
 }
 
 export const getXchainConfigForTesting = (): XchainConfig => {

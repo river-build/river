@@ -1,9 +1,9 @@
 import type { GroupSessionExtraData } from './encryptionDevice'
 
 import { DecryptionAlgorithm, DecryptionError, IDecryptionParams } from './base'
-import { GroupEncryptionSession } from './olmLib'
-import { EncryptedData } from '@river-build/proto'
-import { dlog } from '@river-build/dlog'
+import { GroupEncryptionAlgorithmId, GroupEncryptionSession } from './olmLib'
+import { EncryptedData, EncryptedDataVersion } from '@river-build/proto'
+import { bin_fromBase64, dlog } from '@river-build/dlog'
 
 const log = dlog('csb:encryption:groupDecryption')
 
@@ -13,6 +13,7 @@ const log = dlog('csb:encryption:groupDecryption')
  * @param params - parameters, as per {@link DecryptionAlgorithm}
  */
 export class GroupDecryption extends DecryptionAlgorithm {
+    public readonly algorithm = GroupEncryptionAlgorithmId.GroupEncryption
     public constructor(params: IDecryptionParams) {
         super(params)
     }
@@ -23,7 +24,7 @@ export class GroupDecryption extends DecryptionAlgorithm {
      * decrypting, or rejects with an `algorithms.DecryptionError` if there is a
      * problem decrypting the event.
      */
-    public async decrypt(streamId: string, content: EncryptedData): Promise<string> {
+    public async decrypt(streamId: string, content: EncryptedData): Promise<Uint8Array | string> {
         if (!content.senderKey || !content.sessionId || !content.ciphertext) {
             throw new DecryptionError('GROUP_DECRYPTION_MISSING_FIELDS', 'Missing fields in input')
         }
@@ -34,8 +35,18 @@ export class GroupDecryption extends DecryptionAlgorithm {
             throw new Error('Session not found')
         }
 
+        // for historical reasons, we return the plaintext as a string
         const result = session.decrypt(content.ciphertext)
-        return result.plaintext
+
+        switch (content.version) {
+            case EncryptedDataVersion.ENCRYPTED_DATA_VERSION_0:
+                return result.plaintext
+            case EncryptedDataVersion.ENCRYPTED_DATA_VERSION_1:
+                return bin_fromBase64(result.plaintext)
+
+            default:
+                throw new DecryptionError('GROUP_DECRYPTION_INVALID_VERSION', 'Unsupported version')
+        }
     }
 
     /**
@@ -57,5 +68,28 @@ export class GroupDecryption extends DecryptionAlgorithm {
         } catch (e) {
             log(`Error handling room key import: ${(<Error>e).message}`)
         }
+    }
+
+    /** */
+    public async exportGroupSession(
+        streamId: string,
+        sessionId: string,
+    ): Promise<GroupEncryptionSession | undefined> {
+        return this.device.exportInboundGroupSession(streamId, sessionId)
+    }
+
+    /** */
+    public exportGroupSessions(): Promise<GroupEncryptionSession[]> {
+        return this.device.exportInboundGroupSessions()
+    }
+
+    /** */
+    public exportGroupSessionIds(streamId: string): Promise<string[]> {
+        return this.device.getInboundGroupSessionIds(streamId)
+    }
+
+    /** */
+    public async hasSessionKey(streamId: string, sessionId: string): Promise<boolean> {
+        return this.device.hasInboundSessionKeys(streamId, sessionId)
     }
 }

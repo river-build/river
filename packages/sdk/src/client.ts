@@ -29,6 +29,10 @@ import {
     Tags,
     BlockchainTransaction,
     MemberPayload_Mls,
+    MiniblockHeader,
+    GetStreamResponse,
+    CreateStreamResponse,
+    ChannelProperties,
     CreationCookie,
 } from '@river-build/proto'
 import {
@@ -46,8 +50,8 @@ import {
     BaseDecryptionExtensions,
     CryptoStore,
     DecryptionEvents,
-    EncryptionDevice,
     EntitlementsDelegate,
+    GroupEncryptionAlgorithmId,
     GroupEncryptionCrypto,
     GroupEncryptionSession,
     IGroupEncryptionClient,
@@ -85,6 +89,7 @@ import {
 import {
     checkEventSignature,
     makeEvent,
+    unpackEnvelope,
     UnpackEnvelopeOpts,
     unpackStream,
     unpackStreamEx,
@@ -94,7 +99,6 @@ import { IStreamStateView, StreamStateView } from './streamStateView'
 import {
     make_UserMetadataPayload_Inception,
     make_ChannelPayload_Inception,
-    make_ChannelProperties,
     make_ChannelPayload_Message,
     make_MemberPayload_Membership2,
     make_SpacePayload_Inception,
@@ -141,7 +145,7 @@ import {
 
 import debug from 'debug'
 import { Stream } from './stream'
-import { usernameChecksum } from './utils'
+import { getTime, usernameChecksum } from './utils'
 import { isEncryptedContentKind, toDecryptedContent } from './encryptedContentTypes'
 import { ClientDecryptionExtensions } from './clientDecryptionExtensions'
 import { PersistenceStore, IPersistenceStore, StubPersistenceStore } from './persistenceStore'
@@ -153,6 +157,8 @@ import { SignerContext } from './signerContext'
 import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from './crypto_utils'
 import { makeTags, makeTipTags } from './tags'
 import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
+import { extractMlsExternalGroup, ExtractMlsExternalGroupResult } from './mls/utils/mlsutils'
+import { MlsAdapter, MLS_ALGORITHM } from './mls'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -201,8 +207,10 @@ export class Client
     private entitlementsDelegate: EntitlementsDelegate
     private decryptionExtensions?: BaseDecryptionExtensions
     private syncedStreamsExtensions?: SyncedStreamsExtension
+    private mlsAdapter?: MlsAdapter
     private persistenceStore: IPersistenceStore
     private validatedEvents: Record<string, { isValid: boolean; reason?: string }> = {}
+    private defaultGroupEncryptionAlgorithm: GroupEncryptionAlgorithmId
 
     constructor(
         signerContext: SignerContext,
@@ -213,6 +221,8 @@ export class Client
         logNamespaceFilter?: string,
         highPriorityStreamIds?: string[],
         unpackEnvelopeOpts?: UnpackEnvelopeOpts,
+        defaultGroupEncryptionAlgorithm?: GroupEncryptionAlgorithmId,
+        userNickname?: string,
     ) {
         super()
         if (logNamespaceFilter) {
@@ -232,10 +242,12 @@ export class Client
         this.rpcClient = rpcClient
         this.unpackEnvelopeOpts = unpackEnvelopeOpts
         this.userId = userIdFromAddress(signerContext.creatorAddress)
+        this.defaultGroupEncryptionAlgorithm =
+            defaultGroupEncryptionAlgorithm ?? GroupEncryptionAlgorithmId.HybridGroupEncryption
 
-        const shortId = shortenHexString(
-            this.userId.startsWith('0x') ? this.userId.slice(2) : this.userId,
-        )
+        const shortId =
+            userNickname ??
+            shortenHexString(this.userId.startsWith('0x') ? this.userId.slice(2) : this.userId)
 
         this.logCall = dlog('csb:cl:call').extend(shortId)
         this.logSync = dlog('csb:cl:sync').extend(shortId)
@@ -258,6 +270,7 @@ export class Client
             startSyncStreams: async () => {
                 await this.streams.startSyncStreams()
                 this.decryptionExtensions?.start()
+                this.mlsAdapter?.start()
             },
             initStream: (streamId, allowGetStream) => this.initStream(streamId, allowGetStream),
             emitClientInitStatus: (status) => this.emit('clientInitStatusUpdated', status),
@@ -278,13 +291,6 @@ export class Client
 
     get cryptoInitialized(): boolean {
         return this.cryptoBackend !== undefined
-    }
-
-    get encryptionDevice(): EncryptionDevice {
-        if (!this.cryptoBackend) {
-            throw new Error('cryptoBackend not initialized')
-        }
-        return this.cryptoBackend.encryptionDevice
     }
 
     async stop(): Promise<void> {
@@ -354,7 +360,7 @@ export class Client
         }
     }
 
-    private async initUserJoinedStreams() {
+    private initUserJoinedStreams() {
         assert(isDefined(this.userStreamId), 'userStreamId must be set')
         assert(isDefined(this.syncedStreamsExtensions), 'syncedStreamsExtensions must be set')
         const stream = this.stream(this.userStreamId)
@@ -384,7 +390,14 @@ export class Client
     async initializeUser(opts?: {
         spaceId?: Uint8Array | string
         encryptionDeviceInit?: EncryptionDeviceInitOpts
-    }): Promise<void> {
+    }): Promise<{
+        initCryptoTime: number
+        initMlsTime: number
+        initUserStreamTime: number
+        initUserInboxStreamTime: number
+        initUserMetadataStreamTime: number
+        initUserSettingsStreamTime: number
+    }> {
         const initUserMetadata = opts?.spaceId
             ? {
                   spaceId: streamIdAsBytes(opts?.spaceId),
@@ -394,23 +407,44 @@ export class Client
         const initializeUserStartTime = performance.now()
         this.logCall('initializeUser', this.userId)
         assert(this.userStreamId === undefined, 'already initialized')
-        await this.initCrypto(opts?.encryptionDeviceInit)
+        const initCrypto = await getTime(() => this.initCrypto(opts?.encryptionDeviceInit))
+        const initMls = await getTime(() => this.initMls())
 
         check(isDefined(this.decryptionExtensions), 'decryptionExtensions must be defined')
         check(isDefined(this.syncedStreamsExtensions), 'syncedStreamsExtensions must be defined')
+        check(isDefined(this.mlsAdapter), 'mlsAdapter must be defined')
 
-        await Promise.all([
-            this.initUserStream(initUserMetadata),
-            this.initUserInboxStream(initUserMetadata),
-            this.initUserMetadataStream(initUserMetadata),
-            this.initUserSettingsStream(initUserMetadata),
+        const [
+            initUserStream,
+            initUserInboxStream,
+            initUserMetadataStream,
+            initUserSettingsStream,
+        ] = await Promise.all([
+            getTime(() => this.initUserStream(initUserMetadata)),
+            getTime(() => this.initUserInboxStream(initUserMetadata)),
+            getTime(() => this.initUserMetadataStream(initUserMetadata)),
+            getTime(() => this.initUserSettingsStream(initUserMetadata)),
         ])
-        await this.initUserJoinedStreams()
+        this.initUserJoinedStreams()
 
         this.syncedStreamsExtensions.start()
         const initializeUserEndTime = performance.now()
         const executionTime = initializeUserEndTime - initializeUserStartTime
         this.logCall('initializeUser::executionTime', executionTime)
+
+        // all of these init calls follow a similar pattern and call highly similar functions
+        // so just tracking more granular times for a single one of these as a start, so there's not too much data to digest
+        const initUserMetadataTimes = initUserMetadataStream.result
+
+        return {
+            initCryptoTime: initCrypto.time,
+            initMlsTime: initMls.time,
+            initUserStreamTime: initUserStream.time,
+            initUserInboxStreamTime: initUserInboxStream.time,
+            initUserMetadataStreamTime: initUserMetadataStream.time,
+            initUserSettingsStreamTime: initUserSettingsStream.time,
+            ...initUserMetadataTimes,
+        }
     }
 
     private async initUserStream(metadata: { spaceId: Uint8Array } | undefined) {
@@ -438,12 +472,58 @@ export class Client
     private async initUserMetadataStream(metadata?: { spaceId: Uint8Array }) {
         this.userMetadataStreamId = makeUserMetadataStreamId(this.userId)
         const userMetadataStream = this.createSyncedStream(this.userMetadataStreamId)
-        if (!(await userMetadataStream.initializeFromPersistence())) {
-            const response =
-                (await this.getUserStream(this.userMetadataStreamId)) ??
-                (await this.createUserMetadataStream(this.userMetadataStreamId, metadata))
-            await userMetadataStream.initializeFromResponse(response)
+
+        let initUserMetadataStreamInitFromPersistenceTime = 0
+        let initUserMetadataStreamGetUserStreamTime = 0
+        let initUserMetadataStreamCreateUserMetadataStreamTime = 0
+        let initUserMetadataStreamInitFromResponseTime = 0
+
+        const initFromPersistence = await getTime(() =>
+            userMetadataStream.initializeFromPersistence(),
+        )
+        initUserMetadataStreamInitFromPersistenceTime = initFromPersistence.time
+        if (!initFromPersistence.result) {
+            const getUserStreamResponse = await getTime(() => {
+                check(!!this.userMetadataStreamId, 'userMetadataStreamId must be set')
+                return this.getUserStream(this.userMetadataStreamId)
+            })
+            initUserMetadataStreamGetUserStreamTime = getUserStreamResponse.time
+            let response: ParsedStreamResponse
+            if (getUserStreamResponse.result) {
+                response = getUserStreamResponse.result
+            } else {
+                const createUserMetadataStreamResponse = await getTime(() => {
+                    check(!!this.userMetadataStreamId, 'userMetadataStreamId must be set')
+                    return this.createUserMetadataStream(this.userMetadataStreamId, metadata)
+                })
+                initUserMetadataStreamCreateUserMetadataStreamTime =
+                    createUserMetadataStreamResponse.time
+                response = createUserMetadataStreamResponse.result
+            }
+            const initializeFromResponse = await getTime(() =>
+                userMetadataStream.initializeFromResponse(response),
+            )
+            initUserMetadataStreamInitFromResponseTime = initializeFromResponse.time
         }
+
+        const times = {
+            ...(initUserMetadataStreamInitFromPersistenceTime
+                ? { initUserMetadataStreamInitFromPersistenceTime }
+                : {}),
+            ...(initUserMetadataStreamGetUserStreamTime
+                ? { initUserMetadataStreamGetUserStreamTime }
+                : {}),
+            ...(initUserMetadataStreamCreateUserMetadataStreamTime
+                ? {
+                      initUserMetadataStreamCreateUserMetadataStreamTime,
+                  }
+                : {}),
+            ...(initUserMetadataStreamInitFromResponseTime
+                ? { initUserMetadataStreamInitFromResponseTime }
+                : {}),
+        }
+
+        return times
     }
 
     private async initUserSettingsStream(metadata?: { spaceId: Uint8Array }) {
@@ -564,7 +644,8 @@ export class Client
         const streamId = streamIdAsString(request.streamId)
         try {
             this.creatingStreamIds.add(streamId)
-            let response = await this.rpcClient.createStream(request)
+            let response: CreateStreamResponse | GetStreamResponse =
+                await this.rpcClient.createStream(request)
             const stream = this.createSyncedStream(streamId)
             if (!response.stream) {
                 // if a stream alread exists it will return a nil stream in the response, but no error
@@ -864,8 +945,12 @@ export class Client
         assert(isGDMChannelStreamId(streamId), 'streamId must be a valid GDM stream id')
         check(isDefined(this.cryptoBackend))
 
-        const channelProps = make_ChannelProperties(channelName, channelTopic).toJsonString()
-        const encryptedData = await this.cryptoBackend.encryptGroupEvent(streamId, channelProps)
+        const channelProps = new ChannelProperties({ name: channelName, topic: channelTopic })
+        const encryptedData = await this.cryptoBackend.encryptGroupEvent(
+            streamId,
+            channelProps.toBinary(),
+            this.defaultGroupEncryptionAlgorithm,
+        )
 
         const event = make_GDMChannelPayload_ChannelProperties(encryptedData)
         return this.makeEventAndAddToStream(streamId, event, {
@@ -1043,7 +1128,11 @@ export class Client
 
     async setDisplayName(streamId: string, displayName: string) {
         check(isDefined(this.cryptoBackend))
-        const encryptedData = await this.cryptoBackend.encryptGroupEvent(streamId, displayName)
+        const encryptedData = await this.cryptoBackend.encryptGroupEvent(
+            streamId,
+            new TextEncoder().encode(displayName),
+            this.defaultGroupEncryptionAlgorithm,
+        )
         await this.makeEventAndAddToStream(
             streamId,
             make_MemberPayload_DisplayName(encryptedData),
@@ -1056,7 +1145,11 @@ export class Client
         const stream = this.stream(streamId)
         check(isDefined(stream), 'stream not found')
         stream.view.getMemberMetadata().usernames.setLocalUsername(this.userId, username)
-        const encryptedData = await this.cryptoBackend.encryptGroupEvent(streamId, username)
+        const encryptedData = await this.cryptoBackend.encryptGroupEvent(
+            streamId,
+            new TextEncoder().encode(username),
+            this.defaultGroupEncryptionAlgorithm,
+        )
         encryptedData.checksum = usernameChecksum(username, streamId)
         try {
             await this.makeEventAndAddToStream(
@@ -1511,13 +1604,41 @@ export class Client
         }
 
         const tags = opts?.disableTags === true ? undefined : makeTags(payload, stream.view)
-        const cleartext = payload.toJsonString()
-        const message = await this.encryptGroupEvent(payload, streamId)
-        message.refEventId = getRefEventIdFromChannelMessage(payload)
+        const cleartext = payload.toBinary()
 
+        let message: EncryptedData
+        const encryptionAlgorithm = stream.view.membershipContent.encryptionAlgorithm
+        switch (encryptionAlgorithm) {
+            case MLS_ALGORITHM:
+                message = await this.encryptGroupEventEpochSecret(payload, streamId)
+                break
+            case GroupEncryptionAlgorithmId.HybridGroupEncryption:
+                message = await this.encryptGroupEvent(
+                    payload,
+                    streamId,
+                    GroupEncryptionAlgorithmId.HybridGroupEncryption,
+                )
+                break
+            case GroupEncryptionAlgorithmId.GroupEncryption:
+                message = await this.encryptGroupEvent(
+                    payload,
+                    streamId,
+                    GroupEncryptionAlgorithmId.GroupEncryption,
+                )
+                break
+            default: {
+                message = await this.encryptGroupEvent(
+                    payload,
+                    streamId,
+                    this.defaultGroupEncryptionAlgorithm,
+                )
+            }
+        }
         if (!message) {
             throw new Error('failed to encrypt message')
         }
+        message.refEventId = getRefEventIdFromChannelMessage(payload)
+
         if (isChannelStreamId(streamId)) {
             return this.makeEventAndAddToStream(streamId, make_ChannelPayload_Message(message), {
                 method: 'sendMessage',
@@ -2013,6 +2134,24 @@ export class Client
         }
     }
 
+    async getMiniblockHeader(
+        streamId: string,
+        miniblockNum: bigint,
+        unpackOpts: UnpackEnvelopeOpts | undefined = undefined,
+    ): Promise<MiniblockHeader> {
+        const response = await this.rpcClient.getMiniblockHeader({
+            streamId: streamIdAsBytes(streamId),
+            miniblockNum: miniblockNum,
+        })
+        check(isDefined(response.header), `header not found: ${streamId}`)
+        const header = await unpackEnvelope(response.header, unpackOpts)
+        check(
+            header.event.payload.case === 'miniblockHeader',
+            `bad miniblock header: wrong case received: ${header.event.payload.case}`,
+        )
+        return header.event.payload.value
+    }
+
     async scrollback(
         streamId: string,
     ): Promise<{ terminus: boolean; firstEvent?: StreamTimelineEvent }> {
@@ -2095,6 +2234,23 @@ export class Client
         return info
     }
 
+    async getMiniblockInfo(
+        streamId: string,
+    ): Promise<{ miniblockNum: bigint; miniblockHash: Uint8Array }> {
+        let streamView = this.stream(streamId)?.view
+        // if we don't have a local copy, or if it's just not initialized, fetch the latest
+        if (!streamView || !streamView.isInitialized) {
+            streamView = await this.getStream(streamId)
+        }
+        check(isDefined(streamView), `stream not found: ${streamId}`)
+        check(isDefined(streamView.miniblockInfo), `stream not initialized: ${streamId}`)
+        check(isDefined(streamView.prevMiniblockHash), `prevMiniblockHash not found: ${streamId}`)
+        return {
+            miniblockNum: streamView.miniblockInfo.max,
+            miniblockHash: streamView.prevMiniblockHash,
+        }
+    }
+
     async downloadNewInboxMessages(): Promise<void> {
         this.logCall('downloadNewInboxMessages')
         check(isDefined(this.userInboxStreamId))
@@ -2167,7 +2323,7 @@ export class Client
         options: {
             method?: string
             localId?: string
-            cleartext?: string
+            cleartext?: Uint8Array
             optional?: boolean
             tags?: PlainMessage<Tags>
         } = {},
@@ -2209,7 +2365,7 @@ export class Client
         prevMiniblockHash: Uint8Array,
         optional?: boolean,
         localId?: string,
-        cleartext?: string,
+        cleartext?: Uint8Array,
         tags?: PlainMessage<Tags>,
         retryCount?: number,
     ): Promise<{ prevMiniblockHash: Uint8Array; eventId: string; error?: AddEventResponse_Error }> {
@@ -2326,6 +2482,18 @@ export class Client
         )
     }
 
+    /// Initialise MLS but do not start it
+    private async initMls(): Promise<void> {
+        this.logCall('initMls')
+        if (this.mlsAdapter) {
+            this.logCall('Attempt to re-init mls adapter, ignoring')
+            return
+        }
+
+        this.mlsAdapter = new MlsAdapter(this)
+        await this.mlsAdapter.initialize()
+    }
+
     /**
      * Resets crypto backend and creates a new encryption account, uploading device keys to UserDeviceKey stream.
      */
@@ -2391,6 +2559,18 @@ export class Client
         this.decryptionExtensions?.setHighPriorityStreams(streamIds)
     }
 
+    public async ensureOutboundSession(
+        streamId: string,
+        opts: { awaitInitialShareSession: boolean },
+    ) {
+        check(isDefined(this.cryptoBackend), 'crypto backend not initialized')
+        return this.cryptoBackend.ensureOutboundSession(
+            streamId,
+            this.defaultGroupEncryptionAlgorithm,
+            opts,
+        )
+    }
+
     /**
      * decrypts and updates the decrypted event
      */
@@ -2405,7 +2585,7 @@ export class Client
         check(isDefined(stream), 'stream not found')
         check(isEncryptedContentKind(kind), `invalid kind ${kind}`)
         const cleartext = await this.cleartextForGroupEvent(streamId, eventId, encryptedData)
-        const decryptedContent = toDecryptedContent(kind, cleartext)
+        const decryptedContent = toDecryptedContent(kind, encryptedData.version, cleartext)
         stream.updateDecryptedContent(eventId, decryptedContent)
     }
 
@@ -2413,7 +2593,7 @@ export class Client
         streamId: string,
         eventId: string,
         encryptedData: EncryptedData,
-    ): Promise<string> {
+    ): Promise<Uint8Array | string> {
         const cached = await this.persistenceStore.getCleartext(eventId)
         if (cached) {
             this.logDebug('Cache hit for cleartext', eventId)
@@ -2434,6 +2614,7 @@ export class Client
         inStreamId: string | Uint8Array,
         sessions: GroupEncryptionSession[],
         toDevices: UserDeviceCollection,
+        algorithm: GroupEncryptionAlgorithmId,
     ) {
         const streamIdStr = streamIdAsString(inStreamId)
         const streamIdBytes = streamIdAsBytes(inStreamId)
@@ -2442,6 +2623,11 @@ export class Client
         check(
             new Set(sessions.map((s) => s.streamId)).size === 1,
             'sessions should all be from the same stream',
+        )
+        check(sessions[0].algorithm === algorithm, 'algorithm mismatch')
+        check(
+            new Set(sessions.map((s) => s.algorithm)).size === 1,
+            'all sessions should be the same algorithm',
         )
         check(sessions[0].streamId === streamIdStr, 'streamId mismatch')
 
@@ -2470,6 +2656,7 @@ export class Client
                         senderKey: userDevice.deviceKey,
                         sessionIds: sessionIds,
                         ciphertexts: ciphertext,
+                        algorithm: algorithm,
                     }),
                     miniblockHash,
                 )
@@ -2483,12 +2670,16 @@ export class Client
     }
 
     // Encrypt event using GroupEncryption.
-    public encryptGroupEvent(event: Message, streamId: string): Promise<EncryptedData> {
+    public encryptGroupEvent(
+        event: Message,
+        streamId: string,
+        algorithm: GroupEncryptionAlgorithmId,
+    ): Promise<EncryptedData> {
         if (!this.cryptoBackend) {
             throw new Error('crypto backend not initialized')
         }
-        const cleartext = event.toJsonString()
-        return this.cryptoBackend.encryptGroupEvent(streamId, cleartext)
+
+        return this.cryptoBackend.encryptGroupEvent(streamId, event.toBinary(), algorithm)
     }
 
     async encryptWithDeviceKeys(
@@ -2506,10 +2697,10 @@ export class Client
 
     // Used during testing
     userDeviceKey(): UserDevice {
-        return {
-            deviceKey: this.encryptionDevice.deviceCurve25519Key!,
-            fallbackKey: this.encryptionDevice.fallbackKey.key,
+        if (!this.cryptoBackend) {
+            throw new Error('cryptoBackend not initialized')
         }
+        return this.cryptoBackend.getUserDevice()
     }
 
     public async debugForceMakeMiniblock(
@@ -2537,6 +2728,27 @@ export class Client
         return this.makeEventAndAddToStream(streamId, make_MemberPayload_Mls(payload), {
             method: 'mls',
         })
+    }
+
+    public async getMlsExternalGroupInfo(
+        streamId: string,
+    ): Promise<ExtractMlsExternalGroupResult | undefined> {
+        let streamView = this.stream(streamId)?.view
+        if (!streamView || !streamView.isInitialized) {
+            streamView = await this.getStream(streamId)
+        }
+        check(isDefined(streamView), `stream not found: ${streamId}`)
+        return extractMlsExternalGroup(streamView)
+    }
+
+    private async encryptGroupEventEpochSecret(
+        payload: Message,
+        streamId: string,
+    ): Promise<EncryptedData> {
+        if (this.mlsAdapter === undefined) {
+            throw new Error('mls adapter not initialized')
+        }
+        return this.mlsAdapter.encryptGroupEventEpochSecret(streamId, payload)
     }
 }
 

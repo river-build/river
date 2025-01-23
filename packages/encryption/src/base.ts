@@ -1,6 +1,7 @@
-import { GroupEncryptionSession, UserDeviceCollection } from './olmLib'
+import { GroupEncryptionAlgorithmId, GroupEncryptionSession, UserDeviceCollection } from './olmLib'
 
 import { EncryptionDevice } from './encryptionDevice'
+import { EncryptedData } from '@river-build/proto'
 
 export interface IGroupEncryptionClient {
     downloadUserDeviceInfo(userIds: string[], forceDownload: boolean): Promise<UserDeviceCollection>
@@ -8,8 +9,10 @@ export interface IGroupEncryptionClient {
         streamId: string,
         sessions: GroupEncryptionSession[],
         devicesInRoom: UserDeviceCollection,
+        algorithm: GroupEncryptionAlgorithmId,
     ): Promise<void>
     getDevicesInStream(streamId: string): Promise<UserDeviceCollection>
+    getMiniblockInfo(streamId: string): Promise<{ miniblockNum: bigint; miniblockHash: Uint8Array }>
 }
 
 export interface IDecryptionParams {
@@ -37,6 +40,14 @@ export abstract class EncryptionAlgorithm implements IEncryptionParams {
         this.device = params.device
         this.client = params.client
     }
+
+    abstract ensureOutboundSession(
+        streamId: string,
+        opts?: { awaitInitialShareSession: boolean },
+    ): Promise<void>
+
+    abstract encrypt_deprecated_v0(streamId: string, payload: string): Promise<EncryptedData>
+    abstract encrypt(streamId: string, payload: Uint8Array): Promise<EncryptedData>
 }
 
 /**
@@ -48,6 +59,19 @@ export abstract class DecryptionAlgorithm implements IDecryptionParams {
     public constructor(params: IDecryptionParams) {
         this.device = params.device
     }
+
+    abstract decrypt(streamId: string, content: EncryptedData): Promise<Uint8Array | string>
+
+    abstract importStreamKey(streamId: string, session: GroupEncryptionSession): Promise<void>
+
+    abstract exportGroupSession(
+        streamId: string,
+        sessionId: string,
+    ): Promise<GroupEncryptionSession | undefined>
+
+    abstract exportGroupSessions(): Promise<GroupEncryptionSession[]>
+    abstract exportGroupSessionIds(streamId: string): Promise<string[]>
+    abstract hasSessionKey(streamId: string, sessionId: string): Promise<boolean>
 }
 
 /**

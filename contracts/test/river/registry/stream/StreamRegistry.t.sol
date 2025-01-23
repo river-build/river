@@ -20,17 +20,17 @@ contract StreamRegistryTest is
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                       allocateStream                       */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  /// forge-config: default.fuzz.runs = 64
   function test_fuzz_allocateStream(
     address nodeOperator,
-    TestNode[] memory nodes,
+    TestNode[100] memory nodes,
     TestStream memory testStream
   )
     external
     givenNodeOperatorIsApproved(nodeOperator)
     givenNodesAreRegistered(nodeOperator, nodes)
   {
-    vm.assume(nodes.length > 0 && nodes.length <= 100);
-
     address[] memory nodeAddresses = new address[](nodes.length);
     uint256 nodesLength = nodes.length;
     for (uint256 i; i < nodesLength; ++i) {
@@ -122,6 +122,7 @@ contract StreamRegistryTest is
     givenNodeOperatorIsApproved(nodeOperator)
     givenNodeIsRegistered(nodeOperator, node.node, node.url)
   {
+    vm.assume(randomNode != node.node);
     address[] memory nodes = new address[](2);
     nodes[0] = node.node;
     nodes[1] = randomNode;
@@ -281,20 +282,19 @@ contract StreamRegistryTest is
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                 setStreamLastMiniblockBatch                */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  /// forge-config: default.fuzz.runs = 64
   function test_setStreamLastMiniblockBatch(
     address nodeOperator,
     bytes32 genesisMiniblockHash,
     bytes memory genesisMiniblock,
-    SetMiniblock[] memory miniblocks,
+    SetMiniblock[256] memory miniblocks,
     TestNode memory node
   )
     external
     givenNodeOperatorIsApproved(nodeOperator)
     givenNodeIsRegistered(nodeOperator, node.node, node.url)
   {
-    vm.assume(miniblocks.length < 500);
-    vm.assume(miniblocks.length > 0);
-
     address[] memory nodes = new address[](1);
     nodes[0] = node.node;
 
@@ -310,8 +310,13 @@ contract StreamRegistryTest is
       );
     }
 
+    SetMiniblock[] memory _miniblocks = new SetMiniblock[](miniblocks.length);
+    for (uint256 i; i < miniblocks.length; ++i) {
+      _miniblocks[i] = miniblocks[i];
+    }
+
     vm.prank(node.node);
-    streamRegistry.setStreamLastMiniblockBatch(miniblocks);
+    streamRegistry.setStreamLastMiniblockBatch(_miniblocks);
 
     for (uint256 i = 0; i < miniblocks.length; i++) {
       assertEq(

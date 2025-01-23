@@ -6,13 +6,28 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gammazero/workerpool"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
 )
+
+type CorruptStreamRecord struct {
+	StreamId             shared.StreamId
+	Nodes                []common.Address
+	MostRecentBlock      int64
+	MostRecentLocalBlock int64
+	FirstCorruptBlock    int64
+	CorruptionReason     string
+}
+
+type CorruptStreamTrackingService interface {
+	GetCorruptStreams(ctx context.Context) []CorruptStreamRecord
+}
 
 type MiniblockScrubber interface {
 	ScheduleStreamMiniblocksScrub(
@@ -27,6 +42,11 @@ type miniblockScrubTaskProcessorImpl struct {
 	store      storage.StreamStorage
 	workerPool workerpool.WorkerPool
 	reports    chan *MiniblockScrubReport
+
+	// Metrics
+	scrubQueueLength    prometheus.GaugeFunc
+	scrubTasksCompleted *prometheus.CounterVec
+	scrubScheduleCalls  *prometheus.CounterVec
 }
 
 var _ MiniblockScrubber = (*miniblockScrubTaskProcessorImpl)(nil)
@@ -68,15 +88,39 @@ func NewMiniblockScrubber(
 	store storage.StreamStorage,
 	numWorkers int,
 	reports chan *MiniblockScrubReport,
+	metrics infra.MetricsFactory,
 ) MiniblockScrubber {
 	if numWorkers <= 0 {
 		numWorkers = 100
 	}
-	return &miniblockScrubTaskProcessorImpl{
+
+	proc := &miniblockScrubTaskProcessorImpl{
 		store:      store,
 		reports:    reports,
 		workerPool: *workerpool.New(numWorkers),
 	}
+
+	if metrics != nil {
+		proc.scrubQueueLength = metrics.NewGaugeFunc(
+			prometheus.GaugeOpts{
+				Name: "miniblock_scrubber_queue_length",
+				Help: "Total outstanding scheduled tasks for the miniblock scrubber",
+			},
+			func() float64 { return float64(proc.workerPool.WaitingQueueSize()) },
+		)
+		proc.scrubTasksCompleted = metrics.NewCounterVecEx(
+			"miniblock_scrubber_tasks_completed",
+			"Total number of scrubs executed by the miniblock scrubber",
+			"status",
+		)
+		proc.scrubScheduleCalls = metrics.NewCounterVecEx(
+			"miniblock_scrubber_scrubs_scheduled",
+			"Total number of times a stream was scheduled for a miniblock scrub",
+			"status",
+		)
+	}
+
+	return proc
 }
 
 // Close releases all miniblockScrubTaskProcessorImpl resources. It blocks until
@@ -124,7 +168,7 @@ func (m *miniblockScrubTaskProcessorImpl) scrubMiniblocks(
 	fromBlockNumInclusive int64,
 ) *MiniblockScrubReport {
 	blockNum := fromBlockNumInclusive
-	latest, err := m.store.GetLastMiniblockNumber(ctx, streamId)
+	latest, err := m.store.GetMaxArchivedMiniblockNumber(ctx, streamId)
 	if err != nil {
 		return newErrorReport(
 			streamId,
@@ -201,7 +245,8 @@ func (m *miniblockScrubTaskProcessorImpl) scrubMiniblocks(
 				streamId,
 				base.RiverError(
 					protocol.Err_DB_OPERATION_FAILURE,
-					"Unable to read latest miniblocks").
+					"Unable to read latest miniblocks for stream").
+					Tag("streamId", streamId).
 					Tag("lastAvailableBlockNum", blockNum-1).
 					Tag("latestBlockNum", latest),
 				blockNum,
@@ -229,8 +274,18 @@ func (m *miniblockScrubTaskProcessorImpl) ScheduleStreamMiniblocksScrub(
 	ctx context.Context,
 	streamId shared.StreamId,
 	fromBlockNum int64,
-) error {
-	latest, err := m.store.GetLastMiniblockNumber(ctx, streamId)
+) (err error) {
+	if m.scrubScheduleCalls != nil {
+		defer func() {
+			if err == nil {
+				m.scrubScheduleCalls.WithLabelValues("submitted").Inc()
+			} else {
+				m.scrubScheduleCalls.WithLabelValues("error").Inc()
+			}
+		}()
+	}
+
+	latest, err := m.store.GetMaxArchivedMiniblockNumber(ctx, streamId)
 	if err != nil {
 		return base.AsRiverError(err, protocol.Err_DB_OPERATION_FAILURE).
 			Func("ScheduleStreamMiniblockScrub").
@@ -249,7 +304,19 @@ func (m *miniblockScrubTaskProcessorImpl) ScheduleStreamMiniblocksScrub(
 
 	m.workerPool.Submit(
 		func() {
-			m.reports <- m.scrubMiniblocks(ctx, streamId, fromBlockNum)
+			report := m.scrubMiniblocks(ctx, streamId, fromBlockNum)
+			m.reports <- report
+			if m.scrubTasksCompleted != nil {
+				status := "ok"
+				if report.ScrubError != nil {
+					if report.FirstCorruptBlock != -1 {
+						status = "corrupt"
+					} else {
+						status = "error"
+					}
+				}
+				m.scrubTasksCompleted.WithLabelValues(status).Inc()
+			}
 		},
 	)
 

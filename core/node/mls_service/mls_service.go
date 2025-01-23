@@ -1,6 +1,7 @@
 package mls_service
 
 /*
+#cgo LDFLAGS: -L${SRCDIR}/../../mls/mls-tools/target/release -lmls_lib
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -93,6 +94,42 @@ func SnapshotExternalGroupRequest(request *mls_tools.SnapshotExternalGroupReques
 		return nil, err
 	}
 	result := mls_tools.SnapshotExternalGroupResponse{}
+	err = proto.Unmarshal(responseBytes, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func KeyPackageRequest(request *mls_tools.KeyPackageRequest) (*mls_tools.KeyPackageResponse, error) {
+	r := &mls_tools.MlsRequest{
+		Content: &mls_tools.MlsRequest_KeyPackage{
+			KeyPackage: request,
+		},
+	}
+	responseBytes, err := makeMlsRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	result := mls_tools.KeyPackageResponse{}
+	err = proto.Unmarshal(responseBytes, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func WelcomeMessageRequest(request *mls_tools.WelcomeMessageRequest) (*mls_tools.WelcomeMessageResponse, error) {
+	r := &mls_tools.MlsRequest{
+		Content: &mls_tools.MlsRequest_WelcomeMessage{
+			WelcomeMessage: request,
+		},
+	}
+	responseBytes, err := makeMlsRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	result := mls_tools.WelcomeMessageResponse{}
 	err = proto.Unmarshal(responseBytes, &result)
 	if err != nil {
 		return nil, err

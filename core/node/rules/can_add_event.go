@@ -3,13 +3,14 @@ package rules
 import (
 	"bytes"
 	"context"
-	"log/slog"
 	"math/big"
 	"slices"
 	"time"
 
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/mls_service"
 	"github.com/river-build/river/core/node/mls_service/mls_tools"
@@ -22,15 +23,16 @@ import (
 
 	"github.com/river-build/river/core/node/auth"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
 )
 
 type aeParams struct {
 	ctx                   context.Context
-	cfg                   crypto.OnChainConfiguration
+	config                config.Config
+	chainConfig           crypto.OnChainConfiguration
 	mediaMaxChunkSize     int
 	streamMembershipLimit int
 	validNodeAddresses    []common.Address
@@ -99,6 +101,16 @@ type aeMlsEpochSecrets struct {
 	secrets *MemberPayload_Mls_EpochSecrets
 }
 
+type aeMlsKeyPackageRules struct {
+	params     *aeParams
+	keyPackage *MemberPayload_KeyPackage
+}
+
+type aeMlsWelcomeMessageRules struct {
+	params         *aeParams
+	welcomeMessage *MemberPayload_Mls_WelcomeMessage
+}
+
 type aeMediaPayloadChunkRules struct {
 	params *aeParams
 	chunk  *MediaPayload_Chunk
@@ -141,7 +153,7 @@ type aeHideUserJoinLeaveEventsWrapperRules struct {
 
   - @return canAddEvent bool // true if the event can be added to the stream, will be false in case of duplictate state
 
-  - @return chainAuthArgsList *auth.ChainAuthArgs[] // a list of on chain requirements, such that, if defined, at least one must be satisfied in order to add the event to the stream
+  - @return verifications *AddEventVerifications // a list of on chain requirements, such that, if defined, at least one must be satisfied in order to add the event to the stream
 
   - @return sideEffects *AddEventSideEffects // side effects that need to be executed before adding the event to the stream or on failures
 
@@ -152,12 +164,13 @@ type aeHideUserJoinLeaveEventsWrapperRules struct {
 * (false, nil, nil, nil) // event cannot be added to the stream, but there is no error, state would remain the same
 * (false, nil, nil, error) // event cannot be added to the stream, but there is no error, state would remain the same
 * (true, nil, nil, nil) // event can be added to the stream
-* (true, nil, &IsStreamEvent_Payload, nil) // event can be added after parent event is added or verified
-* (true, chainAuthArgs, nil, nil) // event can be added if chainAuthArgs are satisfied
-* (true, chainAuthArgs, &IsStreamEvent_Payload, nil) // event can be added if chainAuthArgs are satisfied and parent event is added or verified
+* (true, nil, &AddEventSideEffects, nil) // event can be added after parent event is added or verified
+* (true, &AddEventVerifications, nil, nil) // event can be added if chainAuthArgs are satisfied
+* (true, &AddEventVerifications, &AddEventSideEffects, nil) // event can be added if chainAuthArgs are satisfied and parent event is added or verified
 */
 func CanAddEvent(
 	ctx context.Context,
+	config config.Config,
 	chainConfig crypto.OnChainConfiguration,
 	validNodeAddresses []common.Address,
 	currentTime time.Time,
@@ -195,7 +208,8 @@ func CanAddEvent(
 
 	ru := &aeParams{
 		ctx:                   ctx,
-		cfg:                   chainConfig,
+		config:                config,
+		chainConfig:           chainConfig,
 		mediaMaxChunkSize:     int(settings.MediaMaxChunkSize),
 		streamMembershipLimit: int(settings.MembershipLimits.ForType(streamView.StreamId().Type())),
 		validNodeAddresses:    validNodeAddresses,
@@ -204,7 +218,7 @@ func CanAddEvent(
 		streamView:            streamView,
 	}
 	builder := ru.canAddEvent()
-	ru.log().Debug("CanAddEvent", "builder", builder)
+	ru.log().Debugw("CanAddEvent", "builder", builder)
 	return builder.run()
 }
 
@@ -584,6 +598,10 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 			check(ru.validMemberBlockchainTransaction_IsUnique).
 			check(ru.validMemberBlockchainTransaction_ReceiptMetadata)
 	case *MemberPayload_Mls_:
+		if !params.config.EnableMls {
+			return aeBuilder().
+				fail(RiverError(Err_INVALID_ARGUMENT, "mls disabled globally"))
+		}
 		return params.canAddMlsPayload(content.Mls)
 
 	case *MemberPayload_EncryptionAlgorithm_:
@@ -623,11 +641,30 @@ func (params *aeParams) canAddMlsPayload(payload *MemberPayload_Mls) ruleBuilder
 			check(params.creatorIsMember).
 			check(params.mlsInitialized).
 			check(ru.validMlsEpochSecrets)
+
+	case *MemberPayload_Mls_KeyPackage:
+		ru := &aeMlsKeyPackageRules{
+			params:     params,
+			keyPackage: content.KeyPackage,
+		}
+		return aeBuilder().
+			check(params.creatorIsMember).
+			check(params.mlsInitialized).
+			check(ru.validMlsKeyPackage)
+
+	case *MemberPayload_Mls_WelcomeMessage_:
+		ru := &aeMlsWelcomeMessageRules{
+			params:         params,
+			welcomeMessage: content.WelcomeMessage,
+		}
+		return aeBuilder().
+			check(params.creatorIsMember).
+			check(params.mlsInitialized).
+			check(ru.validMlsWelcomeMessage)
 	default:
 		return aeBuilder().
 			fail(unknownContentType(content))
 	}
-
 }
 
 func (params *aeParams) pass() (bool, error) {
@@ -877,6 +914,7 @@ func (ru *aeReceivedBlockchainTransactionRules) parentEventForReceivedBlockchain
 				transaction,
 			),
 			StreamId: streamId,
+			Tags:     ru.params.parsedEvent.Event.Tags, // forward tags
 		}, nil
 	default:
 		return nil, RiverError(Err_INVALID_ARGUMENT, "unknown transaction content", "content", content)
@@ -907,6 +945,7 @@ func (ru *aeBlockchainTransactionRules) parentEventForBlockchainTransaction() (*
 					ru.transaction,
 				),
 				StreamId: userStreamId,
+				Tags:     ru.params.parsedEvent.Event.Tags, // forward tags
 			}, nil
 		}
 
@@ -1438,13 +1477,18 @@ func (ru *aeMlsInitializeGroupRules) validMlsInitializeGroup() (bool, error) {
 
 func (ru *aeMlsExternalJoinRules) validMlsExternalJoin() (bool, error) {
 	view := ru.params.streamView.(events.MlsStreamView)
-	externalJoinRequest, err := view.GetMlsExternalJoinRequest()
+	mlsGroupState, err := view.GetMlsGroupState()
 	if err != nil {
 		return false, err
 	}
-	externalJoinRequest.ProposedExternalJoinCommit = ru.externalJoin.Commit
-	externalJoinRequest.ProposedExternalJoinInfoMessage = ru.externalJoin.GroupInfoMessage
-	externalJoinRequest.SignaturePublicKey = ru.externalJoin.SignaturePublicKey
+
+	externalJoinRequest := &mls_tools.ExternalJoinRequest{
+		GroupState:                      mlsGroupState,
+		ProposedExternalJoinCommit:      ru.externalJoin.Commit,
+		ProposedExternalJoinInfoMessage: ru.externalJoin.GroupInfoMessage,
+		SignaturePublicKey:              ru.externalJoin.SignaturePublicKey,
+	}
+
 	resp, err := mls_service.ExternalJoinRequest(externalJoinRequest)
 	if err != nil {
 		return false, err
@@ -1469,6 +1513,60 @@ func (ru *aeMlsEpochSecrets) validMlsEpochSecrets() (bool, error) {
 			return false, RiverError(Err_INVALID_ARGUMENT, "epoch already exists", "epoch", secret.Epoch)
 		}
 	}
+	return true, nil
+}
+
+func (ru *aeMlsKeyPackageRules) validMlsKeyPackage() (bool, error) {
+	view := ru.params.streamView.(events.MlsStreamView)
+	mlsGroupState, err := view.GetMlsGroupState()
+	if err != nil {
+		return false, err
+	}
+
+	keyPackageRequest := &mls_tools.KeyPackageRequest{
+		GroupState: mlsGroupState,
+		KeyPackage: &mls_tools.KeyPackage{
+			KeyPackage:         ru.keyPackage.KeyPackage,
+			SignaturePublicKey: ru.keyPackage.SignaturePublicKey,
+		},
+	}
+
+	resp, err := mls_service.KeyPackageRequest(keyPackageRequest)
+	if err != nil {
+		return false, err
+	}
+
+	if resp.GetResult() != mls_tools.ValidationResult_VALID {
+		return false, RiverError(Err_INVALID_ARGUMENT, "invalid key package", "result", resp.GetResult())
+	}
+
+	return true, nil
+}
+
+func (ru *aeMlsWelcomeMessageRules) validMlsWelcomeMessage() (bool, error) {
+	view := ru.params.streamView.(events.MlsStreamView)
+	mlsGroupState, err := view.GetMlsGroupState()
+	if err != nil {
+		return false, err
+	}
+
+	welcomeMessageRequest := &mls_tools.WelcomeMessageRequest{
+		GroupState:           mlsGroupState,
+		SignaturePublicKeys:  ru.welcomeMessage.SignaturePublicKeys,
+		GroupInfoMessage:     ru.welcomeMessage.GroupInfoMessage,
+		WelcomeMessages:      ru.welcomeMessage.WelcomeMessages,
+		WelcomeMessageCommit: ru.welcomeMessage.Commit,
+	}
+
+	resp, err := mls_service.WelcomeMessageRequest(welcomeMessageRequest)
+	if err != nil {
+		return false, err
+	}
+
+	if resp.GetResult() != mls_tools.ValidationResult_VALID {
+		return false, RiverError(Err_INVALID_ARGUMENT, "invalid welcome message", "result", resp.GetResult())
+	}
+
 	return true, nil
 }
 
@@ -1901,8 +1999,8 @@ func (params *aeParams) isValidNode(addressOrId []byte) bool {
 	return false
 }
 
-func (params *aeParams) log() *slog.Logger {
-	return dlog.FromCtx(params.ctx)
+func (params *aeParams) log() *zap.SugaredLogger {
+	return logging.FromCtx(params.ctx)
 }
 
 func hasCommon(x, y []string) bool {

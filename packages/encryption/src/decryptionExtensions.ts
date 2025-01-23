@@ -14,7 +14,12 @@ import {
     check,
     bin_toHexString,
 } from '@river-build/dlog'
-import { GROUP_ENCRYPTION_ALGORITHM, GroupEncryptionSession, UserDevice } from './olmLib'
+import {
+    GroupEncryptionAlgorithmId,
+    GroupEncryptionSession,
+    parseGroupEncryptionAlgorithmId,
+    UserDevice,
+} from './olmLib'
 import { GroupEncryptionCrypto } from './groupEncryptionCrypto'
 
 export interface EntitlementsDelegate {
@@ -91,6 +96,7 @@ export interface GroupSessionsData {
     streamId: string
     item: KeySolicitationItem
     sessions: GroupEncryptionSession[]
+    algorithm: GroupEncryptionAlgorithmId
 }
 
 export interface DecryptionSessionError {
@@ -522,14 +528,22 @@ export abstract class BaseDecryptionExtensions {
             return
         }
         this.log.debug('processNewGroupSession', session)
-        // check if it contains any keys we need
+        // check if it contains any keys we need, default to GroupEncryption if the algorithm is not set
+        const parsed = parseGroupEncryptionAlgorithmId(
+            session.algorithm,
+            GroupEncryptionAlgorithmId.GroupEncryption,
+        )
+        if (parsed.kind === 'unrecognized') {
+            // todo dispatch event to update the error message
+            this.log.error('skipping, invalid algorithm', session.algorithm)
+            return
+        }
+        const algorithm: GroupEncryptionAlgorithmId = parsed.value
+
         const neededKeyIndexs = []
         for (let i = 0; i < session.sessionIds.length; i++) {
             const sessionId = session.sessionIds[i]
-            const hasKeys = await this.crypto.encryptionDevice.hasInboundSessionKeys(
-                streamId,
-                sessionId,
-            )
+            const hasKeys = await this.crypto.hasSessionKey(streamId, sessionId, algorithm)
             if (!hasKeys) {
                 neededKeyIndexs.push(i)
             }
@@ -549,7 +563,7 @@ export abstract class BaseDecryptionExtensions {
                     streamId: streamId,
                     sessionId: session.sessionIds[i],
                     sessionKey: sessionKeys.keys[i],
-                    algorithm: GROUP_ENCRYPTION_ALGORITHM,
+                    algorithm: algorithm,
                 } satisfies GroupEncryptionSession),
         )
         // import the sessions
@@ -594,7 +608,10 @@ export abstract class BaseDecryptionExtensions {
             })
             if (sessionNotFound) {
                 const streamId = item.streamId
-                const sessionId = item.encryptedData.sessionId
+                const sessionId =
+                    item.encryptedData.sessionId && item.encryptedData.sessionId.length > 0
+                        ? item.encryptedData.sessionId
+                        : bin_toHexString(item.encryptedData.sessionIdBytes)
                 if (!this.decryptionFailures[streamId]) {
                     this.decryptionFailures[streamId] = { [sessionId]: [item] }
                 } else if (!this.decryptionFailures[streamId][sessionId]) {
@@ -656,8 +673,7 @@ export abstract class BaseDecryptionExtensions {
             )
             return
         }
-        const knownSessionIds =
-            (await this.crypto.encryptionDevice.getInboundGroupSessionIds(streamId)) ?? []
+        const knownSessionIds = await this.crypto.getGroupSessionIds(streamId)
 
         const isNewDevice = knownSessionIds.length === 0
 
@@ -685,8 +701,7 @@ export abstract class BaseDecryptionExtensions {
         const streamId = item.streamId
 
         check(this.hasStream(streamId), 'stream not found')
-        const knownSessionIds =
-            (await this.crypto.encryptionDevice.getInboundGroupSessionIds(streamId)) ?? []
+        const knownSessionIds = await this.crypto.getGroupSessionIds(streamId)
 
         const { isValid, reason } = this.isValidEvent(streamId, item.solicitation.srcEventId)
         if (!isValid) {
@@ -698,6 +713,7 @@ export abstract class BaseDecryptionExtensions {
             return
         }
 
+        // todo split this up by algorithm so that we can send all the new hybrid keys
         knownSessionIds.sort()
         const requestedSessionIds = new Set(item.solicitation.sessionIds.sort())
         const replySessionIds = item.solicitation.isNewDevice
@@ -716,14 +732,11 @@ export abstract class BaseDecryptionExtensions {
             return
         }
 
-        const sessions: GroupEncryptionSession[] = []
+        const allSessions: GroupEncryptionSession[] = []
         for (const sessionId of replySessionIds) {
-            const groupSession = await this.crypto.encryptionDevice.exportInboundGroupSession(
-                streamId,
-                sessionId,
-            )
+            const groupSession = await this.crypto.exportGroupSession(streamId, sessionId)
             if (groupSession) {
-                sessions.push(groupSession)
+                allSessions.push(groupSession)
             }
         }
         this.log.debug('processing key solicitation with', item.streamId, {
@@ -731,30 +744,50 @@ export abstract class BaseDecryptionExtensions {
             toDevice: item.solicitation.deviceKey,
             requestedCount: item.solicitation.sessionIds.length,
             replyIds: replySessionIds.length,
-            sessions: sessions.length,
+            sessions: allSessions.length,
         })
-        if (sessions.length === 0) {
+        if (allSessions.length === 0) {
             return
         }
-
+        // send a single key fulfillment for all algorithms
         const { error } = await this.sendKeyFulfillment({
             streamId,
             userAddress: item.fromUserAddress,
             deviceKey: item.solicitation.deviceKey,
             sessionIds: item.solicitation.isNewDevice
                 ? []
-                : sessions.map((x) => x.sessionId).sort(),
+                : allSessions.map((x) => x.sessionId).sort(),
         })
 
-        if (!error) {
+        // if the key fulfillment failed, someone else already sent a key fulfillment
+        if (error) {
+            if (!error.msg.includes('DUPLICATE_EVENT')) {
+                // duplicate events are expected, we can ignore them, others are not
+                this.log.error('failed to send key fulfillment', error)
+            }
+            return
+        }
+
+        // if the key fulfillment succeeded, send one group session payload for each algorithm
+        const sessions = allSessions.reduce((acc, session) => {
+            if (!acc[session.algorithm]) {
+                acc[session.algorithm] = []
+            }
+            acc[session.algorithm].push(session)
+            return acc
+        }, {} as Record<GroupEncryptionAlgorithmId, GroupEncryptionSession[]>)
+
+        // send one key fulfillment for each algorithm
+        for (const kv of Object.entries(sessions)) {
+            const algorithm = kv[0] as GroupEncryptionAlgorithmId
+            const sessions = kv[1]
+
             await this.encryptAndShareGroupSessions({
                 streamId,
                 item,
                 sessions,
+                algorithm,
             })
-        } else if (!error.msg.includes('DUPLICATE_EVENT')) {
-            // duplicate events are expected, we can ignore them, others are not
-            this.log.error('failed to send key fulfillment', error)
         }
     }
 
@@ -863,7 +896,7 @@ function takeFirst<T>(count: number, array: T[]): T[] {
 
 function isSessionNotFoundError(err: unknown): boolean {
     if (err !== null && typeof err === 'object' && 'message' in err) {
-        return (err.message as string).includes('Session not found')
+        return (err.message as string).toLowerCase().includes('session not found')
     }
     return false
 }

@@ -1,8 +1,7 @@
-import { EncryptedData } from '@river-build/proto'
-import { PlainMessage } from '@bufbuild/protobuf'
+import { EncryptedData, EncryptedDataVersion } from '@river-build/proto'
 import { EncryptionAlgorithm, IEncryptionParams } from './base'
-import { GROUP_ENCRYPTION_ALGORITHM } from './olmLib'
-import { dlog } from '@river-build/dlog'
+import { GroupEncryptionAlgorithmId } from './olmLib'
+import { bin_toBase64, dlog } from '@river-build/dlog'
 
 const log = dlog('csb:encryption:groupEncryption')
 
@@ -22,6 +21,7 @@ const log = dlog('csb:encryption:groupEncryption')
  * @param params - parameters, as per {@link EncryptionAlgorithm}
  */
 export class GroupEncryption extends EncryptionAlgorithm {
+    public readonly algorithm = GroupEncryptionAlgorithmId.GroupEncryption
     public constructor(params: IEncryptionParams) {
         super(params)
     }
@@ -63,7 +63,27 @@ export class GroupEncryption extends EncryptionAlgorithm {
             throw new Error('Session key not found for session ' + sessionId)
         }
 
-        await this.client.encryptAndShareGroupSessions(streamId, [session], devicesInRoom)
+        await this.client.encryptAndShareGroupSessions(
+            streamId,
+            [session],
+            devicesInRoom,
+            this.algorithm,
+        )
+    }
+
+    /**
+     * @deprecated
+     */
+    public async encrypt_deprecated_v0(streamId: string, payload: string): Promise<EncryptedData> {
+        await this.ensureOutboundSession(streamId)
+        const result = await this.device.encryptGroupMessage(payload, streamId)
+        return new EncryptedData({
+            algorithm: this.algorithm,
+            senderKey: this.device.deviceCurve25519Key!,
+            ciphertext: result.ciphertext,
+            sessionId: result.sessionId,
+            version: EncryptedDataVersion.ENCRYPTED_DATA_VERSION_0,
+        })
     }
 
     /**
@@ -71,18 +91,16 @@ export class GroupEncryption extends EncryptionAlgorithm {
      *
      * @returns Promise which resolves to the new event body
      */
-    public async encrypt(streamId: string, payload: string): Promise<EncryptedData> {
+    public async encrypt(streamId: string, payload: Uint8Array): Promise<EncryptedData> {
         log('Starting to encrypt event')
-
         await this.ensureOutboundSession(streamId)
-
-        const result = await this.device.encryptGroupMessage(payload, streamId)
-
+        const result = await this.device.encryptGroupMessage(bin_toBase64(payload), streamId)
         return new EncryptedData({
-            algorithm: GROUP_ENCRYPTION_ALGORITHM,
+            algorithm: this.algorithm,
             senderKey: this.device.deviceCurve25519Key!,
             ciphertext: result.ciphertext,
             sessionId: result.sessionId,
-        } satisfies PlainMessage<EncryptedData>)
+            version: EncryptedDataVersion.ENCRYPTED_DATA_VERSION_1,
+        })
     }
 }
