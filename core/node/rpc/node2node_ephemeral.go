@@ -129,7 +129,10 @@ func (s *Service) SealEphemeralStream(
 	return connect.NewResponse(r), nil
 }
 
-func (s *Service) sealEphemeralStream(ctx context.Context, req *SealEphemeralStreamRequest) (*SealEphemeralStreamResponse, error) {
+func (s *Service) sealEphemeralStream(
+	ctx context.Context,
+	req *SealEphemeralStreamRequest,
+) (*SealEphemeralStreamResponse, error) {
 	streamId, err := StreamIdFromBytes(req.GetStreamId())
 	if err != nil {
 		return nil, AsRiverError(err).Func("sealEphemeralStream")
@@ -137,6 +140,12 @@ func (s *Service) sealEphemeralStream(ctx context.Context, req *SealEphemeralStr
 
 	// Normalize stream locally
 	if _, err = s.storage.NormalizeEphemeralStream(ctx, streamId); err != nil {
+		if IsRiverErrorCode(err, Err_NOT_FOUND) {
+			// Something is missing in the stream, so we can't normalize it.
+			// Run the process to fetch missing data from replicas.
+			// TODO: Implement
+		}
+
 		return nil, err
 	}
 

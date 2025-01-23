@@ -2216,12 +2216,16 @@ func (s *PostgresStreamStore) normalizeEphemeralStreamTx(
 		s.sqlForStream("SELECT blockdata FROM {{miniblocks}} WHERE stream_id = $1 AND seq_num = 0", streamId),
 		streamId,
 	).Scan(&genesisMbData); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return common.Hash{}, RiverError(Err_NOT_FOUND, "Genesis miniblock of the given ephemeral stream not found",
+				"streamId", streamId)
+		}
 		return common.Hash{}, err
 	}
 
 	var genesisMb Miniblock
 	if err := proto.Unmarshal(genesisMbData, &genesisMb); err != nil {
-		return common.Hash{}, err
+		return common.Hash{}, RiverError(Err_INTERNAL, "Failed to decode genesis miniblock")
 	}
 
 	var mediaEvent StreamEvent
