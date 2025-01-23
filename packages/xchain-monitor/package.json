@@ -5,8 +5,8 @@
     "dependencies": {
         "@river-build/generated": "workspace:^",
         "@river-build/web3": "workspace:^",
-        "typescript": "^5.7.3",
-        "viem": "^2.22.8"
+        "typescript": "^5.1.6",
+        "viem": "^2.21.51"
     },
     "scripts": {
         "build": "tsc",
@@ -14,6 +14,6 @@
         "dev": "yarn tsx src/index.ts"
     },
     "devDependencies": {
-        "tsx": "^4.19.2"
+        "tsx": "^4.7.1"
     }
 }
