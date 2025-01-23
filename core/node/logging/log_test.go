@@ -3,14 +3,16 @@ package logging_test
 import (
 	"encoding/hex"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 
+	"github.com/river-build/river/core/node/logging"
+	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/testutils"
 	"github.com/river-build/river/core/node/testutils/testfmt"
 )
@@ -26,7 +28,7 @@ type Data2 struct {
 	DataMap   map[string]*Data2
 	Bool      bool
 	AndFalse  bool
-	Enternity time.Duration
+	Eternity  time.Duration
 	EmptyStr  string
 }
 
@@ -56,17 +58,16 @@ func makeTestData2() *Data2 {
 		DataMap:   map[string]*Data2{"hello": {Num: 3}},
 		Bool:      true,
 		AndFalse:  false,
-		Enternity: time.Hour,
+		Eternity: time.Hour,
 	}
 }
 
-func TestDlog(t *testing.T) {
+func TestZap(t *testing.T) {
 	if !testfmt.Enabled() {
 		t.SkipNow()
 	}
-	unsugared, err := zap.NewDevelopment()
-	require.NoError(t, err)
-	log := unsugared.Sugar()
+
+	log := logging.DefaultZapLogger()
 
 	data := makeTestData2()
 
@@ -76,7 +77,8 @@ func TestDlog(t *testing.T) {
 	log.Named("group").With("with1", 1, "with2", 2).Infow("TestZap", "data", data, "int", 22)
 	fmt.Println()
 
-	log.Infow("simple type examples",
+	log.Infow(
+		"simple type examples",
 		"hex_bytes", []byte{0x01, 0x02, 0x03, 0x04, 0x05},
 		"long bytes", []byte("hello world"),
 		"string", "hello world",
@@ -87,13 +89,13 @@ func TestDlog(t *testing.T) {
 		"float", 3.14,
 		"duration", time.Minute,
 	)
+	require.NoError(t, log.Sync())
 	fmt.Println()
 }
 
 type byteArray [10]byte
 
 func TestByteType(t *testing.T) {
-	t.Skip("TODO - implement in zap")
 	assert := assert.New(t)
 
 	log, buf := testutils.ZapJsonLogger()
@@ -103,8 +105,19 @@ func TestByteType(t *testing.T) {
 	assert.Contains(buf.String(), "0102030405060708090a")
 }
 
+func TestByteSliceType(t *testing.T) {
+	assert := assert.New(t)
+
+	log, buf := testutils.ZapJsonLogger()
+
+	b := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+
+	log.Infow("byte slice", "byte_slice", b)
+	assert.Contains(buf.String(), "0102030405060708090a")
+
+}
+
 func TestCommonAddress(t *testing.T) {
-	t.Skip("TODO - implement in zap")
 	assert := assert.New(t)
 
 	log, buf := testutils.ZapJsonLogger()
@@ -141,7 +154,6 @@ func bytesFromHex(s string) []byte {
 }
 
 func TestShortHex(t *testing.T) {
-	t.Skip("TODO - implement in zap")
 	assert := assert.New(t)
 
 	log, buf := testutils.ZapJsonLogger()
@@ -167,4 +179,31 @@ func TestShortHex(t *testing.T) {
 		log.Infow("test", "hex", test.arg)
 		assert.Contains(buf.String(), test.expected, "arg: %v", test.arg)
 	}
+}
+
+
+func TestProtoBinaryStrings(t *testing.T) {
+	// The byte string renders sanely, but the proto is missing nested brackets in the
+	// final log response.
+	envelope := &Envelope{
+		Hash: []byte("2346ad27d7568ba9896f1b7da6b5991251debdf2"),
+	}
+
+	// Create a new logging logger that logs to a temp file in JSON format
+	logger, buffer := testutils.ZapJsonLogger()
+
+	logger.Infow("Logging envelope", "envelope", envelope)
+
+	logOutput := buffer.String()
+	logOutput = testutils.RemoveJsonTimestamp(string(logOutput))
+	// os.WriteFile("testdata/envelope_json.txt", []byte(logOutput), 0644)
+
+	expectedBytes, err := os.ReadFile("testdata/envelope_json.txt")
+	require.NoError(t, err)
+	expected := string(expectedBytes[:])
+
+	// Compare the output with the expected output
+	// The expected output contains a b64-encoded string of the Hash field above.
+	fmt.Print(logOutput)
+	require.Equal(t, expected, logOutput)
 }
