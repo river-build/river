@@ -12,7 +12,6 @@ import { PlainMessage } from '@bufbuild/protobuf'
 import { logNever } from './check'
 import { bytesToHex } from 'ethereum-cryptography/utils'
 import { userIdFromAddress } from './id'
-import { MlsConfirmedSnapshot } from './mls/types'
 
 export class StreamStateView_Mls extends StreamStateView_AbstractContent {
     readonly streamId: string
@@ -20,7 +19,7 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
     groupInfoMessage?: Uint8Array
     members: { [key: string]: PlainMessage<MemberPayload_Snapshot_Mls_Member> } = {}
     epochSecrets: { [key: string]: Uint8Array } = {}
-    pendingKeyPackages: { [key: string]: MemberPayload_KeyPackage } = {}
+    pendingKeyPackages: { [key: string]: PlainMessage<MemberPayload_KeyPackage> } = {}
     welcomeMessagesMiniblockNum: { [key: string]: bigint } = {}
 
     constructor(streamId: string) {
@@ -29,12 +28,14 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
     }
 
     applySnapshot(content: MemberPayload_Snapshot_Mls): void {
-        this.externalGroupSnapshot = content.externalGroupSnapshot
-        this.groupInfoMessage = content.groupInfoMessage
-        this.members = content.members
-        this.epochSecrets = content.epochSecrets
-        this.pendingKeyPackages = content.pendingKeyPackages
-        this.welcomeMessagesMiniblockNum = content.welcomeMessagesMiniblockNum
+        // Clone the protobuf to prevent mangling it
+        const cloned = content.clone()
+        this.externalGroupSnapshot = cloned.externalGroupSnapshot
+        this.groupInfoMessage = cloned.groupInfoMessage
+        this.members = cloned.members
+        this.epochSecrets = cloned.epochSecrets
+        this.pendingKeyPackages = cloned.pendingKeyPackages
+        this.welcomeMessagesMiniblockNum = cloned.welcomeMessagesMiniblockNum
     }
 
     appendEvent(
@@ -49,27 +50,27 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
             case 'initializeGroup':
                 this.externalGroupSnapshot = mlsEvent.content.value.externalGroupSnapshot
                 this.groupInfoMessage = mlsEvent.content.value.groupInfoMessage
-                this.members[event.creatorUserId] = {
-                    signaturePublicKeys: [mlsEvent.content.value.signaturePublicKey],
-                }
+                this.addSignaturePublicKey(
+                    event.creatorUserId,
+                    mlsEvent.content.value.clone().signaturePublicKey,
+                )
                 break
             case 'externalJoin':
                 this.addSignaturePublicKey(
                     event.creatorUserId,
-                    mlsEvent.content.value.signaturePublicKey,
+                    mlsEvent.content.value.clone().signaturePublicKey,
                 )
                 break
             case 'epochSecrets':
                 for (const secret of mlsEvent.content.value.secrets) {
                     if (!this.epochSecrets[secret.epoch.toString()]) {
-                        this.epochSecrets[secret.epoch.toString()] = secret.secret
+                        this.epochSecrets[secret.epoch.toString()] = secret.clone().secret
                     }
                 }
                 break
             case 'keyPackage':
                 this.pendingKeyPackages[bytesToHex(mlsEvent.content.value.signaturePublicKey)] =
-                    mlsEvent.content.value
-
+                    mlsEvent.content.value.clone()
                 break
             case 'welcomeMessage':
                 for (const signatureKey of mlsEvent.content.value.signaturePublicKeys) {
