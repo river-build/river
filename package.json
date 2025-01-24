@@ -5,10 +5,10 @@
     "packageManager": "yarn@3.8.0",
     "scripts": {
         "anvil": "yarn workspace @river-build/contracts exec anvil",
-        "build": "turbo build",
+        "build": "yarn turbo build",
         "cast": "yarn workspace @river-build/contracts exec cast",
         "clean": "./scripts/yarn-clean.sh",
-        "csb:build": "turbo build --filter @river-build/sdk",
+        "csb:build": "yarn turbo build --filter @river-build/sdk",
         "csb:cb": "yarn csb:clean && yarn csb:build",
         "csb:clean": "yarn csb:command run clean",
         "csb:command": "bash -c 'yarn workspaces foreach --verbose $(yarn csb:list:include) $0 $@'",
@@ -24,7 +24,7 @@
         "csb:wait": "yarn csb:wait:entitlements",
         "csb:wait:entitlements": "wait-on https://localhost:5157/info --timeout=900000 --i=5000 --verbose",
         "csb:wait:no-entitlements": "wait-on https://localhost:5158/info --timeout=900000 --i=5000 --verbose",
-        "lint": "turbo lint",
+        "lint": "yarn turbo lint",
         "postinstall": "husky install",
         "prepare": "husky install",
         "prettier:check": "prettier --check .",
@@ -32,10 +32,10 @@
         "syncpack:check": "syncpack list-mismatches",
         "syncpack:fix": "syncpack fix-mismatches && syncpack format",
         "turbo": "TURBO_NO_UPDATE_NOTIFIER=1 TURBO_TELEMETRY_DISABLED=1 turbo",
-        "top:turbo": "turbo",
-        "test": "turbo test",
-        "test:build": "turbo test:build",
-        "test:unit": "turbo test:unit -- --silent"
+        "top:turbo": "yarn turbo",
+        "test": "yarn turbo test",
+        "test:build": "yarn turbo test:build",
+        "test:unit": "yarn turbo test:unit -- --silent"
     },
     "devDependencies": {
         "@arethetypeswrong/cli": "^0.15.3",
