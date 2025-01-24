@@ -5,6 +5,7 @@ import (
 	"context"
 	"slices"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -68,6 +69,9 @@ type TestMiniblockProducer interface {
 		streamId StreamId,
 		forceSnapshot bool,
 	) (*MiniblockRef, error)
+
+	PauseEventProcessing()
+	ResumeEventProcessing()
 }
 
 type MiniblockProducer interface {
@@ -117,6 +121,16 @@ type miniblockProducer struct {
 	candidates candidateTracker
 
 	onNewBlockMutex sync.Mutex
+
+	pauseEventProcessing atomic.Bool
+}
+
+func (p *miniblockProducer) PauseEventProcessing() {
+	p.pauseEventProcessing.Store(true)
+}
+
+func (p *miniblockProducer) ResumeEventProcessing() {
+	p.pauseEventProcessing.Store(false)
 }
 
 var _ MiniblockProducer = (*miniblockProducer)(nil)
@@ -178,6 +192,10 @@ func (p *candidateTracker) add(ctx context.Context, mp *miniblockProducer, j *mb
 // logs to determine which mini block candidate was registered and which are not. For each registered mini block
 // candidate it applies the candidate to the stream.
 func (p *miniblockProducer) OnNewBlock(ctx context.Context, blockNum crypto.BlockNumber) {
+	if p.pauseEventProcessing.Load() {
+		return
+	}
+
 	// Try lock to have only one invocation at a time. Previous onNewBlock may still be running.
 	if !p.onNewBlockMutex.TryLock() {
 		return
@@ -631,6 +649,7 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 	// Only register miniblocks when it's time. If it's not time assume registration was successful.
 	// This is to reduce the number of transactions/calldata size.
 	var success []StreamId
+	var invalidProposals []StreamId
 	var failed []StreamId
 	var filteredProposals []*mbJob
 	freq := int64(p.cfg.Get().StreamMiniblockRegistrationFrequency)
@@ -665,9 +684,10 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 		}
 
 		var err error
-		successRegistered, failed, err := p.streamCache.Params().Registry.SetStreamLastMiniblockBatch(ctx, mbs)
+		successRegistered, invalid, failed, err := p.streamCache.Params().Registry.SetStreamLastMiniblockBatch(ctx, mbs)
 		if err == nil {
 			success = append(success, successRegistered...)
+			invalidProposals = append(invalidProposals, invalid...)
 			if len(failed) > 0 {
 				log.Errorw("processMiniblockProposalBatch: Failed to register some miniblocks", "failed", failed)
 			}
@@ -684,6 +704,8 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 		"mbFrequency", freq,
 	)
 
+	streamsOutOfSync := make([]*mbJob, 0, len(invalidProposals))
+
 	for _, job := range proposals {
 		if slices.Contains(success, job.stream.streamId) {
 			err := job.stream.ApplyMiniblock(ctx, job.candidate)
@@ -696,7 +718,61 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 					err,
 				)
 			}
+
+			p.jobDone(ctx, job)
+		} else if slices.Contains(invalidProposals, job.stream.streamId) {
+			streamsOutOfSync = append(streamsOutOfSync, job)
 		}
+	}
+
+	if err := p.promoteConfirmedCandidates(ctx, streamsOutOfSync); err != nil {
+		log.Error("processMiniblockProposalBatch: Error promoting confirmed miniblock candidates", "err", err)
+	}
+}
+
+// promoteConfirmedCandidates tries to promote local candidates that are registered in the Stream Registry
+// but not yet applied.
+func (p *miniblockProducer) promoteConfirmedCandidates(ctx context.Context, jobs []*mbJob) error {
+	if len(jobs) == 0 {
+		return nil
+	}
+
+	log := logging.FromCtx(ctx)
+	registry := p.streamCache.Params().Registry
+
+	headNum, err := p.streamCache.Params().RiverChain.Client.BlockNumber(ctx)
+	if err != nil {
+		return AsRiverError(err, Err_CANNOT_CALL_CONTRACT).
+			Message("Unable to determine River Chain block number")
+	}
+
+	for _, job := range jobs {
+		stream, err := registry.GetStream(ctx, job.stream.streamId, crypto.BlockNumber(headNum))
+		if err != nil {
+			log.Error("Unable to retrieve stream details from registry",
+				"streamId", job.stream.streamId, "err", err)
+		}
+
+		committedLocalCandidateRef := MiniblockRef{
+			Hash: stream.LastMiniblockHash,
+			Num:  int64(stream.LastMiniblockNum),
+		}
+
+		if err := job.stream.promoteCandidate(ctx, &committedLocalCandidateRef); err == nil {
+			log.Info("Promoted miniblock candidate",
+				"streamId", job.stream.streamId,
+				"num", committedLocalCandidateRef.Num,
+				"hash", committedLocalCandidateRef.Hash)
+		} else {
+			log.Error("Unable to promote candidate",
+				"streamId", job.stream.streamId,
+				"num", committedLocalCandidateRef.Num,
+				"hash", committedLocalCandidateRef.Hash,
+				"err", err)
+		}
+
 		p.jobDone(ctx, job)
 	}
+
+	return nil
 }

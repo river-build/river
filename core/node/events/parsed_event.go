@@ -5,13 +5,12 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
-
 	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/crypto"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 type ParsedEvent struct {
@@ -33,7 +32,7 @@ func (e *ParsedEvent) GetEnvelopeBytes() ([]byte, error) {
 		Func("GetEnvelopeBytes")
 }
 
-func ParseEvent(envelope *Envelope) (*ParsedEvent, error) {
+func ParseEventWithCachedStreamEvent(envelope *Envelope, streamEvent *StreamEvent) (*ParsedEvent, error) {
 	hash := RiverHash(envelope.Event)
 	if !bytes.Equal(hash[:], envelope.Hash) {
 		return nil, RiverError(Err_BAD_EVENT_HASH, "Bad hash provided", "computed", hash, "got", envelope.Hash)
@@ -44,8 +43,7 @@ func ParseEvent(envelope *Envelope) (*ParsedEvent, error) {
 		return nil, err
 	}
 
-	var streamEvent StreamEvent
-	err = proto.Unmarshal(envelope.Event, &streamEvent)
+	err = proto.Unmarshal(envelope.Event, streamEvent)
 	if err != nil {
 		return nil, AsRiverError(err, Err_INVALID_ARGUMENT).
 			Message("Failed to decode stream event from bytes").
@@ -76,7 +74,7 @@ func ParseEvent(envelope *Envelope) (*ParsedEvent, error) {
 	}
 
 	return &ParsedEvent{
-		Event:    &streamEvent,
+		Event:    streamEvent,
 		Envelope: envelope,
 		Hash:     common.BytesToHash(envelope.Hash),
 		MiniblockRef: &MiniblockRef{
@@ -85,6 +83,11 @@ func ParseEvent(envelope *Envelope) (*ParsedEvent, error) {
 		},
 		SignerPubKey: signerPubKey,
 	}, nil
+}
+
+func ParseEvent(envelope *Envelope) (*ParsedEvent, error) {
+	streamEvent := new(StreamEvent)
+	return ParseEventWithCachedStreamEvent(envelope, streamEvent)
 }
 
 func (e *ParsedEvent) ShortDebugStr() string {

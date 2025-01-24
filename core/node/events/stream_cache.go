@@ -10,7 +10,6 @@ import (
 	"github.com/gammazero/workerpool"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/puzpuzpuz/xsync/v3"
-
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
@@ -56,6 +55,11 @@ type StreamCache interface {
 	CacheCleanup(ctx context.Context, enabled bool, expiration time.Duration) CacheCleanupResult
 }
 
+type StreamCacheTest interface {
+	PauseEventProcessing()
+	ResumeEventProcessing()
+}
+
 type streamCacheImpl struct {
 	params *StreamCacheParams
 
@@ -74,9 +78,14 @@ type streamCacheImpl struct {
 	streamCacheRemoteGauge   prometheus.Gauge
 
 	onlineSyncWorkerPool *workerpool.WorkerPool
+
+	pauseEventProcessing atomic.Bool
 }
 
-var _ StreamCache = (*streamCacheImpl)(nil)
+var (
+	_ StreamCache     = (*streamCacheImpl)(nil)
+	_ StreamCacheTest = (*streamCacheImpl)(nil)
+)
 
 func NewStreamCache(
 	ctx context.Context,
@@ -156,9 +165,7 @@ func (s *streamCacheImpl) Start(ctx context.Context) error {
 	s.appliedBlockNum.Store(uint64(s.params.AppliedBlockNum))
 
 	// Close initial worker pool after all tasks are executed.
-	go func() {
-		initialSyncWorkerPool.StopWait()
-	}()
+	go initialSyncWorkerPool.StopWait()
 
 	// TODO: add buffered channel to avoid blocking ChainMonitor
 	s.params.RiverChain.ChainMonitor.OnBlockWithLogs(
@@ -178,6 +185,10 @@ func (s *streamCacheImpl) Start(ctx context.Context) error {
 }
 
 func (s *streamCacheImpl) onBlockWithLogs(ctx context.Context, blockNum crypto.BlockNumber, logs []*types.Log) {
+	if s.pauseEventProcessing.Load() {
+		return
+	}
+	
 	streamEvents, errs := s.params.Registry.FilterStreamEvents(ctx, logs)
 	// Process parsed stream events even if some failed to parse
 	for _, err := range errs {
@@ -467,4 +478,12 @@ func (s *streamCacheImpl) GetMbCandidateStreams(ctx context.Context) []*streamIm
 	})
 
 	return candidates
+}
+
+func (s *streamCacheImpl) PauseEventProcessing() {
+	s.pauseEventProcessing.Store(true)
+}
+
+func (s *streamCacheImpl) ResumeEventProcessing() {
+	s.pauseEventProcessing.Store(false)
 }
