@@ -114,135 +114,8 @@ func (s *Service) saveEphemeralMiniblock(
 
 	// Normalize stream if this is the last miniblock of the ephemeral stream
 	if req.GetLast() {
-		if _, err = s.storage.NormalizeEphemeralStream(ctx, streamId); err != nil {
-			if !IsRiverErrorCode(err, Err_NOT_FOUND) {
-				return nil, err
-			}
-
-			// Miniblocks are missing in the stream, so we can't normalize it.
-			// Run the process to fetch missing data from replicas.
-
-			// Get existing miniblock numbers of the given ephemeral stream
-			existingMbs, err := s.storage.ReadEphemeralMiniblockNums(ctx, streamId)
-			if err != nil {
-				return nil, err
-			}
-
-			existingMbsMap := make(map[int64]struct{}, len(existingMbs))
-			for _, num := range existingMbs {
-				existingMbsMap[int64(num)] = struct{}{}
-			}
-
-			// Detect missing miniblocks of the given stream.
-			// Do not fetch the last miniblock, as it is already saved.
-			missingMbs := make([]int64, 0, mbInfo.Ref.Num)
-			for num := int64(0); num < mbInfo.Ref.Num; num++ {
-				if _, ok := existingMbsMap[num]; ok {
-					continue
-				}
-				missingMbs = append(missingMbs, num)
-			}
-
-			nodes := NewStreamNodesWithLock(req.NodeAddresses(), s.wallet.Address)
-			remotes, _ := nodes.GetRemotesAndIsLocal()
-			sender := NewQuorumPool("method", "Service.saveEphemeralMiniblock", "streamId", streamId)
-			remoteQuorumNum := RemoteQuorumNum(len(remotes), true)
-
-			// Create channel for each missing miniblock
-			filledMbs := make(map[int64]int, len(missingMbs))
-			filledMbsLock := &sync.Mutex{}
-			mbChans := make(map[int64]chan []byte, len(missingMbs))
-			mbDoneChans := make(map[int64]chan struct{}, len(missingMbs))
-			for _, num := range missingMbs {
-				mbChan := make(chan []byte, len(remotes))
-				mbChans[num] = mbChan
-				mbDoneChan := make(chan struct{}, 1)
-				mbDoneChans[num] = mbDoneChan
-				go func(num int64) {
-					// remoteQuorumNum of the same mbs must be collected to store the current mbs into DB.
-					// In theory, a replica node could return "bad" mb so we need to collect remoteQuorumNum of the same mbs.
-					collectedMiniblocks := make(map[[32]byte][]byte)
-					collectedMiniblocksCounter := make(map[[32]byte]int)
-					for i := 0; i < len(remotes); i++ {
-						select {
-						case <-ctx.Done():
-							return
-						case mb := <-mbChan:
-							mbHash := sha256.Sum256(mb)
-							collectedMiniblocks[mbHash] = mb
-							collectedMiniblocksCounter[mbHash]++
-
-							// Store miniblock if the quorum is reached.
-							if collectedMiniblocksCounter[mbHash] == remoteQuorumNum {
-								if err = s.storage.WriteEphemeralMiniblock(ctx, streamId, &storage.WriteMiniblockData{
-									Number: num,
-									Hash:   mbHash,
-									Data:   mb,
-								}); err != nil {
-									// TODO: Handle error
-									return
-								}
-								filledMbsLock.Lock()
-								filledMbs[num]++
-								filledMbsLock.Unlock()
-								mbDoneChan <- struct{}{}
-								close(mbChan)
-								return
-							}
-						}
-					}
-				}(num)
-			}
-
-			// Fetch missing miniblocks from replicas.
-			sender.GoRemotes(ctx, remotes, func(ctx context.Context, node common.Address) error {
-				stub, err := s.nodeRegistry.GetNodeToNodeClientForAddress(node)
-				if err != nil {
-					return err
-				}
-
-				resp, err := stub.GetMiniblocksByIds(ctx, connect.NewRequest[GetMiniblocksByIdsRequest](
-					&GetMiniblocksByIdsRequest{
-						StreamId:     streamId[:],
-						MiniblockIds: missingMbs,
-					},
-				))
-				if err != nil {
-					return err
-				}
-
-				for resp.Receive() {
-					missingMb := resp.Msg().GetMiniblockRaw()
-					missingMbNum := resp.Msg().GetMiniblockNum()
-					if _, ok := mbChans[missingMbNum]; ok {
-						select {
-						case <-mbDoneChans[missingMbNum]:
-							return resp.Close()
-						default:
-							mbChans[missingMbNum] <- missingMb
-						}
-					}
-				}
-
-				return resp.Err()
-			})
-
-			if err := sender.Wait(); err != nil {
-				return nil, err
-			}
-
-			// Normalize stream if all missing miniblocks are filled
-			for _, count := range filledMbs {
-				if count < remoteQuorumNum {
-					return nil, RiverError(Err_UNAVAILABLE, "Cannot normalize stream due to missing miniblocks").
-						Func("Service.saveEphemeralMiniblock")
-				}
-			}
-
-			// Try to normalize the stream again assuming all missing miniblocks are filled.
-			if _, err = s.storage.NormalizeEphemeralStream(ctx, streamId); err != nil {
-				return nil, err
-			}
+		if err = s.normalizeStream(ctx, streamId, mbInfo, req.NodeAddresses()); err != nil {
+			return nil, err
 		}
 	}
 
@@ -291,4 +164,158 @@ func (s *Service) sealEphemeralStream(
 	}
 
 	return &SealEphemeralStreamResponse{}, nil
+}
+
+// normalizeStream normalizes the given stream.
+// Fetching missing miniblocks from replicas if needed.
+func (s *Service) normalizeStream(ctx context.Context, streamId StreamId, mbInfo *MiniblockInfo, nodeAddresses []common.Address) error {
+	_, err := s.storage.NormalizeEphemeralStream(ctx, streamId)
+	if err == nil {
+		return nil
+	}
+
+	if !IsRiverErrorCode(err, Err_NOT_FOUND) {
+		return err
+	}
+
+	// Handle missing miniblocks
+	missingMbs, err := s.detectMissingMiniblocks(ctx, streamId, mbInfo.Ref.Num)
+	if err != nil {
+		return err
+	}
+
+	if len(missingMbs) > 0 {
+		if err = s.fetchMissingMiniblocks(ctx, streamId, missingMbs, nodeAddresses); err != nil {
+			return err
+		}
+
+		// Try normalizing the stream again
+		if _, err = s.storage.NormalizeEphemeralStream(ctx, streamId); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// detectMissingMiniblocks detects missing miniblocks of the given stream
+func (s *Service) detectMissingMiniblocks(ctx context.Context, streamId StreamId, lastNum int64) ([]int64, error) {
+	existingMbs, err := s.storage.ReadEphemeralMiniblockNums(ctx, streamId)
+	if err != nil {
+		return nil, err
+	}
+
+	existingMbsMap := make(map[int64]struct{}, len(existingMbs))
+	for _, num := range existingMbs {
+		existingMbsMap[int64(num)] = struct{}{}
+	}
+
+	var missingMbs []int64
+	for num := int64(0); num < lastNum; num++ {
+		if _, exists := existingMbsMap[num]; !exists {
+			missingMbs = append(missingMbs, num)
+		}
+	}
+	return missingMbs, nil
+}
+
+// fetchMissingMiniblocks fetches missing miniblocks from replicas and stores them into DB if quorum has reached
+func (s *Service) fetchMissingMiniblocks(ctx context.Context, streamId StreamId, missingMbs []int64, nodeAddresses []common.Address) error {
+	nodes := NewStreamNodesWithLock(nodeAddresses, s.wallet.Address)
+	remotes, _ := nodes.GetRemotesAndIsLocal()
+	sender := NewQuorumPool("method", "Service.saveEphemeralMiniblock", "streamId", streamId)
+	remoteQuorumNum := RemoteQuorumNum(len(remotes), true)
+
+	// Create channel for each missing miniblock
+	filledMbs := make(map[int64]int, len(missingMbs))
+	filledMbsLock := &sync.Mutex{}
+	mbChans := make(map[int64]chan []byte, len(missingMbs))
+	mbDoneChans := make(map[int64]chan struct{}, len(missingMbs))
+	for _, num := range missingMbs {
+		mbChan := make(chan []byte, len(remotes))
+		mbChans[num] = mbChan
+		mbDoneChan := make(chan struct{}, 1)
+		mbDoneChans[num] = mbDoneChan
+		go func(num int64) {
+			// remoteQuorumNum of the same mbs must be collected to store the current mbs into DB.
+			// In theory, a replica node could return "bad" mb so we need to collect remoteQuorumNum of the same mbs.
+			collectedMiniblocks := make(map[[32]byte][]byte)
+			collectedMiniblocksCounter := make(map[[32]byte]int)
+			for i := 0; i < len(remotes); i++ {
+				select {
+				case <-ctx.Done():
+					return
+				case mb := <-mbChan:
+					mbHash := sha256.Sum256(mb)
+					collectedMiniblocks[mbHash] = mb
+					collectedMiniblocksCounter[mbHash]++
+
+					// Store miniblock if the quorum is reached.
+					if collectedMiniblocksCounter[mbHash] == remoteQuorumNum {
+						if err := s.storage.WriteEphemeralMiniblock(ctx, streamId, &storage.WriteMiniblockData{
+							Number: num,
+							Hash:   mbHash,
+							Data:   mb,
+						}); err != nil {
+							// TODO: Handle error
+							return
+						}
+						filledMbsLock.Lock()
+						filledMbs[num]++
+						filledMbsLock.Unlock()
+						mbDoneChan <- struct{}{}
+						close(mbChan)
+						return
+					}
+				}
+			}
+		}(num)
+	}
+
+	// Fetch missing miniblocks from replicas.
+	sender.GoRemotes(ctx, remotes, func(ctx context.Context, node common.Address) error {
+		stub, err := s.nodeRegistry.GetNodeToNodeClientForAddress(node)
+		if err != nil {
+			return err
+		}
+
+		resp, err := stub.GetMiniblocksByIds(ctx, connect.NewRequest[GetMiniblocksByIdsRequest](
+			&GetMiniblocksByIdsRequest{
+				StreamId:     streamId[:],
+				MiniblockIds: missingMbs,
+			},
+		))
+		if err != nil {
+			return err
+		}
+
+		for resp.Receive() {
+			missingMb := resp.Msg().GetMiniblockRaw()
+			missingMbNum := resp.Msg().GetMiniblockNum()
+			if _, ok := mbChans[missingMbNum]; ok {
+				select {
+				case <-mbDoneChans[missingMbNum]:
+					return resp.Close()
+				default:
+					mbChans[missingMbNum] <- missingMb
+				}
+			}
+		}
+
+		return resp.Err()
+	})
+
+	if err := sender.Wait(); err != nil {
+		return err
+	}
+
+	// Normalize stream if all missing miniblocks are filled
+	for _, count := range filledMbs {
+		if count < remoteQuorumNum {
+			return RiverError(Err_UNAVAILABLE, "Cannot normalize stream due to missing miniblocks").
+				Func("Service.saveEphemeralMiniblock")
+		}
+	}
+
+	return nil
 }
