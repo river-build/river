@@ -13,7 +13,6 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/testutils"
 	"github.com/river-build/river/core/node/testutils/testfmt"
@@ -65,20 +64,12 @@ func makeTestData2() *Data2 {
 }
 
 func TestZap(t *testing.T) {
-	if !testfmt.Enabled() {
-		t.SkipNow()
-	}
-
-	log := logging.DefaultZapLogger()
+	log, buf := testutils.ZapJsonLogger()
 
 	data := makeTestData2()
 
 	log.Errorw("Error example", "int", 33, "data", data, "str", "hello", "bytes", []byte("world"))
-	fmt.Println()
-
 	log.Named("group").With("with1", 1, "with2", 2).Infow("TestZap", "data", data, "int", 22)
-	fmt.Println()
-
 	log.Infow(
 		"simple type examples",
 		"hex_bytes", []byte{0x01, 0x02, 0x03, 0x04, 0x05},
@@ -92,7 +83,22 @@ func TestZap(t *testing.T) {
 		"duration", time.Minute,
 	)
 	require.NoError(t, log.Sync())
-	fmt.Println()
+
+	if testfmt.Enabled() {
+		fmt.Print(buf.String())
+		fmt.Println()	
+	}
+
+	logOutput := testutils.RemoveJsonTimestamp(buf.String())
+	// Uncomment to write file
+	// os.WriteFile("testdata/zap.txt", []byte(logOutput), 0644)
+
+	expectedBytes, err := os.ReadFile("testdata/zap.txt")
+	require.NoError(t, err)
+	expected := string(expectedBytes[:])
+
+	// Compare the output with the expected output
+	require.Equal(t, expected, logOutput)
 }
 
 type byteArray [10]byte

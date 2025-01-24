@@ -201,8 +201,17 @@ func (enc *jsonEncoder) OpenNamespace(key string) {
 func (enc *jsonEncoder) AddString(key, val string) {
 	enc.addKey(key)
 
-	val = formatString(val)
-	enc.AppendString(val)
+	first, middle, last, truncated := formatHexString(val)
+	if truncated {
+		enc.addElementSeparator()
+		enc.buf.AppendByte('"')
+		enc.safeAddString(first)
+		enc.safeAddString(middle)
+		enc.safeAddString(last)
+		enc.buf.AppendByte('"')
+	} else {
+		enc.AppendString(val)
+	}
 }
 
 func (enc *jsonEncoder) AddTime(key string, val time.Time) {

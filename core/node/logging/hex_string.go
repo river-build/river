@@ -47,20 +47,21 @@ const (
 	shortenHexCharsPartLen = shortenHexChars/2 - 2
 )
 
-// formatString will optionally shorten strings if they are determined to be parsable as
-// hex and are past a threshold length.
-func formatString(s string) string {
+// formatHexString will optionally shorten strings if they are determined to be parsable as
+// hex and are past a threshold length. We return all components of the shortened string in
+// order to avoid unnecessary copies.
+func formatHexString(s string) (first string, middle string, last string, truncated bool) {
 	hex, hasPrefix := IsHexString(s)
 	if hex {
 		if hasPrefix {
 			if len(s) > (shortenHexChars + 2) {
-				s = s[:(2+shortenHexCharsPartLen)] + ".." + s[len(s)-shortenHexCharsPartLen:]
+				return s[:(2+shortenHexCharsPartLen)], "..", s[len(s)-shortenHexCharsPartLen:], true
 			}
 		} else {
 			if len(s) > shortenHexChars {
-				s = s[:shortenHexCharsPartLen] + ".." + s[len(s)-shortenHexCharsPartLen:]
+				return s[:shortenHexCharsPartLen], "..", s[len(s)-shortenHexCharsPartLen:], true
 			}
 		}
 	}
-	return s
+	return "", "", "", false
 }
