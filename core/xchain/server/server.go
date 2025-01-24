@@ -306,6 +306,9 @@ func (x *xchain) Run(ctx context.Context) {
 		onEntitlementCheckRequestedCallback = func(ctx context.Context, event types.Log) {
 			x.onEntitlementCheckRequested(ctx, event, entitlementCheckReceipts)
 		}
+		onEntitlementCheckRequestedV2Callback = func(ctx context.Context, event types.Log) {
+			x.onEntitlementCheckRequestedV2(ctx, event, entitlementCheckReceipts)
+		}
 	)
 	x.cancel = cancel
 
@@ -324,12 +327,20 @@ func (x *xchain) Run(ctx context.Context) {
 		x.metricsPublisher.StartMetricsServer(runCtx, cfg)
 	}
 
-	// register callback for Base EntitlementCheckRequested events
+	// Register callback for Base EntitlementCheckRequested V1 events
 	x.baseChain.ChainMonitor.OnContractWithTopicsEvent(
 		x.baseChainStartBlock,
 		entitlementAddress,
 		[][]common.Hash{{x.checkerABI.Events["EntitlementCheckRequested"].ID}},
 		onEntitlementCheckRequestedCallback)
+
+	// register callback for Base EntitlementCheckRequested events
+	x.baseChain.ChainMonitor.OnContractWithTopicsEvent(
+		x.baseChainStartBlock,
+		entitlementAddress,
+		[][]common.Hash{{x.checkerABI.Events["EntitlementCheckRequestedV2"].ID}},
+		onEntitlementCheckRequestedV2Callback)
+
 
 	// read entitlement check results from entitlementCheckReceipts and write the result to Base
 	x.writeEntitlementCheckResults(runCtx, entitlementCheckReceipts)
@@ -355,7 +366,9 @@ func (x *xchain) onEntitlementCheckRequested(
 	}
 
 	log.Infow("Received EntitlementCheckRequested",
-		"xchain.req.txid", hex.EncodeToString(entitlementCheckRequest.TransactionId[:]))
+		"xchain.req.txid", hex.EncodeToString(entitlementCheckRequest.TransactionId[:]),
+			"request", entitlementCheckRequest,
+			)
 
 	// process the entitlement request and post the result to entitlementCheckResults
 	// First, convert the check to a V2 request for unified processing.
@@ -399,7 +412,7 @@ func (x *xchain) onEntitlementCheckRequested(
 	}
 }
 
-// onEntitlementCheckRequested is the callback that the chain monitor calls for each EntitlementCheckRequested
+// onEntitlementCheckRequestedV2 is the callback that the chain monitor calls for each EntitlementCheckRequestedV2
 // event raised on Base in the entitlement contract.
 func (x *xchain) onEntitlementCheckRequestedV2(
 	ctx context.Context,
@@ -455,8 +468,8 @@ func (x *xchain) handleEntitlementCheckRequest(
 
 	for _, selectedNodeAddress := range request.SelectedNodes {
 		if selectedNodeAddress == x.baseChain.Wallet.Address {
-			log.Infow("Processing EntitlementCheckRequested")
-			outcome, err := x.process(ctx, request, x.baseChain.Client, request.SpaceAddress)
+			log.Infow("Processing EntitlementCheckRequested", "request", request)
+			outcome, err := x.process(ctx, request, x.baseChain.Client, request.WalletAddress)
 			if err != nil {
 				return nil, err
 			}
@@ -724,6 +737,7 @@ func (x *xchain) process(
 	if err != nil {
 		return false, err
 	}
+	log.Infow("Fetched linked wallets", "wallets", wallets)
 
 	ruleData, err := x.getRuleData(ctx, request.TransactionId, request.RoleId, request.SpaceAddress, client)
 	if err != nil {
@@ -732,6 +746,7 @@ func (x *xchain) process(
 
 	// Embed log metadata for rule evaluation logs
 	ctx = logging.CtxWithLog(ctx, log)
+	log.Info("Evaluating rule data", "wallets", wallets, "ruleData", ruleData)
 	result, err = x.evaluator.EvaluateRuleData(ctx, wallets, ruleData)
 	if err != nil {
 		log.Errorw("Failed to EvaluateRuleData", "err", err)

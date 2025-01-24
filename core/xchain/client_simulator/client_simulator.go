@@ -98,10 +98,10 @@ type clientSimulator struct {
 	decoder *node_crypto.EvmErrorDecoder
 
 	entitlementGated         *deploy.MockEntitlementGated
+	entitlementGatedAddress  common.Address
 	entitlementGatedABI      *abi.ABI
 	entitlementGatedContract *bind.BoundContract
 
-	checker         *base.IEntitlementChecker
 	checkerABI      *abi.ABI
 	checkerContract *bind.BoundContract
 
@@ -118,17 +118,14 @@ var _ ClientSimulator = &clientSimulator{}
 func New(
 	ctx context.Context,
 	cfg *config.Config,
+	mockEntitlementGatedAddress common.Address,
 	baseChain *node_crypto.Blockchain,
 	wallet *node_crypto.Wallet,
 ) (ClientSimulator, error) {
 	entitlementGated, err := deploy.NewMockEntitlementGated(
-		cfg.GetTestEntitlementContractAddress(),
-		nil,
+		mockEntitlementGatedAddress,
+		baseChain.Client,
 	)
-	if err != nil {
-		return nil, err
-	}
-	checker, err := base.NewIEntitlementChecker(cfg.GetEntitlementContractAddress(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +142,7 @@ func New(
 
 	var (
 		entitlementGatedContract = bind.NewBoundContract(
-			cfg.GetTestEntitlementContractAddress(),
+			mockEntitlementGatedAddress,
 			*entitlementGatedABI,
 			nil,
 			nil,
@@ -178,9 +175,9 @@ func New(
 		wallet,
 		decoder,
 		entitlementGated,
+		mockEntitlementGatedAddress,
 		entitlementGatedABI,
 		entitlementGatedContract,
-		checker,
 		checkerABI,
 		checkerContract,
 		baseChain,
@@ -197,7 +194,7 @@ func (cs *clientSimulator) Stop() {
 func (cs *clientSimulator) Start(ctx context.Context) {
 	cs.baseChain.ChainMonitor.OnContractWithTopicsEvent(
 		0,
-		cs.cfg.GetTestEntitlementContractAddress(),
+		cs.entitlementGatedAddress,
 		[][]common.Hash{{cs.entitlementGatedABI.Events["EntitlementCheckResultPosted"].ID}},
 		func(ctx context.Context, event types.Log) {
 			cs.onEntitlementCheckResultPosted(ctx, event, cs.resultPosted)
@@ -227,17 +224,8 @@ func (cs *clientSimulator) executeCheck(ctx context.Context, ruleData *deploy.IR
 		"RequestEntitlementCheck",
 		func(opts *bind.TransactOpts) (*types.Transaction, error) {
 			log.Infow("Calling RequestEntitlementCheck", "opts", opts, "ruleData", ruleData)
-			gated, err := deploy.NewMockEntitlementGated(
-				cs.cfg.GetTestEntitlementContractAddress(),
-				cs.baseChain.Client,
-			)
-			if err != nil {
-				log.Errorw("Failed to get NewMockEntitlementGated", "err", err)
-				return nil, err
-			}
-			log.Infow("NewMockEntitlementGated", "gated", gated.RequestEntitlementCheck, "err", err)
-			tx, err := gated.RequestEntitlementCheck(opts, big.NewInt(0), *ruleData)
-			log.Infow("RequestEntitlementCheck called", "tx", tx, "err", err)
+
+			tx, err := cs.entitlementGated.RequestEntitlementCheck(opts, big.NewInt(0), *ruleData)
 			return tx, err
 		})
 
@@ -278,16 +266,8 @@ func (cs *clientSimulator) executeV2Check(ctx context.Context, ruleData *deploy.
 		"RequestEntitlementCheckV2",
 		func(opts *bind.TransactOpts) (*types.Transaction, error) {
 			log.Infow("Calling RequestEntitlementCheck", "opts", opts, "ruleData", ruleData)
-			gated, err := deploy.NewMockEntitlementGated(
-				cs.cfg.GetTestEntitlementContractAddress(),
-				cs.baseChain.Client,
-			)
-			if err != nil {
-				log.Errorw("Failed to get NewMockEntitlementGated", "err", err)
-				return nil, err
-			}
-			log.Infow("NewMockEntitlementGated", "gated", gated.RequestEntitlementCheck, "err", err)
-			tx, err := gated.RequestEntitlementCheckV2(opts, []*big.Int{big.NewInt(0)}, *ruleData)
+
+			tx, err := cs.entitlementGated.RequestEntitlementCheckV2(opts, []*big.Int{big.NewInt(0)}, *ruleData)
 			log.Infow("RequestEntitlementCheckV2 called", "tx", tx, "err", err)
 			return tx, err
 		})
@@ -386,8 +366,6 @@ func (cs *clientSimulator) onEntitlementCheckResultPosted(
 		"Unpacking EntitlementCheckResultPosted event",
 		"event",
 		event,
-		"entitlementCheckResultPosted",
-		entitlementCheckResultPosted,
 	)
 
 	if err := cs.entitlementGatedContract.UnpackLog(&entitlementCheckResultPosted, "EntitlementCheckResultPosted", event); err != nil {
@@ -396,8 +374,7 @@ func (cs *clientSimulator) onEntitlementCheckResultPosted(
 	}
 
 	log.Infow("Received EntitlementCheckResultPosted event",
-		"TransactionId", entitlementCheckResultPosted.TransactionId,
-		"Result", entitlementCheckResultPosted.Result,
+		"event", entitlementCheckResultPosted,
 	)
 
 	postedResults <- postResult{
@@ -565,14 +542,20 @@ func (cs *clientSimulator) EvaluateRuleData(
 	return cs.awaitNextResult(ctx)
 }
 
-func RunClientSimulator(ctx context.Context, cfg *config.Config, wallet *node_crypto.Wallet, simType SimulationType) {
+func RunClientSimulator(ctx context.Context, cfg *config.Config, mockEntitlementGated common.Address, wallet *node_crypto.Wallet, simType SimulationType) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	log := logging.FromCtx(ctx).With("application", "clientSimulator")
 	log.Infow("--- ClientSimulator starting", "simType", simType)
 
-	cs, err := New(ctx, cfg, nil, wallet)
+	cs, err := New(
+		ctx,
+		cfg,
+		mockEntitlementGated,
+		nil,
+		wallet,
+	)
 	if err != nil {
 		log.Errorw("--- Failed to create clientSimulator", "err", err)
 		return
