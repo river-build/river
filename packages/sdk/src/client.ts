@@ -209,7 +209,8 @@ export class Client
     private persistenceStore: IPersistenceStore
     private validatedEvents: Record<string, { isValid: boolean; reason?: string }> = {}
     private defaultGroupEncryptionAlgorithm: GroupEncryptionAlgorithmId
-    private mlsClientExtensionsOpts?: MlsClientExtensionsOpts
+    private nickname?: string
+    private mlsClientExtensionsOpts: MlsClientExtensionsOpts
 
     constructor(
         signerContext: SignerContext,
@@ -221,6 +222,7 @@ export class Client
         highPriorityStreamIds?: string[],
         unpackEnvelopeOpts?: UnpackEnvelopeOpts,
         defaultGroupEncryptionAlgorithm?: GroupEncryptionAlgorithmId,
+        nickname?: string,
         mlsClientExtensionsOpts?: MlsClientExtensionsOpts,
     ) {
         super()
@@ -243,6 +245,7 @@ export class Client
         this.userId = userIdFromAddress(signerContext.creatorAddress)
         this.defaultGroupEncryptionAlgorithm =
             defaultGroupEncryptionAlgorithm ?? GroupEncryptionAlgorithmId.GroupEncryption
+        this.nickname = nickname
 
         const shortId =
             mlsClientExtensionsOpts?.nickname ??
@@ -257,7 +260,12 @@ export class Client
         this.logInfo = dlog('csb:cl:info', { defaultEnabled: true }).extend(shortId)
         this.logDebug = dlog('csb:cl:debug').extend(shortId)
         // TODO: refactor this to all debuggers that mls components need
-        this.mlsClientExtensionsOpts = mlsClientExtensionsOpts
+        this.mlsClientExtensionsOpts = {
+            log: dlog('csb:cl:mls').extend(shortId),
+            nickname: this.nickname,
+            ...mlsClientExtensionsOpts,
+        }
+
         this.cryptoStore = cryptoStore
 
         if (persistenceStoreName) {

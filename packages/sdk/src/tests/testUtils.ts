@@ -269,6 +269,7 @@ export const makeTestClient = async (opts?: TestClientOpts): Promise<Client> => 
     const userId = userIdFromAddress(context.creatorAddress)
     const dbName = `database-${userId}${deviceId}`
     const persistenceDbName = `persistence-${userId}${deviceId}`
+    const nickname = opts?.mlsOpts?.nickname
     const mlsOpts = opts?.mlsOpts
 
     // create a new client with store(s)
@@ -284,6 +285,7 @@ export const makeTestClient = async (opts?: TestClientOpts): Promise<Client> => 
         undefined,
         undefined,
         undefined,
+        nickname,
         mlsOpts,
     )
 }
