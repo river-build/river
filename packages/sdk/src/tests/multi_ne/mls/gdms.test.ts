@@ -87,13 +87,6 @@ describe('gdmsMlsTests', () => {
             await alice.setStreamEncryptionAlgorithm(streamId, MLS_ALGORITHM)
         }, 5_000)
 
-        it('clientCanCreateGDM', async () => {
-            expect(alice).toBeDefined()
-            expect(bob).toBeDefined()
-            expect(charlie).toBeDefined()
-            expect(streamId).toBeDefined()
-        })
-
         it('clientsBecomeActive', { timeout: 15_000 }, async () => {
             await Promise.all([
                 ...clients.map((c) =>
@@ -130,13 +123,18 @@ describe('gdmsMlsTests', () => {
         })
 
         it('clientsAgreeOnEpochSecrets', async () => {
-            await Promise.all([
-                ...clients.map((c) =>
-                    expect
-                        .poll(() => epochSecrets(c).map((a) => a[0]), { timeout: 10_000 })
-                        .toStrictEqual(clients.map((_, i) => BigInt(i))),
-                ),
-            ])
+            const desiredEpochs = clients.map((_, i) => BigInt(i))
+            await expect
+                .poll(
+                    () =>
+                        clients.every((c) => {
+                            const epochs = epochSecrets(c).map((a) => a[0])
+                            expect(epochs).toStrictEqual(desiredEpochs)
+                            return true
+                        }),
+                    { timeout: 20_000 },
+                )
+                .toBeTruthy()
 
             const [owner, ...others] = clients
 
@@ -151,115 +149,78 @@ describe('gdmsMlsTests', () => {
             let frank!: Client
 
             beforeEach(async () => {
-                // david = await makeInitAndStartClient('david')
-                // eve = await makeInitAndStartClient('eve')
-                // frank = await makeInitAndStartClient('frank')
-                // await alice.inviteUser(streamId, david.userId)
-                // await Promise.all([
-                //     alice.inviteUser(streamId, david.userId),
-                //     alice.inviteUser(streamId, eve.userId),
-                //     alice.inviteUser(streamId, frank.userId),
-                // ])
-                // await Promise.all([
-                //     david.waitForStream(streamId),
-                //     eve.waitForStream(streamId),
-                //     frank.waitForStream(streamId),
-                // ])
+                david = await makeInitAndStartClient('david')
+                eve = await makeInitAndStartClient('eve')
+                frank = await makeInitAndStartClient('frank')
+
+                await Promise.all(
+                    [david, eve, frank].map(async (c) => {
+                        await alice.inviteUser(streamId, c.userId)
+                        await c.joinStream(streamId)
+                        await c.waitForStream(streamId)
+                    }),
+                )
+            }, 10_000)
+
+            it('invitedClientsBecomeActive', async () => {
+                await expect
+                    .poll(() => [david, eve, frank].every((c) => clientStatus(c) === 'active'), {
+                        timeout: 10_000,
+                    })
+                    .toBeTruthy()
             })
 
-            it('clientsCanJoinGDM', async () => {
-                // expect(david).toBeDefined()
-                // expect(eve).toBeDefined()
-                // expect(frank).toBeDefined()
+            it('clientsCanSendMessage', { timeout: 15_000 }, async () => {
+                await send(alice, 'hello all')
+
+                await expect
+                    .poll(
+                        () =>
+                            clients.every((c) =>
+                                checkTimelineContainsAll(['hello all'], timeline(c)),
+                            ),
+                        { timeout: 15_000 },
+                    )
+                    .toBe(true)
             })
 
-            it('canInviteUsers', async () => {
-                // await alice.inviteUser(streamId, david.userId)
-                // await david.waitForStream(streamId)
+            it('clientsCanSendMutlipleMessages', { timeout: 10_000 }, async () => {
+                await Promise.all([
+                    ...clients.flatMap((c: Client, i) =>
+                        Array.from({ length: 10 }, (_, j) =>
+                            send(c, `new message ${j} from client ${i}`),
+                        ),
+                    ),
+                    ...clients.map((c: Client) =>
+                        expect
+                            .poll(() => checkTimelineContainsAll(messages, timeline(c)), {
+                                timeout: 10_000,
+                            })
+                            .toBe(true),
+                    ),
+                ])
             })
 
-            // it('clientsBecomeActive', { timeout: 15_000 }, async () => {
-            //     await Promise.all([
-            //         ...clients.map((c) =>
-            //             expect.poll(() => clientStatus(c), { timeout: 15_000 }).toBe('active'),
-            //         ),
-            //     ])
-            // })
-            //
-            // it('clientsCanSendMessage', { timeout: 15_000 }, async () => {
-            //     await send(alice, 'hello all')
-            //
-            //     await expect
-            //         .poll(
-            //             () =>
-            //                 clients.every((c) => checkTimelineContainsAll(['hello all'], timeline(c))),
-            //             { timeout: 15_000 },
-            //         )
-            //         .toBe(true)
-            // })
-            //
-            // it('clientsCanSendMutlipleMessages', { timeout: 10_000 }, async () => {
-            //     await Promise.all([
-            //         ...clients.flatMap((c: Client, i) =>
-            //             Array.from({ length: 10 }, (_, j) => send(c, `message ${j} from client ${i}`)),
-            //         ),
-            //         ...clients.map((c: Client) =>
-            //             expect
-            //                 .poll(() => checkTimelineContainsAll(messages, timeline(c)), {
-            //                     timeout: 10_000,
-            //                 })
-            //                 .toBe(true),
-            //         ),
-            //     ])
-            // })
-            //
-            // it('clientsAgreeOnEpochSecrets', async () => {
-            //     await Promise.all([
-            //         ...clients.map((c) =>
-            //             expect
-            //                 .poll(() => epochSecrets(c).map((a) => a[0]), { timeout: 10_000 })
-            //                 .toStrictEqual(clients.map((_, i) => BigInt(i))),
-            //         ),
-            //     ])
-            //
-            //     const [owner, ...others] = clients
-            //
-            //     others.forEach((other) => {
-            //         expect(epochSecrets(other)).toStrictEqual(epochSecrets(owner))
-            //     })
-            // })
-        })
-    })
+            it('clientsAgreeOnEpochSecrets', { timeout: 20_000 }, async () => {
+                const desiredEpochs = clients.map((_, i) => BigInt(i))
+                await expect
+                    .poll(
+                        () =>
+                            clients.every((c) => {
+                                const epochs = epochSecrets(c).map((a) => a[0])
+                                expect(epochs).toStrictEqual(desiredEpochs)
+                                return true
+                            }),
+                        { timeout: 20_000 },
+                    )
+                    .toBeTruthy()
 
-    describe('2+1Clients', () => {
-        let alice!: Client
-        let bob!: Client
-        let charlie!: Client
-        let david!: Client
+                const [owner, ...others] = clients
 
-        beforeEach(async () => {
-            alice = await makeInitAndStartClient('alice')
-            bob = await makeInitAndStartClient('bob')
-            charlie = await makeInitAndStartClient('charlie')
-            david = await makeInitAndStartClient('david')
-            const { streamId: gdmStreamId } = await alice.createGDMChannel([
-                bob.userId,
-                charlie.userId,
-            ])
-            streamId = gdmStreamId
-            await expect(Promise.all([alice.waitForStream(streamId)])).resolves.toBeDefined()
-            await expect(Promise.all([bob.waitForStream(streamId)])).resolves.toBeDefined()
-            await expect(Promise.all([charlie.waitForStream(streamId)])).resolves.toBeDefined()
-        }, 10_000)
-
-        beforeEach(async () => {
-            await alice.setStreamEncryptionAlgorithm(streamId, MLS_ALGORITHM)
-            await expect.poll(() => clientStatus(alice), { timeout: 10_000 }).toBe('active')
-        }, 10_000)
-
-        it('inviteUserToGDMWithMLSEnabled', async () => {
-            // await alice.inviteUser(streamId, david.userId)
-            // await david.waitForStream(streamId)
+                others.forEach((other) => {
+                    expect(epochSecrets(other)).toStrictEqual(epochSecrets(owner))
+                })
+            })
         })
     })
 })
