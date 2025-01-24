@@ -121,6 +121,7 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 				&SaveEphemeralMiniblockRequest{
 					StreamId:  r.streamId[:],
 					Miniblock: ephemeralMb,
+					Nodes:     cc.GetNodes(),
 					Last:      last,
 				},
 			),

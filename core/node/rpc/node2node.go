@@ -8,6 +8,7 @@ import (
 	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/protocol"
+	"github.com/river-build/river/core/node/shared"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/utils"
 )
@@ -205,4 +206,45 @@ func (s *Service) saveMiniblockCandidate(
 	}
 
 	return &SaveMiniblockCandidateResponse{}, nil
+}
+
+func (s *Service) GetMiniblocksByIds(
+	ctx context.Context,
+	req *connect.Request[GetMiniblocksByIdsRequest],
+	resp *connect.ServerStream[GetMiniblocksByIdsResponse],
+) error {
+	ctx, log := utils.CtxAndLogForRequest(ctx, req)
+	log.Debugw("GetMiniblocksByIds ENTER")
+	if err := s.getMiniblocksByIds(ctx, req.Msg, resp); err != nil {
+		return AsRiverError(err).Func("GetMiniblocksByIds").
+			Tag("streamId", req.Msg.StreamId).
+			Tag("mbIds", req.Msg.MiniblockIds).
+			LogWarn(log).
+			AsConnectError()
+	}
+	log.Debugw("GetMiniblocksByIds LEAVE")
+	return nil
+}
+
+func (s *Service) getMiniblocksByIds(
+	ctx context.Context,
+	req *GetMiniblocksByIdsRequest,
+	resp *connect.ServerStream[GetMiniblocksByIdsResponse],
+) error {
+	streamId, err := shared.StreamIdFromBytes(req.StreamId)
+	if err != nil {
+		return err
+	}
+
+	if err = s.storage.ReadMiniblocksByStream(ctx, streamId, func(blockdata []byte, seqNum int) error {
+		return resp.Send(&GetMiniblocksByIdsResponse{
+			MiniblockRaw: blockdata,
+			MiniblockNum: int64(seqNum),
+		})
+	}); err != nil {
+		return err
+	}
+
+	// Send back an empty response to signal the end of the stream.
+	return resp.Send(&GetMiniblocksByIdsResponse{})
 }
