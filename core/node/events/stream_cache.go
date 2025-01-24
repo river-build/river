@@ -40,6 +40,7 @@ type StreamCacheParams struct {
 	Metrics                 infra.MetricsFactory
 	RemoteMiniblockProvider RemoteMiniblockProvider
 	Scrubber                Scrubber
+	disableCallbacks        bool // for test purposes
 }
 
 type StreamCache interface {
@@ -53,11 +54,6 @@ type StreamCache interface {
 	GetLoadedViews(ctx context.Context) []StreamView
 	GetMbCandidateStreams(ctx context.Context) []*streamImpl
 	CacheCleanup(ctx context.Context, enabled bool, expiration time.Duration) CacheCleanupResult
-}
-
-type StreamCacheTest interface {
-	PauseEventProcessing()
-	ResumeEventProcessing()
 }
 
 type streamCacheImpl struct {
@@ -79,12 +75,11 @@ type streamCacheImpl struct {
 
 	onlineSyncWorkerPool *workerpool.WorkerPool
 
-	pauseEventProcessing atomic.Bool
+	disableCallbacks bool
 }
 
 var (
-	_ StreamCache     = (*streamCacheImpl)(nil)
-	_ StreamCacheTest = (*streamCacheImpl)(nil)
+	_ StreamCache = (*streamCacheImpl)(nil)
 )
 
 func NewStreamCache(
@@ -117,6 +112,7 @@ func NewStreamCache(
 		),
 		chainConfig:          params.ChainConfig,
 		onlineSyncWorkerPool: workerpool.New(params.Config.StreamReconciliation.OnlineWorkerPoolSize),
+		disableCallbacks:     params.disableCallbacks,
 	}
 }
 
@@ -168,10 +164,12 @@ func (s *streamCacheImpl) Start(ctx context.Context) error {
 	go initialSyncWorkerPool.StopWait()
 
 	// TODO: add buffered channel to avoid blocking ChainMonitor
-	s.params.RiverChain.ChainMonitor.OnBlockWithLogs(
-		s.params.AppliedBlockNum+1,
-		s.onBlockWithLogs,
-	)
+	if !s.disableCallbacks {
+		s.params.RiverChain.ChainMonitor.OnBlockWithLogs(
+			s.params.AppliedBlockNum+1,
+			s.onBlockWithLogs,
+		)
+	}
 
 	go s.runCacheCleanup(ctx)
 
@@ -185,10 +183,6 @@ func (s *streamCacheImpl) Start(ctx context.Context) error {
 }
 
 func (s *streamCacheImpl) onBlockWithLogs(ctx context.Context, blockNum crypto.BlockNumber, logs []*types.Log) {
-	if s.pauseEventProcessing.Load() {
-		return
-	}
-	
 	streamEvents, errs := s.params.Registry.FilterStreamEvents(ctx, logs)
 	// Process parsed stream events even if some failed to parse
 	for _, err := range errs {
@@ -478,12 +472,4 @@ func (s *streamCacheImpl) GetMbCandidateStreams(ctx context.Context) []*streamIm
 	})
 
 	return candidates
-}
-
-func (s *streamCacheImpl) PauseEventProcessing() {
-	s.pauseEventProcessing.Store(true)
-}
-
-func (s *streamCacheImpl) ResumeEventProcessing() {
-	s.pauseEventProcessing.Store(false)
 }

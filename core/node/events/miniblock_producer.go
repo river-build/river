@@ -5,7 +5,6 @@ import (
 	"context"
 	"slices"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -69,9 +68,6 @@ type TestMiniblockProducer interface {
 		streamId StreamId,
 		forceSnapshot bool,
 	) (*MiniblockRef, error)
-
-	PauseEventProcessing()
-	ResumeEventProcessing()
 }
 
 type MiniblockProducer interface {
@@ -121,20 +117,9 @@ type miniblockProducer struct {
 	candidates candidateTracker
 
 	onNewBlockMutex sync.Mutex
-
-	pauseEventProcessing atomic.Bool
-}
-
-func (p *miniblockProducer) PauseEventProcessing() {
-	p.pauseEventProcessing.Store(true)
-}
-
-func (p *miniblockProducer) ResumeEventProcessing() {
-	p.pauseEventProcessing.Store(false)
 }
 
 var _ MiniblockProducer = (*miniblockProducer)(nil)
-var _ TestMiniblockProducer = (*miniblockProducer)(nil)
 
 // mbJos tracks single miniblock production attempt for a single stream.
 type mbJob struct {
@@ -192,10 +177,6 @@ func (p *candidateTracker) add(ctx context.Context, mp *miniblockProducer, j *mb
 // logs to determine which mini block candidate was registered and which are not. For each registered mini block
 // candidate it applies the candidate to the stream.
 func (p *miniblockProducer) OnNewBlock(ctx context.Context, blockNum crypto.BlockNumber) {
-	if p.pauseEventProcessing.Load() {
-		return
-	}
-
 	// Try lock to have only one invocation at a time. Previous onNewBlock may still be running.
 	if !p.onNewBlockMutex.TryLock() {
 		return
