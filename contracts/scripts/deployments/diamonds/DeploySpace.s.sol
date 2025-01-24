@@ -33,6 +33,7 @@ import {DeployReferrals} from "contracts/scripts/deployments/facets/DeployReferr
 import {DeployMembershipToken} from "contracts/scripts/deployments/facets/DeployMembershipToken.s.sol";
 import {DeploySpaceEntitlementGated} from "contracts/scripts/deployments/facets/DeploySpaceEntitlementGated.s.sol";
 import {DeployTipping} from "contracts/scripts/deployments/facets/DeployTipping.s.sol";
+import {DeployExecutor} from "contracts/scripts/deployments/facets/DeployExecutor.s.sol";
 import {DeployMultiInit} from "contracts/scripts/deployments/utils/DeployMultiInit.s.sol";
 
 contract DeploySpace is DiamondHelper, Deployer {
@@ -63,6 +64,8 @@ contract DeploySpace is DiamondHelper, Deployer {
     new DeploySpaceEntitlementGated();
   DeployMultiInit deployMultiInit = new DeployMultiInit();
   DeployTipping tippingHelper = new DeployTipping();
+  DeployExecutor executorHelper = new DeployExecutor();
+
   address tokenOwnable;
   address diamondCut;
   address diamondLoupe;
@@ -83,6 +86,7 @@ contract DeploySpace is DiamondHelper, Deployer {
   address prepay;
   address referrals;
   address tipping;
+  address executor;
   address multiInit;
 
   function versionName() public pure override returns (string memory) {
@@ -135,6 +139,7 @@ contract DeploySpace is DiamondHelper, Deployer {
     referrals = referralsHelper.deploy(deployer);
     entitlementGated = entitlementGatedHelper.deploy(deployer);
     tipping = tippingHelper.deploy(deployer);
+    executor = executorHelper.deploy(deployer);
     membershipTokenHelper.removeSelector(IERC721A.tokenURI.selector);
 
     addCut(
@@ -181,7 +186,7 @@ contract DeploySpace is DiamondHelper, Deployer {
     addCut(prepayHelper.makeCut(prepay, IDiamond.FacetCutAction.Add));
     addCut(referralsHelper.makeCut(referrals, IDiamond.FacetCutAction.Add));
     addCut(tippingHelper.makeCut(tipping, IDiamond.FacetCutAction.Add));
-
+    addCut(executorHelper.makeCut(executor, IDiamond.FacetCutAction.Add));
     return
       Diamond.InitParams({
         baseFacets: baseFacets(),
@@ -293,6 +298,9 @@ contract DeploySpace is DiamondHelper, Deployer {
             IDiamond.FacetCutAction.Add
           )
         );
+      } else if (facetNameHash == keccak256(abi.encodePacked("Executor"))) {
+        executor = executorHelper.deploy(deployer);
+        addCut(executorHelper.makeCut(executor, IDiamond.FacetCutAction.Add));
       }
     }
   }

@@ -62,8 +62,47 @@ interface IExecutor is IExecutorBase {
    * @param groupId The group ID
    * @param account The account to grant access to
    * @param delay The delay for the access to be effective
+   * @return newMember Whether the account is a new member of the group
    */
-  function grantAccess(uint64 groupId, address account, uint32 delay) external;
+  function grantAccess(
+    uint64 groupId,
+    address account,
+    uint32 delay
+  ) external returns (bool newMember);
+
+  /**
+   * @notice Checks if an account has access to a group
+   * @param groupId The group ID
+   * @param account The account to check access for
+   * @return isMember Whether the account is a member of the group
+   * @return executionDelay The delay for the access to be effective
+   */
+  function hasAccess(
+    uint64 groupId,
+    address account
+  ) external view returns (bool isMember, uint32 executionDelay);
+
+  /**
+   * @notice Gets the access information for an account in a group
+   * @param groupId The group ID
+   * @param account The account to get access information for
+   * @return since The timestamp when the access was granted
+   * @return currentDelay The current delay for the access
+   * @return pendingDelay The pending delay for the access
+   * @return effect The effect of the access
+   */
+  function getAccess(
+    uint64 groupId,
+    address account
+  )
+    external
+    view
+    returns (
+      uint48 since,
+      uint32 currentDelay,
+      uint32 pendingDelay,
+      uint48 effect
+    );
 
   /**
    * @notice Revokes access to a group for an account
@@ -91,7 +130,14 @@ interface IExecutor is IExecutorBase {
    * @param groupId The group ID
    * @param delay The delay for granting access
    */
-  function setGrantDelay(uint64 groupId, uint32 delay) external;
+  function setGroupDelay(uint64 groupId, uint32 delay) external;
+
+  /**
+   * @notice Gets the grant delay for a group
+   * @param groupId The group ID
+   * @return The grant delay
+   */
+  function getGroupDelay(uint64 groupId) external view returns (uint32);
 
   /**
    * @notice Sets the group ID for a target function
@@ -103,18 +149,6 @@ interface IExecutor is IExecutorBase {
     address target,
     bytes4 selector,
     uint64 groupId
-  ) external;
-
-  /**
-   * @notice Sets the execution delay for a target function
-   * @param target The target contract address
-   * @param delay The execution delay
-   * @param minSetback The minimum setback period
-   */
-  function setTargetFunctionDelay(
-    address target,
-    uint32 delay,
-    uint32 minSetback
   ) external;
 
   /**
@@ -144,6 +178,19 @@ interface IExecutor is IExecutorBase {
     bytes calldata data,
     uint48 when
   ) external payable returns (bytes32 operationId, uint32 nonce);
+
+  /**
+   * @notice Hashes an operation
+   * @param caller The caller address
+   * @param target The target contract address
+   * @param data The calldata for the operation
+   * @return The hash of the operation
+   */
+  function hashOperation(
+    address caller,
+    address target,
+    bytes calldata data
+  ) external pure returns (bytes32);
 
   /**
    * @notice Executes an operation immediately or after delay

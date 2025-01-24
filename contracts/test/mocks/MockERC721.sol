@@ -16,9 +16,15 @@ contract MockERC721 is ERC721 {
 
   function mint(address to, uint256 amount) external {
     for (uint256 i = 0; i < amount; i++) {
-      _mint(to, tokenId);
       tokenId++;
+      _mint(to, tokenId);
     }
+  }
+
+  function mintWithPayment(address to) external payable {
+    require(msg.value >= 1 ether, "Insufficient funds");
+    tokenId++;
+    _mint(to, tokenId);
   }
 
   function burn(uint256 token) external {

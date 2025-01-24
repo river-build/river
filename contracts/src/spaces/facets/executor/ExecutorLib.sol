@@ -14,6 +14,9 @@ import {OwnableStorage} from "@river-build/diamond/src/facets/ownable/OwnableSto
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 // contracts
 
+// debuggging
+import {console} from "forge-std/console.sol";
+
 library ExecutorLib {
   using EnumerableSetLib for EnumerableSetLib.Uint256Set;
   using Time for Time.Delay;
@@ -26,8 +29,6 @@ library ExecutorLib {
   struct Target {
     // Mapping of allowed groups for this target.
     mapping(bytes4 selector => uint64 groupId) allowedGroups;
-    // Delay for execution
-    Time.Delay executionDelay;
     // Whether the target is disabled.
     bool disabled;
   }
@@ -36,8 +37,8 @@ library ExecutorLib {
     // Timepoint at which the user gets the permission.
     // If this is either 0 or in the future, then the role permission is not available.
     uint48 lastAccess;
-    // Delay for access
-    Time.Delay accessDelay;
+    // Delay for execution. Only applies to execute() calls.
+    Time.Delay delay;
   }
 
   struct Group {
@@ -62,7 +63,6 @@ library ExecutorLib {
     0xb7e2813a9de15ce5ee4c1718778708cd70fd7ee3d196d203c0f40369a8d4a600;
 
   struct Layout {
-    EnumerableSetLib.Uint256Set groupIds;
     mapping(address target => Target targetDetails) targets;
     mapping(uint64 groupId => Group group) groups;
     mapping(bytes32 id => Schedule schedule) schedules;
@@ -78,36 +78,42 @@ library ExecutorLib {
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           GROUP MANAGEMENT                 */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  /// @dev Grants access to a group for an account
+  /// @param groupId The ID of the group
+  /// @param account The account to grant access to
+  /// @param grantDelay The delay at which the access will take effect
+  /// @param executionDelay The delay for the access
+  /// @return newMember Whether the account is a new member of the group
   function grantGroupAccess(
     uint64 groupId,
     address account,
     uint32 grantDelay,
-    uint32 accessDelay
+    uint32 executionDelay
   ) internal returns (bool newMember) {
-    newMember = layout().groups[groupId].members[account].lastAccess == 0;
+    Group storage group = layout().groups[groupId];
+
+    newMember = group.members[account].lastAccess == 0;
     uint48 lastAccess;
 
     if (newMember) {
       lastAccess = Time.timestamp() + grantDelay;
-      layout().groups[groupId].members[account] = Access({
+      group.members[account] = Access({
         lastAccess: lastAccess,
-        accessDelay: accessDelay.toDelay()
+        delay: executionDelay.toDelay()
       });
     } else {
-      // just update the delay
-      (
-        layout().groups[groupId].members[account].accessDelay,
-        lastAccess
-      ) = layout().groups[groupId].members[account].accessDelay.withUpdate(
-        accessDelay,
-        0
-      );
+      // just update the access delay
+      (group.members[account].delay, lastAccess) = group
+        .members[account]
+        .delay
+        .withUpdate(executionDelay, 0);
     }
 
     emit IExecutorBase.GroupAccessGranted(
       groupId,
       account,
-      accessDelay,
+      executionDelay,
       lastAccess,
       newMember
     );
@@ -145,7 +151,7 @@ library ExecutorLib {
     return layout().groups[groupId].guardian;
   }
 
-  function getRoleGrantDelay(uint64 groupId) internal view returns (uint32) {
+  function getGroupGrantDelay(uint64 groupId) internal view returns (uint32) {
     return layout().groups[groupId].grantDelay.get();
   }
 
@@ -198,7 +204,7 @@ library ExecutorLib {
   {
     Access storage access = layout().groups[groupId].members[account];
     since = access.lastAccess;
-    (currentDelay, pendingDelay, effect) = access.accessDelay.getFull();
+    (currentDelay, pendingDelay, effect) = access.delay.getFull();
     return (since, currentDelay, pendingDelay, effect);
   }
 
@@ -212,22 +218,6 @@ library ExecutorLib {
   ) internal {
     layout().targets[target].allowedGroups[selector] = groupId;
     emit IExecutorBase.TargetFunctionGroupSet(target, selector, groupId);
-  }
-
-  function setTargetFunctionDelay(
-    address target,
-    uint32 newDelay,
-    uint32 minSetback
-  ) internal returns (uint48 delay) {
-    if (minSetback == 0) {
-      minSetback = DEFAULT_MIN_SETBACK;
-    }
-
-    (layout().targets[target].executionDelay, delay) = layout()
-      .targets[target]
-      .executionDelay
-      .withUpdate(newDelay, minSetback);
-    emit IExecutorBase.TargetFunctionDelaySet(target, newDelay, minSetback);
   }
 
   function setTargetFunctionDisabled(address target, bool disabled) internal {
@@ -273,7 +263,7 @@ library ExecutorLib {
     when = uint48(Math.max(when, minWhen));
 
     // If caller is authorized, schedule operation
-    operationId = _hashOperation(caller, target, data);
+    operationId = hashOperation(caller, target, data);
 
     _checkNotScheduled(operationId);
 
@@ -316,10 +306,10 @@ library ExecutorLib {
     address caller = msg.sender;
 
     // Fetch restrictions that apply to the caller on the targeted function
-    (bool immediate, uint32 setback) = _canCallExtended(caller, target, data);
+    (bool allowed, uint32 delay) = _canCallExtended(caller, target, data);
 
     // If call is not authorized, revert
-    if (!immediate && setback == 0) {
+    if (!allowed && delay == 0) {
       revert IExecutorBase.UnauthorizedCall(
         caller,
         target,
@@ -327,16 +317,16 @@ library ExecutorLib {
       );
     }
 
-    bytes32 operationId = _hashOperation(caller, target, data);
+    bytes32 operationId = hashOperation(caller, target, data);
     uint32 nonce;
 
     // If caller is authorized, check operation was scheduled early enough
     // Consume an available schedule even if there is no currently enforced delay
-    if (setback != 0 || getSchedule(operationId) != 0) {
+    if (delay != 0 || getSchedule(operationId) != 0) {
       nonce = consumeScheduledOp(operationId);
     }
 
-    // Mark the target and selector as authorised
+    // Mark the target and selector as authorized
     bytes32 executionIdBefore = layout().executionId;
     layout().executionId = _hashExecutionId(target, _checkSelector(data));
 
@@ -356,7 +346,7 @@ library ExecutorLib {
     address sender = msg.sender;
     bytes4 selector = _checkSelector(data);
 
-    bytes32 operationId = _hashOperation(caller, target, data);
+    bytes32 operationId = hashOperation(caller, target, data);
     if (layout().schedules[operationId].timepoint == 0) {
       revert IExecutorBase.NotScheduled(operationId);
     } else if (caller != sender) {
@@ -404,7 +394,7 @@ library ExecutorLib {
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           PRIVATE FUNCTIONS                */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
-  function _hashOperation(
+  function hashOperation(
     address caller,
     address target,
     bytes calldata data
@@ -424,7 +414,7 @@ library ExecutorLib {
     address caller,
     address target,
     bytes calldata data
-  ) private view returns (bool immediate, uint32 delay) {
+  ) private view returns (bool allowed, uint32 delay) {
     if (target == address(this)) {
       return _canCallSelf(caller, data);
     } else {

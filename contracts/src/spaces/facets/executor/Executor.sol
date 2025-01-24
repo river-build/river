@@ -8,26 +8,52 @@ import {IExecutor} from "./IExecutor.sol";
 import {ExecutorLib} from "./ExecutorLib.sol";
 
 // contracts
-import {OwnableBase} from "@river-build/diamond/src/facets/ownable/OwnableBase.sol";
+import {TokenOwnableBase} from "@river-build/diamond/src/facets/ownable/token/TokenOwnableBase.sol";
 
 /**
  * @title Executor
  * @notice Facet that enables permissioned delegate calls from a Space
  * @dev This facet must be carefully controlled as delegate calls can be dangerous
  */
-contract Executor is OwnableBase, IExecutor {
+contract Executor is TokenOwnableBase, IExecutor {
   /// @inheritdoc IExecutor
   function grantAccess(
     uint64 groupId,
     address account,
     uint32 delay
-  ) external onlyOwner {
-    ExecutorLib.grantGroupAccess(
-      groupId,
-      account,
-      ExecutorLib.getRoleGrantDelay(groupId),
-      delay
-    );
+  ) external onlyOwner returns (bool newMember) {
+    return
+      ExecutorLib.grantGroupAccess(
+        groupId,
+        account,
+        ExecutorLib.getGroupGrantDelay(groupId),
+        delay
+      );
+  }
+
+  /// @inheritdoc IExecutor
+  function hasAccess(
+    uint64 groupId,
+    address account
+  ) external view returns (bool isMember, uint32 executionDelay) {
+    return ExecutorLib.hasGroupAccess(groupId, account);
+  }
+
+  /// @inheritdoc IExecutor
+  function getAccess(
+    uint64 groupId,
+    address account
+  )
+    external
+    view
+    returns (
+      uint48 since,
+      uint32 currentDelay,
+      uint32 pendingDelay,
+      uint48 effect
+    )
+  {
+    return ExecutorLib.getAccess(groupId, account);
   }
 
   /// @inheritdoc IExecutor
@@ -46,8 +72,12 @@ contract Executor is OwnableBase, IExecutor {
   }
 
   /// @inheritdoc IExecutor
-  function setGrantDelay(uint64 groupId, uint32 delay) external onlyOwner {
+  function setGroupDelay(uint64 groupId, uint32 delay) external onlyOwner {
     ExecutorLib.setGroupGrantDelay(groupId, delay, 0);
+  }
+
+  function getGroupDelay(uint64 groupId) external view returns (uint32) {
+    return ExecutorLib.getGroupGrantDelay(groupId);
   }
 
   /// @inheritdoc IExecutor
@@ -57,15 +87,6 @@ contract Executor is OwnableBase, IExecutor {
     uint64 groupId
   ) external onlyOwner {
     ExecutorLib.setTargetFunctionGroup(target, selector, groupId);
-  }
-
-  /// @inheritdoc IExecutor
-  function setTargetFunctionDelay(
-    address target,
-    uint32 delay,
-    uint32 minSetback
-  ) external onlyOwner {
-    ExecutorLib.setTargetFunctionDelay(target, delay, minSetback);
   }
 
   /// @inheritdoc IExecutor
@@ -88,6 +109,15 @@ contract Executor is OwnableBase, IExecutor {
     uint48 when
   ) external payable returns (bytes32 operationId, uint32 nonce) {
     return ExecutorLib.scheduleExecution(target, data, when);
+  }
+
+  /// @inheritdoc IExecutor
+  function hashOperation(
+    address caller,
+    address target,
+    bytes calldata data
+  ) external pure returns (bytes32) {
+    return ExecutorLib.hashOperation(caller, target, data);
   }
 
   /// @inheritdoc IExecutor
