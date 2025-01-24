@@ -65,7 +65,9 @@ describe('timeline.test.ts', () => {
             await bobChannel.sendMessage(`message ${i}`)
             // force miniblocks, if we're going fast it's possible that the miniblock is not created
             if ((i % NUM_MESSAGES) / 4 == 0) {
-                await bob.riverConnection.client?.debugForceMakeMiniblock(bobChannel.data.id)
+                await bob.riverConnection.client?.debugForceMakeMiniblock(bobChannel.data.id, {
+                    forceSnapshot: true,
+                })
             }
         }
         // alice joins the room
