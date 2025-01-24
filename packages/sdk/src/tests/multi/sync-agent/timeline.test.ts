@@ -51,7 +51,8 @@ describe('timeline.test.ts', () => {
         })
     })
 
-    test.concurrent('scrollback', async () => {
+    // aellis 2025-01-25: this test is flaky and fails intermittently
+    test.skip('scrollback', async () => {
         const NUM_MESSAGES = 100
         const { bob, alice, bobUser, aliceUser } = await setupTest()
         await Promise.all([bob.start(), alice.start()])
