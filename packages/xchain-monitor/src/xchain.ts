@@ -279,9 +279,10 @@ export async function scanBlockchainForXchainEvents(
         // TODO:
         // - Validate that role ids appearing in responses match role ids in expectedNodes, emit error
         // if not.
-        // validate that set of selected nodes for each roleId response is a subset of the set of
+        // - Validate that set of selected nodes for each roleId response is a subset of the set of
         // expectedNodes for that roleId
-        // - Validate that results for each role id are consistent, emit warning if not.
+        // - Validate that results for each role id are consistent (all PASS or all FAIL), emit warning
+        // if not.
     }
 
     return Object.values(requests)
