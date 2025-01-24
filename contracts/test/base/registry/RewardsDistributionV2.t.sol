@@ -2,9 +2,10 @@
 pragma solidity ^0.8.23;
 
 // interfaces
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import {IDiamond} from "@river-build/diamond/src/IDiamond.sol";
 import {IDiamondCut} from "@river-build/diamond/src/facets/cut/IDiamondCut.sol";
-import {IDiamondLoupe} from "@river-build/diamond/src/facets/loupe/IDiamondLoupe.sol";
 import {IOwnableBase} from "@river-build/diamond/src/facets/ownable/IERC173.sol";
 
 // libraries
@@ -15,7 +16,6 @@ import {StakingRewards} from "contracts/src/base/registry/facets/distribution/v2
 import {RewardsDistributionStorage} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistributionStorage.sol";
 
 // contracts
-import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import {DeployRewardsDistributionV2} from "contracts/scripts/deployments/facets/DeployRewardsDistributionV2.s.sol";
 import {EIP712Utils} from "contracts/test/utils/EIP712Utils.sol";
 import {Towns} from "contracts/src/tokens/towns/base/Towns.sol";
@@ -27,7 +27,8 @@ import {BaseRegistryTest} from "./BaseRegistry.t.sol";
 contract RewardsDistributionV2Test is
   BaseRegistryTest,
   EIP712Utils,
-  IOwnableBase
+  IOwnableBase,
+  IDiamond
 {
   using FixedPointMathLib for uint256;
 
@@ -94,11 +95,11 @@ contract RewardsDistributionV2Test is
     address newTowns = deployTokenBase.deploy(deployer);
 
     address implementation = address(new RewardsDistribution());
-    IDiamond.FacetCut memory cut = distributionV2Helper.makeCut(
+    FacetCut memory cut = distributionV2Helper.makeCut(
       implementation,
-      IDiamond.FacetCutAction.Replace
+      FacetCutAction.Replace
     );
-    IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](1);
+    FacetCut[] memory cuts = new FacetCut[](1);
     cuts[0] = cut;
     bytes memory initData = distributionV2Helper.makeInitData(
       newTowns,
@@ -113,9 +114,9 @@ contract RewardsDistributionV2Test is
 
     assertEq(DelegationProxy(proxy).factory(), baseRegistry);
     assertEq(DelegationProxy(proxy).stakeToken(), newTowns);
-    assertEq(ERC20Votes(newTowns).delegates(proxy), OPERATOR);
+    assertEq(IVotes(newTowns).delegates(proxy), OPERATOR);
     assertEq(
-      ERC20Votes(newTowns).allowance(proxy, baseRegistry),
+      IERC20(newTowns).allowance(proxy, baseRegistry),
       type(uint256).max
     );
   }

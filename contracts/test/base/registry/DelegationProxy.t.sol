@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {TestUtils} from "contracts/test/utils/TestUtils.sol";
-import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 import {Initializable_AlreadyInitialized} from "@river-build/diamond/src/facets/initializable/Initializable.sol";
 import {DeployTownsBase} from "contracts/scripts/deployments/utils/DeployTownsBase.s.sol";
 import {DelegationProxy} from "contracts/src/base/registry/facets/distribution/v2/DelegationProxy.sol";
+import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 
 contract DelegationProxyTest is TestUtils {
   DeployTownsBase internal deployTownsTokenBase = new DeployTownsBase();
@@ -48,8 +49,8 @@ contract DelegationProxyTest is TestUtils {
 
     assertEq(DelegationProxy(proxy).factory(), deployer);
     assertEq(DelegationProxy(proxy).stakeToken(), towns);
-    assertEq(ERC20Votes(towns).delegates(proxy), delegatee);
-    assertEq(ERC20Votes(towns).allowance(proxy, deployer), type(uint256).max);
+    assertEq(IVotes(towns).delegates(proxy), delegatee);
+    assertEq(IERC20(towns).allowance(proxy, deployer), type(uint256).max);
   }
 
   function test_fuzz_reinitialize_revertIf_notFactory(address caller) public {
@@ -72,8 +73,8 @@ contract DelegationProxyTest is TestUtils {
 
     assertEq(DelegationProxy(proxy).factory(), deployer);
     assertEq(DelegationProxy(proxy).stakeToken(), token);
-    assertEq(ERC20Votes(token).delegates(proxy), delegatee);
-    assertEq(ERC20Votes(token).allowance(proxy, deployer), type(uint256).max);
+    assertEq(IVotes(token).delegates(proxy), delegatee);
+    assertEq(IERC20(token).allowance(proxy, deployer), type(uint256).max);
   }
 
   function test_fuzz_redelegate_revertIf_notFactory(address caller) public {
@@ -97,7 +98,7 @@ contract DelegationProxyTest is TestUtils {
     vm.prank(deployer);
     DelegationProxy(proxy).redelegate(newDelegatee);
 
-    assertEq(ERC20Votes(towns).delegates(proxy), newDelegatee);
+    assertEq(IVotes(towns).delegates(proxy), newDelegatee);
   }
 
   function test_upgradeBeacon() public {

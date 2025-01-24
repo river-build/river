@@ -15,10 +15,10 @@ import {RewardsDistributionStorage} from "./RewardsDistributionStorage.sol";
 // contracts
 import {Facet} from "@river-build/diamond/src/facets/Facet.sol";
 import {OwnableBase} from "@river-build/diamond/src/facets/ownable/OwnableBase.sol";
-import {UpgradeableBeaconBase} from "contracts/src/diamond/facets/beacon/UpgradeableBeacon.sol";
 import {Nonces} from "@river-build/diamond/src/utils/Nonces.sol";
 import {EIP712Base} from "@river-build/diamond/src/utils/cryptography/signature/EIP712Base.sol";
 import {MainnetDelegationBase} from "contracts/src/base/registry/facets/mainnet/MainnetDelegationBase.sol";
+import {UpgradeableBeaconBase} from "contracts/src/diamond/facets/beacon/UpgradeableBeacon.sol";
 import {DelegationProxy} from "./DelegationProxy.sol";
 import {RewardsDistributionBase} from "./RewardsDistributionBase.sol";
 
