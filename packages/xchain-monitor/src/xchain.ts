@@ -158,6 +158,12 @@ async function scanForPostResults(
     return summary
 }
 
+// scanBlockchainForXchainEvents looks at blocks [initialBlockNum, initialBlockNum + blocksToScan)
+// and returns all XChain requests found in that interval, along with all response information.
+// scanBlockchainForXchainEvents looks at config.transactionValidBlocks number of blocks ahead of
+// the request block for all responses, so this function actually needs the chain to be advanced
+// to initialBlockNum + blocksToScan + config.transactionValidBlocks - 1 in order for the method
+// to complete.
 export async function scanBlockchainForXchainEvents(
     initialBlockNum: BigInt,
     blocksToScan: number,
