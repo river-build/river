@@ -6,9 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-
 	"connectrpc.com/connect"
+	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/protobuf/proto"
 
 	. "github.com/river-build/river/core/node/base"
