@@ -3,23 +3,19 @@ import { LocalEpochSecret } from './localView'
 import { Message, PlainMessage } from '@bufbuild/protobuf'
 import { ExternalInfo } from './onChainView'
 import {
+    Client as MlsClient,
     ExportedTree as MlsExportedTree,
     MlsMessage,
-    Client as MlsClient,
 } from '@river-build/mls-rs-wasm'
 import {
     createGroupInfoAndExternalSnapshot,
     makeExternalJoin,
     makeInitializeGroup,
 } from '../tests/multi_ne/mls/utils'
-import { MLS_ALGORITHM } from './constants'
+import { MLS_ALGORITHM, MLS_ENCRYPTED_DATA_VERSION } from './constants'
 import { DerivedKeys, EpochEncryption } from './epochEncryption'
 import { DecryptedContent, EncryptedContent, toDecryptedContent } from '../encryptedContentTypes'
 
-const encoder = new TextEncoder()
-const encode = (s: string) => encoder.encode(s)
-const decoder = new TextDecoder()
-const decode = (bytes: Uint8Array) => decoder.decode(bytes)
 const crypto = new EpochEncryption()
 
 export class MlsMessages {
@@ -27,9 +23,7 @@ export class MlsMessages {
         epochSecret: LocalEpochSecret,
         event: Message,
     ): Promise<EncryptedData> {
-        const plaintext_ = event.toJsonString()
-        const plaintext = encode(plaintext_)
-
+        const plaintext = event.toBinary()
         const ciphertext = await crypto.seal(epochSecret.derivedKeys, plaintext)
 
         return new EncryptedData({
@@ -38,6 +32,7 @@ export class MlsMessages {
                 epoch: epochSecret.epoch,
                 ciphertext,
             },
+            version: MLS_ENCRYPTED_DATA_VERSION,
         })
     }
 
@@ -59,9 +54,8 @@ export class MlsMessages {
         kind: EncryptedContent['kind'],
         ciphertext: Uint8Array,
     ): Promise<DecryptedContent> {
-        const cleartext_ = await crypto.open(derivedKeys, ciphertext)
-        const cleartext = decode(cleartext_)
-        return toDecryptedContent(kind, cleartext)
+        const cleartext = await crypto.open(derivedKeys, ciphertext)
+        return toDecryptedContent(kind, MLS_ENCRYPTED_DATA_VERSION, cleartext)
     }
 
     public static async prepareExternalJoinMessage(

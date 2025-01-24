@@ -1,14 +1,15 @@
 import { OnChainView } from './onChainView'
-import { DLogger, dlog } from '@river-build/dlog'
+import { dlog, DLogger } from '@river-build/dlog'
 import { LocalEpochSecret, LocalView } from './localView'
 import { MlsLogger } from './logger'
-import { IValueAwaiter, awaiter } from './awaiter'
+import { awaiter, IValueAwaiter } from './awaiter'
 import { MlsEncryptedContentItem } from './types'
 import { toDecryptedContent } from '../encryptedContentTypes'
 import { IPersistenceStore } from '../persistenceStore'
 import { MlsMessages } from './messages'
 import { Stream } from '../stream'
 import { MlsQueueDelegate, StreamUpdate } from './mlsQueue'
+import {MLS_ENCRYPTED_DATA_VERSION} from "./constants";
 
 export type MlsStreamOpts = {
     log: MlsLogger
@@ -151,7 +152,10 @@ export class MlsStream implements MlsQueueDelegate {
 
         const clearText = await this.persistenceStore?.getCleartext(eventId)
         if (clearText !== undefined) {
-            this.stream.updateDecryptedContent(eventId, toDecryptedContent(kind, clearText))
+            this.stream.updateDecryptedContent(
+                eventId,
+                toDecryptedContent(kind, MLS_ENCRYPTED_DATA_VERSION, clearText),
+            )
             return
         }
 
