@@ -177,11 +177,11 @@ func (s *Service) sealEphemeralStream(
 
 	// Normalize stream locally
 	if _, err = s.storage.NormalizeEphemeralStream(ctx, streamId); err != nil {
-		if IsRiverErrorCode(err, Err_NOT_FOUND) {
-			// Something is missing in the stream, so we can't normalize it.
-			// Run the process to fetch missing data from replicas.
-			// TODO: Implement
-		}
+		// TODO: Implement
+		// if IsRiverErrorCode(err, Err_NOT_FOUND) {
+		// Something is missing in the stream, so we can't normalize it.
+		// Run the process to fetch missing data from replicas.
+		// }
 
 		return nil, err
 	}
