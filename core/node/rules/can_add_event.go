@@ -1774,7 +1774,7 @@ func (ru *aePinRules) validPin() (bool, error) {
 	// check if the hash is already pinned
 	for _, snappedPin := range existingPins {
 		if bytes.Equal(snappedPin.Pin.EventId, ru.pin.EventId) {
-			return false, RiverError(Err_DUPLICATE_EVENT, "message is already pinned")
+			return false, RiverError(Err_ALREADY_EXISTS, "message is already pinned")
 		}
 	}
 	return true, nil
@@ -1947,7 +1947,7 @@ func (ru *aeKeyFulfillmentRules) validKeyFulfillment() (bool, error) {
 			if hasCommon(solicitation.SessionIds, ru.fulfillment.SessionIds) {
 				return true, nil
 			}
-			return false, RiverError(Err_DUPLICATE_EVENT, "solicitation with common session ids not found")
+			return false, RiverError(Err_NOT_FOUND, "solicitation with common session ids not found")
 		}
 	}
 	return false, RiverError(Err_INVALID_ARGUMENT, "solicitation with matching device key not found")
