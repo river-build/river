@@ -13,6 +13,7 @@
         "snapshot": "make snapshot",
         "sync": "make update",
         "test": "yarn test:unit",
+        "turbo": "yarn top:turbo",
         "test:unit": "make test"
     },
     "dependencies": {

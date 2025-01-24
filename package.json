@@ -32,6 +32,7 @@
         "syncpack:check": "syncpack list-mismatches",
         "syncpack:fix": "syncpack fix-mismatches && syncpack format",
         "turbo": "TURBO_NO_UPDATE_NOTIFIER=1 TURBO_TELEMETRY_DISABLED=1 turbo",
+        "top:turbo": "turbo",
         "test": "turbo test",
         "test:build": "turbo test:build",
         "test:unit": "turbo test:unit -- --silent"
