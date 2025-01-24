@@ -14,8 +14,8 @@ import (
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/registries"
@@ -99,9 +99,9 @@ func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTe
 
 	baseCtx := ctx
 	for i := range p.numInstances {
-		log := dlog.FromCtx(baseCtx)
+		log := logging.FromCtx(baseCtx)
 		log = log.With("instance", i)
-		ctx = dlog.CtxWithLog(baseCtx, log)
+		ctx = logging.CtxWithLog(baseCtx, log)
 
 		ctc.require.NoError(btc.InitNodeRecord(ctx, i, "fakeurl"))
 
@@ -294,29 +294,25 @@ func (ctc *cacheTestContext) makeMiniblock(inst int, streamId StreamId, forceSna
 func (ctc *cacheTestContext) GetMbProposal(
 	ctx context.Context,
 	node common.Address,
-	streamId StreamId,
-	forceSnapshot bool,
-) (*MiniblockProposal, error) {
+	request *ProposeMiniblockRequest,
+) (*ProposeMiniblockResponse, error) {
 	inst := ctc.instancesByAddr[node]
 
-	stream, err := inst.cache.getStreamImpl(ctx, streamId, true)
+	stream, err := inst.cache.getStreamImpl(ctx, StreamId(request.StreamId), true)
 	if err != nil {
 		return nil, err
 	}
 
-	view, err := stream.getViewIfLocal(ctx)
+	view, err := stream.getView(ctx)
 	if err != nil {
 		return nil, err
-	}
-	if view == nil {
-		return nil, RiverError(Err_INTERNAL, "GetMbProposal: stream is not local")
 	}
 
-	proposal, err := view.ProposeNextMiniblock(ctx, inst.params.ChainConfig.Get(), forceSnapshot)
+	resp, err := view.ProposeNextMiniblock(ctx, inst.params.ChainConfig.Get(), request)
 	if err != nil {
 		return nil, err
 	}
-	return proposal, nil
+	return resp, nil
 }
 
 func (ctc *cacheTestContext) SaveMbCandidate(
@@ -403,4 +399,48 @@ func setOnChainStreamConfig(t *testing.T, ctx context.Context, btc *crypto.Block
 			crypto.ABIEncodeUint64(uint64(p.defaultMinEventsPerSnapshot)),
 		)
 	}
+}
+
+func (i *cacheTestInstance) makeAndSaveMbCandidate(
+	ctx context.Context,
+	stream SyncStream,
+) (*MiniblockInfo, error) {
+	j := &mbJob{
+		stream: stream.(*streamImpl),
+		params: i.params,
+	}
+	err := j.produceCandidate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return j.candidate, nil
+}
+
+func (i *cacheTestInstance) makeMbCandidate(
+	ctx context.Context,
+	stream SyncStream,
+) (*MiniblockInfo, error) {
+	j := &mbJob{
+		stream: stream.(*streamImpl),
+		params: i.params,
+	}
+	j.remoteNodes, _ = j.stream.GetRemotesAndIsLocal()
+	j.replicated = len(j.remoteNodes) > 0
+	err := j.makeCandidate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return j.candidate, nil
+}
+
+func (i *cacheTestInstance) makeMbCandidateForView(
+	ctx context.Context,
+	view *streamViewImpl,
+) (*MiniblockInfo, error) {
+	proposal := view.proposeNextMiniblock(ctx, i.params.ChainConfig.Get(), false)
+	mbCandidate, err := view.makeMiniblockCandidate(ctx, i.params, proposal)
+	if err != nil {
+		return nil, err
+	}
+	return mbCandidate, nil
 }

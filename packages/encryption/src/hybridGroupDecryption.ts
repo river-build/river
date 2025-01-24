@@ -1,10 +1,10 @@
 import { DecryptionAlgorithm, DecryptionError, IDecryptionParams } from './base'
 import { GroupEncryptionAlgorithmId, GroupEncryptionSession } from './olmLib'
-import { EncryptedData, HybridGroupSessionKey } from '@river-build/proto'
-import { bin_toHexString, dlog } from '@river-build/dlog'
+import { EncryptedData, EncryptedDataVersion, HybridGroupSessionKey } from '@river-build/proto'
+import { bin_toHexString, dlogError } from '@river-build/dlog'
 import { decryptAesGcm, importAesGsmKeyBytes } from './cryptoAesGcm'
 
-const log = dlog('csb:encryption:groupDecryption')
+const logError = dlogError('csb:encryption:groupDecryption')
 
 /**
  * Group decryption implementation
@@ -23,7 +23,7 @@ export class HybridGroupDecryption extends DecryptionAlgorithm {
      * decrypting, or rejects with an `algorithms.DecryptionError` if there is a
      * problem decrypting the event.
      */
-    public async decrypt(streamId: string, content: EncryptedData): Promise<string> {
+    public async decrypt(streamId: string, content: EncryptedData): Promise<Uint8Array | string> {
         if (
             !content.senderKey ||
             !content.sessionIdBytes ||
@@ -45,7 +45,15 @@ export class HybridGroupDecryption extends DecryptionAlgorithm {
 
         const key = await importAesGsmKeyBytes(session.key)
         const result = await decryptAesGcm(key, content.ciphertextBytes, content.ivBytes)
-        return new TextDecoder().decode(result) // TODO: what kind of string is actually expected here? TODO: convert to Uint8Array
+
+        switch (content.version) {
+            case EncryptedDataVersion.ENCRYPTED_DATA_VERSION_0:
+                return new TextDecoder().decode(result)
+            case EncryptedDataVersion.ENCRYPTED_DATA_VERSION_1:
+                return result
+            default:
+                throw new DecryptionError('GROUP_DECRYPTION_INVALID_VERSION', 'Unsupported version')
+        }
     }
 
     /**
@@ -56,7 +64,8 @@ export class HybridGroupDecryption extends DecryptionAlgorithm {
         try {
             await this.device.addHybridGroupSession(streamId, session.sessionId, session.sessionKey)
         } catch (e) {
-            log(`Error handling room key import: ${(<Error>e).message}`)
+            logError(`Error handling room key import: ${(<Error>e).message}`)
+            throw e
         }
     }
 
@@ -65,12 +74,12 @@ export class HybridGroupDecryption extends DecryptionAlgorithm {
         streamId: string,
         sessionId: string,
     ): Promise<GroupEncryptionSession | undefined> {
-        return this.device.exportHybridGroupSession(streamId, sessionId, this.algorithm)
+        return this.device.exportHybridGroupSession(streamId, sessionId)
     }
 
     /** */
     public exportGroupSessions(): Promise<GroupEncryptionSession[]> {
-        return this.device.exportHybridGroupSessions(this.algorithm)
+        return this.device.exportHybridGroupSessions()
     }
 
     /** */
