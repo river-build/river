@@ -128,19 +128,21 @@ async function scanForPostResults(
                     const sender = tx.from.toLowerCase() as Address
                     if (sender in roleResult) {
                         logger.error(
-                            'postEntitlementCheckResult called twice by the same sender',
+                            'postEntitlementCheckResult called twice by the same sender for the same transaction and role',
                             'from',
                             sender,
                             'nodeVoteStatus',
                             nodeVoteStatus,
                             'transactionId',
                             transactionId,
+                            'roleId',
+                            roleId,
                             'txHash',
                             tx.hash,
                             'blockNumber',
                             tx.blockNumber,
-                            'existingResult',
-                            roleResult[sender],
+                            'existingResultsForRole',
+                            roleResult,
                         )
                         continue
                     }
