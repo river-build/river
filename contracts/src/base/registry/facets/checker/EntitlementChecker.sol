@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IEntitlementChecker} from "./IEntitlementChecker.sol";
+import {IEntitlementGatedBase} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
 
 // libraries
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -15,7 +16,7 @@ import {Facet} from "@river-build/diamond/src/facets/Facet.sol";
 
 contract EntitlementChecker is IEntitlementChecker, Facet {
   using EnumerableSet for EnumerableSet.AddressSet;
-
+  using EnumerableSet for EnumerableSet.UintSet;
   // =============================================================
   //                           Initializer
   // =============================================================
@@ -170,15 +171,24 @@ contract EntitlementChecker is IEntitlementChecker, Facet {
 
     XChainLib.layout().requests[transactionId] = XChainLib.Request({
       caller: space,
-      value: msg.value
+      value: msg.value,
+      completed: false
     });
 
     address[] memory randomNodes = _getRandomNodes(5);
 
     XChainLib.Check storage check = XChainLib.layout().checks[transactionId];
 
+    check.requestIds.add(requestId);
+
     for (uint256 i; i < randomNodes.length; ++i) {
       check.nodes[requestId].add(randomNodes[i]);
+      check.votes[requestId].push(
+        IEntitlementGatedBase.NodeVote({
+          node: randomNodes[i],
+          vote: IEntitlementGatedBase.NodeVoteStatus.NOT_VOTED
+        })
+      );
     }
 
     emit EntitlementCheckRequestedV2(

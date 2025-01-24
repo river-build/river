@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IEntitlementChecker} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
-
+import {IEntitlementGatedBase} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
 // libraries
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
@@ -14,22 +14,18 @@ library XChainLib {
   bytes32 internal constant STORAGE_SLOT =
     0xf501c51c066c21fd640901535874a71171bb35113f6dc2832fce1b1f9da0cc00;
 
-  struct Votes {
-    uint256 passed;
-    uint256 failed;
-    uint256 total;
-  }
-
   struct Check {
     bytes32 txId;
+    EnumerableSet.UintSet requestIds;
     mapping(uint256 requestId => EnumerableSet.AddressSet) nodes;
-    mapping(uint256 requestId => Votes) votesCount;
+    mapping(uint256 requestId => IEntitlementGatedBase.NodeVote[]) votes;
     mapping(uint256 requestId => bool voteCompleted) voteCompleted;
   }
 
   struct Request {
     address caller;
     uint256 value;
+    bool completed;
   }
 
   struct Layout {

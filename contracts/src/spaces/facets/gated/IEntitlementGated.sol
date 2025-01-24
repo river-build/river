@@ -33,15 +33,13 @@ interface IEntitlementGatedBase {
   error EntitlementGated_NodeAlreadyVoted();
   error EntitlementGated_OnlyEntitlementChecker();
   error EntitlementGated_InvalidEntitlement();
+  error EntitlementGated_RequestIdNotFound();
 
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           EVENTS                           */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
   event EntitlementCheckResultPosted(
     bytes32 indexed transactionId,
-    NodeVoteStatus result
-  );
-
-  event EntitlementCheckResultPostedV2(
-    bytes32 indexed transactionId,
-    address indexed sender,
     NodeVoteStatus result
   );
 }

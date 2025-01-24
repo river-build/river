@@ -175,23 +175,13 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
       .layout();
     Transaction storage transaction = ds.transactions[transactionId];
 
-    if (transaction.isCompleted[requestId])
-      CustomRevert.revertWith(
-        EntitlementGated_TransactionCheckAlreadyRegistered.selector
-      );
-
     // if the entitlement checker has not been set, set it
     if (address(ds.entitlementChecker) == address(0)) {
       _setFallbackEntitlementChecker();
     }
 
-    if (!transaction.finalized) {
-      transaction.finalized = true;
-      transaction.entitlement = entitlement;
-      transaction.roleIds.push(requestId);
-    } else {
-      transaction.roleIds.push(requestId);
-    }
+    transaction.finalized = true;
+    transaction.entitlement = entitlement;
 
     ds.entitlementChecker.requestEntitlementCheckV2{value: msg.value}(
       walletAddress,
@@ -202,36 +192,22 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
 
   function _postEntitlementCheckResultV2(
     bytes32 transactionId,
-    uint256 roleId,
+    uint256,
     NodeVoteStatus result
   ) internal {
     EntitlementGatedStorage.Layout storage ds = EntitlementGatedStorage
       .layout();
     Transaction storage transaction = ds.transactions[transactionId];
 
-    // Combine checks to save gas
-    if (!transaction.finalized || transaction.isCompleted[roleId]) {
-      transaction.finalized
-        ? CustomRevert.revertWith(
-          EntitlementGated_TransactionCheckAlreadyCompleted.selector
-        )
-        : CustomRevert.revertWith(
-          EntitlementGated_TransactionNotRegistered.selector
-        );
+    if (!transaction.finalized) {
+      CustomRevert.revertWith(
+        EntitlementGated_TransactionNotRegistered.selector
+      );
     }
 
-    transaction.isCompleted[roleId] = true;
-
-    bool allRoleIdsCompleted = _checkAllRoleIdsCompleted(transactionId);
-
-    if (result == NodeVoteStatus.PASSED || allRoleIdsCompleted) {
-      _onEntitlementCheckResultPosted(transactionId, result);
-      emit EntitlementCheckResultPosted(transactionId, result);
-    }
-
-    if (allRoleIdsCompleted) {
-      _removeTransaction(transactionId);
-    }
+    emit EntitlementCheckResultPosted(transactionId, result);
+    _onEntitlementCheckResultPosted(transactionId, result);
+    _removeTransaction(transactionId);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/

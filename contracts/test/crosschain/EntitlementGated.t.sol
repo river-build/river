@@ -17,8 +17,6 @@ import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 
 import {Vm} from "forge-std/Test.sol";
 
-import {console} from "forge-std/console.sol";
-
 contract EntitlementGatedTest is
   EntitlementTestUtils,
   BaseSetup,
@@ -71,13 +69,15 @@ contract EntitlementGatedTest is
     assertEq(spaceAddress, address(gated));
     assertEq(resolverAddress, address(entitlementChecker));
 
+    IEntitlementGated _entitlementGated = IEntitlementGated(resolverAddress);
+
     for (uint256 i; i < 3; ++i) {
       vm.startPrank(selectedNodes[i]);
       if (i == 2) {
         vm.expectEmit(address(spaceAddress));
         emit EntitlementCheckResultPosted(transactionId, NodeVoteStatus.PASSED);
       }
-      IEntitlementGated(resolverAddress).postEntitlementCheckResult(
+      _entitlementGated.postEntitlementCheckResult(
         transactionId,
         roleId,
         NodeVoteStatus.PASSED
@@ -217,7 +217,7 @@ contract EntitlementGatedTest is
     gated.postEntitlementCheckResult(requestId, 0, NodeVoteStatus.PASSED);
   }
 
-  function test_postEntitlementCheckResult_multipleRoleIds() external {
+  function test_legacy_postEntitlementCheckResult_multipleRoleIds() external {
     uint256[] memory roleIds = new uint256[](2);
     roleIds[0] = 0;
     roleIds[1] = 1;
@@ -230,7 +230,7 @@ contract EntitlementGatedTest is
     );
 
     // get the nodes that were selected
-    (, , , address[] memory nodes) = _getRequestedEntitlementData(
+    (, , , address[] memory nodes) = _getLegacyEntitlementEventData(
       vm.getRecordedLogs()
     );
 
@@ -371,40 +371,6 @@ contract EntitlementGatedTest is
       }
 
       vm.stopPrank();
-    }
-  }
-
-  function _getEntitlementEventData(
-    Vm.Log[] memory requestLogs
-  )
-    internal
-    pure
-    returns (
-      address walletAddress,
-      address spaceAddress,
-      address resolverAddress,
-      bytes32 transactionId,
-      uint256 roleId,
-      address[] memory selectedNodes
-    )
-  {
-    for (uint256 i = 0; i < requestLogs.length; i++) {
-      if (
-        requestLogs[i].topics.length > 0 &&
-        requestLogs[i].topics[0] == CHECK_REQUESTED_V2
-      ) {
-        (
-          walletAddress,
-          spaceAddress,
-          resolverAddress,
-          transactionId,
-          roleId,
-          selectedNodes
-        ) = abi.decode(
-          requestLogs[i].data,
-          (address, address, address, bytes32, uint256, address[])
-        );
-      }
     }
   }
 }

@@ -9,6 +9,7 @@ import {IEntitlementCheckerBase} from "contracts/src/base/registry/facets/checke
 // libraries
 import {XChainLib} from "./XChainLib.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 
 // contracts
 import {EntitlementGated} from "contracts/src/spaces/facets/gated/EntitlementGated.sol";
@@ -16,6 +17,7 @@ import {Facet} from "@river-build/diamond/src/facets/Facet.sol";
 
 contract XChain is IEntitlementGated, IEntitlementCheckerBase, Facet {
   using EnumerableSet for EnumerableSet.AddressSet;
+  using EnumerableSet for EnumerableSet.UintSet;
 
   function __XChain_init() external onlyInitializing {
     _addInterface(type(IEntitlementGated).interfaceId);
@@ -33,50 +35,92 @@ contract XChain is IEntitlementGated, IEntitlementCheckerBase, Facet {
     uint256 requestId,
     NodeVoteStatus result
   ) external {
+    XChainLib.Request storage request = XChainLib.layout().requests[
+      transactionId
+    ];
+
+    if (request.completed) {
+      revert EntitlementGated_TransactionCheckAlreadyCompleted();
+    }
+
     XChainLib.Check storage check = XChainLib.layout().checks[transactionId];
 
+    if (!check.requestIds.contains(requestId)) {
+      CustomRevert.revertWith(EntitlementGated_RequestIdNotFound.selector);
+    }
+
     if (!check.nodes[requestId].contains(msg.sender)) {
-      revert("XChain: caller is not a voting node");
+      CustomRevert.revertWith(EntitlementGated_NodeNotFound.selector);
     }
 
     if (check.voteCompleted[requestId]) {
-      revert("XChain: vote already completed");
+      CustomRevert.revertWith(
+        EntitlementGated_TransactionCheckAlreadyCompleted.selector
+      );
     }
 
-    check.votesCount[requestId].total++;
+    bool found;
+    uint256 passed = 0;
+    uint256 failed = 0;
 
-    if (result == NodeVoteStatus.PASSED) {
-      check.votesCount[requestId].passed++;
-    } else {
-      check.votesCount[requestId].failed++;
+    uint256 transactionNodesLength = check.nodes[requestId].length();
+
+    for (uint256 i; i < transactionNodesLength; ++i) {
+      NodeVote storage currentVote = check.votes[requestId][i];
+
+      // Update vote if not yet voted
+      if (currentVote.node == msg.sender) {
+        if (currentVote.vote != NodeVoteStatus.NOT_VOTED) {
+          revert EntitlementGated_NodeAlreadyVoted();
+        }
+        currentVote.vote = result;
+        found = true;
+      }
+
+      unchecked {
+        if (currentVote.vote == NodeVoteStatus.PASSED) {
+          ++passed;
+        } else if (currentVote.vote == NodeVoteStatus.FAILED) {
+          ++failed;
+        }
+      }
     }
 
-    // wait for at least half of the nodes to vote
-    uint256 nodesLength = check.nodes[requestId].length();
-    if (check.votesCount[requestId].total <= nodesLength / 2) {
-      return;
+    if (!found) {
+      revert EntitlementGated_NodeNotFound();
     }
 
-    uint256 passed = check.votesCount[requestId].passed;
-    uint256 failed = check.votesCount[requestId].failed;
-
-    if (passed > failed || failed > passed) {
+    if (
+      passed > transactionNodesLength / 2 || failed > transactionNodesLength / 2
+    ) {
       check.voteCompleted[requestId] = true;
-    }
-
-    if (check.voteCompleted[requestId]) {
-      XChainLib.Request memory request = XChainLib.layout().requests[
-        transactionId
-      ];
-
       NodeVoteStatus finalStatusForRole = passed > failed
         ? NodeVoteStatus.PASSED
         : NodeVoteStatus.FAILED;
 
-      EntitlementGated(request.caller).postEntitlementCheckResultV2{
-        value: request.value
-      }(transactionId, requestId, finalStatusForRole);
+      bool allRoleIdsCompleted = checkAllRequestsCompleted(transactionId);
+
+      if (finalStatusForRole == NodeVoteStatus.PASSED || allRoleIdsCompleted) {
+        EntitlementGated(request.caller).postEntitlementCheckResultV2{
+          value: request.value
+        }(transactionId, 0, finalStatusForRole);
+        request.completed = true;
+      }
     }
+  }
+
+  function checkAllRequestsCompleted(
+    bytes32 transactionId
+  ) internal view returns (bool) {
+    XChainLib.Check storage check = XChainLib.layout().checks[transactionId];
+
+    uint256 requestIdsLength = check.requestIds.length();
+    for (uint256 i; i < requestIdsLength; ++i) {
+      if (!check.voteCompleted[check.requestIds.at(i)]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   function getRuleData(

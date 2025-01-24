@@ -712,6 +712,11 @@ export default [
   },
   {
     "type": "error",
+    "name": "EntitlementGated_InvalidEntitlement",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "EntitlementGated_NodeAlreadyVoted",
     "inputs": []
   },
@@ -723,6 +728,11 @@ export default [
   {
     "type": "error",
     "name": "EntitlementGated_OnlyEntitlementChecker",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "EntitlementGated_RequestIdNotFound",
     "inputs": []
   },
   {
