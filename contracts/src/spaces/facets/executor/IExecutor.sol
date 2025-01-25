@@ -23,6 +23,7 @@ interface IExecutorBase {
     bytes4 selector
   );
   error UnauthorizedRenounce(address account, uint64 groupId);
+  error UnauthorizedTarget(address target);
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           EVENTS                            */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/

@@ -40,7 +40,7 @@ contract DeployMetadata is FacetHelper, Deployer {
       IDiamond.FacetCutAction.Add
     );
     console.log("facetInitHelper: deployer", deployer);
-    return (facetCut, makeInitData(bytes32("RiverAirdrop"), ""));
+    return (facetCut, makeInitData(bytes32(""), ""));
   }
 
   function versionName() public pure override returns (string memory) {

@@ -3,12 +3,14 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IExecutor} from "./IExecutor.sol";
+import {IImplementationRegistry} from "contracts/src/factory/facets/registry/IImplementationRegistry.sol";
 
 // libraries
 import {ExecutorLib} from "./ExecutorLib.sol";
 
 // contracts
 import {TokenOwnableBase} from "@river-build/diamond/src/facets/ownable/token/TokenOwnableBase.sol";
+import {MembershipStorage} from "contracts/src/spaces/facets/membership/MembershipStorage.sol";
 
 /**
  * @title Executor
@@ -16,6 +18,25 @@ import {TokenOwnableBase} from "@river-build/diamond/src/facets/ownable/token/To
  * @dev This facet must be carefully controlled as delegate calls can be dangerous
  */
 contract Executor is TokenOwnableBase, IExecutor {
+  /**
+   * @notice Validates if the target address is allowed for delegate calls
+   * @dev Prevents delegate calls to critical system contracts
+   * @param target The contract address to check
+   */
+  modifier checkAllowed(address target) {
+    address factory = MembershipStorage.layout().spaceFactory;
+
+    // Check factory and fetch implementations in single block to optimize caching
+    if (
+      target == factory ||
+      target == _getImplementation(factory, bytes32("RiverAirdrop")) ||
+      target == _getImplementation(factory, bytes32("SpaceOperator"))
+    ) {
+      revert UnauthorizedTarget(target);
+    }
+    _;
+  }
+
   /// @inheritdoc IExecutor
   function grantAccess(
     uint64 groupId,
@@ -85,7 +106,7 @@ contract Executor is TokenOwnableBase, IExecutor {
     address target,
     bytes4 selector,
     uint64 groupId
-  ) external onlyOwner {
+  ) external checkAllowed(target) onlyOwner {
     ExecutorLib.setTargetFunctionGroup(target, selector, groupId);
   }
 
@@ -93,7 +114,7 @@ contract Executor is TokenOwnableBase, IExecutor {
   function setTargetFunctionDisabled(
     address target,
     bool disabled
-  ) external onlyOwner {
+  ) external checkAllowed(target) onlyOwner {
     ExecutorLib.setTargetFunctionDisabled(target, disabled);
   }
 
@@ -124,7 +145,7 @@ contract Executor is TokenOwnableBase, IExecutor {
   function execute(
     address target,
     bytes calldata data
-  ) external payable returns (uint32 nonce) {
+  ) external payable checkAllowed(target) returns (uint32 nonce) {
     return ExecutorLib.execute(target, data);
   }
 
@@ -135,5 +156,12 @@ contract Executor is TokenOwnableBase, IExecutor {
     bytes calldata data
   ) external returns (uint32 nonce) {
     return ExecutorLib.cancel(caller, target, data);
+  }
+
+  function _getImplementation(
+    address factory,
+    bytes32 id
+  ) internal view returns (address) {
+    return IImplementationRegistry(factory).getLatestImplementation(id);
   }
 }
