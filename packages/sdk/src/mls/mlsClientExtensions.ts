@@ -107,9 +107,15 @@ export class MlsClientExtensions {
         if (this.agent === undefined) {
             throw new Error('agent not initialized')
         }
-        const mlsStream = this.agent.streams.get(streamId)
-        if (mlsStream === undefined) {
+        const stream = this.client.streams.get(streamId)
+        if (stream === undefined) {
             throw new Error('stream not initialized')
+        }
+
+        const mlsStream = await this.agent.getMlsStream(stream)
+        // no local view, need to kickstart the queue
+        if (mlsStream.localView === undefined) {
+            this.agent.queue.enqueueStreamUpdate(streamId)
         }
         return this.agent.processor.encryptMessage(mlsStream, message)
     }

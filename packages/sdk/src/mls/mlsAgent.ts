@@ -134,7 +134,7 @@ export class MlsAgent implements MlsQueueDelegate {
     }
 
     // This potentially involves loading from storage
-    public async initStream(stream: Stream): Promise<MlsStream> {
+    private async initMlsStream(stream: Stream): Promise<MlsStream> {
         this.log.debug?.('agent: initStream', stream.streamId)
 
         if (this.streams.has(stream.streamId)) {
@@ -145,6 +145,14 @@ export class MlsAgent implements MlsQueueDelegate {
         this.streams.set(stream.streamId, mlsStream)
 
         return mlsStream
+    }
+
+    public async getMlsStream(stream: Stream): Promise<MlsStream> {
+        const mlsStream = this.streams.get(stream.streamId)
+        if (mlsStream !== undefined) {
+            return mlsStream
+        }
+        return this.initMlsStream(stream)
     }
 
     public async handleStreamUpdate(streamUpdate: StreamUpdate): Promise<void> {
@@ -164,11 +172,7 @@ export class MlsAgent implements MlsQueueDelegate {
 
         const mlsEnabled = encryptionAlgorithm === MLS_ALGORITHM || this.mlsAlwaysEnabled
 
-        let mlsStream = this.streams.get(streamId)
-        if (mlsStream === undefined) {
-            // need to initialize Mls stream
-            mlsStream = await this.initStream(stream)
-        }
+        const mlsStream = await this.getMlsStream(stream)
 
         this.log.debug?.('agent: mlsEnabled', streamId, mlsEnabled)
 
