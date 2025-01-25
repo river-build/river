@@ -74,7 +74,8 @@ export class MlsProcessor {
     public async initializeOrJoinGroup(mlsStream: MlsStream): Promise<void> {
         switch (mlsStream.localView?.status) {
             case 'corrupted':
-                this.log?.warn?.('corrupted mls stream', { streamId: mlsStream.streamId })
+                this.log?.error?.('corrupted mls stream', { streamId: mlsStream.streamId })
+                throw new Error('corrupted mls stream')
                 return
             case 'active':
                 return
