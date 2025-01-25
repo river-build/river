@@ -11,6 +11,13 @@ import { beforeEach, describe } from 'vitest'
 
 const log = dlog('test:mls:gdms')
 
+const ALICE = 0
+const BOB = 1
+const CHARLIE = 2
+const DAVID = 3
+const EVE = 4
+const FRANK = 5
+
 const clients: Client[] = []
 const messages: string[] = []
 const nicks = [
@@ -66,9 +73,9 @@ describe('gdmsMlsTests', () => {
         let charlie!: Client
 
         beforeEach(async () => {
-            alice = await makeInitAndStartClient('alice')
-            bob = await makeInitAndStartClient('bob')
-            charlie = await makeInitAndStartClient('charlie')
+            alice = await makeInitAndStartClient(nicks[ALICE])
+            bob = await makeInitAndStartClient(nicks[BOB])
+            charlie = await makeInitAndStartClient(nicks[CHARLIE])
             const { streamId: gdmStreamId } = await alice.createGDMChannel([
                 bob.userId,
                 charlie.userId,
@@ -149,9 +156,9 @@ describe('gdmsMlsTests', () => {
             let frank!: Client
 
             beforeEach(async () => {
-                david = await makeInitAndStartClient('david')
-                eve = await makeInitAndStartClient('eve')
-                frank = await makeInitAndStartClient('frank')
+                david = await makeInitAndStartClient(nicks[DAVID])
+                eve = await makeInitAndStartClient(nicks[EVE])
+                frank = await makeInitAndStartClient(nicks[FRANK])
 
                 await Promise.all(
                     [david, eve, frank].map(async (c) => {

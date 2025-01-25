@@ -9,7 +9,7 @@ import { IPersistenceStore } from '../persistenceStore'
 import { MlsMessages } from './messages'
 import { Stream } from '../stream'
 import { MlsQueueDelegate, StreamUpdate } from './mlsQueue'
-import {MLS_ENCRYPTED_DATA_VERSION} from "./constants";
+import { MLS_ENCRYPTED_DATA_VERSION } from './constants'
 
 export type MlsStreamOpts = {
     log: MlsLogger
