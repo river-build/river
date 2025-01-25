@@ -122,7 +122,6 @@ func TestByteSliceType(t *testing.T) {
 
 	log.Infow("byte slice", "byte_slice", b)
 	assert.Contains(buf.String(), "0102030405060708090a")
-
 }
 
 func TestCommonAddress(t *testing.T) {

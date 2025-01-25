@@ -58,14 +58,6 @@ type jsonEncoder struct {
 	reflectEnc zapcore.ReflectedEncoder
 }
 
-func defaultReflectedEncoder(w io.Writer) zapcore.ReflectedEncoder {
-	enc := json.NewEncoder(w)
-	// For consistency with our custom JSON encoder.
-	enc.SetEscapeHTML(false)
-	return enc
-}
-
-
 // NewJSONEncoder creates a fast, low-allocation JSON encoder. The encoder
 // appropriately escapes all field keys and values.
 //
@@ -80,6 +72,13 @@ func defaultReflectedEncoder(w io.Writer) zapcore.ReflectedEncoder {
 // keys.
 func NewJSONEncoder(cfg zapcore.EncoderConfig) zapcore.Encoder {
 	return newJSONEncoder(cfg, false)
+}
+
+func defaultReflectedEncoder(w io.Writer) zapcore.ReflectedEncoder {
+	enc := json.NewEncoder(w)
+	// For consistency with our custom JSON encoder.
+	enc.SetEscapeHTML(false)
+	return enc
 }
 
 func newJSONEncoder(cfg zapcore.EncoderConfig, spaced bool) *jsonEncoder {
