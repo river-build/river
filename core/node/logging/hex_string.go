@@ -42,7 +42,8 @@ func IsHexString(s string) (bool, bool) {
 }
 
 const (
-	shortenHexBytes        = 20
+	// Minimum bytes that are needed to fully render hashes
+	shortenHexBytes        = 32
 	shortenHexChars        = shortenHexBytes * 2
 	shortenHexCharsPartLen = shortenHexChars/2 - 2
 )

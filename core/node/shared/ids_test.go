@@ -86,7 +86,7 @@ func TestLogging(t *testing.T) {
 	require.NoError(err)
 
 	log.Infow("test", "streamId", streamId)
-	require.Contains(buf.String(), "102233000000000000..000000000000000000")
+	require.Contains(buf.String(), "1022330000000000000000000000000000000000000000000000000000000000")
 }
 
 func TestErrorFormat(t *testing.T) {

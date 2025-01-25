@@ -393,16 +393,15 @@ func (e *RiverErrorImpl) LogLevel(l *zap.SugaredLogger, level zapcore.Level) *Ri
 }
 
 func (e *RiverErrorImpl) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	var err error
+	enc.AddString("message", e.GetMessage())
+
+	enc.AddString("kind", e.Code.String())
+
 	e.ForEachTag(func(name string, value any) bool {
 		zap.Any(name, value).AddTo(enc)
 		return true
 	})
-	if err != nil {
-		return err
-	}
 	
-	enc.AddString("message", e.GetMessage())
 	return nil
 }
 
