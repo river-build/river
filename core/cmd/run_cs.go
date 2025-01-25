@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/common"
+
 	xc "github.com/river-build/river/core/xchain/client_simulator"
 	"github.com/river-build/river/core/xchain/util"
 
@@ -90,7 +91,7 @@ func init() {
 	cmd := &cobra.Command{
 		Use:   "run-cs <mock-gated-contract>",
 		Short: "Runs the client simulator",
-		Args: cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			entitlementGatedAddress := common.HexToAddress(args[1])
 			return runClientSimulator(entitlementGatedAddress)
