@@ -344,7 +344,7 @@ func (enc *jsonEncoder) AppendUintptr(v uintptr)        { enc.AppendUint64(uint6
 
 func (enc *jsonEncoder) Clone() zapcore.Encoder {
 	clone := enc.clone()
-	clone.buf.Write(enc.buf.Bytes())
+	clone.buf.Write(enc.buf.Bytes()) // nolint
 	return clone
 }
 
@@ -414,7 +414,7 @@ func (enc *jsonEncoder) EncodeEntry(ent zapcore.Entry, fields []zapcore.Field) (
 	}
 	if enc.buf.Len() > 0 {
 		final.addElementSeparator()
-		final.buf.Write(enc.buf.Bytes())
+		final.buf.Write(enc.buf.Bytes()) // nolint
 	}
 	addFields(final, fields)
 	final.closeOpenNamespaces()
