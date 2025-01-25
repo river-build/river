@@ -5,6 +5,7 @@ build({
     entryPoints: {
         start: './src/start.ts',
         demo: './src/demo.ts',
+        foo: './src/foo.ts',
         // NOTE: For some reason esbuild is not picking it up
         mls_rs_wasm_bg: '@river-build/mls-rs-wasm-node/mls_rs_wasm_bg.wasm',
     },

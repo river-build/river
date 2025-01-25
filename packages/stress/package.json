@@ -9,6 +9,7 @@
         "demo": "node --enable-source-maps ./dist/demo.cjs",
         "lint": "eslint . --ext .ts",
         "start": "node --enable-source-maps ./dist/start.cjs",
+        "foo": "node --enable-source-maps ./dist/foo.cjs",
         "test:ci:with-entitlements": "vitest run --config ./vitest.config.entitlements.ts --silent",
         "typecheck": "tsc --noEmit",
         "watch": "tsc --watch"
