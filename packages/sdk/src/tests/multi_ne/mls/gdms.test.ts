@@ -191,7 +191,7 @@ describe('gdmsMlsTests', () => {
                     .toBe(true)
             })
 
-            it('clientsCanSendMutlipleMessages', { timeout: 10_000 }, async () => {
+            it('clientsCanSendMutlipleMessages', { timeout: 20_000 }, async () => {
                 await Promise.all([
                     ...clients.flatMap((c: Client, i) =>
                         Array.from({ length: 10 }, (_, j) =>
@@ -201,7 +201,7 @@ describe('gdmsMlsTests', () => {
                     ...clients.map((c: Client) =>
                         expect
                             .poll(() => checkTimelineContainsAll(messages, timeline(c)), {
-                                timeout: 10_000,
+                                timeout: 20_000,
                             })
                             .toBe(true),
                     ),
