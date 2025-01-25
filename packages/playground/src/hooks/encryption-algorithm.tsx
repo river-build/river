@@ -1,28 +1,27 @@
 'use client'
 
-import { useCallback, useEffect, useState } from "react";
-import { useSyncAgent } from "@river-build/react-sdk";
-
-
+import { useCallback, useEffect, useState } from 'react'
+import { useSyncAgent } from '@river-build/react-sdk'
 
 export const useEncryptionAlgorithm = (streamId?: string) => {
     const { riverConnection } = useSyncAgent()
     const [encryption, setEncryption] = useState<string | undefined>(undefined)
 
-    const setEncryptionAlgorithm = useCallback((algorithm?: string) => {
-        if (!streamId) {
-            return
-        }
-        void riverConnection
-            .callWithStream(streamId, async (client, stream) => {
+    const setEncryptionAlgorithm = useCallback(
+        (algorithm?: string) => {
+            if (!streamId) {
+                return
+            }
+            void riverConnection.callWithStream(streamId, async (client, stream) => {
                 try {
                     await client.setStreamEncryptionAlgorithm(streamId, algorithm)
                 } catch (error) {
                     console.error(error)
                 }
             })
-    }, [streamId, riverConnection])
-
+        },
+        [streamId, riverConnection],
+    )
 
     useEffect(() => {
         let isMounted = true
@@ -58,5 +57,3 @@ export const useEncryptionAlgorithm = (streamId?: string) => {
 
     return { encryption, setEncryptionAlgorithm }
 }
-
-

@@ -11,9 +11,7 @@ export const Encryption = ({ streamId }: EncryptionProps) => {
     const { encryption, setEncryptionAlgorithm } = useEncryptionAlgorithm(streamId)
     return (
         <div>
-            <Label>
-                {encryption === MLS_ALGORITHM ? 'MLS ENABLED' : 'MLS DISABLED'}
-            </Label>
+            <Label>{encryption === MLS_ALGORITHM ? 'MLS ENABLED' : 'MLS DISABLED'}</Label>
             <Button onClick={() => setEncryptionAlgorithm(MLS_ALGORITHM)}>ENABLE MLS</Button>
         </div>
     )
