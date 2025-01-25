@@ -32,6 +32,7 @@ import {
     MiniblockHeader,
     GetStreamResponse,
     CreateStreamResponse,
+    ChannelProperties,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -97,7 +98,6 @@ import { IStreamStateView, StreamStateView } from './streamStateView'
 import {
     make_UserMetadataPayload_Inception,
     make_ChannelPayload_Inception,
-    make_ChannelProperties,
     make_ChannelPayload_Message,
     make_MemberPayload_Membership2,
     make_SpacePayload_Inception,
@@ -221,7 +221,7 @@ export class Client
         highPriorityStreamIds?: string[],
         unpackEnvelopeOpts?: UnpackEnvelopeOpts,
         defaultGroupEncryptionAlgorithm?: GroupEncryptionAlgorithmId,
-        userNickname?: string,
+        logId?: string,
     ) {
         super()
         if (logNamespaceFilter) {
@@ -242,10 +242,10 @@ export class Client
         this.unpackEnvelopeOpts = unpackEnvelopeOpts
         this.userId = userIdFromAddress(signerContext.creatorAddress)
         this.defaultGroupEncryptionAlgorithm =
-            defaultGroupEncryptionAlgorithm ?? GroupEncryptionAlgorithmId.GroupEncryption
+            defaultGroupEncryptionAlgorithm ?? GroupEncryptionAlgorithmId.HybridGroupEncryption
 
         const shortId =
-            userNickname ??
+            logId ??
             shortenHexString(this.userId.startsWith('0x') ? this.userId.slice(2) : this.userId)
 
         this.logCall = dlog('csb:cl:call').extend(shortId)
@@ -955,10 +955,10 @@ export class Client
         assert(isGDMChannelStreamId(streamId), 'streamId must be a valid GDM stream id')
         check(isDefined(this.cryptoBackend))
 
-        const channelProps = make_ChannelProperties(channelName, channelTopic).toJsonString()
+        const channelProps = new ChannelProperties({ name: channelName, topic: channelTopic })
         const encryptedData = await this.cryptoBackend.encryptGroupEvent(
             streamId,
-            channelProps,
+            channelProps.toBinary(),
             this.defaultGroupEncryptionAlgorithm,
         )
 
@@ -1140,7 +1140,7 @@ export class Client
         check(isDefined(this.cryptoBackend))
         const encryptedData = await this.cryptoBackend.encryptGroupEvent(
             streamId,
-            displayName,
+            new TextEncoder().encode(displayName),
             this.defaultGroupEncryptionAlgorithm,
         )
         await this.makeEventAndAddToStream(
@@ -1157,7 +1157,7 @@ export class Client
         stream.view.getMemberMetadata().usernames.setLocalUsername(this.userId, username)
         const encryptedData = await this.cryptoBackend.encryptGroupEvent(
             streamId,
-            username,
+            new TextEncoder().encode(username),
             this.defaultGroupEncryptionAlgorithm,
         )
         encryptedData.checksum = usernameChecksum(username, streamId)
@@ -1614,7 +1614,7 @@ export class Client
         }
 
         const tags = opts?.disableTags === true ? undefined : makeTags(payload, stream.view)
-        const cleartext = payload.toJsonString()
+        const cleartext = payload.toBinary()
 
         let message: EncryptedData
         const encryptionAlgorithm = stream.view.membershipContent.encryptionAlgorithm
@@ -2333,7 +2333,7 @@ export class Client
         options: {
             method?: string
             localId?: string
-            cleartext?: string
+            cleartext?: Uint8Array
             optional?: boolean
             tags?: PlainMessage<Tags>
         } = {},
@@ -2375,7 +2375,7 @@ export class Client
         prevMiniblockHash: Uint8Array,
         optional?: boolean,
         localId?: string,
-        cleartext?: string,
+        cleartext?: Uint8Array,
         tags?: PlainMessage<Tags>,
         retryCount?: number,
     ): Promise<{ prevMiniblockHash: Uint8Array; eventId: string; error?: AddEventResponse_Error }> {
@@ -2572,7 +2572,7 @@ export class Client
         check(isDefined(stream), 'stream not found')
         check(isEncryptedContentKind(kind), `invalid kind ${kind}`)
         const cleartext = await this.cleartextForGroupEvent(streamId, eventId, encryptedData)
-        const decryptedContent = toDecryptedContent(kind, cleartext)
+        const decryptedContent = toDecryptedContent(kind, encryptedData.version, cleartext)
         stream.updateDecryptedContent(eventId, decryptedContent)
     }
 
@@ -2580,7 +2580,7 @@ export class Client
         streamId: string,
         eventId: string,
         encryptedData: EncryptedData,
-    ): Promise<string> {
+    ): Promise<Uint8Array | string> {
         const cached = await this.persistenceStore.getCleartext(eventId)
         if (cached) {
             this.logDebug('Cache hit for cleartext', eventId)
@@ -2665,8 +2665,8 @@ export class Client
         if (!this.cryptoBackend) {
             throw new Error('crypto backend not initialized')
         }
-        const cleartext = event.toJsonString()
-        return this.cryptoBackend.encryptGroupEvent(streamId, cleartext, algorithm)
+
+        return this.cryptoBackend.encryptGroupEvent(streamId, event.toBinary(), algorithm)
     }
 
     async encryptWithDeviceKeys(
