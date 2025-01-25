@@ -40,7 +40,10 @@ describe('channelMlsTests', () => {
     let spaceId: string
     let channelId: string
 
-    const send = (client: Client, message: string) => client.sendMessage(channelId, message)
+    const send = (client: Client, message: string) => {
+        messages.push(message)
+        return client.sendMessage(channelId, message)
+    }
     const timeline = (client: Client) => client.streams.get(channelId)?.view.timeline || []
 
     const clientStatus = (client: Client) =>
@@ -63,13 +66,10 @@ describe('channelMlsTests', () => {
         return true
     }
 
-    const sawMessage = (client: Client, messages: string[]) =>
+    const saw = (client: Client, messages: string[]) =>
         checkTimelineContainsAll(messages, timeline(client))
 
-    const sawAll = (client: Client) => sawMessage(client, messages)
-
-    const poll = (fn: () => boolean, opts = { timeout: 10_000 }) =>
-        expect.poll(fn, opts).toBeTruthy()
+    const sawAll = (client: Client) => saw(client, messages)
 
     const everyoneActive = (opts = { timeout: 10_000 }) => poll(() => everyone(isActive), opts)
 
@@ -78,16 +78,15 @@ describe('channelMlsTests', () => {
 
     const everyoneSawAll = (opts = { timeout: 10_000 }) => poll(() => everyone(sawAll), opts)
 
-    const inviteToStream = async (client: Client, streamId: string) => {
-        await alice.inviteUser(streamId, client.userId)
+    const joinStream = async (client: Client, streamId: string) => {
         await client.joinStream(streamId)
         const stream = await client.waitForStream(streamId)
         await stream.waitForMembership(MembershipOp.SO_JOIN)
     }
 
-    const invite = async (client: Client) => {
-        await inviteToStream(client, spaceId)
-        await inviteToStream(client, channelId)
+    const join = async (client: Client) => {
+        await joinStream(client, spaceId)
+        await joinStream(client, channelId)
     }
 
     beforeEach(async () => {
@@ -131,7 +130,7 @@ describe('channelMlsTests', () => {
 
         beforeEach(async () => {
             bob = await makeInitAndStartClient('bob')
-            await invite(bob)
+            await join(bob)
         })
 
         const timeout = 10_000
@@ -145,7 +144,7 @@ describe('channelMlsTests', () => {
         })
 
         it('bob saw the message', { timeout }, async () => {
-            await poll(() => sawMessage(bob, ['hello bob']), { timeout })
+            await poll(() => saw(bob, ['hello bob']), { timeout })
         })
     })
 
@@ -154,7 +153,7 @@ describe('channelMlsTests', () => {
 
         beforeEach(async () => {
             const newcomers = await Promise.all(nicknames.map(makeInitAndStartClient))
-            await Promise.all(newcomers.map(invite))
+            await Promise.all(newcomers.map(join))
         }, 10_000)
 
         beforeEach(async () => {

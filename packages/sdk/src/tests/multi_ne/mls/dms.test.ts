@@ -68,7 +68,10 @@ describe('dmsMlsTests', () => {
         ])
     })
 
-    const send = (client: Client, message: string) => client.sendMessage(streamId, message)
+    const send = (client: Client, message: string) => {
+        messages.push(message)
+        return client.sendMessage(streamId, message)
+    }
     const timeline = (client: Client) => client.streams.get(streamId)?.view.timeline || []
 
     it('clientsCanSendMessage', { timeout: 15_000 }, async () => {
