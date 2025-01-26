@@ -2200,13 +2200,7 @@ func (s *PostgresStreamStore) normalizeEphemeralStreamTx(
 	streamId StreamId,
 ) (common.Hash, error) {
 	if _, err := s.lockEphemeralStream(ctx, tx, streamId, true); err != nil {
-		// Ignore a case when an ephemeral stream does not exist. A new record will be inserted.
-		// There might be a situation when a request to create an ephemeral stream failed,
-		// but the rest of ephemeral miniblocks were processed.
-		// In this case, the stream does not exist in the table so a new record must be inserted.
-		if !IsRiverErrorCode(err, Err_NOT_FOUND) {
-			return common.Hash{}, err
-		}
+		return common.Hash{}, err
 	}
 
 	// Read the genesis miniblock for the given streeam
