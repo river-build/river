@@ -11,6 +11,7 @@ import { MlsStream } from './mlsStream'
 import { IPersistenceStore } from '../persistenceStore'
 import { MlsLogger } from './logger'
 import { MlsEncryptedContentItem } from './types'
+import { LocalViewDTO } from './localViewStorage'
 
 const defaultLogger = dlog('csb:mls:ext')
 
@@ -153,5 +154,10 @@ export class MlsProcessor {
 
         // TODO: Figure how to get miniblockBefore
         return new LocalView(prepared.group, { eventId, miniblockBefore: 0n })
+    }
+
+    public async loadLocalView(dto: LocalViewDTO): Promise<LocalView> {
+        const group = await this.mlsClient.loadGroup(dto.groupId)
+        return new LocalView(group, dto.pendingInfo, dto.rejectedEpoch)
     }
 }

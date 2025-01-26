@@ -9,6 +9,8 @@ import { Client } from '../client'
 import { MLS_ALGORITHM } from './constants'
 import { EncryptedContent } from '../encryptedContentTypes'
 import { Stream } from '../stream'
+import { DexieLocalViewStorage } from './localViewStorage'
+import { IPersistenceStore } from '../persistenceStore'
 
 const defaultLogger = dlog('csb:mls:agent')
 
@@ -30,13 +32,14 @@ const defaultMlsAgentOpts = {
 export class MlsAgent implements MlsQueueDelegate {
     private readonly client: Client
     // private readonly mlsClient: MlsClient
-    // private readonly persistenceStore?: IPersistenceStore
+    private readonly persistenceStore?: IPersistenceStore
     private readonly encryptionEmitter?: TypedEmitter<StreamEncryptionEvents>
     private readonly stateEmitter?: TypedEmitter<StreamStateEvents>
 
     public readonly streams: Map<string, MlsStream> = new Map()
     public readonly processor: MlsProcessor
     public readonly queue: MlsQueue
+    public readonly localViewStorage: DexieLocalViewStorage
 
     private log: MlsLogger
     private started: boolean = false
@@ -47,18 +50,20 @@ export class MlsAgent implements MlsQueueDelegate {
         // mlsClient: MlsClient,
         processor: MlsProcessor,
         queue: MlsQueue,
-        // persistenceStore: IPersistenceStore,
+        localViewStorage: DexieLocalViewStorage,
+        persistenceStore?: IPersistenceStore,
         encryptionEmitter?: TypedEmitter<StreamEncryptionEvents>,
         stateEmitter?: TypedEmitter<StreamStateEvents>,
         opts: MlsAgentOpts = defaultMlsAgentOpts,
     ) {
         this.client = client
         // this.mlsClient = mlsClient
-        // this.persistenceStore = persistenceStore
+        this.persistenceStore = persistenceStore
         this.encryptionEmitter = encryptionEmitter
         this.stateEmitter = stateEmitter
         this.processor = processor
         this.queue = queue
+        this.localViewStorage = localViewStorage
         this.log = opts.log
         this.mlsAlwaysEnabled = opts.mlsAlwaysEnabled
     }
@@ -134,14 +139,20 @@ export class MlsAgent implements MlsQueueDelegate {
     }
 
     // This potentially involves loading from storage
-    private async initMlsStream(stream: Stream): Promise<MlsStream> {
+    public async initMlsStream(stream: Stream): Promise<MlsStream> {
         this.log.debug?.('agent: initStream', stream.streamId)
 
-        if (this.streams.has(stream.streamId)) {
-            throw new Error('stream already initialized')
+        let mlsStream = this.streams.get(stream.streamId)
+
+        if (mlsStream !== undefined) {
+            this.log.warn?.('agent: stream already initialized', stream.streamId)
+            return mlsStream
         }
 
-        const mlsStream = new MlsStream(stream.streamId, stream)
+        // fetch localview from storage
+        const localView = await this.localViewStorage.getLocalView(stream.streamId, this.processor)
+
+        mlsStream = new MlsStream(stream.streamId, stream, this.persistenceStore, localView)
         this.streams.set(stream.streamId, mlsStream)
 
         return mlsStream
@@ -216,6 +227,12 @@ export class MlsAgent implements MlsQueueDelegate {
                 }
             }
             await this.processor.announceEpochSecrets(mlsStream)
+
+            // Persisting the group to storage
+            if (mlsStream.localView !== undefined) {
+                await this.localViewStorage.saveLocalView(mlsStream.streamId, mlsStream.localView)
+                await mlsStream.localView.group.writeToStorage()
+            }
         }
     }
 }

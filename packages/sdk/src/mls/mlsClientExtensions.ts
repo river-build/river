@@ -8,8 +8,12 @@ import { MlsProcessor, MlsProcessorOpts } from './mlsProcessor'
 import { IPersistenceStore } from '../persistenceStore'
 import { fromSingle, MlsLogger } from './logger'
 import { dlog, DLogger } from '@river-build/dlog'
+import { Stream } from '../stream'
+import { DexieGroupStateStorage } from './groupStateStorage'
+import { genId } from '../id'
+import { DexieLocalViewStorage } from './localViewStorage'
 
-const mlsClientOptions: MlsClientOptions = {
+const defaultMlsClientOpts: MlsClientOptions = {
     withAllowExternalCommit: true,
     withRatchetTreeExtension: false,
 }
@@ -19,6 +23,7 @@ export type MlsClientExtensionsOpts = {
     mlsAlwaysEnabled?: boolean
     delayMs?: number
     log: DLogger
+    deviceId?: string
 }
 
 function makeMlsProcessorOpts(log: DLogger): MlsProcessorOpts {
@@ -47,41 +52,53 @@ function makeMlsQueueOpts(log: DLogger, delayMs: number): MlsQueueOpts {
 const defaultLogger = dlog('csb:mls:client')
 
 export class MlsClientExtensions {
-    private client: Client
-    private persistenceStore?: IPersistenceStore
+    private readonly client: Client
+    private readonly persistenceStore?: IPersistenceStore
     public agent?: MlsAgent
     private mlsClient?: MlsClient
     private opts: MlsClientExtensionsOpts = { log: defaultLogger }
+    private readonly mlsClientOptions: MlsClientOptions
     private log: MlsLogger
+    public storage: DexieGroupStateStorage
+    public localViewStorage: DexieLocalViewStorage
+    private readonly deviceKey: Uint8Array
 
     constructor(
         client: Client,
         persistenceStore?: IPersistenceStore,
-        mlsClientOptions?: MlsClientExtensionsOpts,
+        mlsClientExtensionsOpts?: MlsClientExtensionsOpts,
     ) {
         this.client = client
         this.persistenceStore = persistenceStore
-        if (mlsClientOptions !== undefined) {
-            this.opts = mlsClientOptions
+        if (mlsClientExtensionsOpts !== undefined) {
+            this.opts = mlsClientExtensionsOpts
         }
         this.log = fromSingle(this.opts.log)
+
+        if (this.opts.deviceId === undefined) {
+            this.opts.deviceId = genId(5)
+        }
+        this.log.debug?.('device id', this.opts.deviceId)
+        this.deviceKey = new TextEncoder().encode(this.opts.deviceId)
+        // use in memory group storage by default
+        this.storage = new DexieGroupStateStorage(this.deviceKey)
+        this.localViewStorage = new DexieLocalViewStorage(this.deviceKey)
+
+        this.mlsClientOptions = { ...defaultMlsClientOpts, storage: this.storage }
     }
 
     public start(): void {
         this.agent?.start()
         this.agent?.queue.start()
-        // nop
     }
 
     public async stop(): Promise<void> {
         await this.agent?.queue.stop()
         this.agent?.stop()
-        // nop
     }
 
-    public async initialize(deviceKey: Uint8Array): Promise<void> {
-        // nop
-        this.mlsClient = await MlsClient.create(deviceKey, mlsClientOptions)
+    public async initialize(): Promise<void> {
+        this.mlsClient = await MlsClient.create(this.deviceKey, this.mlsClientOptions)
         const queue = new MlsQueue(
             undefined,
             makeMlsQueueOpts(this.opts.log, this.opts.delayMs ?? 15),
@@ -96,11 +113,21 @@ export class MlsClientExtensions {
             this.client,
             processor,
             queue,
+            this.localViewStorage,
+            this.persistenceStore,
             this.client,
             this.client,
             makeMlsAgentOpts(this.opts.log, this.opts.mlsAlwaysEnabled ?? false),
         )
         this.agent.queue.delegate = this.agent
+    }
+
+    public async initMlsStream(stream: Stream): Promise<void> {
+        if (this.agent === undefined) {
+            throw new Error('agent not initialized')
+        }
+
+        await this.agent?.initMlsStream(stream)
     }
 
     public async encryptMessage(streamId: string, message: Message): Promise<EncryptedData> {

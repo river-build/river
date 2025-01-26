@@ -1430,6 +1430,7 @@ export class Client
         } finally {
             this.initStreamRequests.delete(streamIdStr)
         }
+        await this.mlsExtensions?.initMlsStream(stream)
         return stream
     }
 
@@ -2490,16 +2491,12 @@ export class Client
             return
         }
 
-        // Create and inject all the dependencies
-        // generate random device key
-        const deviceKey = randomBytes(32)
-
         this.mlsExtensions = new MlsClientExtensions(
             this,
             this.persistenceStore,
             this.mlsClientExtensionsOpts,
         )
-        await this.mlsExtensions.initialize(deviceKey)
+        await this.mlsExtensions.initialize()
     }
 
     /**

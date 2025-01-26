@@ -35,11 +35,11 @@ export type LocalEpochSecret = {
 export type LocalViewStatus = 'pending' | 'active' | 'rejected' | 'corrupted'
 
 export class LocalView {
-    private group: MlsGroup
-    private pendingInfo?: PendingInfo
+    public group: MlsGroup
+    public pendingInfo?: PendingInfo
     public readonly epochSecrets: Map<bigint, LocalEpochSecret> = new Map()
     // this will mark the epoch rejected by the group
-    private rejectedEpoch?: bigint
+    public rejectedEpoch?: bigint
 
     private crypto: EpochEncryption = new EpochEncryption()
 
