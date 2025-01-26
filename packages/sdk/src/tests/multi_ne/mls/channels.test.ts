@@ -26,6 +26,8 @@ afterEach(async () => {
     messages.length = 0
 })
 
+const poll = (fn: () => boolean, opts = { timeout: 10_000 }) => expect.poll(fn, opts).toBeTruthy()
+
 async function makeInitAndStartClient(nickname?: string) {
     const clientLog = log.extend(nickname ?? 'client')
     const client = await makeTestClient({ mlsOpts: { nickname, log: clientLog } })
