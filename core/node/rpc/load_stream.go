@@ -18,9 +18,9 @@ type remoteStream struct {
 	view     *StreamView
 }
 
-var _ Stream = (*remoteStream)(nil)
+var _ ViewStream = (*remoteStream)(nil)
 
-func (s *Service) loadStream(ctx context.Context, streamId StreamId) (Stream, error) {
+func (s *Service) loadStream(ctx context.Context, streamId StreamId) (ViewStream, error) {
 	stream, err := s.cache.GetStreamNoWait(ctx, streamId)
 	if err != nil {
 		return nil, err

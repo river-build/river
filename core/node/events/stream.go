@@ -30,7 +30,7 @@ type MiniblockStream interface {
 	GetMiniblocks(ctx context.Context, fromInclusive int64, ToExclusive int64) ([]*Miniblock, bool, error)
 }
 
-type Stream interface {
+type ViewStream interface {
 	AddableStream
 	MiniblockStream
 
