@@ -43,17 +43,3 @@ func (cc *CreationCookie) IsLocal(addr common.Address) bool {
 
 	return false
 }
-
-// NodeAddresses returns the addresses of the nodes in the SaveEphemeralMiniblockRequest.
-func (cc *SealEphemeralStreamRequest) NodeAddresses() []common.Address {
-	if cc == nil {
-		return nil
-	}
-
-	addresses := make([]common.Address, len(cc.Nodes))
-	for i, node := range cc.Nodes {
-		addresses[i] = common.BytesToAddress(node)
-	}
-
-	return addresses
-}
