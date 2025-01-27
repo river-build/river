@@ -83,7 +83,7 @@ describe('mlsTests', () => {
         }
     })
 
-    function makeMlsPayloadInitializeGroup(
+    function makeInitializeGroup(
         signaturePublicKey: Uint8Array,
         externalGroupSnapshot: Uint8Array,
         groupInfoMessage: Uint8Array,
@@ -100,7 +100,7 @@ describe('mlsTests', () => {
         }
     }
 
-    function makeMlsPayloadExternalJoin(
+    function makeExternalJoin(
         signaturePublicKey: Uint8Array,
         commit: Uint8Array,
         groupInfoMessage: Uint8Array,
@@ -213,7 +213,7 @@ describe('mlsTests', () => {
         const { groupInfoMessage, externalGroupSnapshot } =
             await createGroupInfoAndExternalSnapshot(group)
 
-        const mlsPayload = makeMlsPayloadInitializeGroup(
+        const mlsPayload = makeInitializeGroup(
             bobMlsClient.signaturePublicKey().slice(1), // slice 1 byte to make it invalid
             externalGroupSnapshot,
             groupInfoMessage,
@@ -224,7 +224,7 @@ describe('mlsTests', () => {
     })
 
     test('invalid external MLS group is not accepted', async () => {
-        const mlsPayload = makeMlsPayloadInitializeGroup(
+        const mlsPayload = makeInitializeGroup(
             bobMlsClient.signaturePublicKey(),
             new Uint8Array([]),
             new Uint8Array([]),
@@ -243,7 +243,7 @@ describe('mlsTests', () => {
             group2,
         )
 
-        const mlsPayload = makeMlsPayloadInitializeGroup(
+        const mlsPayload = makeInitializeGroup(
             bobMlsClient.signaturePublicKey(),
             externalGroupSnapshot1,
             groupInfoMessage2,
@@ -261,7 +261,7 @@ describe('mlsTests', () => {
         const { groupInfoMessage, externalGroupSnapshot } =
             await createGroupInfoAndExternalSnapshot(groupAtEpoch1)
 
-        const mlsPayload = makeMlsPayloadInitializeGroup(
+        const mlsPayload = makeInitializeGroup(
             aliceMlsClient.signaturePublicKey(),
             externalGroupSnapshot,
             groupInfoMessage,
@@ -277,7 +277,7 @@ describe('mlsTests', () => {
         // tamper with the message a little bit
         const invalidGroupInfoMessage = groupInfoMessage
         invalidGroupInfoMessage[invalidGroupInfoMessage.length - 2] += 1 // make it invalid
-        const payload = makeMlsPayloadInitializeGroup(
+        const payload = makeInitializeGroup(
             bobMlsClient.signaturePublicKey(),
             externalGroupSnapshot,
             groupInfoMessage,
@@ -290,7 +290,7 @@ describe('mlsTests', () => {
     test('clients can create MLS Groups in channels', async () => {
         const { groupInfoMessage, externalGroupSnapshot } =
             await createGroupInfoAndExternalSnapshot(bobMlsGroup)
-        const mlsPayload = makeMlsPayloadInitializeGroup(
+        const mlsPayload = makeInitializeGroup(
             bobMlsClient.signaturePublicKey(),
             externalGroupSnapshot,
             groupInfoMessage,
@@ -306,7 +306,7 @@ describe('mlsTests', () => {
         const group = await bobMlsClient.createGroup()
         const { groupInfoMessage, externalGroupSnapshot } =
             await createGroupInfoAndExternalSnapshot(group)
-        const mlsPayload = makeMlsPayloadInitializeGroup(
+        const mlsPayload = makeInitializeGroup(
             bobMlsClient.signaturePublicKey(),
             externalGroupSnapshot,
             groupInfoMessage,
@@ -338,7 +338,7 @@ describe('mlsTests', () => {
                 latestExternalGroupSnapshot,
             )
 
-        const aliceMlsPayload = makeMlsPayloadExternalJoin(
+        const aliceMlsPayload = makeExternalJoin(
             new Uint8Array([1, 2, 3]),
             aliceCommit,
             aliceGroupInfoMessage,
@@ -358,7 +358,7 @@ describe('mlsTests', () => {
         const invalidGroupInfoMessage = groupInfoMessage
         invalidGroupInfoMessage[invalidGroupInfoMessage.length - 2] += 1 // make it invalid
 
-        const aliceMlsPayload = makeMlsPayloadExternalJoin(
+        const aliceMlsPayload = makeExternalJoin(
             aliceMlsClient.signaturePublicKey(),
             commit,
             invalidGroupInfoMessage,
@@ -376,7 +376,7 @@ describe('mlsTests', () => {
                 latestExternalGroupSnapshot,
             )
 
-        const aliceMlsPayload = makeMlsPayloadExternalJoin(
+        const aliceMlsPayload = makeExternalJoin(
             aliceMlsClient.signaturePublicKey(),
             aliceCommit,
             aliceGroupInfoMessage,
@@ -722,7 +722,7 @@ describe('mlsTests', () => {
             latestValidGroupInfoMessage,
             externalGroup.snapshot().toBytes(),
         )
-        const aliceMlsPayload = makeMlsPayloadExternalJoin(
+        const aliceMlsPayload = makeExternalJoin(
             aliceThrowawayClient.signaturePublicKey(),
             aliceCommit,
             aliceGroupInfoMessage,
