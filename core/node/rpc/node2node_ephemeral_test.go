@@ -108,13 +108,24 @@ func TestCreateEphemeralStream(t *testing.T) {
 				Events: []*Envelope{envelope},
 				Header: header,
 			},
-			Last: i == chunks-1,
 		}))
 		tt.require.NoError(err)
 
 		mb.Num = int64(i + 1)
 		mb.Hash = common.BytesToHash(header.Hash)
 	}
+
+	nodeAddresses := make([][]byte, len(tt.nodes))
+	for i, node := range tt.nodes {
+		nodeAddresses[i] = node.address.Bytes()
+	}
+
+	// Seal the stream
+	_, err = alice.node2nodeClient.SealEphemeralStream(alice.ctx, connect.NewRequest(&SealEphemeralStreamRequest{
+		StreamId: mediaStreamId[:],
+		Nodes:    nodeAddresses,
+	}))
+	tt.require.NoError(err)
 
 	// No events in storage since the stream still ephemeral.
 	// The first miniblock is the stream creation miniblock, the rest 10 are media chunks.
