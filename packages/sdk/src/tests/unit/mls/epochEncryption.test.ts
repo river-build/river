@@ -2,7 +2,7 @@
  * @group main
  */
 
-import { EpochEncryption } from "../../../mls/epochEncryption"
+import { EpochEncryption } from '../../../mls/epochEncryption'
 
 describe('epochEncryptionTests', () => {
     const encoder = new TextEncoder()
@@ -48,7 +48,10 @@ describe('epochEncryptionTests', () => {
         const keys = await crypto.deriveKeys(secret)
         const plaintext = encoder.encode('plaintext')
         const ciphertext = await crypto.seal(keys, plaintext)
-        const badKeys = { publicKey: new Uint8Array(keys.publicKey), secretKey: new Uint8Array(keys.secretKey) }
+        const badKeys = {
+            publicKey: new Uint8Array(keys.publicKey),
+            secretKey: new Uint8Array(keys.secretKey),
+        }
         badKeys.publicKey[0] = badKeys.publicKey[0] ^ 0xff
         await expect(crypto.open(badKeys, ciphertext)).rejects.toThrow()
     })
