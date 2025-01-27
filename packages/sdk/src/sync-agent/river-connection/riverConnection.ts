@@ -20,12 +20,14 @@ import { RetryParams, expiryInterceptor } from '../../rpcInterceptors'
 import { Stream } from '../../stream'
 import { isDefined } from '../../check'
 import { UnpackEnvelopeOpts } from '../../sign'
+import { MlsCryptoStore } from '../../mls/mlsCryptoStore'
 
 const logger = dlogger('csb:riverConnection')
 
 export interface ClientParams {
     signerContext: SignerContext
     cryptoStore: CryptoStore
+    mlsCryptoStore: MlsCryptoStore
     entitlementsDelegate: EntitlementsDelegate
     persistenceStoreName?: string
     logNamespaceFilter?: string
@@ -172,6 +174,7 @@ export class RiverConnection extends PersistedObservable<RiverConnectionModel> {
             this.clientParams.signerContext,
             rpcClient,
             this.clientParams.cryptoStore,
+            this.clientParams.mlsCryptoStore,
             this.clientParams.entitlementsDelegate,
             this.clientParams.persistenceStoreName,
             this.clientParams.logNamespaceFilter,

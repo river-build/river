@@ -158,6 +158,7 @@ import { makeTags, makeTipTags } from './tags'
 import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
 import { extractMlsExternalGroup, ExtractMlsExternalGroupResult } from './mls/utils/mlsutils'
 import { MlsAdapter, MLS_ALGORITHM } from './mls'
+import { MlsCryptoStore } from './mls/mlsCryptoStore'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -197,6 +198,7 @@ export class Client
 
     public cryptoBackend?: GroupEncryptionCrypto
     public cryptoStore: CryptoStore
+    public mlsCryptoStore: MlsCryptoStore
 
     private getStreamRequests: Map<string, Promise<StreamStateView>> = new Map()
     private getStreamExRequests: Map<string, Promise<StreamStateView>> = new Map()
@@ -215,6 +217,7 @@ export class Client
         signerContext: SignerContext,
         rpcClient: StreamRpcClient,
         cryptoStore: CryptoStore,
+        mlsCryptoStore: MlsCryptoStore,
         entitlementsDelegate: EntitlementsDelegate,
         persistenceStoreName?: string,
         logNamespaceFilter?: string,
@@ -257,6 +260,7 @@ export class Client
         this.logInfo = dlog('csb:cl:info', { defaultEnabled: true }).extend(shortId)
         this.logDebug = dlog('csb:cl:debug').extend(shortId)
         this.cryptoStore = cryptoStore
+        this.mlsCryptoStore = mlsCryptoStore
 
         if (persistenceStoreName) {
             this.persistenceStore = new PersistenceStore(persistenceStoreName)

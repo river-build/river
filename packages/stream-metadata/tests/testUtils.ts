@@ -74,6 +74,8 @@ export async function makeTestClient(wallet: ethers.Wallet): Promise<Client> {
 	const userId = userIdFromAddress(context.creatorAddress)
 	const dbName = `database-${userId}-${deviceId}`
 	const cryptoStore = RiverDbManager.getCryptoDb(userId, dbName)
+	const mlsDbName = `mls-${userId}-${deviceId}`
+	const mlsCryptoStore = RiverDbManager.getMlsCryptoDb(userId, mlsDbName)
 
 	// arg: entitlements delegate
 	const entitlementsDelegate = new MockEntitlementsDelegate()
@@ -82,7 +84,14 @@ export async function makeTestClient(wallet: ethers.Wallet): Promise<Client> {
 	const persistenceDbName = `persistence-${userId}-${deviceId}`
 
 	// create the client with all the args
-	return new Client(context, rpcClient, cryptoStore, entitlementsDelegate, persistenceDbName)
+	return new Client(
+		context,
+		rpcClient,
+		cryptoStore,
+		mlsCryptoStore,
+		entitlementsDelegate,
+		persistenceDbName,
+	)
 }
 
 export async function makeUserContext(wallet: ethers.Wallet): Promise<SignerContext> {
