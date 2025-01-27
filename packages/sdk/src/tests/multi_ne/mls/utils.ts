@@ -1,7 +1,5 @@
 import { StreamTimelineEvent } from '../../../types'
 import { getChannelMessagePayload } from '../../testUtils'
-import { RemoteGroupInfo } from '../../../mls/view/remote'
-import { Client } from '../../../client'
 
 function getPayloadRemoteEvent(event: StreamTimelineEvent): string | undefined {
     if (event.decryptedContent?.kind === 'channelMessage') {

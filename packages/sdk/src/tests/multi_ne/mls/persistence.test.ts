@@ -78,11 +78,6 @@ describe('persistenceMlsTests', () => {
         }
     }
 
-    const hasAllKeys = () => {
-        const allKeys = clients.map((_, i) => i)
-        return hasKeys(...allKeys)
-    }
-
     const sawMessage =
         (...messages: string[]) =>
         (client: Client) =>

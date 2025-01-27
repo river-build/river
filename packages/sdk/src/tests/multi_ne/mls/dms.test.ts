@@ -25,9 +25,12 @@ afterEach(async () => {
     messages.length = 0
 })
 
-async function makeInitAndStartClient(logId?: string,) {
+async function makeInitAndStartClient(logId?: string) {
     const clientLog = log.extend(logId ?? 'client')
-    const client = await makeTestClient({ logId, mlsOpts: { log: clientLog, mlsAlwaysEnabled: false } })
+    const client = await makeTestClient({
+        logId,
+        mlsOpts: { log: clientLog, mlsAlwaysEnabled: false },
+    })
     await client.initializeUser()
     client.startSync()
     clients.push(client)
