@@ -39,12 +39,12 @@ contract ExecutorTest is BaseSetup, IExecutorBase, IOwnableBase {
     _;
   }
 
-  function test_single_grantAccess() external {
+  function test_nofuzz_grantAccess() external {
     uint64 groupId = 1;
     address account = _randomAddress();
-    // execution delay is the delay at which an execution will take effect
+    // execution delay is the delay at which any execution for this group will take effect
     uint32 executionDelay = 100;
-    // group delay is the delay at which the group will take effect
+    // group delay is the delay at which the group permission will take effect
     uint48 lastAccess = Time.timestamp() + executor.getGroupDelay(groupId);
 
     vm.prank(founder);
@@ -96,7 +96,11 @@ contract ExecutorTest is BaseSetup, IExecutorBase, IOwnableBase {
     uint32 delay = 100;
 
     vm.startPrank(founder);
+    // Grant access to the bot for the specified group with a delay
     executor.grantAccess(groupId, bot, delay);
+
+    // Configure which function the group has access to by setting the target function group
+    // This allows members of groupId to call mintWithPayment() on the mockERC721 contract
     executor.setTargetFunctionGroup(
       address(mockERC721),
       mockERC721.mintWithPayment.selector,
@@ -113,6 +117,8 @@ contract ExecutorTest is BaseSetup, IExecutorBase, IOwnableBase {
         mockERC721.mint.selector
       )
     );
+
+    // This will revert because the bot does not have access to the mint function
     executor.execute(
       address(mockERC721),
       abi.encodeCall(mockERC721.mint, (receiver, 1))
@@ -133,8 +139,10 @@ contract ExecutorTest is BaseSetup, IExecutorBase, IOwnableBase {
     vm.expectRevert(
       abi.encodeWithSelector(IExecutorBase.NotScheduled.selector, operationId)
     );
+    // This will revert because the operation has not been scheduled since the group has a delay
     executor.execute(address(mockERC721), mintWithPayment);
 
+    // Schedule the operation with the group delay
     vm.prank(bot);
     executor.scheduleOperation(
       address(mockERC721),
@@ -142,13 +150,17 @@ contract ExecutorTest is BaseSetup, IExecutorBase, IOwnableBase {
       Time.timestamp() + delay
     );
 
+    // Deal the bot some funds
     vm.deal(address(bot), 1 ether);
 
+    // Warp to the delay
     vm.warp(Time.timestamp() + delay + 1);
 
+    // Execute the operation
     vm.prank(bot);
     executor.execute{value: 1 ether}(address(mockERC721), mintWithPayment);
 
+    // Assert that the receiver received the token
     assertEq(mockERC721.balanceOf(receiver), 1);
   }
 }
