@@ -11,6 +11,8 @@ import {
     ConfirmedMlsEventWithCommit,
     MlsSnapshot,
     MlsConfirmedSnapshot,
+    StreamUpdateDelegate,
+    StreamUpdate,
 } from '../types'
 import { elogger, ELogger } from '@river-build/dlog'
 import { logNever } from '../../check'
@@ -147,7 +149,7 @@ export function extractFromTimeLine(timeline: StreamTimelineEvent[]): SnapshotAn
 }
 
 /// Class to represent on-chain view of MLS
-export class RemoteView {
+export class RemoteView implements StreamUpdateDelegate {
     // for bookkeeping
     private lastConfirmedEventNumFor = {
         mlsEvent: BigInt(-1),
@@ -184,6 +186,15 @@ export class RemoteView {
             exportedTree: this.remoteGroup.group.exportTree(),
             latestGroupInfo: this.remoteGroup.groupInfoWithExternalKey,
             epoch: this.remoteGroup.group.epoch,
+        }
+    }
+
+    public async handleStreamUpdate(streamUpdate: StreamUpdate): Promise<void> {
+        for (const snapshot of streamUpdate.snapshots) {
+            await this.processSnapshot(snapshot)
+        }
+        for (const event of streamUpdate.confirmedEvents) {
+            await this.processConfirmedMlsEvent(event)
         }
     }
 
