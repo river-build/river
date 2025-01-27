@@ -104,7 +104,7 @@ func joinSpace_T(
 	t *testing.T,
 	wallet *crypto.Wallet,
 	ctx context.Context,
-	syncStream *StreamImpl,
+	syncStream *Stream,
 	users []string,
 ) {
 	stream := syncStream
@@ -133,7 +133,7 @@ func joinChannel_T(
 	t *testing.T,
 	wallet *crypto.Wallet,
 	ctx context.Context,
-	syncStream *StreamImpl,
+	syncStream *Stream,
 	users []string,
 ) {
 	stream := syncStream
@@ -163,7 +163,7 @@ func leaveChannel_T(
 	t *testing.T,
 	wallet *crypto.Wallet,
 	ctx context.Context,
-	syncStream *StreamImpl,
+	syncStream *Stream,
 	users []string,
 ) {
 	stream := syncStream

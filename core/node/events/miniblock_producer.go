@@ -219,7 +219,7 @@ func (p *miniblockProducer) scheduleCandidates(ctx context.Context, blockNum cry
 }
 
 func (p *miniblockProducer) isLocalLeaderOnCurrentBlock(
-	stream *StreamImpl,
+	stream *Stream,
 	blockNum crypto.BlockNumber,
 ) bool {
 	streamNodes := stream.GetNodes()
@@ -230,7 +230,7 @@ func (p *miniblockProducer) isLocalLeaderOnCurrentBlock(
 	return streamNodes[index] == p.localNodeAddress
 }
 
-func (p *miniblockProducer) trySchedule(ctx context.Context, stream *StreamImpl) *mbJob {
+func (p *miniblockProducer) trySchedule(ctx context.Context, stream *Stream) *mbJob {
 	j := &mbJob{
 		stream: stream,
 		params: p.streamCache.Params(),

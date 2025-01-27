@@ -55,7 +55,7 @@ func SyncStreamsResponseFromStreamAndCookie(result *StreamAndCookie) *SyncStream
 	}
 }
 
-type StreamImpl struct {
+type Stream struct {
 	params *StreamCacheParams
 
 	streamId StreamId
@@ -100,19 +100,19 @@ type localStreamState struct {
 }
 
 // IsLocal is thread-safe.
-func (s *StreamImpl) IsLocal() bool {
+func (s *Stream) IsLocal() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.local != nil
 }
 
 // view should be called with at least a read lock.
-func (s *StreamImpl) view() *StreamView {
+func (s *Stream) view() *StreamView {
 	return s.local.useGetterAndSetterToGetView
 }
 
 // This should be accessed under lock.
-func (s *StreamImpl) setView(view *StreamView) {
+func (s *Stream) setView(view *StreamView) {
 	s.local.useGetterAndSetterToGetView = view
 	if view != nil && len(s.local.pendingCandidates) > 0 {
 		lastMbNum := view.LastBlock().Ref.Num
@@ -127,7 +127,7 @@ func (s *StreamImpl) setView(view *StreamView) {
 }
 
 // loadInternal should be called with a lock held.
-func (s *StreamImpl) loadInternal(ctx context.Context) error {
+func (s *Stream) loadInternal(ctx context.Context) error {
 	if s.view() != nil {
 		return nil
 	}
@@ -159,7 +159,7 @@ func (s *StreamImpl) loadInternal(ctx context.Context) error {
 
 // ApplyMiniblock applies given miniblock, updating the cached stream view and storage.
 // ApplyMiniblock is thread-safe.
-func (s *StreamImpl) ApplyMiniblock(ctx context.Context, miniblock *MiniblockInfo) error {
+func (s *Stream) ApplyMiniblock(ctx context.Context, miniblock *MiniblockInfo) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -172,7 +172,7 @@ func (s *StreamImpl) ApplyMiniblock(ctx context.Context, miniblock *MiniblockInf
 
 // importMiniblocks imports the given miniblocks.
 // importMiniblocks is thread-safe.
-func (s *StreamImpl) importMiniblocks(
+func (s *Stream) importMiniblocks(
 	ctx context.Context,
 	miniblocks []*MiniblockInfo,
 ) error {
@@ -186,7 +186,7 @@ func (s *StreamImpl) importMiniblocks(
 }
 
 // importMiniblocksLocked should be called with a lock held.
-func (s *StreamImpl) importMiniblocksLocked(
+func (s *Stream) importMiniblocksLocked(
 	ctx context.Context,
 	miniblocks []*MiniblockInfo,
 ) error {
@@ -269,7 +269,7 @@ func (s *StreamImpl) importMiniblocksLocked(
 }
 
 // applyMiniblockImplLocked should be called with a lock held.
-func (s *StreamImpl) applyMiniblockImplLocked(
+func (s *Stream) applyMiniblockImplLocked(
 	ctx context.Context,
 	miniblock *MiniblockInfo,
 	miniblockBytes []byte,
@@ -323,14 +323,14 @@ func (s *StreamImpl) applyMiniblockImplLocked(
 }
 
 // promoteCandidate is thread-safe.
-func (s *StreamImpl) promoteCandidate(ctx context.Context, mb *MiniblockRef) error {
+func (s *Stream) promoteCandidate(ctx context.Context, mb *MiniblockRef) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.promoteCandidateLocked(ctx, mb)
 }
 
 // promoteCandidateLocked shouldbe called with a lock held.
-func (s *StreamImpl) promoteCandidateLocked(ctx context.Context, mb *MiniblockRef) error {
+func (s *Stream) promoteCandidateLocked(ctx context.Context, mb *MiniblockRef) error {
 	if s.local == nil {
 		return nil
 	}
@@ -381,7 +381,7 @@ func (s *StreamImpl) promoteCandidateLocked(ctx context.Context, mb *MiniblockRe
 }
 
 // schedulePromotionLocked should be called with a lock held.
-func (s *StreamImpl) schedulePromotionLocked(mb *MiniblockRef) error {
+func (s *Stream) schedulePromotionLocked(mb *MiniblockRef) error {
 	if len(s.local.pendingCandidates) == 0 {
 		if mb.Num != s.view().LastBlock().Ref.Num+1 {
 			return RiverError(Err_INTERNAL, "schedulePromotionNoLock: next promotion is not for the next block")
@@ -398,7 +398,7 @@ func (s *StreamImpl) schedulePromotionLocked(mb *MiniblockRef) error {
 }
 
 // initFromGenesis is not thread-safe. It should be called with a lock held.
-func (s *StreamImpl) initFromGenesis(
+func (s *Stream) initFromGenesis(
 	ctx context.Context,
 	genesisInfo *MiniblockInfo,
 	genesisBytes []byte,
@@ -445,7 +445,7 @@ func (s *StreamImpl) initFromGenesis(
 }
 
 // initFromBlockchain is not thread-safe. It should be called with a lock held.
-func (s *StreamImpl) initFromBlockchain(ctx context.Context) error {
+func (s *Stream) initFromBlockchain(ctx context.Context) error {
 	// TODO: move this call out of the lock
 	record, _, mb, blockNum, err := s.params.Registry.GetStreamWithGenesis(ctx, s.streamId)
 	if err != nil {
@@ -499,7 +499,7 @@ func (s *StreamImpl) initFromBlockchain(ctx context.Context) error {
 // GetViewIfLocal returns stream view if stream is local, nil if stream is not local,
 // and error if stream is local and failed to load.
 // GetViewIfLocal is thread-safe.
-func (s *StreamImpl) GetViewIfLocal(ctx context.Context) (*StreamView, error) {
+func (s *Stream) GetViewIfLocal(ctx context.Context) (*StreamView, error) {
 	s.mu.RLock()
 	isLocal := s.local != nil
 	var view *StreamView
@@ -529,7 +529,7 @@ func (s *StreamImpl) GetViewIfLocal(ctx context.Context) (*StreamView, error) {
 
 // GetView returns stream view if stream is local, and error if stream is not local or failed to load.
 // GetView is thread-safe.
-func (s *StreamImpl) GetView(ctx context.Context) (*StreamView, error) {
+func (s *Stream) GetView(ctx context.Context) (*StreamView, error) {
 	view, err := s.GetViewIfLocal(ctx)
 	if err != nil {
 		return nil, err
@@ -542,7 +542,7 @@ func (s *StreamImpl) GetView(ctx context.Context) (*StreamView, error) {
 
 // tryGetView returns StreamView if it's already loaded, or nil if it's not.
 // tryGetView is thread-safe.
-func (s *StreamImpl) tryGetView() *StreamView {
+func (s *Stream) tryGetView() *StreamView {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if s.local != nil && s.view() != nil {
@@ -556,7 +556,7 @@ func (s *StreamImpl) tryGetView() *StreamView {
 // maybeScrubLocked schedules a stream scrub if the stream is eligible based on it's
 // last scrub time.
 // maybeScrubLocked should be taken with a lock.
-func (s *StreamImpl) maybeScrubLocked() {
+func (s *Stream) maybeScrubLocked() {
 	if !ValidChannelStreamId(&s.streamId) {
 		return
 	}
@@ -572,7 +572,7 @@ func (s *StreamImpl) maybeScrubLocked() {
 // resetLastScrubbed reset the last scrubbed time on the stream, which is used for
 // determining when the stream is eligible for another scrub.
 // resetLastScrubbed is thread-safe.
-func (s *StreamImpl) resetLastScrubbed() {
+func (s *Stream) resetLastScrubbed() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.local != nil {
@@ -583,7 +583,7 @@ func (s *StreamImpl) resetLastScrubbed() {
 // tryCleanup unloads its internal view when s haven't got activity within the given expiration period.
 // It returns true when the view is unloaded
 // tryCleanup is thread-safe.
-func (s *StreamImpl) tryCleanup(expiration time.Duration) bool {
+func (s *Stream) tryCleanup(expiration time.Duration) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -618,7 +618,7 @@ func (s *StreamImpl) tryCleanup(expiration time.Duration) bool {
 // miniblocks: with indexes from fromIndex inclusive, to toIndex exclusive
 // terminus: true if fromIndex is 0, or if there are no more blocks because they've been garbage collected
 // GetMiniblocks is thread-safe.
-func (s *StreamImpl) GetMiniblocks(
+func (s *Stream) GetMiniblocks(
 	ctx context.Context,
 	fromInclusive int64,
 	toExclusive int64,
@@ -647,7 +647,7 @@ func (s *StreamImpl) GetMiniblocks(
 
 // AddEvent adds an event to the stream.
 // AddEvent is thread-safe.
-func (s *StreamImpl) AddEvent(ctx context.Context, event *ParsedEvent) error {
+func (s *Stream) AddEvent(ctx context.Context, event *ParsedEvent) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.loadInternal(ctx); err != nil {
@@ -659,7 +659,7 @@ func (s *StreamImpl) AddEvent(ctx context.Context, event *ParsedEvent) error {
 
 // notifySubscribersLocked updates all callers with unseen events and the new sync cookie.
 // Callers must have a lock held.
-func (s *StreamImpl) notifySubscribersLocked(
+func (s *Stream) notifySubscribersLocked(
 	envelopes []*Envelope,
 	newSyncCookie *SyncCookie,
 ) {
@@ -678,7 +678,7 @@ func (s *StreamImpl) notifySubscribersLocked(
 
 // addEventLocked is not thread-safe.
 // Callers must have a lock held.
-func (s *StreamImpl) addEventLocked(ctx context.Context, event *ParsedEvent) error {
+func (s *Stream) addEventLocked(ctx context.Context, event *ParsedEvent) error {
 	envelopeBytes, err := event.GetEnvelopeBytes()
 	if err != nil {
 		return err
@@ -728,7 +728,7 @@ func (s *StreamImpl) addEventLocked(ctx context.Context, event *ParsedEvent) err
 
 // Sub subscribes the reciever to the stream, sending all content between the cookie and the
 // current stream state. This method is thread-safe.
-func (s *StreamImpl) Sub(ctx context.Context, cookie *SyncCookie, receiver SyncResultReceiver) error {
+func (s *Stream) Sub(ctx context.Context, cookie *SyncCookie, receiver SyncResultReceiver) error {
 	log := logging.FromCtx(ctx)
 	if !bytes.Equal(cookie.NodeAddress, s.params.Wallet.Address.Bytes()) {
 		return RiverError(
@@ -834,7 +834,7 @@ func (s *StreamImpl) Sub(ctx context.Context, cookie *SyncCookie, receiver SyncR
 // Unsub unsubscribes the receiver from sync. It's ok to unsub non-existing receiver.
 // Such situation arises during ForceFlush.
 // Unsub is thread-safe.
-func (s *StreamImpl) Unsub(receiver SyncResultReceiver) {
+func (s *Stream) Unsub(receiver SyncResultReceiver) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.local.receivers != nil {
@@ -846,7 +846,7 @@ func (s *StreamImpl) Unsub(receiver SyncResultReceiver) {
 // All subbed receivers will receive empty response and must
 // terminate corresponding sync loop.
 // ForceFlush is thread-safe.
-func (s *StreamImpl) ForceFlush(ctx context.Context) {
+func (s *Stream) ForceFlush(ctx context.Context) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -866,7 +866,7 @@ func (s *StreamImpl) ForceFlush(ctx context.Context) {
 
 // canCreateMiniblock determines if a stream is eligible to create a miniblock.
 // canCreateMiniblock is thread-safe.
-func (s *StreamImpl) canCreateMiniblock() bool {
+func (s *Stream) canCreateMiniblock() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -886,7 +886,7 @@ type streamImplStatus struct {
 
 // getStatus returns a snapshot of useful statistics describing the stream's in-memory state.
 // getStatus is thread-safe.
-func (s *StreamImpl) getStatus() *streamImplStatus {
+func (s *Stream) getStatus() *streamImplStatus {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -907,7 +907,7 @@ func (s *StreamImpl) getStatus() *streamImplStatus {
 // the first block in the list of pending candidates, it will be applied. This method is thread-safe.
 // Note: saving the candidate itself, without applying it, does not modify the stream's in-memory
 // cached state at all.
-func (s *StreamImpl) SaveMiniblockCandidate(ctx context.Context, mb *Miniblock) error {
+func (s *Stream) SaveMiniblockCandidate(ctx context.Context, mb *Miniblock) error {
 	mbInfo, err := NewMiniblockInfoFromProto(
 		mb,
 		NewParsedMiniblockInfoOpts(),
@@ -943,7 +943,7 @@ func (s *StreamImpl) SaveMiniblockCandidate(ctx context.Context, mb *Miniblock) 
 // list of pending candidates. It will also return a true result if this block matches the
 // last block applied to the stream.
 // tryApplyCandidate is thread-safe.
-func (s *StreamImpl) tryApplyCandidate(ctx context.Context, mb *MiniblockInfo) (bool, error) {
+func (s *Stream) tryApplyCandidate(ctx context.Context, mb *MiniblockInfo) (bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -996,7 +996,7 @@ func (s *StreamImpl) tryApplyCandidate(ctx context.Context, mb *MiniblockInfo) (
 
 // tryReadAndApplyCandidateLocked searches for the candidate in storage and applies it if it exists.
 // tryReadAndApplyCandidateLocked is not thread-safe.
-func (s *StreamImpl) tryReadAndApplyCandidateLocked(ctx context.Context, mbRef *MiniblockRef) bool {
+func (s *Stream) tryReadAndApplyCandidateLocked(ctx context.Context, mbRef *MiniblockRef) bool {
 	miniblockBytes, err := s.params.Storage.ReadMiniblockCandidate(ctx, s.streamId, mbRef.Hash, mbRef.Num)
 	if err == nil {
 		miniblock, err := NewMiniblockInfoFromBytes(miniblockBytes, mbRef.Num)
@@ -1018,7 +1018,7 @@ func (s *StreamImpl) tryReadAndApplyCandidateLocked(ctx context.Context, mbRef *
 // getLastMiniblockNumSkipLoad returns the last miniblock number for the given stream from the view if loaded,
 // or from storage otherwise.
 // getLastMiniblockNumSkipLoad is thread-safe.
-func (s *StreamImpl) getLastMiniblockNumSkipLoad(ctx context.Context) (int64, error) {
+func (s *Stream) getLastMiniblockNumSkipLoad(ctx context.Context) (int64, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -1032,7 +1032,7 @@ func (s *StreamImpl) getLastMiniblockNumSkipLoad(ctx context.Context) (int64, er
 
 // applyStreamEvents applies the list of stream events to the stream.
 // applyStreamEvents is thread-safe.
-func (s *StreamImpl) applyStreamEvents(
+func (s *Stream) applyStreamEvents(
 	ctx context.Context,
 	events []river.EventWithStreamId,
 	blockNum crypto.BlockNumber,
@@ -1078,7 +1078,7 @@ func (s *StreamImpl) applyStreamEvents(
 
 // GetNodes returns the list of nodes this stream resides on according to the stream
 // registry. GetNodes is thread-safe.
-func (s *StreamImpl) GetNodes() []common.Address {
+func (s *Stream) GetNodes() []common.Address {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return slices.Clone(s.nodesLocked.GetNodes())
@@ -1088,7 +1088,7 @@ func (s *StreamImpl) GetNodes() []common.Address {
 // remotes - a list of non-local nodes on which the stream resides
 // isLocal - boolean, whether the stream is hosted on this node
 // GetRemotesAndIsLocal is thread-safe.
-func (s *StreamImpl) GetRemotesAndIsLocal() ([]common.Address, bool) {
+func (s *Stream) GetRemotesAndIsLocal() ([]common.Address, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	r, l := s.nodesLocked.GetRemotesAndIsLocal()
@@ -1098,7 +1098,7 @@ func (s *StreamImpl) GetRemotesAndIsLocal() ([]common.Address, bool) {
 // GetStickyPeer returns the peer this node typically uses to forward requests to for this
 // stream. If the node becomes unavailable, the sticky peer can be updated with AdvanceStickyPeer.
 // This method is thread-safe.
-func (s *StreamImpl) GetStickyPeer() common.Address {
+func (s *Stream) GetStickyPeer() common.Address {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.nodesLocked.GetStickyPeer()
@@ -1107,12 +1107,12 @@ func (s *StreamImpl) GetStickyPeer() common.Address {
 // AdvanceStickyPeer updates the peer used for forwarding requests for this stream. AdvanceStickyPeer
 // can be used whenever a node becomes unavailable.
 // AdvanceStickyPeer is thread-safe.
-func (s *StreamImpl) AdvanceStickyPeer(currentPeer common.Address) common.Address {
+func (s *Stream) AdvanceStickyPeer(currentPeer common.Address) common.Address {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.nodesLocked.AdvanceStickyPeer(currentPeer)
 }
 
-func (s *StreamImpl) Update(event *river.StreamPlacementUpdated, localNode common.Address) error {
+func (s *Stream) Update(event *river.StreamPlacementUpdated, localNode common.Address) error {
 	return RiverError(Err_INTERNAL, "Can't update nodes on the streamImpl")
 }

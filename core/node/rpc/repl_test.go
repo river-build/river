@@ -151,7 +151,7 @@ func TestStreamReconciliationFromGenesis(t *testing.T) {
 
 	// make sure that node loaded the stream and synced up its local database with the stream registry.
 	// this happens as a background task, therefore wait till all mini-blocks are imported.
-	var stream *StreamImpl
+	var stream *Stream
 	require.Eventuallyf(func() bool {
 		stream, err = lastStartedNode.service.cache.GetStreamNoWait(ctx, streamId)
 		if err == nil {
@@ -275,7 +275,7 @@ func TestStreamReconciliationForKnownStreams(t *testing.T) {
 
 	// wait till stream cache has finish reconciliation for the stream
 	var (
-		stream             *StreamImpl
+		stream             *Stream
 		receivedMiniblocks []*protocol.Miniblock
 	)
 

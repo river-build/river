@@ -14,7 +14,7 @@ import (
 
 // mbJos tracks single miniblock production attempt for a single stream.
 type mbJob struct {
-	stream        *StreamImpl
+	stream        *Stream
 	params        *StreamCacheParams
 	forceSnapshot bool
 

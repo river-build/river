@@ -47,12 +47,12 @@ type StreamCache interface {
 	Start(ctx context.Context) error
 	Params() *StreamCacheParams
 	// GetStreamWaitForLocal is a transitional method to support existing GetStream API before block number are wired through APIs.
-	GetStreamWaitForLocal(ctx context.Context, streamId StreamId) (*StreamImpl, error)
+	GetStreamWaitForLocal(ctx context.Context, streamId StreamId) (*Stream, error)
 	// GetStreamNoWait is a transitional method to support existing GetStream API before block number are wired through APIs.
-	GetStreamNoWait(ctx context.Context, streamId StreamId) (*StreamImpl, error)
+	GetStreamNoWait(ctx context.Context, streamId StreamId) (*Stream, error)
 	ForceFlushAll(ctx context.Context)
 	GetLoadedViews(ctx context.Context) []*StreamView
-	GetMbCandidateStreams(ctx context.Context) []*StreamImpl
+	GetMbCandidateStreams(ctx context.Context) []*Stream
 	CacheCleanup(ctx context.Context, enabled bool, expiration time.Duration) CacheCleanupResult
 }
 
@@ -62,7 +62,7 @@ type streamCacheImpl struct {
 	// streamId -> *streamImpl
 	// cache is populated by getting all streams that should be on local node from River chain.
 	// streamImpl can be in unloaded state, in which case it will be loaded on first GetStream call.
-	cache *xsync.MapOf[StreamId, *StreamImpl]
+	cache *xsync.MapOf[StreamId, *Stream]
 
 	// appliedBlockNum is the number of the last block logs from which were applied to cache.
 	appliedBlockNum atomic.Uint64
@@ -84,7 +84,7 @@ func NewStreamCache(
 ) *streamCacheImpl {
 	return &streamCacheImpl{
 		params: params,
-		cache:  xsync.NewMapOf[StreamId, *StreamImpl](),
+		cache:  xsync.NewMapOf[StreamId, *Stream](),
 		streamCacheSizeGauge: params.Metrics.NewGaugeVecEx(
 			"stream_cache_size", "Number of streams in stream cache",
 			"chain_id", "address",
@@ -132,7 +132,7 @@ func (s *streamCacheImpl) Start(ctx context.Context) error {
 	// load local streams in-memory cache
 	initialSyncWorkerPool := workerpool.New(s.params.Config.StreamReconciliation.InitialWorkerPoolSize)
 	for _, stream := range localStreamResults {
-		si := &StreamImpl{
+		si := &Stream{
 			params:              s.params,
 			streamId:            stream.StreamId,
 			lastAppliedBlockNum: s.params.AppliedBlockNum,
@@ -209,7 +209,7 @@ func (s *streamCacheImpl) onStreamAllocated(
 	blockNum crypto.BlockNumber,
 ) {
 	if slices.Contains(event.Nodes, s.params.Wallet.Address) {
-		stream := &StreamImpl{
+		stream := &Stream{
 			params:              s.params,
 			streamId:            StreamId(event.StreamId),
 			lastAppliedBlockNum: blockNum,
@@ -264,7 +264,7 @@ func (s *streamCacheImpl) CacheCleanup(ctx context.Context, enabled bool, expira
 
 	// TODO: add data structure that supports to loop over streams that have their view loaded instead of
 	// looping over all streams.
-	s.cache.Range(func(streamID StreamId, stream *StreamImpl) bool {
+	s.cache.Range(func(streamID StreamId, stream *Stream) bool {
 		if !stream.IsLocal() {
 			result.RemoteStreams++
 			return true
@@ -294,7 +294,7 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 	ctx context.Context,
 	streamId StreamId,
 	waitForLocal bool,
-) (*StreamImpl, error) {
+) (*Stream, error) {
 	// For GetStream the fact that record is not in cache means that there is race to get it during creation:
 	// Blockchain record is already created, but this fact is not reflected yet in local storage.
 	// This may happen if somebody observes record allocation on blockchain and tries to get stream
@@ -330,7 +330,7 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 		}
 	}
 
-	stream := &StreamImpl{
+	stream := &Stream{
 		params:              s.params,
 		streamId:            streamId,
 		lastAppliedBlockNum: blockNum,
@@ -363,9 +363,9 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 
 func (s *streamCacheImpl) createStreamStorage(
 	ctx context.Context,
-	stream *StreamImpl,
+	stream *Stream,
 	mb []byte,
-) (*StreamImpl, bool, error) {
+) (*Stream, bool, error) {
 	// Lock stream, so parallel creators have to wait for the stream to be intialized.
 	stream.mu.Lock()
 	defer stream.mu.Unlock()
@@ -410,11 +410,11 @@ func (s *streamCacheImpl) createStreamStorage(
 	}
 }
 
-func (s *streamCacheImpl) GetStreamWaitForLocal(ctx context.Context, streamId StreamId) (*StreamImpl, error) {
+func (s *streamCacheImpl) GetStreamWaitForLocal(ctx context.Context, streamId StreamId) (*Stream, error) {
 	return s.getStreamImpl(ctx, streamId, true)
 }
 
-func (s *streamCacheImpl) GetStreamNoWait(ctx context.Context, streamId StreamId) (*StreamImpl, error) {
+func (s *streamCacheImpl) GetStreamNoWait(ctx context.Context, streamId StreamId) (*Stream, error) {
 	return s.getStreamImpl(ctx, streamId, false)
 }
 
@@ -422,7 +422,7 @@ func (s *streamCacheImpl) getStreamImpl(
 	ctx context.Context,
 	streamId StreamId,
 	waitForLocal bool,
-) (*StreamImpl, error) {
+) (*Stream, error) {
 	stream, _ := s.cache.Load(streamId)
 	if stream == nil {
 		return s.tryLoadStreamRecord(ctx, streamId, waitForLocal)
@@ -431,7 +431,7 @@ func (s *streamCacheImpl) getStreamImpl(
 }
 
 func (s *streamCacheImpl) ForceFlushAll(ctx context.Context) {
-	s.cache.Range(func(streamID StreamId, stream *StreamImpl) bool {
+	s.cache.Range(func(streamID StreamId, stream *Stream) bool {
 		stream.ForceFlush(ctx)
 		return true
 	})
@@ -439,7 +439,7 @@ func (s *streamCacheImpl) ForceFlushAll(ctx context.Context) {
 
 func (s *streamCacheImpl) GetLoadedViews(ctx context.Context) []*StreamView {
 	var result []*StreamView
-	s.cache.Range(func(streamID StreamId, stream *StreamImpl) bool {
+	s.cache.Range(func(streamID StreamId, stream *Stream) bool {
 		view := stream.tryGetView()
 		if view != nil {
 			result = append(result, view)
@@ -449,9 +449,9 @@ func (s *streamCacheImpl) GetLoadedViews(ctx context.Context) []*StreamView {
 	return result
 }
 
-func (s *streamCacheImpl) GetMbCandidateStreams(ctx context.Context) []*StreamImpl {
-	var candidates []*StreamImpl
-	s.cache.Range(func(streamID StreamId, stream *StreamImpl) bool {
+func (s *streamCacheImpl) GetMbCandidateStreams(ctx context.Context) []*Stream {
+	var candidates []*Stream
+	s.cache.Range(func(streamID StreamId, stream *Stream) bool {
 		if stream.canCreateMiniblock() {
 			candidates = append(candidates, stream)
 		}

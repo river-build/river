@@ -13,7 +13,7 @@ import (
 func (s *Service) localGetMiniblocks(
 	ctx context.Context,
 	req *connect.Request[GetMiniblocksRequest],
-	stream *StreamImpl,
+	stream *Stream,
 ) (*connect.Response[GetMiniblocksResponse], error) {
 	toExclusive := req.Msg.ToExclusive
 

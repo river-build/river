@@ -25,7 +25,7 @@ type localSyncer struct {
 	localAddr   common.Address
 
 	activeStreamsMu sync.Mutex
-	activeStreams   map[StreamId]*StreamImpl
+	activeStreams   map[StreamId]*Stream
 }
 
 func newLocalSyncer(
@@ -45,7 +45,7 @@ func newLocalSyncer(
 		localAddr:          localAddr,
 		cookies:            cookies,
 		messages:           messages,
-		activeStreams:      make(map[StreamId]*StreamImpl),
+		activeStreams:      make(map[StreamId]*Stream),
 	}, nil
 }
 

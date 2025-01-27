@@ -80,7 +80,7 @@ func (s *streamCacheImpl) syncStreamFromPeers(
 // It returns block number of last block successfully synced + 1.
 func (s *streamCacheImpl) syncStreamFromSinglePeer(
 	ctx context.Context,
-	stream *StreamImpl,
+	stream *Stream,
 	remote common.Address,
 	fromInclusive int64,
 	toExclusive int64,
