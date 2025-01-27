@@ -3,35 +3,23 @@
  */
 
 import { beforeEach, describe, it } from 'vitest'
-import { DexieGroupStateStorage, InMemoryGroupStateStorage } from '../../../mls/groupStateStorage'
 import { IGroupStateStorage } from '@river-build/mls-rs-wasm'
-import { randomBytes } from 'crypto'
+import { MlsCryptoStore } from '../../../mls/mlsCryptoStore'
+import { genId } from '../../../id'
 
 const encoder = new TextEncoder()
 
-const storages: Array<{
-    type: string
-    createStorage: () => IGroupStateStorage
-}> = [
-    {
-        type: 'InMemoryGroupStateStorage',
-        createStorage: () => new InMemoryGroupStateStorage(),
-    },
-    {
-        type: 'DexieGroupStateStorage',
-        createStorage: () => new DexieGroupStateStorage(randomBytes(16)),
-    },
-]
-
-describe.each(storages)('$type', ({ createStorage }) => {
+describe('MlsCryptoStorage', () => {
     let storage: IGroupStateStorage
     const groupId = encoder.encode('group-id')
     const data = encoder.encode('data')
     const epochId = 1n
     const epochData = encoder.encode('epoch-data')
+    const userId = 'user-id'
 
     beforeEach(() => {
-        storage = createStorage()
+        const dbName = `mls-${genId(5)}`
+        storage = new MlsCryptoStore(dbName, userId)
     })
 
     it('shouldCreateStorage', () => {

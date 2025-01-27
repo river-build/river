@@ -1,4 +1,4 @@
-import { LocalEpochSecret, LocalView } from './localView'
+import { LocalEpochSecret, LocalView } from './view/local'
 import Dexie from 'dexie'
 import { EpochRecord, IGroupStateStorage } from '@river-build/mls-rs-wasm'
 
