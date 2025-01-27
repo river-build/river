@@ -406,7 +406,7 @@ func (i *cacheTestInstance) makeAndSaveMbCandidate(
 	stream SyncStream,
 ) (*MiniblockInfo, error) {
 	j := &mbJob{
-		stream: stream.(*streamImpl),
+		stream: stream.(*StreamImpl),
 		params: i.params,
 	}
 	err := j.produceCandidate(ctx)
@@ -421,7 +421,7 @@ func (i *cacheTestInstance) makeMbCandidate(
 	stream SyncStream,
 ) (*MiniblockInfo, error) {
 	j := &mbJob{
-		stream: stream.(*streamImpl),
+		stream: stream.(*StreamImpl),
 		params: i.params,
 	}
 	j.remoteNodes, _ = j.stream.GetRemotesAndIsLocal()
