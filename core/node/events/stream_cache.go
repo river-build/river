@@ -17,6 +17,7 @@ import (
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/logging"
+	. "github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/registries"
 	. "github.com/river-build/river/core/node/shared"
@@ -41,6 +42,7 @@ type StreamCacheParams struct {
 	Metrics                 infra.MetricsFactory
 	RemoteMiniblockProvider RemoteMiniblockProvider
 	Scrubber                Scrubber
+	NodeRegistry            NodeRegistry
 }
 
 type StreamCache interface {
@@ -183,17 +185,20 @@ func (s *streamCacheImpl) onBlockWithLogs(ctx context.Context, blockNum crypto.B
 
 	// TODO: parallel processing?
 	for streamId, events := range streamEvents {
-		allocatedEvent, ok := events[0].(*river.StreamAllocated)
-		if ok {
-			s.onStreamAllocated(ctx, allocatedEvent, events[1:], blockNum)
+		switch event := events[0].(type) {
+		case *river.StreamAllocated:
+			s.onStreamAllocated(ctx, event, events[1:], blockNum)
 			continue
-		}
-
-		stream, ok := s.cache.Load(streamId)
-		if !ok {
+		case *river.StreamCreated:
+			s.onStreamCreated(ctx, event, blockNum)
 			continue
+		default:
+			stream, ok := s.cache.Load(streamId)
+			if !ok {
+				continue
+			}
+			stream.applyStreamEvents(ctx, events, blockNum)
 		}
-		stream.applyStreamEvents(ctx, events, blockNum)
 	}
 
 	s.appliedBlockNum.Store(uint64(blockNum))
@@ -205,22 +210,24 @@ func (s *streamCacheImpl) onStreamAllocated(
 	otherEvents []river.EventWithStreamId,
 	blockNum crypto.BlockNumber,
 ) {
-	if slices.Contains(event.Nodes, s.params.Wallet.Address) {
-		stream := &streamImpl{
-			params:              s.params,
-			streamId:            StreamId(event.StreamId),
-			lastAppliedBlockNum: blockNum,
-			lastAccessedTime:    time.Now(),
-			local:               &localStreamState{},
-		}
-		stream.nodesLocked.Reset(event.Nodes, s.params.Wallet.Address)
-		stream, created, err := s.createStreamStorage(ctx, stream, event.GenesisMiniblock)
-		if err != nil {
-			logging.FromCtx(ctx).Errorw("Failed to allocate stream", "err", err, "streamId", stream.streamId)
-		}
-		if created && len(otherEvents) > 0 {
-			stream.applyStreamEvents(ctx, otherEvents, blockNum)
-		}
+	if !slices.Contains(event.Nodes, s.params.Wallet.Address) {
+		return
+	}
+
+	stream := &streamImpl{
+		params:              s.params,
+		streamId:            event.GetStreamId(),
+		lastAppliedBlockNum: blockNum,
+		lastAccessedTime:    time.Now(),
+		local:               &localStreamState{},
+	}
+	stream.nodesLocked.Reset(event.Nodes, s.params.Wallet.Address)
+	stream, created, err := s.createStreamStorage(ctx, stream, event.GenesisMiniblock)
+	if err != nil {
+		logging.FromCtx(ctx).Errorw("Failed to allocate stream", "err", err, "streamId", event.GetStreamId())
+	}
+	if created && len(otherEvents) > 0 {
+		stream.applyStreamEvents(ctx, otherEvents, blockNum)
 	}
 }
 

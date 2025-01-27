@@ -2271,7 +2271,7 @@ func (s *PostgresStreamStore) getLastMiniblockNumberTx(
 		streamID,
 	).Scan(&maxSeqNum)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return 0, RiverError(Err_INTERNAL, "Stream exists in es table, but no miniblocks in DB")
 		}
 		return 0, err
@@ -2311,6 +2311,7 @@ func (s *PostgresStreamStore) normalizeEphemeralStreamTx(
 	streamId StreamId,
 ) (common.Hash, error) {
 	if _, err := s.lockEphemeralStream(ctx, tx, streamId, true); err != nil {
+		// The given stream might be already normalized. In this case, return the genesis miniblock hash.
 		return common.Hash{}, err
 	}
 
@@ -2393,6 +2394,33 @@ func (s *PostgresStreamStore) normalizeEphemeralStreamTx(
 	}
 
 	return common.BytesToHash(genesisMb.Header.Hash), nil
+}
+
+// IsStreamEphemeral returns true if the stream is ephemeral, false otherwise.
+func (s *PostgresStreamStore) IsStreamEphemeral(ctx context.Context, streamId StreamId) (ephemeral bool, err error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	err = s.txRunner(
+		ctx,
+		"IsStreamEphemeral",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			if err := tx.QueryRow(
+				ctx,
+				"SELECT ephemeral from es WHERE stream_id = $1",
+				streamId,
+			).Scan(&ephemeral); err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					return RiverError(Err_NOT_FOUND, "Stream not found", "streamId", streamId)
+				}
+				return err
+			}
+			return nil
+		},
+		nil,
+		"streamId", streamId,
+	)
+	return
 }
 
 func getCurrentNodeProcessInfo(currentSchemaName string) string {

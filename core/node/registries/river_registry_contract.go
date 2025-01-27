@@ -168,6 +168,10 @@ func NewRiverRegistryContract(
 				func(log *types.Log) any { return &river.StreamRegistryV1StreamAllocated{Raw: *log} },
 			},
 			{
+				river.Event_StreamCreated,
+				func(log *types.Log) any { return &river.StreamRegistryV1StreamCreated{Raw: *log} },
+			},
+			{
 				river.Event_StreamLastMiniblockUpdated,
 				func(log *types.Log) any { return &river.StreamRegistryV1StreamLastMiniblockUpdated{Raw: *log} },
 			},

@@ -148,6 +148,9 @@ type StreamStorage interface {
 	// Returns the hash of the first and last miniblock of the normalized stream.
 	NormalizeEphemeralStream(ctx context.Context, streamId StreamId) (common.Hash, error)
 
+	// IsStreamEphemeral returns true if the stream is ephemeral.
+	IsStreamEphemeral(ctx context.Context, streamId StreamId) (bool, error)
+
 	Close(ctx context.Context)
 }
 
