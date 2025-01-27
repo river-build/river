@@ -89,6 +89,7 @@ import {
 } from '../sync-agent/timeline/models/timeline-types'
 import { SyncState } from '../syncedStreamsLoop'
 import { RpcOptions } from '../rpcCommon'
+import { MlsClientExtensionsOpts } from '../mls/mlsClientExtensions'
 
 const log = dlog('csb:test:util')
 
@@ -260,6 +261,8 @@ export interface TestClientOpts {
     context?: SignerContext
     entitlementsDelegate?: EntitlementsDelegate
     deviceId?: string
+    logId?: string
+    mlsOpts?: MlsClientExtensionsOpts
 }
 
 export const makeTestClient = async (opts?: TestClientOpts): Promise<Client> => {
@@ -282,6 +285,12 @@ export const makeTestClient = async (opts?: TestClientOpts): Promise<Client> => 
         mlsCryptoStore,
         entitlementsDelegate,
         persistenceDbName,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        opts?.logId,
+        opts?.mlsOpts,
     )
 }
 
