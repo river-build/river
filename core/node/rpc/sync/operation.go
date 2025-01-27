@@ -34,7 +34,7 @@ type (
 		// thisNodeAddress keeps the address of this stream  thisNodeAddress instance
 		thisNodeAddress common.Address
 		// streamCache gives access to streams managed by this thisNodeAddress
-		streamCache *StreamCacheImpl
+		streamCache *StreamCache
 		// nodeRegistry is used to get the remote remoteNode endpoint from a thisNodeAddress address
 		nodeRegistry nodes.NodeRegistry
 	}
@@ -66,7 +66,7 @@ func NewStreamsSyncOperation(
 	ctx context.Context,
 	syncId string,
 	node common.Address,
-	streamCache *StreamCacheImpl,
+	streamCache *StreamCache,
 	nodeRegistry nodes.NodeRegistry,
 ) (*StreamSyncOperation, error) {
 	// make the sync operation cancellable for CancelSync

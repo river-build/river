@@ -41,7 +41,7 @@ var _ RemoteMiniblockProvider = (*cacheTestContext)(nil)
 type cacheTestInstance struct {
 	params         *StreamCacheParams
 	streamRegistry StreamRegistry
-	cache          *StreamCacheImpl
+	cache          *StreamCache
 	mbProducer     *miniblockProducer
 }
 
@@ -152,7 +152,7 @@ func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTe
 	return baseCtx, ctc
 }
 
-func (ctc *cacheTestContext) initCache(n int, opts *MiniblockProducerOpts) *StreamCacheImpl {
+func (ctc *cacheTestContext) initCache(n int, opts *MiniblockProducerOpts) *StreamCache {
 	streamCache := NewStreamCache(ctc.ctx, ctc.instances[n].params)
 	err := streamCache.Start(ctc.ctx)
 	ctc.require.NoError(err)

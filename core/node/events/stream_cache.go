@@ -43,7 +43,7 @@ type StreamCacheParams struct {
 	Scrubber                Scrubber
 }
 
-type StreamCacheImpl struct {
+type StreamCache struct {
 	params *StreamCacheParams
 
 	// streamId -> *streamImpl
@@ -66,8 +66,8 @@ type StreamCacheImpl struct {
 func NewStreamCache(
 	ctx context.Context,
 	params *StreamCacheParams,
-) *StreamCacheImpl {
-	return &StreamCacheImpl{
+) *StreamCache {
+	return &StreamCache{
 		params: params,
 		cache:  xsync.NewMapOf[StreamId, *Stream](),
 		streamCacheSizeGauge: params.Metrics.NewGaugeVecEx(
@@ -96,7 +96,7 @@ func NewStreamCache(
 	}
 }
 
-func (s *StreamCacheImpl) Start(ctx context.Context) error {
+func (s *StreamCache) Start(ctx context.Context) error {
 	// schedule sync tasks for all streams that are local to this node.
 	// these tasks sync up the local db with the latest block in the registry.
 	var localStreamResults []*registries.GetStreamResult
@@ -162,7 +162,7 @@ func (s *StreamCacheImpl) Start(ctx context.Context) error {
 	return nil
 }
 
-func (s *StreamCacheImpl) onBlockWithLogs(ctx context.Context, blockNum crypto.BlockNumber, logs []*types.Log) {
+func (s *StreamCache) onBlockWithLogs(ctx context.Context, blockNum crypto.BlockNumber, logs []*types.Log) {
 	streamEvents, errs := s.params.Registry.FilterStreamEvents(ctx, logs)
 	// Process parsed stream events even if some failed to parse
 	for _, err := range errs {
@@ -187,7 +187,7 @@ func (s *StreamCacheImpl) onBlockWithLogs(ctx context.Context, blockNum crypto.B
 	s.appliedBlockNum.Store(uint64(blockNum))
 }
 
-func (s *StreamCacheImpl) onStreamAllocated(
+func (s *StreamCache) onStreamAllocated(
 	ctx context.Context,
 	event *river.StreamAllocated,
 	otherEvents []river.EventWithStreamId,
@@ -212,11 +212,11 @@ func (s *StreamCacheImpl) onStreamAllocated(
 	}
 }
 
-func (s *StreamCacheImpl) Params() *StreamCacheParams {
+func (s *StreamCache) Params() *StreamCacheParams {
 	return s.params
 }
 
-func (s *StreamCacheImpl) runCacheCleanup(ctx context.Context) {
+func (s *StreamCache) runCacheCleanup(ctx context.Context) {
 	log := logging.FromCtx(ctx)
 
 	for {
@@ -241,7 +241,7 @@ type CacheCleanupResult struct {
 	RemoteStreams   int
 }
 
-func (s *StreamCacheImpl) CacheCleanup(ctx context.Context, enabled bool, expiration time.Duration) CacheCleanupResult {
+func (s *StreamCache) CacheCleanup(ctx context.Context, enabled bool, expiration time.Duration) CacheCleanupResult {
 	var (
 		log    = logging.FromCtx(ctx)
 		result CacheCleanupResult
@@ -275,7 +275,7 @@ func (s *StreamCacheImpl) CacheCleanup(ctx context.Context, enabled bool, expira
 	return result
 }
 
-func (s *StreamCacheImpl) tryLoadStreamRecord(
+func (s *StreamCache) tryLoadStreamRecord(
 	ctx context.Context,
 	streamId StreamId,
 	waitForLocal bool,
@@ -346,7 +346,7 @@ func (s *StreamCacheImpl) tryLoadStreamRecord(
 	return stream, err
 }
 
-func (s *StreamCacheImpl) createStreamStorage(
+func (s *StreamCache) createStreamStorage(
 	ctx context.Context,
 	stream *Stream,
 	mb []byte,
@@ -396,16 +396,16 @@ func (s *StreamCacheImpl) createStreamStorage(
 }
 
 // GetStreamWaitForLocal is a transitional method to support existing GetStream API before block number are wired through APIs.
-func (s *StreamCacheImpl) GetStreamWaitForLocal(ctx context.Context, streamId StreamId) (*Stream, error) {
+func (s *StreamCache) GetStreamWaitForLocal(ctx context.Context, streamId StreamId) (*Stream, error) {
 	return s.getStreamImpl(ctx, streamId, true)
 }
 
 // GetStreamNoWait is a transitional method to support existing GetStream API before block number are wired through APIs.
-func (s *StreamCacheImpl) GetStreamNoWait(ctx context.Context, streamId StreamId) (*Stream, error) {
+func (s *StreamCache) GetStreamNoWait(ctx context.Context, streamId StreamId) (*Stream, error) {
 	return s.getStreamImpl(ctx, streamId, false)
 }
 
-func (s *StreamCacheImpl) getStreamImpl(
+func (s *StreamCache) getStreamImpl(
 	ctx context.Context,
 	streamId StreamId,
 	waitForLocal bool,
@@ -417,14 +417,14 @@ func (s *StreamCacheImpl) getStreamImpl(
 	return stream, nil
 }
 
-func (s *StreamCacheImpl) ForceFlushAll(ctx context.Context) {
+func (s *StreamCache) ForceFlushAll(ctx context.Context) {
 	s.cache.Range(func(streamID StreamId, stream *Stream) bool {
 		stream.ForceFlush(ctx)
 		return true
 	})
 }
 
-func (s *StreamCacheImpl) GetLoadedViews(ctx context.Context) []*StreamView {
+func (s *StreamCache) GetLoadedViews(ctx context.Context) []*StreamView {
 	var result []*StreamView
 	s.cache.Range(func(streamID StreamId, stream *Stream) bool {
 		view := stream.tryGetView()
@@ -436,7 +436,7 @@ func (s *StreamCacheImpl) GetLoadedViews(ctx context.Context) []*StreamView {
 	return result
 }
 
-func (s *StreamCacheImpl) GetMbCandidateStreams(ctx context.Context) []*Stream {
+func (s *StreamCache) GetMbCandidateStreams(ctx context.Context) []*Stream {
 	var candidates []*Stream
 	s.cache.Range(func(streamID StreamId, stream *Stream) bool {
 		if stream.canCreateMiniblock() {

@@ -340,7 +340,7 @@ func (h *txpoolHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type cacheHandler struct {
-	cache *StreamCacheImpl
+	cache *StreamCache
 }
 
 func (h *cacheHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

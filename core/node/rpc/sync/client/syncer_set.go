@@ -39,7 +39,7 @@ type (
 		// messages is the channel to which StreamsSyncers write updates that must be sent to the client
 		messages chan *SyncStreamsResponse
 		// streamCache is used to subscribe to streams managed by this node instance
-		streamCache *StreamCacheImpl
+		streamCache *StreamCache
 		// nodeRegistry keeps a mapping from node address to node meta-data
 		nodeRegistry nodes.NodeRegistry
 		// syncerTasks is a wait group for running background StreamsSyncers that is used to ensure all syncers stopped
@@ -83,7 +83,7 @@ func NewSyncers(
 	ctx context.Context,
 	globalSyncOpCtxCancel context.CancelCauseFunc,
 	syncID string,
-	streamCache *StreamCacheImpl,
+	streamCache *StreamCache,
 	nodeRegistry nodes.NodeRegistry,
 	localNodeAddress common.Address,
 	cookies StreamCookieSetGroupedByNodeAddress,

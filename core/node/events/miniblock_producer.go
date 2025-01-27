@@ -82,7 +82,7 @@ type MiniblockProducerOpts struct {
 // candidates and schedules these candidates for registration.
 func NewMiniblockProducer(
 	ctx context.Context,
-	streamCache *StreamCacheImpl,
+	streamCache *StreamCache,
 	cfg crypto.OnChainConfiguration,
 	opts *MiniblockProducerOpts,
 ) *miniblockProducer {
@@ -104,7 +104,7 @@ func NewMiniblockProducer(
 }
 
 type miniblockProducer struct {
-	streamCache      *StreamCacheImpl
+	streamCache      *StreamCache
 	cfg              crypto.OnChainConfiguration
 	opts             MiniblockProducerOpts
 	localNodeAddress common.Address

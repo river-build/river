@@ -12,7 +12,7 @@ import (
 	. "github.com/river-build/river/core/node/shared"
 )
 
-func (s *StreamCacheImpl) submitSyncStreamTask(
+func (s *StreamCache) submitSyncStreamTask(
 	ctx context.Context,
 	pool *workerpool.WorkerPool,
 	streamId StreamId,
@@ -30,7 +30,7 @@ func (s *StreamCacheImpl) submitSyncStreamTask(
 // syncStreamFromPeers syncs the database for the given streamResult by fetching missing blocks from peers
 // participating in the stream.
 // TODO: change. It is assumed that stream is already in the local DB and only miniblocks maybe in the need of syncing.
-func (s *StreamCacheImpl) syncStreamFromPeers(
+func (s *StreamCache) syncStreamFromPeers(
 	ctx context.Context,
 	streamId StreamId,
 	lastMbInContract *MiniblockRef,
@@ -78,7 +78,7 @@ func (s *StreamCacheImpl) syncStreamFromPeers(
 
 // syncStreamFromSinglePeer syncs the database for the given streamResult by fetching missing blocks from a single peer.
 // It returns block number of last block successfully synced + 1.
-func (s *StreamCacheImpl) syncStreamFromSinglePeer(
+func (s *StreamCache) syncStreamFromSinglePeer(
 	ctx context.Context,
 	stream *Stream,
 	remote common.Address,

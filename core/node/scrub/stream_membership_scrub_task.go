@@ -33,7 +33,7 @@ type streamMembershipScrubTaskProcessorImpl struct {
 	ctx          context.Context
 	pendingTasks *xsync.MapOf[StreamId, bool]
 	workerPool   *workerpool.WorkerPool
-	cache        *StreamCacheImpl
+	cache        *StreamCache
 	eventAdder   EventAdder
 	chainAuth    auth.ChainAuth
 	config       *config.Config
@@ -50,7 +50,7 @@ var _ Scrubber = (*streamMembershipScrubTaskProcessorImpl)(nil)
 
 func NewStreamMembershipScrubTasksProcessor(
 	ctx context.Context,
-	cache *StreamCacheImpl,
+	cache *StreamCache,
 	eventAdder EventAdder,
 	chainAuth auth.ChainAuth,
 	cfg *config.Config,

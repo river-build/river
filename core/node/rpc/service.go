@@ -51,7 +51,7 @@ type Service struct {
 	storage         storage.StreamStorage
 
 	// Streams
-	cache       *StreamCacheImpl
+	cache       *StreamCache
 	mbProducer  TestMiniblockProducer
 	syncHandler river_sync.Handler
 
