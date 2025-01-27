@@ -10,7 +10,6 @@ import (
 	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/protocol"
-	"github.com/river-build/river/core/node/shared"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/utils"
 )
@@ -233,7 +232,7 @@ func (s *Service) streamMiniblocksByIds(
 	req *GetMiniblocksByIdsRequest,
 	resp *connect.ServerStream[GetMiniblockResponse],
 ) error {
-	streamId, err := shared.StreamIdFromBytes(req.GetStreamId())
+	streamId, err := StreamIdFromBytes(req.GetStreamId())
 	if err != nil {
 		return err
 	}
@@ -277,7 +276,7 @@ func (s *Service) GetMiniblockById(
 }
 
 func (s *Service) getMiniblockById(ctx context.Context, streamIdRaw []byte, id int64) (*GetMiniblockResponse, error) {
-	streamId, err := shared.StreamIdFromBytes(streamIdRaw)
+	streamId, err := StreamIdFromBytes(streamIdRaw)
 	if err != nil {
 		return nil, err
 	}
