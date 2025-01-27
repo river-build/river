@@ -18,21 +18,21 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var (
-	_ = errors.New
-	_ = big.NewInt
-	_ = strings.NewReader
-	_ = ethereum.NotFound
-	_ = bind.Bind
-	_ = common.Big1
-	_ = types.BloomLookup
-	_ = event.NewSubscription
-	_ = abi.ConvertType
+	_	= errors.New
+	_	= big.NewInt
+	_	= strings.NewReader
+	_	= ethereum.NotFound
+	_	= bind.Bind
+	_	= common.Big1
+	_	= types.BloomLookup
+	_	= event.NewSubscription
+	_	= abi.ConvertType
 )
 
 // MockEntitlementCheckerMetaData contains all meta data concerning the MockEntitlementChecker contract.
 var MockEntitlementCheckerMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"constructor\",\"inputs\":[{\"name\":\"approvedOperators\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"__EntitlementChecker_init\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"__NodeOperator_init\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"getClaimAddressForOperator\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCommissionRate\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getNodeAtIndex\",\"inputs\":[{\"name\":\"index\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getNodeCount\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getNodesByOperator\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"nodes\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getOperatorStatus\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"enumNodeOperatorStatus\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getOperators\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRandomNodes\",\"inputs\":[{\"name\":\"count\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"isOperator\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"isValidNode\",\"inputs\":[{\"name\":\"node\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"registerNode\",\"inputs\":[{\"name\":\"node\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"registerOperator\",\"inputs\":[{\"name\":\"claimer\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"requestEntitlementCheck\",\"inputs\":[{\"name\":\"walletAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"transactionId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"nodes\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"requestEntitlementCheckV2\",\"inputs\":[{\"name\":\"walletAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"transactionId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"requestId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"setClaimAddressForOperator\",\"inputs\":[{\"name\":\"claimer\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"operator\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setCommissionRate\",\"inputs\":[{\"name\":\"rateBps\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setOperatorStatus\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"newStatus\",\"type\":\"uint8\",\"internalType\":\"enumNodeOperatorStatus\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"unregisterNode\",\"inputs\":[{\"name\":\"node\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"Approval\",\"inputs\":[{\"name\":\"owner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"approved\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ApprovalForAll\",\"inputs\":[{\"name\":\"owner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"operator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"approved\",\"type\":\"bool\",\"indexed\":false,\"internalType\":\"bool\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ConsecutiveTransfer\",\"inputs\":[{\"name\":\"fromTokenId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"toTokenId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"from\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EntitlementCheckRequested\",\"inputs\":[{\"name\":\"callerAddress\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"},{\"name\":\"contractAddress\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"},{\"name\":\"transactionId\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"selectedNodes\",\"type\":\"address[]\",\"indexed\":false,\"internalType\":\"address[]\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EntitlementCheckRequestedV2\",\"inputs\":[{\"name\":\"walletAddress\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"},{\"name\":\"spaceAddress\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"},{\"name\":\"resolverAddress\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"},{\"name\":\"transactionId\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"selectedNodes\",\"type\":\"address[]\",\"indexed\":false,\"internalType\":\"address[]\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Initialized\",\"inputs\":[{\"name\":\"version\",\"type\":\"uint32\",\"indexed\":false,\"internalType\":\"uint32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"InterfaceAdded\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"indexed\":true,\"internalType\":\"bytes4\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"InterfaceRemoved\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"indexed\":true,\"internalType\":\"bytes4\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"NodeRegistered\",\"inputs\":[{\"name\":\"nodeAddress\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"NodeUnregistered\",\"inputs\":[{\"name\":\"nodeAddress\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OperatorClaimAddressChanged\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"claimAddress\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OperatorCommissionChanged\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"commission\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OperatorRegistered\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OperatorStatusChanged\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"newStatus\",\"type\":\"uint8\",\"indexed\":true,\"internalType\":\"enumNodeOperatorStatus\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OwnershipTransferred\",\"inputs\":[{\"name\":\"previousOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"newOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Transfer\",\"inputs\":[{\"name\":\"from\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"ApprovalCallerNotOwnerNorApproved\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ApprovalQueryForNonexistentToken\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BalanceQueryForZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementChecker_InsufficientNumberOfNodes\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementChecker_InvalidNodeOperator\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementChecker_InvalidOperator\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementChecker_NodeAlreadyRegistered\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementChecker_NodeNotRegistered\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementChecker_OperatorNotActive\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Initializable_InInitializingState\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Initializable_NotInInitializingState\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Introspection_AlreadySupported\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Introspection_NotSupported\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"MintERC2309QuantityExceedsLimit\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"MintToZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"MintZeroQuantity\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__AlreadyDelegated\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"NodeOperator__AlreadyRegistered\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__ClaimAddressNotChanged\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__InvalidAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__InvalidCommissionRate\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__InvalidOperator\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__InvalidSpace\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__InvalidStakeRequirement\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__InvalidStatusTransition\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__NotClaimer\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__NotEnoughStake\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__NotRegistered\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__NotTransferable\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__StatusNotChanged\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Ownable__NotOwner\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"Ownable__ZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"OwnerQueryForNonexistentToken\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"OwnershipNotInitializedForExtraData\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TransferCallerNotOwnerNorApproved\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TransferFromIncorrectOwner\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TransferToNonERC721ReceiverImplementer\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TransferToZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"URIQueryForNonexistentToken\",\"inputs\":[]}]",
-	Bin: "0x60806040523480156200001157600080fd5b50604051620024d4380380620024d4833981016040819052620000349162000682565b6200003e62000230565b6200004933620002d8565b6200005b63232cd89f60e21b620003a6565b6200006833600162000481565b7f988e8266be98e92aff755bdd688f8f4a2421e26daa6089c7e2668053a3bf550060005b82518110156200022757620000c2838281518110620000af57620000af62000754565b60209081029190910101518390620005dd565b506002826002016000858481518110620000e057620000e062000754565b6020908102919091018101516001600160a01b03168252810191909152604001600020805460ff191660018360038111156200012057620001206200076a565b02179055503382600401600085848151811062000141576200014162000754565b60200260200101516001600160a01b03166001600160a01b0316815260200190815260200160002060006101000a8154816001600160a01b0302191690836001600160a01b03160217905550620001cb838281518110620001a657620001a662000754565b60209081029190910181015133600090815260058601909252604090912090620005dd565b50828181518110620001e157620001e162000754565b60200260200101516001600160a01b03167f4d0eb1f4bac8744fd2be119845e23b3befc88094b42bcda1204c65694a00f9e560405160405180910390a26001016200008c565b50505062000780565b7f59b501c3653afc186af7d48dda36cf6732bd21629a6295693664240a6ef520008054640100000000900460ff16156200027d576040516366008a2d60e01b815260040160405180910390fd5b805463ffffffff9081161015620002d557805463ffffffff191663ffffffff90811782556040519081527fe9c9b456cb2994b80aeef036cf59d26e9617df80f816a6ee5a5b4166e07e2f5c9060200160405180910390a15b50565b60006200030c7f4675fa8241f86f37157864d3d49b85ad4b164352c516da28e1678a90470ae300546001600160a01b031690565b90506001600160a01b0382166200033657604051634e3ef82560e01b815260040160405180910390fd5b817f4675fa8241f86f37157864d3d49b85ad4b164352c516da28e1678a90470ae30080546001600160a01b0319166001600160a01b03928316179055604051838216918316907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a35050565b6001600160e01b0319811660009081527f81088bbc801e045ea3e7620779ab349988f58afbdfba10dff983df3f33522b00602052604090205460ff1662000430576001600160e01b0319811660009081527f81088bbc801e045ea3e7620779ab349988f58afbdfba10dff983df3f33522b0060205260409020805460ff1916600117905562000449565b604051637967f77d60e11b815260040160405180910390fd5b6040516001600160e01b03198216907f78f84e5b1c5c05be2b5ad3800781dd404d6d6c6302bc755c0fe20f58a33a7f2290600090a250565b7f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df00546000829003620004c65760405163b562e8dd60e01b815260040160405180910390fd5b6001600160a01b03831660008181527f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df056020908152604080832080546801000000000000000188020190558483527f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df0490915281206001851460e11b4260a01b17831790558284019083908390600080516020620024b48339815191528180a4600183015b818114620005935780836000600080516020620024b4833981519152600080a46001016200056a565b5081600003620005b557604051622e076360e81b815260040160405180910390fd5b7f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df005550505050565b6000620005f4836001600160a01b038416620005fd565b90505b92915050565b60008181526001830160205260408120546200064657508154600181810184556000848152602080822090930184905584548482528286019093526040902091909155620005f7565b506000620005f7565b634e487b7160e01b600052604160045260246000fd5b80516001600160a01b03811681146200067d57600080fd5b919050565b600060208083850312156200069657600080fd5b82516001600160401b0380821115620006ae57600080fd5b818501915085601f830112620006c357600080fd5b815181811115620006d857620006d86200064f565b8060051b604051601f19603f830116810181811085821117156200070057620007006200064f565b6040529182528482019250838101850191888311156200071f57600080fd5b938501935b828510156200074857620007388562000665565b8452938501939285019262000724565b98975050505050505050565b634e487b7160e01b600052603260045260246000fd5b634e487b7160e01b600052602160045260246000fd5b611d2480620007906000396000f3fe60806040526004361061011f5760003560e01c806359f12a26116100a0578063a33d1ccb11610064578063a33d1ccb14610324578063c5e41cf614610339578063e0cc26a214610359578063e97cc6f6146103ae578063fd39105a1461040657600080fd5b806359f12a2614610281578063672d7a0d146102a15780636d70f7ae146102c157806374b62682146102f15780639ebd11ef1461030457600080fd5b80633c59f126116100e75780633c59f126146101c957806343024ac9146102015780634463ba8f146102215780634f84544514610241578063541da4e51461026157600080fd5b806319fac8fd1461012457806327a099d8146101465780633682a4501461017157806339bf397e1461019157806339dc5b3e146101b4575b600080fd5b34801561013057600080fd5b5061014461013f36600461195b565b61046b565b005b34801561015257600080fd5b5061015b610568565b60405161016891906119b9565b60405180910390f35b34801561017d57600080fd5b5061014461018c3660046119e8565b610588565b34801561019d57600080fd5b506101a6610685565b604051908152602001610168565b3480156101c057600080fd5b5061014461069f565b3480156101d557600080fd5b506101e96101e436600461195b565b6106fb565b6040516001600160a01b039091168152602001610168565b34801561020d57600080fd5b5061015b61021c3660046119e8565b61076f565b34801561022d57600080fd5b5061014461023c366004611a03565b610861565b34801561024d57600080fd5b5061015b61025c36600461195b565b610bc7565b34801561026d57600080fd5b5061014461027c366004611a54565b610bd8565b34801561028d57600080fd5b5061014461029c366004611b3d565b610c1d565b3480156102ad57600080fd5b506101446102bc3660046119e8565b610dd9565b3480156102cd57600080fd5b506102e16102dc3660046119e8565b610eec565b6040519015158152602001610168565b6101446102ff366004611b70565b610f0b565b34801561031057600080fd5b506102e161031f3660046119e8565b61113d565b34801561033057600080fd5b50610144611154565b34801561034557600080fd5b506101446103543660046119e8565b6111ae565b34801561036557600080fd5b506101a66103743660046119e8565b6001600160a01b031660009081527f988e8266be98e92aff755bdd688f8f4a2421e26daa6089c7e2668053a3bf5503602052604090205490565b3480156103ba57600080fd5b506101e96103c93660046119e8565b6001600160a01b0390811660009081527f988e8266be98e92aff755bdd688f8f4a2421e26daa6089c7e2668053a3bf550460205260409020541690565b34801561041257600080fd5b5061045e6104213660046119e8565b6001600160a01b031660009081527f988e8266be98e92aff755bdd688f8f4a2421e26daa6089c7e2668053a3bf5502602052604090205460ff1690565b6040516101689190611bb9565b600080516020611d0483398151915261048481336112b1565b6104a1576040516306e0839760e01b815260040160405180910390fd5b6127108211156104c45760405163caf6558b60e01b815260040160405180910390fd5b3360009081526003820160205260409020548211801561050a5750600133600090815260028301602052604090205460ff16600381111561050757610507611ba3565b14155b156105285760405163caf6558b60e01b815260040160405180910390fd5b336000818152600383016020526040808220859055518492917f3f8e6b052699b5c8512c54ad8f8c79ddbf0486d3263c519f20bdbb42cd4bd6da91a35050565b6060600080516020611d04833981519152610582816112d2565b91505090565b6001600160a01b0381166105af576040516330bdf2f160e21b815260040160405180910390fd5b600080516020611d048339815191526105c881336112b1565b156105e657604051632e86c00360e11b815260040160405180910390fd5b6105f13360016112df565b6105fb8133611459565b503360008181526002830160209081526040808320805460ff1916600117905560048501825280832080546001600160a01b0388166001600160a01b03199091168117909155835260058501909152902061065591611459565b5060405133907f4d0eb1f4bac8744fd2be119845e23b3befc88094b42bcda1204c65694a00f9e590600090a25050565b6000600080516020611ce48339815191526105828161146e565b7f59b501c3653afc186af7d48dda36cf6732bd21629a6295693664240a6ef5200054640100000000900460ff166106e957604051630ef4733760e31b815260040160405180910390fd5b6106f96315bf23a760e01b611478565b565b6000600080516020611ce48339815191526107158161146e565b831061075e5760405162461bcd60e51b8152602060048201526013602482015272496e646578206f7574206f6620626f756e647360681b60448201526064015b60405180910390fd5b6107688184611551565b9392505050565b6060600080516020611ce4833981519152600061078b8261146e565b90508067ffffffffffffffff8111156107a6576107a6611a3e565b6040519080825280602002602001820160405280156107cf578160200160208202803683370190505b5092506000805b828110156108565760006107ea8583611551565b6001600160a01b03808216600090815260028801602052604090205491925080891691160361084d578086848060010195508151811061082c5761082c611be1565b60200260200101906001600160a01b031690816001600160a01b0316815250505b506001016107d6565b508352509092915050565b7f4675fa8241f86f37157864d3d49b85ad4b164352c516da28e1678a90470ae300546001600160a01b031633146108ad576040516365f4906560e01b8152336004820152602401610755565b6001600160a01b0382166108d4576040516330bdf2f160e21b815260040160405180910390fd5b600080516020611d048339815191526108ed81846112b1565b61090a576040516306e0839760e01b815260040160405180910390fd5b6001600160a01b038316600090815260028201602052604090205460ff1682600381111561093a5761093a611ba3565b81600381111561094c5761094c611ba3565b0361096a576040516318324e6f60e01b815260040160405180910390fd5b600081600381111561097e5761097e611ba3565b14801561099d5750600183600381111561099a5761099a611ba3565b14155b156109bb5760405163184186fd60e01b815260040160405180910390fd5b60018160038111156109cf576109cf611ba3565b1480156109ee575060028360038111156109eb576109eb611ba3565b14155b15610a0c5760405163184186fd60e01b815260040160405180910390fd5b6002816003811115610a2057610a20611ba3565b148015610a5c57506000836003811115610a3c57610a3c611ba3565b14158015610a5c57506003836003811115610a5957610a59611ba3565b14155b15610a7a5760405163184186fd60e01b815260040160405180910390fd5b6003816003811115610a8e57610a8e611ba3565b148015610aca57506000836003811115610aaa57610aaa611ba3565b14158015610aca57506002836003811115610ac757610ac7611ba3565b14155b15610ae85760405163184186fd60e01b815260040160405180910390fd5b6003836003811115610afc57610afc611ba3565b03610b23576001600160a01b03841660009081526006830160205260409020429055610b3f565b6001600160a01b03841660009081526006830160205260408120555b6001600160a01b03841660009081526002830160205260409020805484919060ff19166001836003811115610b7657610b76611ba3565b0217905550826003811115610b8d57610b8d611ba3565b6040516001600160a01b038616907f7db2ae93d80cbf3cf719888318a0b92adff1855bcb01eda517607ed7b0f2183a90600090a350505050565b6060610bd28261155d565b92915050565b7f4675e3cc15801ffde520a3076d6ad75c0c6dbe8f23bdbea1dd45b676caffe4f38433858585604051610c0f959493929190611bf7565b60405180910390a150505050565b3360008181527f988e8266be98e92aff755bdd688f8f4a2421e26daa6089c7e2668053a3bf5505602052604090208290600080516020611d0483398151915290610c6790836112b1565b610c8457604051637dd0ec8560e01b815260040160405180910390fd5b600080516020611d04833981519152610c9d81866112b1565b610cba576040516306e0839760e01b815260040160405180910390fd5b6001600160a01b03808616600090815260048301602052604090205481169087168103610cfa576040516366c7dd8d60e11b815260040160405180910390fd5b6001600160a01b03811660009081526005830160205260409020610d1e90876112b1565b15610d49576001600160a01b03811660009081526005830160205260409020610d479087611728565b505b6001600160a01b038681166000908152600484016020908152604080832080546001600160a01b031916948c16948517905592825260058501905220610d8f9087611459565b50866001600160a01b0316866001600160a01b03167f9acff66817c6f3fac3752bef82306270971b2a3da032a5cb876e05676bb8328860405160405180910390a350505050505050565b600080516020611d04833981519152610df281336112b1565b610e0f5760405163c931a1fb60e01b815260040160405180910390fd5b600080516020611ce4833981519152610e2881846112b1565b15610e465760405163d1922fc160e01b815260040160405180910390fd5b610e508184611459565b506001600160a01b038316600081815260028301602052604080822080546001600160a01b03191633179055517f564728e6a7c8edd446557d94e0339d5e6ca2e05f42188914efdbdc87bcbbabf69190a250600233600090815260028301602052604090205460ff166003811115610eca57610eca611ba3565b14610ee857604051637164de9160e01b815260040160405180910390fd5b5050565b600080600080516020611d048339815191525b905061076881846112b1565b604080516060810182523380825234602080840191825260008486018181528882527ff501c51c066c21fd640901535874a71171bb35113f6dc2832fce1b1f9da0cc01909252948520935184546001600160a01b0319166001600160a01b0390911617845590516001840155516002909201805460ff19169215159290921790915590610f98600561155d565b60008581527ff501c51c066c21fd640901535874a71171bb35113f6dc2832fce1b1f9da0cc0260205260409020909150610fd5600182018561173d565b5060005b82518110156110f357611022838281518110610ff757610ff7611be1565b602002602001015183600301600088815260200190815260200160002061145990919063ffffffff16565b50816004016000868152602001908152602001600020604051806040016040528085848151811061105557611055611be1565b60200260200101516001600160a01b031681526020016000600281111561107e5761107e611ba3565b9052815460018101835560009283526020928390208251910180546001600160a01b031981166001600160a01b03909316928317825593830151929390929183916001600160a81b03191617600160a01b8360028111156110e1576110e1611ba3565b02179055505050806001019050610fd9565b507ff116223a7f59f1061fd42fcd9ff757b06a05709a822d38873fbbc5b5fda148bf86843088888760405161112d96959493929190611c3c565b60405180910390a1505050505050565b600080600080516020611ce4833981519152610eff565b7f59b501c3653afc186af7d48dda36cf6732bd21629a6295693664240a6ef5200054640100000000900460ff1661119e57604051630ef4733760e31b815260040160405180910390fd5b6106f963232cd89f60e21b611478565b6001600160a01b0380821660009081527f180c1d0b9e5eeea9f2f078bc2712cd77acc6afea03b37705abe96dda6f602602602052604090205482913391600080516020611ce48339815191529116821461121b5760405163fd2dc62f60e01b815260040160405180910390fd5b600080516020611ce483398151915261123481866112b1565b611251576040516317e3e0b960e01b815260040160405180910390fd5b61125b8186611728565b506001600160a01b038516600081815260028301602052604080822080546001600160a01b0319169055517fb1864577e4f285436a80ebc833984755393e2450d58622a65fb4fce87ea3573a9190a25050505050565b6001600160a01b031660009081526001919091016020526040902054151590565b6060600061076883611749565b7f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df005460008290036113235760405163b562e8dd60e01b815260040160405180910390fd5b6001600160a01b03831660008181527f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df056020908152604080832080546801000000000000000188020190558483527f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df0490915281206001851460e11b4260a01b178317905582840190839083907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef8180a4600183015b81811461141057808360007fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef600080a46001016113d8565b508160000361143157604051622e076360e81b815260040160405180910390fd5b7f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df005550505050565b6000610768836001600160a01b0384166117a5565b6000610bd2825490565b6001600160e01b0319811660009081527f81088bbc801e045ea3e7620779ab349988f58afbdfba10dff983df3f33522b00602052604090205460ff16611500576001600160e01b0319811660009081527f81088bbc801e045ea3e7620779ab349988f58afbdfba10dff983df3f33522b0060205260409020805460ff19166001179055611519565b604051637967f77d60e11b815260040160405180910390fd5b6040516001600160e01b03198216907f78f84e5b1c5c05be2b5ad3800781dd404d6d6c6302bc755c0fe20f58a33a7f2290600090a250565b600061076883836117f4565b6060600080516020611ce483398151915260006115798261146e565b90508084111561159c57604051631762997d60e01b815260040160405180910390fd5b60008467ffffffffffffffff8111156115b7576115b7611a3e565b6040519080825280602002602001820160405280156115e0578160200160208202803683370190505b50905060008267ffffffffffffffff8111156115fe576115fe611a3e565b604051908082528060200260200182016040528015611627578160200160208202803683370190505b50905060005b8381101561165b578082828151811061164857611648611be1565b602090810291909101015260010161162d565b5060005b8681101561171d576000611673828661181e565b90506116a483828151811061168a5761168a611be1565b60200260200101518760000161155190919063ffffffff16565b8483815181106116b6576116b6611be1565b60200260200101906001600160a01b031690816001600160a01b031681525050828560019003955085815181106116ef576116ef611be1565b602002602001015183828151811061170957611709611be1565b60209081029190910101525060010161165f565b509095945050505050565b6000610768836001600160a01b038416611868565b600061076883836117a5565b60608160000180548060200260200160405190810160405280929190818152602001828054801561179957602002820191906000526020600020905b815481526020019060010190808311611785575b50505050509050919050565b60008181526001830160205260408120546117ec57508154600181810184556000848152602080822090930184905584548482528286019093526040902091909155610bd2565b506000610bd2565b600082600001828154811061180b5761180b611be1565b9060005260206000200154905092915050565b60408051446020820152429181019190915260608101839052336080820152600090829060a0016040516020818303038152906040528051906020012060001c6107689190611c8a565b6000818152600183016020526040812054801561195157600061188c600183611cac565b85549091506000906118a090600190611cac565b90508082146119055760008660000182815481106118c0576118c0611be1565b90600052602060002001549050808760000184815481106118e3576118e3611be1565b6000918252602080832090910192909255918252600188019052604090208390555b855486908061191657611916611ccd565b600190038181906000526020600020016000905590558560010160008681526020019081526020016000206000905560019350505050610bd2565b6000915050610bd2565b60006020828403121561196d57600080fd5b5035919050565b60008151808452602080850194506020840160005b838110156119ae5781516001600160a01b031687529582019590820190600101611989565b509495945050505050565b6020815260006107686020830184611974565b80356001600160a01b03811681146119e357600080fd5b919050565b6000602082840312156119fa57600080fd5b610768826119cc565b60008060408385031215611a1657600080fd5b611a1f836119cc565b9150602083013560048110611a3357600080fd5b809150509250929050565b634e487b7160e01b600052604160045260246000fd5b60008060008060808587031215611a6a57600080fd5b611a73856119cc565b9350602080860135935060408601359250606086013567ffffffffffffffff80821115611a9f57600080fd5b818801915088601f830112611ab357600080fd5b813581811115611ac557611ac5611a3e565b8060051b604051601f19603f83011681018181108582111715611aea57611aea611a3e565b60405291825284820192508381018501918b831115611b0857600080fd5b938501935b82851015611b2d57611b1e856119cc565b84529385019392850192611b0d565b989b979a50959850505050505050565b60008060408385031215611b5057600080fd5b611b59836119cc565b9150611b67602084016119cc565b90509250929050565b600080600060608486031215611b8557600080fd5b611b8e846119cc565b95602085013595506040909401359392505050565b634e487b7160e01b600052602160045260246000fd5b6020810160048310611bdb57634e487b7160e01b600052602160045260246000fd5b91905290565b634e487b7160e01b600052603260045260246000fd5b6001600160a01b03868116825285166020820152604081018490526060810183905260a060808201819052600090611c3190830184611974565b979650505050505050565b6001600160a01b038781168252868116602083015285166040820152606081018490526080810183905260c060a08201819052600090611c7e90830184611974565b98975050505050505050565b600082611ca757634e487b7160e01b600052601260045260246000fd5b500690565b81810381811115610bd257634e487b7160e01b600052601160045260246000fd5b634e487b7160e01b600052603160045260246000fdfe180c1d0b9e5eeea9f2f078bc2712cd77acc6afea03b37705abe96dda6f602600988e8266be98e92aff755bdd688f8f4a2421e26daa6089c7e2668053a3bf5500ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+	ABI:	"[{\"type\":\"constructor\",\"inputs\":[{\"name\":\"approvedOperators\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"__EntitlementChecker_init\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"__NodeOperator_init\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"__XChain_init\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"getClaimAddressForOperator\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCommissionRate\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getNodeAtIndex\",\"inputs\":[{\"name\":\"index\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getNodeCount\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getNodesByOperator\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"nodes\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getOperatorStatus\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"enumNodeOperatorStatus\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getOperators\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRandomNodes\",\"inputs\":[{\"name\":\"count\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRuleData\",\"inputs\":[{\"name\":\"transactionId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"tuple\",\"internalType\":\"structIRuleEntitlementBase.RuleData\",\"components\":[{\"name\":\"operations\",\"type\":\"tuple[]\",\"internalType\":\"structIRuleEntitlementBase.Operation[]\",\"components\":[{\"name\":\"opType\",\"type\":\"uint8\",\"internalType\":\"enumIRuleEntitlementBase.CombinedOperationType\"},{\"name\":\"index\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]},{\"name\":\"checkOperations\",\"type\":\"tuple[]\",\"internalType\":\"structIRuleEntitlementBase.CheckOperation[]\",\"components\":[{\"name\":\"opType\",\"type\":\"uint8\",\"internalType\":\"enumIRuleEntitlementBase.CheckOperationType\"},{\"name\":\"chainId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"contractAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"threshold\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"name\":\"logicalOperations\",\"type\":\"tuple[]\",\"internalType\":\"structIRuleEntitlementBase.LogicalOperation[]\",\"components\":[{\"name\":\"logOpType\",\"type\":\"uint8\",\"internalType\":\"enumIRuleEntitlementBase.LogicalOperationType\"},{\"name\":\"leftOperationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"rightOperationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"isCompleted\",\"inputs\":[{\"name\":\"transactionId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"requestId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"isOperator\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"isValidNode\",\"inputs\":[{\"name\":\"node\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"postEntitlementCheckResult\",\"inputs\":[{\"name\":\"transactionId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"requestId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"result\",\"type\":\"uint8\",\"internalType\":\"enumIEntitlementGatedBase.NodeVoteStatus\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"registerNode\",\"inputs\":[{\"name\":\"node\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"registerOperator\",\"inputs\":[{\"name\":\"claimer\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"requestEntitlementCheck\",\"inputs\":[{\"name\":\"walletAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"transactionId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"nodes\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"requestEntitlementCheckV2\",\"inputs\":[{\"name\":\"walletAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"transactionId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"requestId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"setClaimAddressForOperator\",\"inputs\":[{\"name\":\"claimer\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"operator\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setCommissionRate\",\"inputs\":[{\"name\":\"rateBps\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setOperatorStatus\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"newStatus\",\"type\":\"uint8\",\"internalType\":\"enumNodeOperatorStatus\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"unregisterNode\",\"inputs\":[{\"name\":\"node\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"Approval\",\"inputs\":[{\"name\":\"owner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"approved\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ApprovalForAll\",\"inputs\":[{\"name\":\"owner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"operator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"approved\",\"type\":\"bool\",\"indexed\":false,\"internalType\":\"bool\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ConsecutiveTransfer\",\"inputs\":[{\"name\":\"fromTokenId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"toTokenId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"from\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EntitlementCheckRequested\",\"inputs\":[{\"name\":\"callerAddress\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"},{\"name\":\"contractAddress\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"},{\"name\":\"transactionId\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"selectedNodes\",\"type\":\"address[]\",\"indexed\":false,\"internalType\":\"address[]\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EntitlementCheckRequestedV2\",\"inputs\":[{\"name\":\"walletAddress\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"},{\"name\":\"spaceAddress\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"},{\"name\":\"resolverAddress\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"},{\"name\":\"transactionId\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"selectedNodes\",\"type\":\"address[]\",\"indexed\":false,\"internalType\":\"address[]\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"EntitlementCheckResultPosted\",\"inputs\":[{\"name\":\"transactionId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"result\",\"type\":\"uint8\",\"indexed\":false,\"internalType\":\"enumIEntitlementGatedBase.NodeVoteStatus\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Initialized\",\"inputs\":[{\"name\":\"version\",\"type\":\"uint32\",\"indexed\":false,\"internalType\":\"uint32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"InterfaceAdded\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"indexed\":true,\"internalType\":\"bytes4\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"InterfaceRemoved\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"indexed\":true,\"internalType\":\"bytes4\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"NodeRegistered\",\"inputs\":[{\"name\":\"nodeAddress\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"NodeUnregistered\",\"inputs\":[{\"name\":\"nodeAddress\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OperatorClaimAddressChanged\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"claimAddress\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OperatorCommissionChanged\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"commission\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OperatorRegistered\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OperatorStatusChanged\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"newStatus\",\"type\":\"uint8\",\"indexed\":true,\"internalType\":\"enumNodeOperatorStatus\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OwnershipTransferred\",\"inputs\":[{\"name\":\"previousOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"newOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Transfer\",\"inputs\":[{\"name\":\"from\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"ApprovalCallerNotOwnerNorApproved\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ApprovalQueryForNonexistentToken\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BalanceQueryForZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementChecker_InsufficientNumberOfNodes\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementChecker_InvalidNodeOperator\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementChecker_InvalidOperator\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementChecker_NodeAlreadyRegistered\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementChecker_NodeNotRegistered\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementChecker_OperatorNotActive\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementGated_InvalidAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementGated_InvalidEntitlement\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementGated_NodeAlreadyVoted\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementGated_NodeNotFound\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementGated_OnlyEntitlementChecker\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementGated_RequestIdNotFound\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementGated_TransactionCheckAlreadyCompleted\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementGated_TransactionCheckAlreadyRegistered\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EntitlementGated_TransactionNotRegistered\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Initializable_InInitializingState\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Initializable_NotInInitializingState\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Introspection_AlreadySupported\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Introspection_NotSupported\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"MintERC2309QuantityExceedsLimit\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"MintToZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"MintZeroQuantity\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__AlreadyDelegated\",\"inputs\":[{\"name\":\"operator\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"NodeOperator__AlreadyRegistered\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__ClaimAddressNotChanged\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__InvalidAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__InvalidCommissionRate\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__InvalidOperator\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__InvalidSpace\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__InvalidStakeRequirement\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__InvalidStatusTransition\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__NotClaimer\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__NotEnoughStake\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__NotRegistered\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__NotTransferable\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NodeOperator__StatusNotChanged\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Ownable__NotOwner\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"Ownable__ZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"OwnerQueryForNonexistentToken\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"OwnershipNotInitializedForExtraData\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TransferCallerNotOwnerNorApproved\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TransferFromIncorrectOwner\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TransferToNonERC721ReceiverImplementer\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TransferToZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"URIQueryForNonexistentToken\",\"inputs\":[]}]",
+	Bin:	"0x60806040523480156200001157600080fd5b5060405162002c3238038062002c32833981016040819052620000349162000682565b6200003e62000230565b6200004933620002d8565b6200005b63232cd89f60e21b620003a6565b6200006833600162000481565b7f988e8266be98e92aff755bdd688f8f4a2421e26daa6089c7e2668053a3bf550060005b82518110156200022757620000c2838281518110620000af57620000af62000754565b60209081029190910101518390620005dd565b506002826002016000858481518110620000e057620000e062000754565b6020908102919091018101516001600160a01b03168252810191909152604001600020805460ff191660018360038111156200012057620001206200076a565b02179055503382600401600085848151811062000141576200014162000754565b60200260200101516001600160a01b03166001600160a01b0316815260200190815260200160002060006101000a8154816001600160a01b0302191690836001600160a01b03160217905550620001cb838281518110620001a657620001a662000754565b60209081029190910181015133600090815260058601909252604090912090620005dd565b50828181518110620001e157620001e162000754565b60200260200101516001600160a01b03167f4d0eb1f4bac8744fd2be119845e23b3befc88094b42bcda1204c65694a00f9e560405160405180910390a26001016200008c565b50505062000780565b7f59b501c3653afc186af7d48dda36cf6732bd21629a6295693664240a6ef520008054640100000000900460ff16156200027d576040516366008a2d60e01b815260040160405180910390fd5b805463ffffffff9081161015620002d557805463ffffffff191663ffffffff90811782556040519081527fe9c9b456cb2994b80aeef036cf59d26e9617df80f816a6ee5a5b4166e07e2f5c9060200160405180910390a15b50565b60006200030c7f4675fa8241f86f37157864d3d49b85ad4b164352c516da28e1678a90470ae300546001600160a01b031690565b90506001600160a01b0382166200033657604051634e3ef82560e01b815260040160405180910390fd5b817f4675fa8241f86f37157864d3d49b85ad4b164352c516da28e1678a90470ae30080546001600160a01b0319166001600160a01b03928316179055604051838216918316907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a35050565b6001600160e01b0319811660009081527f81088bbc801e045ea3e7620779ab349988f58afbdfba10dff983df3f33522b00602052604090205460ff1662000430576001600160e01b0319811660009081527f81088bbc801e045ea3e7620779ab349988f58afbdfba10dff983df3f33522b0060205260409020805460ff1916600117905562000449565b604051637967f77d60e11b815260040160405180910390fd5b6040516001600160e01b03198216907f78f84e5b1c5c05be2b5ad3800781dd404d6d6c6302bc755c0fe20f58a33a7f2290600090a250565b7f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df00546000829003620004c65760405163b562e8dd60e01b815260040160405180910390fd5b6001600160a01b03831660008181527f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df056020908152604080832080546801000000000000000188020190558483527f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df0490915281206001851460e11b4260a01b1783179055828401908390839060008051602062002c128339815191528180a4600183015b81811462000593578083600060008051602062002c12833981519152600080a46001016200056a565b5081600003620005b557604051622e076360e81b815260040160405180910390fd5b7f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df005550505050565b6000620005f4836001600160a01b038416620005fd565b90505b92915050565b60008181526001830160205260408120546200064657508154600181810184556000848152602080822090930184905584548482528286019093526040902091909155620005f7565b506000620005f7565b634e487b7160e01b600052604160045260246000fd5b80516001600160a01b03811681146200067d57600080fd5b919050565b600060208083850312156200069657600080fd5b82516001600160401b0380821115620006ae57600080fd5b818501915085601f830112620006c357600080fd5b815181811115620006d857620006d86200064f565b8060051b604051601f19603f830116810181811085821117156200070057620007006200064f565b6040529182528482019250838101850191888311156200071f57600080fd5b938501935b828510156200074857620007388562000665565b8452938501939285019262000724565b98975050505050505050565b634e487b7160e01b600052603260045260246000fd5b634e487b7160e01b600052602160045260246000fd5b61248280620007906000396000f3fe60806040526004361061014b5760003560e01c8063672d7a0d116100b6578063a33d1ccb1161006f578063a33d1ccb146103e9578063bbbcb94b146103fe578063c5e41cf614610413578063e0cc26a214610433578063e97cc6f614610488578063fd39105a146104e057600080fd5b8063672d7a0d146102ed5780636d70f7ae1461030d57806374b626821461033d57806392c399ff1461035057806398ddb51b1461037d5780639ebd11ef146103c957600080fd5b806343024ac91161010857806343024ac91461022d5780634463ba8f1461024d5780634739e8051461026d5780634f8454451461028d578063541da4e5146102ad57806359f12a26146102cd57600080fd5b806319fac8fd1461015057806327a099d8146101725780633682a4501461019d57806339bf397e146101bd57806339dc5b3e146101e05780633c59f126146101f5575b600080fd5b34801561015c57600080fd5b5061017061016b366004611e91565b610545565b005b34801561017e57600080fd5b50610187610642565b6040516101949190611eef565b60405180910390f35b3480156101a957600080fd5b506101706101b8366004611f1e565b610662565b3480156101c957600080fd5b506101d261075f565b604051908152602001610194565b3480156101ec57600080fd5b50610170610779565b34801561020157600080fd5b50610215610210366004611e91565b6107d5565b6040516001600160a01b039091168152602001610194565b34801561023957600080fd5b50610187610248366004611f1e565b610849565b34801561025957600080fd5b50610170610268366004611f39565b61093b565b34801561027957600080fd5b50610170610288366004611f74565b610ca1565b34801561029957600080fd5b506101876102a8366004611e91565b610ff0565b3480156102b957600080fd5b506101706102c8366004611fc7565b611001565b3480156102d957600080fd5b506101706102e83660046120b0565b611046565b3480156102f957600080fd5b50610170610308366004611f1e565b611202565b34801561031957600080fd5b5061032d610328366004611f1e565b611315565b6040519015158152602001610194565b61017061034b3660046120e3565b611334565b34801561035c57600080fd5b5061037061036b366004612116565b611554565b6040516101949190612221565b34801561038957600080fd5b5061032d610398366004612116565b6000918252600080516020612422833981519152602090815260408084209284526005909201905290205460ff1690565b3480156103d557600080fd5b5061032d6103e4366004611f1e565b611578565b3480156103f557600080fd5b5061017061158f565b34801561040a57600080fd5b506101706115e9565b34801561041f57600080fd5b5061017061042e366004611f1e565b611643565b34801561043f57600080fd5b506101d261044e366004611f1e565b6001600160a01b031660009081527f988e8266be98e92aff755bdd688f8f4a2421e26daa6089c7e2668053a3bf5503602052604090205490565b34801561049457600080fd5b506102156104a3366004611f1e565b6001600160a01b0390811660009081527f988e8266be98e92aff755bdd688f8f4a2421e26daa6089c7e2668053a3bf550460205260409020541690565b3480156104ec57600080fd5b506105386104fb366004611f1e565b6001600160a01b031660009081527f988e8266be98e92aff755bdd688f8f4a2421e26daa6089c7e2668053a3bf5502602052604090205460ff1690565b60405161019491906122c4565b60008051602061246283398151915261055e8133611746565b61057b576040516306e0839760e01b815260040160405180910390fd5b61271082111561059e5760405163caf6558b60e01b815260040160405180910390fd5b336000908152600382016020526040902054821180156105e45750600133600090815260028301602052604090205460ff1660038111156105e1576105e1612138565b14155b156106025760405163caf6558b60e01b815260040160405180910390fd5b336000818152600383016020526040808220859055518492917f3f8e6b052699b5c8512c54ad8f8c79ddbf0486d3263c519f20bdbb42cd4bd6da91a35050565b606060008051602061246283398151915261065c81611768565b91505090565b6001600160a01b038116610689576040516330bdf2f160e21b815260040160405180910390fd5b6000805160206124628339815191526106a28133611746565b156106c057604051632e86c00360e11b815260040160405180910390fd5b6106cb336001611775565b6106d581336118ef565b503360008181526002830160209081526040808320805460ff1916600117905560048501825280832080546001600160a01b0388166001600160a01b03199091168117909155835260058501909152902061072f916118ef565b5060405133907f4d0eb1f4bac8744fd2be119845e23b3befc88094b42bcda1204c65694a00f9e590600090a25050565b600060008051602061244283398151915261065c81611904565b7f59b501c3653afc186af7d48dda36cf6732bd21629a6295693664240a6ef5200054640100000000900460ff166107c357604051630ef4733760e31b815260040160405180910390fd5b6107d36315bf23a760e01b61190e565b565b60006000805160206124428339815191526107ef81611904565b83106108385760405162461bcd60e51b8152602060048201526013602482015272496e646578206f7574206f6620626f756e647360681b60448201526064015b60405180910390fd5b61084281846119e7565b9392505050565b6060600080516020612442833981519152600061086582611904565b90508067ffffffffffffffff81111561088057610880611fb1565b6040519080825280602002602001820160405280156108a9578160200160208202803683370190505b5092506000805b828110156109305760006108c485836119e7565b6001600160a01b0380821660009081526002880160205260409020549192508089169116036109275780868480600101955081518110610906576109066122de565b60200260200101906001600160a01b031690816001600160a01b0316815250505b506001016108b0565b508352509092915050565b7f4675fa8241f86f37157864d3d49b85ad4b164352c516da28e1678a90470ae300546001600160a01b03163314610987576040516365f4906560e01b815233600482015260240161082f565b6001600160a01b0382166109ae576040516330bdf2f160e21b815260040160405180910390fd5b6000805160206124628339815191526109c78184611746565b6109e4576040516306e0839760e01b815260040160405180910390fd5b6001600160a01b038316600090815260028201602052604090205460ff16826003811115610a1457610a14612138565b816003811115610a2657610a26612138565b03610a44576040516318324e6f60e01b815260040160405180910390fd5b6000816003811115610a5857610a58612138565b148015610a7757506001836003811115610a7457610a74612138565b14155b15610a955760405163184186fd60e01b815260040160405180910390fd5b6001816003811115610aa957610aa9612138565b148015610ac857506002836003811115610ac557610ac5612138565b14155b15610ae65760405163184186fd60e01b815260040160405180910390fd5b6002816003811115610afa57610afa612138565b148015610b3657506000836003811115610b1657610b16612138565b14158015610b3657506003836003811115610b3357610b33612138565b14155b15610b545760405163184186fd60e01b815260040160405180910390fd5b6003816003811115610b6857610b68612138565b148015610ba457506000836003811115610b8457610b84612138565b14158015610ba457506002836003811115610ba157610ba1612138565b14155b15610bc25760405163184186fd60e01b815260040160405180910390fd5b6003836003811115610bd657610bd6612138565b03610bfd576001600160a01b03841660009081526006830160205260409020429055610c19565b6001600160a01b03841660009081526006830160205260408120555b6001600160a01b03841660009081526002830160205260409020805484919060ff19166001836003811115610c5057610c50612138565b0217905550826003811115610c6757610c67612138565b6040516001600160a01b038616907f7db2ae93d80cbf3cf719888318a0b92adff1855bcb01eda517607ed7b0f2183a90600090a350505050565b60008381527ff501c51c066c21fd640901535874a71171bb35113f6dc2832fce1b1f9da0cc0160205260409020600281015460ff1615610cf457604051637912b73960e01b815260040160405180910390fd5b600084815260008051602061242283398151915260205260409020610d1c60018201856119f3565b610d3057610d30630829702360e41b611a0b565b60008481526003820160205260409020610d4a9033611746565b610d5e57610d5e638223a7e960e01b611a0b565b600084815260058201602052604090205460ff1615610d8757610d87637912b73960e01b611a0b565b60008481526003820160205260408120819081908190610da690611904565b905060005b81811015610ec45760008981526004870160205260408120805483908110610dd557610dd56122de565b60009182526020909120018054909150336001600160a01b0390911603610e615760008154600160a01b900460ff166002811115610e1557610e15612138565b14610e33576040516347592a4d60e01b815260040160405180910390fd5b80548990829060ff60a01b1916600160a01b836002811115610e5757610e57612138565b0217905550600195505b60018154600160a01b900460ff166002811115610e8057610e80612138565b03610e9057846001019450610ebb565b60028154600160a01b900460ff166002811115610eaf57610eaf612138565b03610ebb578360010193505b50600101610dab565b5083610ee357604051638223a7e960e01b815260040160405180910390fd5b610eee60028261230a565b831180610f045750610f0160028261230a565b82115b15610fe55760008881526005860160205260408120805460ff19166001179055828411610f32576002610f35565b60015b90506000610f428b611a15565b90506001826002811115610f5857610f58612138565b1480610f615750805b15610fe257875460018901546040516372c3487960e11b81526001600160a01b039092169163e58690f29190610fa0908f90600090889060040161231e565b6000604051808303818588803b158015610fb957600080fd5b505af1158015610fcd573d6000803e3d6000fd5b50505060028a01805460ff1916600117905550505b50505b505050505050505050565b6060610ffb82611a93565b92915050565b7f4675e3cc15801ffde520a3076d6ad75c0c6dbe8f23bdbea1dd45b676caffe4f38433858585604051611038959493929190612343565b60405180910390a150505050565b3360008181527f988e8266be98e92aff755bdd688f8f4a2421e26daa6089c7e2668053a3bf5505602052604090208290600080516020612462833981519152906110909083611746565b6110ad57604051637dd0ec8560e01b815260040160405180910390fd5b6000805160206124628339815191526110c68186611746565b6110e3576040516306e0839760e01b815260040160405180910390fd5b6001600160a01b03808616600090815260048301602052604090205481169087168103611123576040516366c7dd8d60e11b815260040160405180910390fd5b6001600160a01b038116600090815260058301602052604090206111479087611746565b15611172576001600160a01b038116600090815260058301602052604090206111709087611c5e565b505b6001600160a01b038681166000908152600484016020908152604080832080546001600160a01b031916948c169485179055928252600585019052206111b890876118ef565b50866001600160a01b0316866001600160a01b03167f9acff66817c6f3fac3752bef82306270971b2a3da032a5cb876e05676bb8328860405160405180910390a350505050505050565b60008051602061246283398151915261121b8133611746565b6112385760405163c931a1fb60e01b815260040160405180910390fd5b6000805160206124428339815191526112518184611746565b1561126f5760405163d1922fc160e01b815260040160405180910390fd5b61127981846118ef565b506001600160a01b038316600081815260028301602052604080822080546001600160a01b03191633179055517f564728e6a7c8edd446557d94e0339d5e6ca2e05f42188914efdbdc87bcbbabf69190a250600233600090815260028301602052604090205460ff1660038111156112f3576112f3612138565b1461131157604051637164de9160e01b815260040160405180910390fd5b5050565b6000806000805160206124628339815191525b90506108428184611746565b604080516060810182523380825234602080840191825260008486018181528882527ff501c51c066c21fd640901535874a71171bb35113f6dc2832fce1b1f9da0cc01909252948520935184546001600160a01b0319166001600160a01b0390911617845590516001840155516002909201805460ff191692151592909217909155906113c16005611a93565b6000858152600080516020612422833981519152602052604090209091506113ec6001820185611c73565b5060005b825181101561150a5761143983828151811061140e5761140e6122de565b60200260200101518360030160008881526020019081526020016000206118ef90919063ffffffff16565b50816004016000868152602001908152602001600020604051806040016040528085848151811061146c5761146c6122de565b60200260200101516001600160a01b031681526020016000600281111561149557611495612138565b9052815460018101835560009283526020928390208251910180546001600160a01b031981166001600160a01b03909316928317825593830151929390929183916001600160a81b03191617600160a01b8360028111156114f8576114f8612138565b021790555050508060010190506113f0565b507ff116223a7f59f1061fd42fcd9ff757b06a05709a822d38873fbbc5b5fda148bf86843088888760405161154496959493929190612388565b60405180910390a1505050505050565b610ffb60405180606001604052806060815260200160608152602001606081525090565b600080600080516020612442833981519152611328565b7f59b501c3653afc186af7d48dda36cf6732bd21629a6295693664240a6ef5200054640100000000900460ff166115d957604051630ef4733760e31b815260040160405180910390fd5b6107d363232cd89f60e21b61190e565b7f59b501c3653afc186af7d48dda36cf6732bd21629a6295693664240a6ef5200054640100000000900460ff1661163357604051630ef4733760e31b815260040160405180910390fd5b6107d3636afd38fd60e11b61190e565b6001600160a01b0380821660009081527f180c1d0b9e5eeea9f2f078bc2712cd77acc6afea03b37705abe96dda6f602602602052604090205482913391600080516020612442833981519152911682146116b05760405163fd2dc62f60e01b815260040160405180910390fd5b6000805160206124428339815191526116c98186611746565b6116e6576040516317e3e0b960e01b815260040160405180910390fd5b6116f08186611c5e565b506001600160a01b038516600081815260028301602052604080822080546001600160a01b0319169055517fb1864577e4f285436a80ebc833984755393e2450d58622a65fb4fce87ea3573a9190a25050505050565b6001600160a01b03811660009081526001830160205260408120541515610842565b6060600061084283611c7f565b7f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df005460008290036117b95760405163b562e8dd60e01b815260040160405180910390fd5b6001600160a01b03831660008181527f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df056020908152604080832080546801000000000000000188020190558483527f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df0490915281206001851460e11b4260a01b178317905582840190839083907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef8180a4600183015b8181146118a657808360007fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef600080a460010161186e565b50816000036118c757604051622e076360e81b815260040160405180910390fd5b7f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df005550505050565b6000610842836001600160a01b038416611cdb565b6000610ffb825490565b6001600160e01b0319811660009081527f81088bbc801e045ea3e7620779ab349988f58afbdfba10dff983df3f33522b00602052604090205460ff16611996576001600160e01b0319811660009081527f81088bbc801e045ea3e7620779ab349988f58afbdfba10dff983df3f33522b0060205260409020805460ff191660011790556119af565b604051637967f77d60e11b815260040160405180910390fd5b6040516001600160e01b03198216907f78f84e5b1c5c05be2b5ad3800781dd404d6d6c6302bc755c0fe20f58a33a7f2290600090a250565b60006108428383611d2a565b60008181526001830160205260408120541515610842565b8060005260046000fd5b60008181526000805160206124228339815191526020526040812081611a3d60018301611904565b905060005b81811015611a8857600583016000611a5d60018601846119e7565b815260208101919091526040016000205460ff16611a8057506000949350505050565b600101611a42565b506001949350505050565b60606000805160206124428339815191526000611aaf82611904565b905080841115611ad257604051631762997d60e01b815260040160405180910390fd5b60008467ffffffffffffffff811115611aed57611aed611fb1565b604051908082528060200260200182016040528015611b16578160200160208202803683370190505b50905060008267ffffffffffffffff811115611b3457611b34611fb1565b604051908082528060200260200182016040528015611b5d578160200160208202803683370190505b50905060005b83811015611b915780828281518110611b7e57611b7e6122de565b6020908102919091010152600101611b63565b5060005b86811015611c53576000611ba98286611d54565b9050611bda838281518110611bc057611bc06122de565b6020026020010151876000016119e790919063ffffffff16565b848381518110611bec57611bec6122de565b60200260200101906001600160a01b031690816001600160a01b03168152505082856001900395508581518110611c2557611c256122de565b6020026020010151838281518110611c3f57611c3f6122de565b602090810291909101015250600101611b95565b509095945050505050565b6000610842836001600160a01b038416611d9e565b60006108428383611cdb565b606081600001805480602002602001604051908101604052809291908181526020018280548015611ccf57602002820191906000526020600020905b815481526020019060010190808311611cbb575b50505050509050919050565b6000818152600183016020526040812054611d2257508154600181810184556000848152602080822090930184905584548482528286019093526040902091909155610ffb565b506000610ffb565b6000826000018281548110611d4157611d416122de565b9060005260206000200154905092915050565b60408051446020820152429181019190915260608101839052336080820152600090829060a0016040516020818303038152906040528051906020012060001c61084291906123d6565b60008181526001830160205260408120548015611e87576000611dc26001836123ea565b8554909150600090611dd6906001906123ea565b9050808214611e3b576000866000018281548110611df657611df66122de565b9060005260206000200154905080876000018481548110611e1957611e196122de565b6000918252602080832090910192909255918252600188019052604090208390555b8554869080611e4c57611e4c61240b565b600190038181906000526020600020016000905590558560010160008681526020019081526020016000206000905560019350505050610ffb565b6000915050610ffb565b600060208284031215611ea357600080fd5b5035919050565b60008151808452602080850194506020840160005b83811015611ee45781516001600160a01b031687529582019590820190600101611ebf565b509495945050505050565b6020815260006108426020830184611eaa565b80356001600160a01b0381168114611f1957600080fd5b919050565b600060208284031215611f3057600080fd5b61084282611f02565b60008060408385031215611f4c57600080fd5b611f5583611f02565b9150602083013560048110611f6957600080fd5b809150509250929050565b600080600060608486031215611f8957600080fd5b8335925060208401359150604084013560038110611fa657600080fd5b809150509250925092565b634e487b7160e01b600052604160045260246000fd5b60008060008060808587031215611fdd57600080fd5b611fe685611f02565b9350602080860135935060408601359250606086013567ffffffffffffffff8082111561201257600080fd5b818801915088601f83011261202657600080fd5b81358181111561203857612038611fb1565b8060051b604051601f19603f8301168101818110858211171561205d5761205d611fb1565b60405291825284820192508381018501918b83111561207b57600080fd5b938501935b828510156120a05761209185611f02565b84529385019392850192612080565b989b979a50959850505050505050565b600080604083850312156120c357600080fd5b6120cc83611f02565b91506120da60208401611f02565b90509250929050565b6000806000606084860312156120f857600080fd5b61210184611f02565b95602085013595506040909401359392505050565b6000806040838503121561212957600080fd5b50508035926020909101359150565b634e487b7160e01b600052602160045260246000fd5b6003811061215e5761215e612138565b50565b60008151808452602080850194506020840160005b83811015611ee457815180516007811061219257612192612138565b885280840151848901526040808201516001600160a01b0316908901526060908101519088015260809096019590820190600101612176565b60008151808452602080850194506020840160005b83811015611ee457815180516121f58161214e565b88528084015160ff908116858a01526040918201511690880152606090960195908201906001016121e0565b6020808252825160608383015280516080840181905260009291820190839060a08601905b8083101561227d578351805161225b8161214e565b835285015160ff16858301529284019260019290920191604090910190612246565b50838701519350601f1992508286820301604087015261229d8185612161565b935050506040850151818584030160608601526122ba83826121cb565b9695505050505050565b60208101600483106122d8576122d8612138565b91905290565b634e487b7160e01b600052603260045260246000fd5b634e487b7160e01b600052601260045260246000fd5b600082612319576123196122f4565b500490565b83815260208101839052606081016123358361214e565b826040830152949350505050565b6001600160a01b03868116825285166020820152604081018490526060810183905260a06080820181905260009061237d90830184611eaa565b979650505050505050565b6001600160a01b038781168252868116602083015285166040820152606081018490526080810183905260c060a082018190526000906123ca90830184611eaa565b98975050505050505050565b6000826123e5576123e56122f4565b500690565b81810381811115610ffb57634e487b7160e01b600052601160045260246000fd5b634e487b7160e01b600052603160045260246000fdfef501c51c066c21fd640901535874a71171bb35113f6dc2832fce1b1f9da0cc02180c1d0b9e5eeea9f2f078bc2712cd77acc6afea03b37705abe96dda6f602600988e8266be98e92aff755bdd688f8f4a2421e26daa6089c7e2668053a3bf5500ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
 }
 
 // MockEntitlementCheckerABI is the input ABI used to generate the binding from.
@@ -62,61 +62,61 @@ func DeployMockEntitlementChecker(auth *bind.TransactOpts, backend bind.Contract
 
 // MockEntitlementChecker is an auto generated Go binding around an Ethereum contract.
 type MockEntitlementChecker struct {
-	MockEntitlementCheckerCaller     // Read-only binding to the contract
-	MockEntitlementCheckerTransactor // Write-only binding to the contract
-	MockEntitlementCheckerFilterer   // Log filterer for contract events
+	MockEntitlementCheckerCaller		// Read-only binding to the contract
+	MockEntitlementCheckerTransactor	// Write-only binding to the contract
+	MockEntitlementCheckerFilterer		// Log filterer for contract events
 }
 
 // MockEntitlementCheckerCaller is an auto generated read-only Go binding around an Ethereum contract.
 type MockEntitlementCheckerCaller struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+	contract *bind.BoundContract	// Generic contract wrapper for the low level calls
 }
 
 // MockEntitlementCheckerTransactor is an auto generated write-only Go binding around an Ethereum contract.
 type MockEntitlementCheckerTransactor struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+	contract *bind.BoundContract	// Generic contract wrapper for the low level calls
 }
 
 // MockEntitlementCheckerFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
 type MockEntitlementCheckerFilterer struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+	contract *bind.BoundContract	// Generic contract wrapper for the low level calls
 }
 
 // MockEntitlementCheckerSession is an auto generated Go binding around an Ethereum contract,
 // with pre-set call and transact options.
 type MockEntitlementCheckerSession struct {
-	Contract     *MockEntitlementChecker // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts           // Call options to use throughout this session
-	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
+	Contract	*MockEntitlementChecker	// Generic contract binding to set the session for
+	CallOpts	bind.CallOpts		// Call options to use throughout this session
+	TransactOpts	bind.TransactOpts	// Transaction auth options to use throughout this session
 }
 
 // MockEntitlementCheckerCallerSession is an auto generated read-only Go binding around an Ethereum contract,
 // with pre-set call options.
 type MockEntitlementCheckerCallerSession struct {
-	Contract *MockEntitlementCheckerCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts                 // Call options to use throughout this session
+	Contract	*MockEntitlementCheckerCaller	// Generic contract caller binding to set the session for
+	CallOpts	bind.CallOpts			// Call options to use throughout this session
 }
 
 // MockEntitlementCheckerTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
 // with pre-set transact options.
 type MockEntitlementCheckerTransactorSession struct {
-	Contract     *MockEntitlementCheckerTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts                 // Transaction auth options to use throughout this session
+	Contract	*MockEntitlementCheckerTransactor	// Generic contract transactor binding to set the session for
+	TransactOpts	bind.TransactOpts			// Transaction auth options to use throughout this session
 }
 
 // MockEntitlementCheckerRaw is an auto generated low-level Go binding around an Ethereum contract.
 type MockEntitlementCheckerRaw struct {
-	Contract *MockEntitlementChecker // Generic contract binding to access the raw methods on
+	Contract *MockEntitlementChecker	// Generic contract binding to access the raw methods on
 }
 
 // MockEntitlementCheckerCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
 type MockEntitlementCheckerCallerRaw struct {
-	Contract *MockEntitlementCheckerCaller // Generic read-only contract binding to access the raw methods on
+	Contract *MockEntitlementCheckerCaller	// Generic read-only contract binding to access the raw methods on
 }
 
 // MockEntitlementCheckerTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
 type MockEntitlementCheckerTransactorRaw struct {
-	Contract *MockEntitlementCheckerTransactor // Generic write-only contract binding to access the raw methods on
+	Contract *MockEntitlementCheckerTransactor	// Generic write-only contract binding to access the raw methods on
 }
 
 // NewMockEntitlementChecker creates a new instance of MockEntitlementChecker, bound to a specific deployed contract.
@@ -450,6 +450,68 @@ func (_MockEntitlementChecker *MockEntitlementCheckerCallerSession) GetRandomNod
 	return _MockEntitlementChecker.Contract.GetRandomNodes(&_MockEntitlementChecker.CallOpts, count)
 }
 
+// GetRuleData is a free data retrieval call binding the contract method 0x92c399ff.
+//
+// Solidity: function getRuleData(bytes32 transactionId, uint256 roleId) view returns(((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[]))
+func (_MockEntitlementChecker *MockEntitlementCheckerCaller) GetRuleData(opts *bind.CallOpts, transactionId [32]byte, roleId *big.Int) (IRuleEntitlementBaseRuleData, error) {
+	var out []interface{}
+	err := _MockEntitlementChecker.contract.Call(opts, &out, "getRuleData", transactionId, roleId)
+
+	if err != nil {
+		return *new(IRuleEntitlementBaseRuleData), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(IRuleEntitlementBaseRuleData)).(*IRuleEntitlementBaseRuleData)
+
+	return out0, err
+
+}
+
+// GetRuleData is a free data retrieval call binding the contract method 0x92c399ff.
+//
+// Solidity: function getRuleData(bytes32 transactionId, uint256 roleId) view returns(((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[]))
+func (_MockEntitlementChecker *MockEntitlementCheckerSession) GetRuleData(transactionId [32]byte, roleId *big.Int) (IRuleEntitlementBaseRuleData, error) {
+	return _MockEntitlementChecker.Contract.GetRuleData(&_MockEntitlementChecker.CallOpts, transactionId, roleId)
+}
+
+// GetRuleData is a free data retrieval call binding the contract method 0x92c399ff.
+//
+// Solidity: function getRuleData(bytes32 transactionId, uint256 roleId) view returns(((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[]))
+func (_MockEntitlementChecker *MockEntitlementCheckerCallerSession) GetRuleData(transactionId [32]byte, roleId *big.Int) (IRuleEntitlementBaseRuleData, error) {
+	return _MockEntitlementChecker.Contract.GetRuleData(&_MockEntitlementChecker.CallOpts, transactionId, roleId)
+}
+
+// IsCompleted is a free data retrieval call binding the contract method 0x98ddb51b.
+//
+// Solidity: function isCompleted(bytes32 transactionId, uint256 requestId) view returns(bool)
+func (_MockEntitlementChecker *MockEntitlementCheckerCaller) IsCompleted(opts *bind.CallOpts, transactionId [32]byte, requestId *big.Int) (bool, error) {
+	var out []interface{}
+	err := _MockEntitlementChecker.contract.Call(opts, &out, "isCompleted", transactionId, requestId)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// IsCompleted is a free data retrieval call binding the contract method 0x98ddb51b.
+//
+// Solidity: function isCompleted(bytes32 transactionId, uint256 requestId) view returns(bool)
+func (_MockEntitlementChecker *MockEntitlementCheckerSession) IsCompleted(transactionId [32]byte, requestId *big.Int) (bool, error) {
+	return _MockEntitlementChecker.Contract.IsCompleted(&_MockEntitlementChecker.CallOpts, transactionId, requestId)
+}
+
+// IsCompleted is a free data retrieval call binding the contract method 0x98ddb51b.
+//
+// Solidity: function isCompleted(bytes32 transactionId, uint256 requestId) view returns(bool)
+func (_MockEntitlementChecker *MockEntitlementCheckerCallerSession) IsCompleted(transactionId [32]byte, requestId *big.Int) (bool, error) {
+	return _MockEntitlementChecker.Contract.IsCompleted(&_MockEntitlementChecker.CallOpts, transactionId, requestId)
+}
+
 // IsOperator is a free data retrieval call binding the contract method 0x6d70f7ae.
 //
 // Solidity: function isOperator(address operator) view returns(bool)
@@ -552,6 +614,48 @@ func (_MockEntitlementChecker *MockEntitlementCheckerSession) NodeOperatorInit()
 // Solidity: function __NodeOperator_init() returns()
 func (_MockEntitlementChecker *MockEntitlementCheckerTransactorSession) NodeOperatorInit() (*types.Transaction, error) {
 	return _MockEntitlementChecker.Contract.NodeOperatorInit(&_MockEntitlementChecker.TransactOpts)
+}
+
+// XChainInit is a paid mutator transaction binding the contract method 0xbbbcb94b.
+//
+// Solidity: function __XChain_init() returns()
+func (_MockEntitlementChecker *MockEntitlementCheckerTransactor) XChainInit(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _MockEntitlementChecker.contract.Transact(opts, "__XChain_init")
+}
+
+// XChainInit is a paid mutator transaction binding the contract method 0xbbbcb94b.
+//
+// Solidity: function __XChain_init() returns()
+func (_MockEntitlementChecker *MockEntitlementCheckerSession) XChainInit() (*types.Transaction, error) {
+	return _MockEntitlementChecker.Contract.XChainInit(&_MockEntitlementChecker.TransactOpts)
+}
+
+// XChainInit is a paid mutator transaction binding the contract method 0xbbbcb94b.
+//
+// Solidity: function __XChain_init() returns()
+func (_MockEntitlementChecker *MockEntitlementCheckerTransactorSession) XChainInit() (*types.Transaction, error) {
+	return _MockEntitlementChecker.Contract.XChainInit(&_MockEntitlementChecker.TransactOpts)
+}
+
+// PostEntitlementCheckResult is a paid mutator transaction binding the contract method 0x4739e805.
+//
+// Solidity: function postEntitlementCheckResult(bytes32 transactionId, uint256 requestId, uint8 result) returns()
+func (_MockEntitlementChecker *MockEntitlementCheckerTransactor) PostEntitlementCheckResult(opts *bind.TransactOpts, transactionId [32]byte, requestId *big.Int, result uint8) (*types.Transaction, error) {
+	return _MockEntitlementChecker.contract.Transact(opts, "postEntitlementCheckResult", transactionId, requestId, result)
+}
+
+// PostEntitlementCheckResult is a paid mutator transaction binding the contract method 0x4739e805.
+//
+// Solidity: function postEntitlementCheckResult(bytes32 transactionId, uint256 requestId, uint8 result) returns()
+func (_MockEntitlementChecker *MockEntitlementCheckerSession) PostEntitlementCheckResult(transactionId [32]byte, requestId *big.Int, result uint8) (*types.Transaction, error) {
+	return _MockEntitlementChecker.Contract.PostEntitlementCheckResult(&_MockEntitlementChecker.TransactOpts, transactionId, requestId, result)
+}
+
+// PostEntitlementCheckResult is a paid mutator transaction binding the contract method 0x4739e805.
+//
+// Solidity: function postEntitlementCheckResult(bytes32 transactionId, uint256 requestId, uint8 result) returns()
+func (_MockEntitlementChecker *MockEntitlementCheckerTransactorSession) PostEntitlementCheckResult(transactionId [32]byte, requestId *big.Int, result uint8) (*types.Transaction, error) {
+	return _MockEntitlementChecker.Contract.PostEntitlementCheckResult(&_MockEntitlementChecker.TransactOpts, transactionId, requestId, result)
 }
 
 // RegisterNode is a paid mutator transaction binding the contract method 0x672d7a0d.
@@ -724,15 +828,15 @@ func (_MockEntitlementChecker *MockEntitlementCheckerTransactorSession) Unregist
 
 // MockEntitlementCheckerApprovalIterator is returned from FilterApproval and is used to iterate over the raw logs and unpacked data for Approval events raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerApprovalIterator struct {
-	Event *MockEntitlementCheckerApproval // Event containing the contract specifics and raw log
+	Event	*MockEntitlementCheckerApproval	// Event containing the contract specifics and raw log
 
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
+	contract	*bind.BoundContract	// Generic contract to use for unpacking event data
+	event		string			// Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	logs	chan types.Log		// Log channel receiving the found contract events
+	sub	ethereum.Subscription	// Subscription for errors, completion and termination
+	done	bool			// Whether the subscription completed delivering logs
+	fail	error			// Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -791,10 +895,10 @@ func (it *MockEntitlementCheckerApprovalIterator) Close() error {
 
 // MockEntitlementCheckerApproval represents a Approval event raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerApproval struct {
-	Owner    common.Address
-	Approved common.Address
-	TokenId  *big.Int
-	Raw      types.Log // Blockchain specific contextual infos
+	Owner		common.Address
+	Approved	common.Address
+	TokenId		*big.Int
+	Raw		types.Log	// Blockchain specific contextual infos
 }
 
 // FilterApproval is a free log retrieval operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
@@ -886,15 +990,15 @@ func (_MockEntitlementChecker *MockEntitlementCheckerFilterer) ParseApproval(log
 
 // MockEntitlementCheckerApprovalForAllIterator is returned from FilterApprovalForAll and is used to iterate over the raw logs and unpacked data for ApprovalForAll events raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerApprovalForAllIterator struct {
-	Event *MockEntitlementCheckerApprovalForAll // Event containing the contract specifics and raw log
+	Event	*MockEntitlementCheckerApprovalForAll	// Event containing the contract specifics and raw log
 
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
+	contract	*bind.BoundContract	// Generic contract to use for unpacking event data
+	event		string			// Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	logs	chan types.Log		// Log channel receiving the found contract events
+	sub	ethereum.Subscription	// Subscription for errors, completion and termination
+	done	bool			// Whether the subscription completed delivering logs
+	fail	error			// Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -953,10 +1057,10 @@ func (it *MockEntitlementCheckerApprovalForAllIterator) Close() error {
 
 // MockEntitlementCheckerApprovalForAll represents a ApprovalForAll event raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerApprovalForAll struct {
-	Owner    common.Address
-	Operator common.Address
-	Approved bool
-	Raw      types.Log // Blockchain specific contextual infos
+	Owner		common.Address
+	Operator	common.Address
+	Approved	bool
+	Raw		types.Log	// Blockchain specific contextual infos
 }
 
 // FilterApprovalForAll is a free log retrieval operation binding the contract event 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31.
@@ -1040,15 +1144,15 @@ func (_MockEntitlementChecker *MockEntitlementCheckerFilterer) ParseApprovalForA
 
 // MockEntitlementCheckerConsecutiveTransferIterator is returned from FilterConsecutiveTransfer and is used to iterate over the raw logs and unpacked data for ConsecutiveTransfer events raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerConsecutiveTransferIterator struct {
-	Event *MockEntitlementCheckerConsecutiveTransfer // Event containing the contract specifics and raw log
+	Event	*MockEntitlementCheckerConsecutiveTransfer	// Event containing the contract specifics and raw log
 
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
+	contract	*bind.BoundContract	// Generic contract to use for unpacking event data
+	event		string			// Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	logs	chan types.Log		// Log channel receiving the found contract events
+	sub	ethereum.Subscription	// Subscription for errors, completion and termination
+	done	bool			// Whether the subscription completed delivering logs
+	fail	error			// Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -1107,11 +1211,11 @@ func (it *MockEntitlementCheckerConsecutiveTransferIterator) Close() error {
 
 // MockEntitlementCheckerConsecutiveTransfer represents a ConsecutiveTransfer event raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerConsecutiveTransfer struct {
-	FromTokenId *big.Int
-	ToTokenId   *big.Int
-	From        common.Address
-	To          common.Address
-	Raw         types.Log // Blockchain specific contextual infos
+	FromTokenId	*big.Int
+	ToTokenId	*big.Int
+	From		common.Address
+	To		common.Address
+	Raw		types.Log	// Blockchain specific contextual infos
 }
 
 // FilterConsecutiveTransfer is a free log retrieval operation binding the contract event 0xdeaa91b6123d068f5821d0fb0678463d1a8a6079fe8af5de3ce5e896dcf9133d.
@@ -1205,15 +1309,15 @@ func (_MockEntitlementChecker *MockEntitlementCheckerFilterer) ParseConsecutiveT
 
 // MockEntitlementCheckerEntitlementCheckRequestedIterator is returned from FilterEntitlementCheckRequested and is used to iterate over the raw logs and unpacked data for EntitlementCheckRequested events raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerEntitlementCheckRequestedIterator struct {
-	Event *MockEntitlementCheckerEntitlementCheckRequested // Event containing the contract specifics and raw log
+	Event	*MockEntitlementCheckerEntitlementCheckRequested	// Event containing the contract specifics and raw log
 
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
+	contract	*bind.BoundContract	// Generic contract to use for unpacking event data
+	event		string			// Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	logs	chan types.Log		// Log channel receiving the found contract events
+	sub	ethereum.Subscription	// Subscription for errors, completion and termination
+	done	bool			// Whether the subscription completed delivering logs
+	fail	error			// Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -1272,12 +1376,12 @@ func (it *MockEntitlementCheckerEntitlementCheckRequestedIterator) Close() error
 
 // MockEntitlementCheckerEntitlementCheckRequested represents a EntitlementCheckRequested event raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerEntitlementCheckRequested struct {
-	CallerAddress   common.Address
-	ContractAddress common.Address
-	TransactionId   [32]byte
-	RoleId          *big.Int
-	SelectedNodes   []common.Address
-	Raw             types.Log // Blockchain specific contextual infos
+	CallerAddress	common.Address
+	ContractAddress	common.Address
+	TransactionId	[32]byte
+	RoleId		*big.Int
+	SelectedNodes	[]common.Address
+	Raw		types.Log	// Blockchain specific contextual infos
 }
 
 // FilterEntitlementCheckRequested is a free log retrieval operation binding the contract event 0x4675e3cc15801ffde520a3076d6ad75c0c6dbe8f23bdbea1dd45b676caffe4f3.
@@ -1343,15 +1447,15 @@ func (_MockEntitlementChecker *MockEntitlementCheckerFilterer) ParseEntitlementC
 
 // MockEntitlementCheckerEntitlementCheckRequestedV2Iterator is returned from FilterEntitlementCheckRequestedV2 and is used to iterate over the raw logs and unpacked data for EntitlementCheckRequestedV2 events raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerEntitlementCheckRequestedV2Iterator struct {
-	Event *MockEntitlementCheckerEntitlementCheckRequestedV2 // Event containing the contract specifics and raw log
+	Event	*MockEntitlementCheckerEntitlementCheckRequestedV2	// Event containing the contract specifics and raw log
 
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
+	contract	*bind.BoundContract	// Generic contract to use for unpacking event data
+	event		string			// Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	logs	chan types.Log		// Log channel receiving the found contract events
+	sub	ethereum.Subscription	// Subscription for errors, completion and termination
+	done	bool			// Whether the subscription completed delivering logs
+	fail	error			// Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -1410,13 +1514,13 @@ func (it *MockEntitlementCheckerEntitlementCheckRequestedV2Iterator) Close() err
 
 // MockEntitlementCheckerEntitlementCheckRequestedV2 represents a EntitlementCheckRequestedV2 event raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerEntitlementCheckRequestedV2 struct {
-	WalletAddress   common.Address
-	SpaceAddress    common.Address
-	ResolverAddress common.Address
-	TransactionId   [32]byte
-	RoleId          *big.Int
-	SelectedNodes   []common.Address
-	Raw             types.Log // Blockchain specific contextual infos
+	WalletAddress	common.Address
+	SpaceAddress	common.Address
+	ResolverAddress	common.Address
+	TransactionId	[32]byte
+	RoleId		*big.Int
+	SelectedNodes	[]common.Address
+	Raw		types.Log	// Blockchain specific contextual infos
 }
 
 // FilterEntitlementCheckRequestedV2 is a free log retrieval operation binding the contract event 0xf116223a7f59f1061fd42fcd9ff757b06a05709a822d38873fbbc5b5fda148bf.
@@ -1480,17 +1584,162 @@ func (_MockEntitlementChecker *MockEntitlementCheckerFilterer) ParseEntitlementC
 	return event, nil
 }
 
+// MockEntitlementCheckerEntitlementCheckResultPostedIterator is returned from FilterEntitlementCheckResultPosted and is used to iterate over the raw logs and unpacked data for EntitlementCheckResultPosted events raised by the MockEntitlementChecker contract.
+type MockEntitlementCheckerEntitlementCheckResultPostedIterator struct {
+	Event	*MockEntitlementCheckerEntitlementCheckResultPosted	// Event containing the contract specifics and raw log
+
+	contract	*bind.BoundContract	// Generic contract to use for unpacking event data
+	event		string			// Event name to use for unpacking event data
+
+	logs	chan types.Log		// Log channel receiving the found contract events
+	sub	ethereum.Subscription	// Subscription for errors, completion and termination
+	done	bool			// Whether the subscription completed delivering logs
+	fail	error			// Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *MockEntitlementCheckerEntitlementCheckResultPostedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(MockEntitlementCheckerEntitlementCheckResultPosted)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(MockEntitlementCheckerEntitlementCheckResultPosted)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *MockEntitlementCheckerEntitlementCheckResultPostedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *MockEntitlementCheckerEntitlementCheckResultPostedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// MockEntitlementCheckerEntitlementCheckResultPosted represents a EntitlementCheckResultPosted event raised by the MockEntitlementChecker contract.
+type MockEntitlementCheckerEntitlementCheckResultPosted struct {
+	TransactionId	[32]byte
+	Result		uint8
+	Raw		types.Log	// Blockchain specific contextual infos
+}
+
+// FilterEntitlementCheckResultPosted is a free log retrieval operation binding the contract event 0xb9d6ce397e562841871d119aaf77469c60a3b5bf8b99a5d9851656015015c633.
+//
+// Solidity: event EntitlementCheckResultPosted(bytes32 indexed transactionId, uint8 result)
+func (_MockEntitlementChecker *MockEntitlementCheckerFilterer) FilterEntitlementCheckResultPosted(opts *bind.FilterOpts, transactionId [][32]byte) (*MockEntitlementCheckerEntitlementCheckResultPostedIterator, error) {
+
+	var transactionIdRule []interface{}
+	for _, transactionIdItem := range transactionId {
+		transactionIdRule = append(transactionIdRule, transactionIdItem)
+	}
+
+	logs, sub, err := _MockEntitlementChecker.contract.FilterLogs(opts, "EntitlementCheckResultPosted", transactionIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &MockEntitlementCheckerEntitlementCheckResultPostedIterator{contract: _MockEntitlementChecker.contract, event: "EntitlementCheckResultPosted", logs: logs, sub: sub}, nil
+}
+
+// WatchEntitlementCheckResultPosted is a free log subscription operation binding the contract event 0xb9d6ce397e562841871d119aaf77469c60a3b5bf8b99a5d9851656015015c633.
+//
+// Solidity: event EntitlementCheckResultPosted(bytes32 indexed transactionId, uint8 result)
+func (_MockEntitlementChecker *MockEntitlementCheckerFilterer) WatchEntitlementCheckResultPosted(opts *bind.WatchOpts, sink chan<- *MockEntitlementCheckerEntitlementCheckResultPosted, transactionId [][32]byte) (event.Subscription, error) {
+
+	var transactionIdRule []interface{}
+	for _, transactionIdItem := range transactionId {
+		transactionIdRule = append(transactionIdRule, transactionIdItem)
+	}
+
+	logs, sub, err := _MockEntitlementChecker.contract.WatchLogs(opts, "EntitlementCheckResultPosted", transactionIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(MockEntitlementCheckerEntitlementCheckResultPosted)
+				if err := _MockEntitlementChecker.contract.UnpackLog(event, "EntitlementCheckResultPosted", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseEntitlementCheckResultPosted is a log parse operation binding the contract event 0xb9d6ce397e562841871d119aaf77469c60a3b5bf8b99a5d9851656015015c633.
+//
+// Solidity: event EntitlementCheckResultPosted(bytes32 indexed transactionId, uint8 result)
+func (_MockEntitlementChecker *MockEntitlementCheckerFilterer) ParseEntitlementCheckResultPosted(log types.Log) (*MockEntitlementCheckerEntitlementCheckResultPosted, error) {
+	event := new(MockEntitlementCheckerEntitlementCheckResultPosted)
+	if err := _MockEntitlementChecker.contract.UnpackLog(event, "EntitlementCheckResultPosted", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
 // MockEntitlementCheckerInitializedIterator is returned from FilterInitialized and is used to iterate over the raw logs and unpacked data for Initialized events raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerInitializedIterator struct {
-	Event *MockEntitlementCheckerInitialized // Event containing the contract specifics and raw log
+	Event	*MockEntitlementCheckerInitialized	// Event containing the contract specifics and raw log
 
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
+	contract	*bind.BoundContract	// Generic contract to use for unpacking event data
+	event		string			// Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	logs	chan types.Log		// Log channel receiving the found contract events
+	sub	ethereum.Subscription	// Subscription for errors, completion and termination
+	done	bool			// Whether the subscription completed delivering logs
+	fail	error			// Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -1549,8 +1798,8 @@ func (it *MockEntitlementCheckerInitializedIterator) Close() error {
 
 // MockEntitlementCheckerInitialized represents a Initialized event raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerInitialized struct {
-	Version uint32
-	Raw     types.Log // Blockchain specific contextual infos
+	Version	uint32
+	Raw	types.Log	// Blockchain specific contextual infos
 }
 
 // FilterInitialized is a free log retrieval operation binding the contract event 0xe9c9b456cb2994b80aeef036cf59d26e9617df80f816a6ee5a5b4166e07e2f5c.
@@ -1616,15 +1865,15 @@ func (_MockEntitlementChecker *MockEntitlementCheckerFilterer) ParseInitialized(
 
 // MockEntitlementCheckerInterfaceAddedIterator is returned from FilterInterfaceAdded and is used to iterate over the raw logs and unpacked data for InterfaceAdded events raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerInterfaceAddedIterator struct {
-	Event *MockEntitlementCheckerInterfaceAdded // Event containing the contract specifics and raw log
+	Event	*MockEntitlementCheckerInterfaceAdded	// Event containing the contract specifics and raw log
 
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
+	contract	*bind.BoundContract	// Generic contract to use for unpacking event data
+	event		string			// Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	logs	chan types.Log		// Log channel receiving the found contract events
+	sub	ethereum.Subscription	// Subscription for errors, completion and termination
+	done	bool			// Whether the subscription completed delivering logs
+	fail	error			// Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -1683,8 +1932,8 @@ func (it *MockEntitlementCheckerInterfaceAddedIterator) Close() error {
 
 // MockEntitlementCheckerInterfaceAdded represents a InterfaceAdded event raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerInterfaceAdded struct {
-	InterfaceId [4]byte
-	Raw         types.Log // Blockchain specific contextual infos
+	InterfaceId	[4]byte
+	Raw		types.Log	// Blockchain specific contextual infos
 }
 
 // FilterInterfaceAdded is a free log retrieval operation binding the contract event 0x78f84e5b1c5c05be2b5ad3800781dd404d6d6c6302bc755c0fe20f58a33a7f22.
@@ -1760,15 +2009,15 @@ func (_MockEntitlementChecker *MockEntitlementCheckerFilterer) ParseInterfaceAdd
 
 // MockEntitlementCheckerInterfaceRemovedIterator is returned from FilterInterfaceRemoved and is used to iterate over the raw logs and unpacked data for InterfaceRemoved events raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerInterfaceRemovedIterator struct {
-	Event *MockEntitlementCheckerInterfaceRemoved // Event containing the contract specifics and raw log
+	Event	*MockEntitlementCheckerInterfaceRemoved	// Event containing the contract specifics and raw log
 
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
+	contract	*bind.BoundContract	// Generic contract to use for unpacking event data
+	event		string			// Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	logs	chan types.Log		// Log channel receiving the found contract events
+	sub	ethereum.Subscription	// Subscription for errors, completion and termination
+	done	bool			// Whether the subscription completed delivering logs
+	fail	error			// Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -1827,8 +2076,8 @@ func (it *MockEntitlementCheckerInterfaceRemovedIterator) Close() error {
 
 // MockEntitlementCheckerInterfaceRemoved represents a InterfaceRemoved event raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerInterfaceRemoved struct {
-	InterfaceId [4]byte
-	Raw         types.Log // Blockchain specific contextual infos
+	InterfaceId	[4]byte
+	Raw		types.Log	// Blockchain specific contextual infos
 }
 
 // FilterInterfaceRemoved is a free log retrieval operation binding the contract event 0x8bd383568d0bc57b64b8e424138fc19ae827e694e05757faa8fea8f63fb87315.
@@ -1904,15 +2153,15 @@ func (_MockEntitlementChecker *MockEntitlementCheckerFilterer) ParseInterfaceRem
 
 // MockEntitlementCheckerNodeRegisteredIterator is returned from FilterNodeRegistered and is used to iterate over the raw logs and unpacked data for NodeRegistered events raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerNodeRegisteredIterator struct {
-	Event *MockEntitlementCheckerNodeRegistered // Event containing the contract specifics and raw log
+	Event	*MockEntitlementCheckerNodeRegistered	// Event containing the contract specifics and raw log
 
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
+	contract	*bind.BoundContract	// Generic contract to use for unpacking event data
+	event		string			// Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	logs	chan types.Log		// Log channel receiving the found contract events
+	sub	ethereum.Subscription	// Subscription for errors, completion and termination
+	done	bool			// Whether the subscription completed delivering logs
+	fail	error			// Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -1971,8 +2220,8 @@ func (it *MockEntitlementCheckerNodeRegisteredIterator) Close() error {
 
 // MockEntitlementCheckerNodeRegistered represents a NodeRegistered event raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerNodeRegistered struct {
-	NodeAddress common.Address
-	Raw         types.Log // Blockchain specific contextual infos
+	NodeAddress	common.Address
+	Raw		types.Log	// Blockchain specific contextual infos
 }
 
 // FilterNodeRegistered is a free log retrieval operation binding the contract event 0x564728e6a7c8edd446557d94e0339d5e6ca2e05f42188914efdbdc87bcbbabf6.
@@ -2048,15 +2297,15 @@ func (_MockEntitlementChecker *MockEntitlementCheckerFilterer) ParseNodeRegister
 
 // MockEntitlementCheckerNodeUnregisteredIterator is returned from FilterNodeUnregistered and is used to iterate over the raw logs and unpacked data for NodeUnregistered events raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerNodeUnregisteredIterator struct {
-	Event *MockEntitlementCheckerNodeUnregistered // Event containing the contract specifics and raw log
+	Event	*MockEntitlementCheckerNodeUnregistered	// Event containing the contract specifics and raw log
 
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
+	contract	*bind.BoundContract	// Generic contract to use for unpacking event data
+	event		string			// Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	logs	chan types.Log		// Log channel receiving the found contract events
+	sub	ethereum.Subscription	// Subscription for errors, completion and termination
+	done	bool			// Whether the subscription completed delivering logs
+	fail	error			// Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -2115,8 +2364,8 @@ func (it *MockEntitlementCheckerNodeUnregisteredIterator) Close() error {
 
 // MockEntitlementCheckerNodeUnregistered represents a NodeUnregistered event raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerNodeUnregistered struct {
-	NodeAddress common.Address
-	Raw         types.Log // Blockchain specific contextual infos
+	NodeAddress	common.Address
+	Raw		types.Log	// Blockchain specific contextual infos
 }
 
 // FilterNodeUnregistered is a free log retrieval operation binding the contract event 0xb1864577e4f285436a80ebc833984755393e2450d58622a65fb4fce87ea3573a.
@@ -2192,15 +2441,15 @@ func (_MockEntitlementChecker *MockEntitlementCheckerFilterer) ParseNodeUnregist
 
 // MockEntitlementCheckerOperatorClaimAddressChangedIterator is returned from FilterOperatorClaimAddressChanged and is used to iterate over the raw logs and unpacked data for OperatorClaimAddressChanged events raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerOperatorClaimAddressChangedIterator struct {
-	Event *MockEntitlementCheckerOperatorClaimAddressChanged // Event containing the contract specifics and raw log
+	Event	*MockEntitlementCheckerOperatorClaimAddressChanged	// Event containing the contract specifics and raw log
 
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
+	contract	*bind.BoundContract	// Generic contract to use for unpacking event data
+	event		string			// Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	logs	chan types.Log		// Log channel receiving the found contract events
+	sub	ethereum.Subscription	// Subscription for errors, completion and termination
+	done	bool			// Whether the subscription completed delivering logs
+	fail	error			// Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -2259,9 +2508,9 @@ func (it *MockEntitlementCheckerOperatorClaimAddressChangedIterator) Close() err
 
 // MockEntitlementCheckerOperatorClaimAddressChanged represents a OperatorClaimAddressChanged event raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerOperatorClaimAddressChanged struct {
-	Operator     common.Address
-	ClaimAddress common.Address
-	Raw          types.Log // Blockchain specific contextual infos
+	Operator	common.Address
+	ClaimAddress	common.Address
+	Raw		types.Log	// Blockchain specific contextual infos
 }
 
 // FilterOperatorClaimAddressChanged is a free log retrieval operation binding the contract event 0x9acff66817c6f3fac3752bef82306270971b2a3da032a5cb876e05676bb83288.
@@ -2345,15 +2594,15 @@ func (_MockEntitlementChecker *MockEntitlementCheckerFilterer) ParseOperatorClai
 
 // MockEntitlementCheckerOperatorCommissionChangedIterator is returned from FilterOperatorCommissionChanged and is used to iterate over the raw logs and unpacked data for OperatorCommissionChanged events raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerOperatorCommissionChangedIterator struct {
-	Event *MockEntitlementCheckerOperatorCommissionChanged // Event containing the contract specifics and raw log
+	Event	*MockEntitlementCheckerOperatorCommissionChanged	// Event containing the contract specifics and raw log
 
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
+	contract	*bind.BoundContract	// Generic contract to use for unpacking event data
+	event		string			// Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	logs	chan types.Log		// Log channel receiving the found contract events
+	sub	ethereum.Subscription	// Subscription for errors, completion and termination
+	done	bool			// Whether the subscription completed delivering logs
+	fail	error			// Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -2412,9 +2661,9 @@ func (it *MockEntitlementCheckerOperatorCommissionChangedIterator) Close() error
 
 // MockEntitlementCheckerOperatorCommissionChanged represents a OperatorCommissionChanged event raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerOperatorCommissionChanged struct {
-	Operator   common.Address
-	Commission *big.Int
-	Raw        types.Log // Blockchain specific contextual infos
+	Operator	common.Address
+	Commission	*big.Int
+	Raw		types.Log	// Blockchain specific contextual infos
 }
 
 // FilterOperatorCommissionChanged is a free log retrieval operation binding the contract event 0x3f8e6b052699b5c8512c54ad8f8c79ddbf0486d3263c519f20bdbb42cd4bd6da.
@@ -2498,15 +2747,15 @@ func (_MockEntitlementChecker *MockEntitlementCheckerFilterer) ParseOperatorComm
 
 // MockEntitlementCheckerOperatorRegisteredIterator is returned from FilterOperatorRegistered and is used to iterate over the raw logs and unpacked data for OperatorRegistered events raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerOperatorRegisteredIterator struct {
-	Event *MockEntitlementCheckerOperatorRegistered // Event containing the contract specifics and raw log
+	Event	*MockEntitlementCheckerOperatorRegistered	// Event containing the contract specifics and raw log
 
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
+	contract	*bind.BoundContract	// Generic contract to use for unpacking event data
+	event		string			// Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	logs	chan types.Log		// Log channel receiving the found contract events
+	sub	ethereum.Subscription	// Subscription for errors, completion and termination
+	done	bool			// Whether the subscription completed delivering logs
+	fail	error			// Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -2565,8 +2814,8 @@ func (it *MockEntitlementCheckerOperatorRegisteredIterator) Close() error {
 
 // MockEntitlementCheckerOperatorRegistered represents a OperatorRegistered event raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerOperatorRegistered struct {
-	Operator common.Address
-	Raw      types.Log // Blockchain specific contextual infos
+	Operator	common.Address
+	Raw		types.Log	// Blockchain specific contextual infos
 }
 
 // FilterOperatorRegistered is a free log retrieval operation binding the contract event 0x4d0eb1f4bac8744fd2be119845e23b3befc88094b42bcda1204c65694a00f9e5.
@@ -2642,15 +2891,15 @@ func (_MockEntitlementChecker *MockEntitlementCheckerFilterer) ParseOperatorRegi
 
 // MockEntitlementCheckerOperatorStatusChangedIterator is returned from FilterOperatorStatusChanged and is used to iterate over the raw logs and unpacked data for OperatorStatusChanged events raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerOperatorStatusChangedIterator struct {
-	Event *MockEntitlementCheckerOperatorStatusChanged // Event containing the contract specifics and raw log
+	Event	*MockEntitlementCheckerOperatorStatusChanged	// Event containing the contract specifics and raw log
 
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
+	contract	*bind.BoundContract	// Generic contract to use for unpacking event data
+	event		string			// Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	logs	chan types.Log		// Log channel receiving the found contract events
+	sub	ethereum.Subscription	// Subscription for errors, completion and termination
+	done	bool			// Whether the subscription completed delivering logs
+	fail	error			// Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -2709,9 +2958,9 @@ func (it *MockEntitlementCheckerOperatorStatusChangedIterator) Close() error {
 
 // MockEntitlementCheckerOperatorStatusChanged represents a OperatorStatusChanged event raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerOperatorStatusChanged struct {
-	Operator  common.Address
-	NewStatus uint8
-	Raw       types.Log // Blockchain specific contextual infos
+	Operator	common.Address
+	NewStatus	uint8
+	Raw		types.Log	// Blockchain specific contextual infos
 }
 
 // FilterOperatorStatusChanged is a free log retrieval operation binding the contract event 0x7db2ae93d80cbf3cf719888318a0b92adff1855bcb01eda517607ed7b0f2183a.
@@ -2795,15 +3044,15 @@ func (_MockEntitlementChecker *MockEntitlementCheckerFilterer) ParseOperatorStat
 
 // MockEntitlementCheckerOwnershipTransferredIterator is returned from FilterOwnershipTransferred and is used to iterate over the raw logs and unpacked data for OwnershipTransferred events raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerOwnershipTransferredIterator struct {
-	Event *MockEntitlementCheckerOwnershipTransferred // Event containing the contract specifics and raw log
+	Event	*MockEntitlementCheckerOwnershipTransferred	// Event containing the contract specifics and raw log
 
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
+	contract	*bind.BoundContract	// Generic contract to use for unpacking event data
+	event		string			// Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	logs	chan types.Log		// Log channel receiving the found contract events
+	sub	ethereum.Subscription	// Subscription for errors, completion and termination
+	done	bool			// Whether the subscription completed delivering logs
+	fail	error			// Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -2862,9 +3111,9 @@ func (it *MockEntitlementCheckerOwnershipTransferredIterator) Close() error {
 
 // MockEntitlementCheckerOwnershipTransferred represents a OwnershipTransferred event raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerOwnershipTransferred struct {
-	PreviousOwner common.Address
-	NewOwner      common.Address
-	Raw           types.Log // Blockchain specific contextual infos
+	PreviousOwner	common.Address
+	NewOwner	common.Address
+	Raw		types.Log	// Blockchain specific contextual infos
 }
 
 // FilterOwnershipTransferred is a free log retrieval operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
@@ -2948,15 +3197,15 @@ func (_MockEntitlementChecker *MockEntitlementCheckerFilterer) ParseOwnershipTra
 
 // MockEntitlementCheckerTransferIterator is returned from FilterTransfer and is used to iterate over the raw logs and unpacked data for Transfer events raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerTransferIterator struct {
-	Event *MockEntitlementCheckerTransfer // Event containing the contract specifics and raw log
+	Event	*MockEntitlementCheckerTransfer	// Event containing the contract specifics and raw log
 
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
+	contract	*bind.BoundContract	// Generic contract to use for unpacking event data
+	event		string			// Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	logs	chan types.Log		// Log channel receiving the found contract events
+	sub	ethereum.Subscription	// Subscription for errors, completion and termination
+	done	bool			// Whether the subscription completed delivering logs
+	fail	error			// Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -3015,10 +3264,10 @@ func (it *MockEntitlementCheckerTransferIterator) Close() error {
 
 // MockEntitlementCheckerTransfer represents a Transfer event raised by the MockEntitlementChecker contract.
 type MockEntitlementCheckerTransfer struct {
-	From    common.Address
-	To      common.Address
-	TokenId *big.Int
-	Raw     types.Log // Blockchain specific contextual infos
+	From	common.Address
+	To	common.Address
+	TokenId	*big.Int
+	Raw	types.Log	// Blockchain specific contextual infos
 }
 
 // FilterTransfer is a free log retrieval operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.

@@ -11,8 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/zap"
-
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/base"
 	"github.com/river-build/river/core/contracts/base/deploy"
@@ -71,21 +69,8 @@ type serviceTester struct {
 	decoder *node_crypto.EvmErrorDecoder
 }
 
-// Disable color output for console testing.
-func noColorLogger() *zap.SugaredLogger {
-	logger, _ := zap.NewDevelopment()
-	return logger.Sugar()
-}
-
-func silentLogger() *zap.SugaredLogger {
-	return zap.NewNop().Sugar()
-}
-
 func newServiceTester(numNodes int, require *require.Assertions) *serviceTester {
 	ctx, cancel := test.NewTestContext()
-	// Comment out to silence xchain and client simulator logs. Chain monitoring logs are still visible.
-	ctx = logging.CtxWithLog(ctx, noColorLogger())
-
 	log := logging.FromCtx(ctx)
 	log.Infow("Creating service tester")
 
@@ -510,38 +495,37 @@ func TestErc721Entitlements(t *testing.T) {
 		emitV2Event         bool
 		sentByRootKeyWallet bool
 	}{
-		// "v1 request sent by root key wallet, v1 event emitted": {
-		// 	sentByRootKeyWallet: true,
-		// },
-		// "v1 request sent by linked wallet, v1 event emitted": {},
-		// "v2 request sent by root key wallet, v1 event emitted": {
-		// 	v2Request:           true,
-		// 	sentByRootKeyWallet: true,
-		// },
-		// "v2 request sent by linked wallet, v1 event emitted": {
-		// 	v2Request: true,
-		// },
-		// "v1 request sent by root key wallet, v2 event emitted": {
-		// 	emitV2Event:         true,
-		// 	sentByRootKeyWallet: true,
-		// },
-		// "v1 request sent by linked wallet, v2 event emitted": {
-		// 	emitV2Event: true,
-		// },
+		"v1 request sent by root key wallet, v1 event emitted": {
+			sentByRootKeyWallet: true,
+		},
+		"v1 request sent by linked wallet, v1 event emitted": {},
+		"v2 request sent by root key wallet, v1 event emitted": {
+			v2Request:           true,
+			sentByRootKeyWallet: true,
+		},
+		"v2 request sent by linked wallet, v1 event emitted": {
+			v2Request: true,
+		},
+		"v1 request sent by root key wallet, v2 event emitted": {
+			emitV2Event:         true,
+			sentByRootKeyWallet: true,
+		},
+		"v1 request sent by linked wallet, v2 event emitted": {
+			emitV2Event: true,
+		},
 		"v2 request sent by root key wallet, v2 event emitted": {
 			v2Request:           true,
 			emitV2Event:         true,
 			sentByRootKeyWallet: true,
 		},
-		// "v2 request sent by linked wallet, v2 event emitted": {
-		// 	v2Request:   true,
-		// 	emitV2Event: true,
-		// },
+		"v2 request sent by linked wallet, v2 event emitted": {
+			v2Request:   true,
+			emitV2Event: true,
+		},
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			ctx, cancel := test.NewTestContext()
-			ctx = logging.CtxWithLog(ctx, noColorLogger())
 			defer cancel()
 
 			require := require.New(t)
@@ -1066,7 +1050,6 @@ func TestEthBalance(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			ctx, cancel := test.NewTestContext()
-			ctx = logging.CtxWithLog(ctx, noColorLogger())
 			defer cancel()
 
 			require := require.New(t)
