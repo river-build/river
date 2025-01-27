@@ -12,10 +12,8 @@ import {IExecutorBase} from "./IExecutor.sol";
 // libraries
 import {OwnableStorage} from "@river-build/diamond/src/facets/ownable/OwnableStorage.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
-// contracts
 
-// debuggging
-import {console} from "forge-std/console.sol";
+// contracts
 
 library ExecutorLib {
   using EnumerableSetLib for EnumerableSetLib.Uint256Set;

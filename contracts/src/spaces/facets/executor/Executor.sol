@@ -7,6 +7,7 @@ import {IImplementationRegistry} from "contracts/src/factory/facets/registry/IIm
 
 // libraries
 import {ExecutorLib} from "./ExecutorLib.sol";
+import {DiamondLoupeBase} from "@river-build/diamond/src/facets/loupe/DiamondLoupeBase.sol";
 
 // contracts
 import {TokenOwnableBase} from "@river-build/diamond/src/facets/ownable/token/TokenOwnableBase.sol";
@@ -107,6 +108,9 @@ contract Executor is TokenOwnableBase, IExecutor {
     bytes4 selector,
     uint64 groupId
   ) external checkAllowed(target) onlyOwner {
+    // Disallow setting any diamond functions
+    if (target == DiamondLoupeBase.facetAddress(selector))
+      revert UnauthorizedTarget(target);
     ExecutorLib.setTargetFunctionGroup(target, selector, groupId);
   }
 
