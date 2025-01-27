@@ -264,12 +264,7 @@ func (tp *streamMembershipScrubTaskProcessorImpl) processStreamImpl(
 		return RiverError(Err_INTERNAL, "Scrub scheduled for non-local stream", "streamId", streamId)
 	}
 
-	joinableView, ok := view.(events.JoinableStreamView)
-	if !ok {
-		return RiverError(Err_INTERNAL, "Unable to scrub stream; could not cast view to JoinableStreamView")
-	}
-
-	members, err := joinableView.GetChannelMembers()
+	members, err := view.GetChannelMembers()
 	if err != nil {
 		return err
 	}

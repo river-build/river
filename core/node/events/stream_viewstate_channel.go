@@ -10,9 +10,9 @@ type ChannelStreamView interface {
 	GetChannelInception() (*ChannelPayload_Inception, error)
 }
 
-var _ ChannelStreamView = (*streamViewImpl)(nil)
+var _ ChannelStreamView = (*StreamViewImpl)(nil)
 
-func (r *streamViewImpl) GetChannelInception() (*ChannelPayload_Inception, error) {
+func (r *StreamViewImpl) GetChannelInception() (*ChannelPayload_Inception, error) {
 	i := r.InceptionPayload()
 	c, ok := i.(*ChannelPayload_Inception)
 	if ok {

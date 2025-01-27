@@ -10,9 +10,9 @@ type DMChannelStreamView interface {
 	GetDMChannelInception() (*DmChannelPayload_Inception, error)
 }
 
-var _ DMChannelStreamView = (*streamViewImpl)(nil)
+var _ DMChannelStreamView = (*StreamViewImpl)(nil)
 
-func (r *streamViewImpl) GetDMChannelInception() (*DmChannelPayload_Inception, error) {
+func (r *StreamViewImpl) GetDMChannelInception() (*DmChannelPayload_Inception, error) {
 	i := r.InceptionPayload()
 	c, ok := i.(*DmChannelPayload_Inception)
 	if ok {

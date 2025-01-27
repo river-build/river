@@ -14,12 +14,12 @@ type MlsStreamView interface {
 	GetMlsEpochSecrets() (map[uint64][]byte, error)
 }
 
-var _ MlsStreamView = (*streamViewImpl)(nil)
+var _ MlsStreamView = (*StreamViewImpl)(nil)
 
-// returns true if the stream has an MLS group initialized 
+// returns true if the stream has an MLS group initialized
 // — the stream has processed exactly one MemberPayload_Mls_InitializeGroup
 // - OR the ExternalGroupSnapshot on Members.Mls is not empty
-func (r *streamViewImpl) IsMlsInitialized() (bool, error) {
+func (r *StreamViewImpl) IsMlsInitialized() (bool, error) {
 	s := r.snapshot
 	if s.Members.GetMls() == nil {
 		return false, nil
@@ -55,15 +55,15 @@ func (r *streamViewImpl) IsMlsInitialized() (bool, error) {
 }
 
 // populates an MlsGroupState with the ExternalGroupSnapshot and all ExternalJoin commits
-func (r *streamViewImpl) GetMlsGroupState() (*mls_tools.MlsGroupState, error) {
+func (r *StreamViewImpl) GetMlsGroupState() (*mls_tools.MlsGroupState, error) {
 	s := r.snapshot
-	
+
 	if s.Members.GetMls() == nil {
 		return nil, fmt.Errorf("MLS not initialized")
 	}
-	
+
 	mlsGroupState := mls_tools.MlsGroupState{
-		Commits: make([][]byte, 0),
+		Commits:               make([][]byte, 0),
 		ExternalGroupSnapshot: s.Members.GetMls().ExternalGroupSnapshot,
 	}
 
@@ -98,7 +98,7 @@ func (r *streamViewImpl) GetMlsGroupState() (*mls_tools.MlsGroupState, error) {
 	return &mlsGroupState, nil
 }
 
-func (r *streamViewImpl) GetMlsEpochSecrets() (map[uint64][]byte, error) {
+func (r *StreamViewImpl) GetMlsEpochSecrets() (map[uint64][]byte, error) {
 	s := r.snapshot
 	if s.Members.GetMls() == nil {
 		return nil, fmt.Errorf("MLS not initialized")

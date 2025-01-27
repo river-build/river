@@ -904,7 +904,7 @@ func (tc *testClient) addHistoryToView(
 	mbs := tc.getMiniblocks(*view.StreamId(), 0, firstMbNum)
 	newView, err := view.CopyAndPrependMiniblocks(mbs)
 	tc.require.NoError(err)
-	return newView.(JoinableStreamView)
+	return newView
 }
 
 func (tc *testClient) requireMembership(streamId StreamId, expectedMemberships []common.Address) {

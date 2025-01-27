@@ -303,7 +303,7 @@ func (ctc *cacheTestContext) GetMbProposal(
 		return nil, err
 	}
 
-	view, err := stream.getView(ctx)
+	view, err := stream.GetView(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -435,7 +435,7 @@ func (i *cacheTestInstance) makeMbCandidate(
 
 func (i *cacheTestInstance) makeMbCandidateForView(
 	ctx context.Context,
-	view *streamViewImpl,
+	view *StreamViewImpl,
 ) (*MiniblockInfo, error) {
 	proposal := view.proposeNextMiniblock(ctx, i.params.ChainConfig.Get(), false)
 	mbCandidate, err := view.makeMiniblockCandidate(ctx, i.params, proposal)
