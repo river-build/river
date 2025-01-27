@@ -20,6 +20,7 @@ import { KeySolicitationContent, UserDevice } from '@river-build/encryption'
 import { EncryptedContent } from './encryptedContentTypes'
 import { SyncState } from './syncedStreamsLoop'
 import { Pin } from './streamStateView_Members'
+import { MlsConfirmedEvent } from './mls/types'
 
 export type StreamChange = {
     prepended?: RemoteTimelineEvent[]
@@ -68,6 +69,8 @@ export type StreamEncryptionEvents = {
         groupInfoMessage: Uint8Array,
     ) => void
     mlsEpochSecrets: (streamId: string, secrets: { epoch: bigint; secret: Uint8Array }[]) => void
+    // MLS-specific confirmed events
+    mlsNewConfirmedEvent: (streamId: string, event: MlsConfirmedEvent) => void
 }
 
 export type SyncedStreamEvents = {
