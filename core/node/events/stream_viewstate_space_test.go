@@ -104,10 +104,10 @@ func joinSpace_T(
 	t *testing.T,
 	wallet *crypto.Wallet,
 	ctx context.Context,
-	syncStream SyncStream,
+	syncStream *StreamImpl,
 	users []string,
 ) {
-	stream := syncStream.(*StreamImpl)
+	stream := syncStream
 	for _, user := range users {
 		err := stream.AddEvent(
 			ctx,
@@ -133,10 +133,10 @@ func joinChannel_T(
 	t *testing.T,
 	wallet *crypto.Wallet,
 	ctx context.Context,
-	syncStream SyncStream,
+	syncStream *StreamImpl,
 	users []string,
 ) {
-	stream := syncStream.(*StreamImpl)
+	stream := syncStream
 	for _, user := range users {
 		err := stream.AddEvent(
 			ctx,
@@ -163,10 +163,10 @@ func leaveChannel_T(
 	t *testing.T,
 	wallet *crypto.Wallet,
 	ctx context.Context,
-	syncStream SyncStream,
+	syncStream *StreamImpl,
 	users []string,
 ) {
-	stream := syncStream.(*StreamImpl)
+	stream := syncStream
 	for _, user := range users {
 		err := stream.AddEvent(
 			ctx,
@@ -208,7 +208,7 @@ func TestSpaceViewState(t *testing.T) {
 
 	_, mb := makeTestSpaceStream(t, user1Wallet, spaceStreamId, nil)
 	s, _ := tt.createStream(spaceStreamId, mb)
-	stream := s.(*StreamImpl)
+	stream := s
 	require.NotNil(t, stream)
 	// refresh view
 	view0, err := stream.GetView(ctx)
@@ -301,12 +301,12 @@ func TestChannelViewState_JoinedMembers(t *testing.T) {
 	// create a space stream and add the members
 	_, mb := makeTestSpaceStream(t, userWallet, spaceStreamId, nil)
 	sStream, _ := tt.createStream(spaceStreamId, mb)
-	spaceStream := sStream.(*StreamImpl)
+	spaceStream := sStream
 	joinSpace_T(t, userWallet, ctx, spaceStream, []string{bob, carol})
 	// create a channel stream and add the members
 	_, mb = makeTestChannelStream(t, userWallet, alice, channelStreamId, spaceStreamId, nil)
 	cStream, _ := tt.createStream(channelStreamId, mb)
-	channelStream := cStream.(*StreamImpl)
+	channelStream := cStream
 	joinChannel_T(t, userWallet, ctx, channelStream, []string{alice, bob, carol})
 	// make a miniblock
 	_ = tt.makeMiniblock(0, channelStreamId, false)
@@ -360,12 +360,12 @@ func TestChannelViewState_RemainingMembers(t *testing.T) {
 	// create a space stream and add the members
 	_, mb := makeTestSpaceStream(t, userWallet, spaceStreamId, nil)
 	sStream, _ := tt.createStream(spaceStreamId, mb)
-	spaceStream := sStream.(*StreamImpl)
+	spaceStream := sStream
 	joinSpace_T(t, userWallet, ctx, spaceStream, []string{bob, carol})
 	// create a channel stream and add the members
 	_, mb = makeTestChannelStream(t, userWallet, alice, channelStreamId, spaceStreamId, nil)
 	cStream, _ := tt.createStream(channelStreamId, mb)
-	channelStream := cStream.(*StreamImpl)
+	channelStream := cStream
 	joinChannel_T(t, userWallet, ctx, channelStream, []string{alice, bob, carol})
 	// bob leaves the channel
 	leaveChannel_T(t, userWallet, ctx, channelStream, []string{bob})

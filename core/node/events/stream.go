@@ -49,28 +49,6 @@ type SyncResultReceiver interface {
 	OnStreamSyncDown(StreamId)
 }
 
-// TODO: refactor interfaces.
-type SyncStream interface {
-	Stream
-	nodes.StreamNodes
-
-	Sub(ctx context.Context, cookie *SyncCookie, receiver SyncResultReceiver) error
-	Unsub(receiver SyncResultReceiver)
-
-	// ApplyMiniblock applies given miniblock, updating the cached stream view and storage.
-	ApplyMiniblock(ctx context.Context, miniblock *MiniblockInfo) error
-
-	// SaveMiniblockCandidate saves the given miniblock as a candidate.
-	// Once blockchain event making candidate canonical is observed,
-	// candidate is read and applied.
-	SaveMiniblockCandidate(
-		ctx context.Context,
-		mb *Miniblock,
-	) error
-
-	IsLocal() bool
-}
-
 func SyncStreamsResponseFromStreamAndCookie(result *StreamAndCookie) *SyncStreamsResponse {
 	return &SyncStreamsResponse{
 		Stream: result,
@@ -99,8 +77,6 @@ type StreamImpl struct {
 	// local is not nil if stream is local to current node. local and all fields of local are protected by mu.
 	local *localStreamState
 }
-
-var _ SyncStream = (*StreamImpl)(nil)
 
 type localStreamState struct {
 	// useGetterAndSetterToGetView contains pointer to current immutable view, if loaded, nil otherwise.

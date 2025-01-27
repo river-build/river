@@ -183,7 +183,7 @@ func (ctc *cacheTestContext) createReplStream() (StreamId, []common.Address, *Mi
 	ctc.require.Len(nodes, ctc.testParams.replFactor)
 
 	for _, n := range nodes {
-		var s SyncStream
+		var s *StreamImpl
 		var err error
 		for {
 			s, err = ctc.instancesByAddr[n].cache.GetStreamWaitForLocal(ctc.ctx, streamId)
@@ -249,7 +249,7 @@ func (ctc *cacheTestContext) createStreamNoCache(
 func (ctc *cacheTestContext) createStream(
 	streamId StreamId,
 	genesisMiniblock *Miniblock,
-) (SyncStream, *StreamView) {
+) (*StreamImpl, *StreamView) {
 	ctc.createStreamNoCache(streamId, genesisMiniblock)
 	s, err := ctc.instances[0].cache.GetStreamWaitForLocal(ctc.ctx, streamId)
 	ctc.require.NoError(err)
@@ -403,10 +403,10 @@ func setOnChainStreamConfig(t *testing.T, ctx context.Context, btc *crypto.Block
 
 func (i *cacheTestInstance) makeAndSaveMbCandidate(
 	ctx context.Context,
-	stream SyncStream,
+	stream *StreamImpl,
 ) (*MiniblockInfo, error) {
 	j := &mbJob{
-		stream: stream.(*StreamImpl),
+		stream: stream,
 		params: i.params,
 	}
 	err := j.produceCandidate(ctx)
@@ -418,10 +418,10 @@ func (i *cacheTestInstance) makeAndSaveMbCandidate(
 
 func (i *cacheTestInstance) makeMbCandidate(
 	ctx context.Context,
-	stream SyncStream,
+	stream *StreamImpl,
 ) (*MiniblockInfo, error) {
 	j := &mbJob{
-		stream: stream.(*StreamImpl),
+		stream: stream,
 		params: i.params,
 	}
 	j.remoteNodes, _ = j.stream.GetRemotesAndIsLocal()

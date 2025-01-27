@@ -111,7 +111,7 @@ func addEventToStream(
 	t *testing.T,
 	ctx context.Context,
 	streamCacheParams *StreamCacheParams,
-	stream SyncStream,
+	stream *StreamImpl,
 	data string,
 	prevMiniblock *MiniblockRef,
 ) {
@@ -242,7 +242,7 @@ func TestCandidatePromotionCandidateInPlace(t *testing.T) {
 	)
 
 	syncStream, view := tt.createStream(spaceStreamId, genesisMb.Proto)
-	stream := syncStream.(*StreamImpl)
+	stream := syncStream
 
 	addEventToStream(t, ctx, tt.instances[0].params, stream, "1", view.LastBlock().Ref)
 	addEventToStream(t, ctx, tt.instances[0].params, stream, "2", view.LastBlock().Ref)
@@ -288,7 +288,7 @@ func TestCandidatePromotionCandidateIsDelayed(t *testing.T) {
 	)
 
 	syncStream, view := tt.createStream(spaceStreamId, genesisMb.Proto)
-	stream := syncStream.(*StreamImpl)
+	stream := syncStream
 
 	addEventToStream(t, ctx, params, stream, "1", view.LastBlock().Ref)
 	addEventToStream(t, ctx, params, stream, "2", view.LastBlock().Ref)
