@@ -32,7 +32,7 @@ type aeParams struct {
 	streamMembershipLimit int
 	validNodeAddresses    []common.Address
 	currentTime           time.Time
-	streamView            *events.StreamViewImpl
+	streamView            *events.StreamView
 	parsedEvent           *events.ParsedEvent
 }
 
@@ -170,7 +170,7 @@ func CanAddEvent(
 	validNodeAddresses []common.Address,
 	currentTime time.Time,
 	parsedEvent *events.ParsedEvent,
-	streamView *events.StreamViewImpl,
+	streamView *events.StreamView,
 ) (bool, *AddEventVerifications, *AddEventSideEffects, error) {
 	if parsedEvent.Event.DelegateExpiryEpochMs > 0 &&
 		isPastExpiry(currentTime, parsedEvent.Event.DelegateExpiryEpochMs) {

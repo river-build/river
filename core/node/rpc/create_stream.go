@@ -80,7 +80,7 @@ func (s *Service) createStream(ctx context.Context, req *CreateStreamRequest) (*
 	if csRules.RequiredMemberships != nil {
 		// load the creator's user stream
 		stream, err := s.loadStream(ctx, csRules.CreatorStreamId)
-		var creatorStreamView *StreamViewImpl
+		var creatorStreamView *StreamView
 		if err == nil {
 			creatorStreamView, err = stream.GetView(ctx)
 		}

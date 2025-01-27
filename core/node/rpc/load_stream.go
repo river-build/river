@@ -15,7 +15,7 @@ import (
 type remoteStream struct {
 	streamId StreamId
 	stub     StreamServiceClient
-	view     *StreamViewImpl
+	view     *StreamView
 }
 
 var _ Stream = (*remoteStream)(nil)
@@ -91,10 +91,10 @@ func (s *remoteStream) AddEvent(ctx context.Context, event *ParsedEvent) error {
 	return nil
 }
 
-func (s *remoteStream) GetView(ctx context.Context) (*StreamViewImpl, error) {
+func (s *remoteStream) GetView(ctx context.Context) (*StreamView, error) {
 	return s.view, nil
 }
 
-func (s *remoteStream) GetViewIfLocal(ctx context.Context) (*StreamViewImpl, error) {
+func (s *remoteStream) GetViewIfLocal(ctx context.Context) (*StreamView, error) {
 	return nil, nil
 }

@@ -18,9 +18,9 @@ type JoinableStreamView interface {
 	HasTransaction(receipt *protocol.BlockchainTransactionReceipt) (bool, error) // defined in userStreamView
 }
 
-var _ JoinableStreamView = (*StreamViewImpl)(nil)
+var _ JoinableStreamView = (*StreamView)(nil)
 
-func (r *StreamViewImpl) GetChannelMembers() (mapset.Set[string], error) {
+func (r *StreamView) GetChannelMembers() (mapset.Set[string], error) {
 	members := mapset.NewSet[string]()
 
 	for _, member := range r.snapshot.Members.Joined {
@@ -60,7 +60,7 @@ func (r *StreamViewImpl) GetChannelMembers() (mapset.Set[string], error) {
 	return members, nil
 }
 
-func (r *StreamViewImpl) GetMembership(userAddress []byte) (protocol.MembershipOp, error) {
+func (r *StreamView) GetMembership(userAddress []byte) (protocol.MembershipOp, error) {
 	retValue := protocol.MembershipOp_SO_UNSPECIFIED
 
 	member, _ := findMember(r.snapshot.Members.Joined, userAddress)
@@ -94,7 +94,7 @@ func (r *StreamViewImpl) GetMembership(userAddress []byte) (protocol.MembershipO
 // Get an up to date solicitations for a channel member
 // this function duplicates code in the snapshot.go logic and
 // could go away if we kept an up to date snapshot
-func (r *StreamViewImpl) GetKeySolicitations(userAddress []byte) ([]*protocol.MemberPayload_KeySolicitation, error) {
+func (r *StreamView) GetKeySolicitations(userAddress []byte) ([]*protocol.MemberPayload_KeySolicitation, error) {
 	member, _ := findMember(r.snapshot.Members.Joined, userAddress)
 
 	// clone so we don't modify the snapshot
@@ -143,7 +143,7 @@ func (r *StreamViewImpl) GetKeySolicitations(userAddress []byte) ([]*protocol.Me
 	}
 }
 
-func (r *StreamViewImpl) GetPinnedMessages() ([]*protocol.MemberPayload_SnappedPin, error) {
+func (r *StreamView) GetPinnedMessages() ([]*protocol.MemberPayload_SnappedPin, error) {
 	s := r.snapshot
 
 	// make a copy of the pins

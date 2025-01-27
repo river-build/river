@@ -130,10 +130,10 @@ func addEventToStream(
 func addEventToView(
 	t *testing.T,
 	streamCacheParams *StreamCacheParams,
-	view *StreamViewImpl,
+	view *StreamView,
 	data string,
 	prevMiniblock *MiniblockRef,
-) *StreamViewImpl {
+) *StreamView {
 	view, err := view.copyAndAddEvent(
 		MakeEvent(
 			t,
@@ -147,7 +147,7 @@ func addEventToView(
 	return view
 }
 
-func getView(t *testing.T, ctx context.Context, stream *streamImpl) *StreamViewImpl {
+func getView(t *testing.T, ctx context.Context, stream *streamImpl) *StreamView {
 	view, err := stream.GetViewIfLocal(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, view)

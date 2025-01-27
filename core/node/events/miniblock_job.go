@@ -53,7 +53,7 @@ func (j *mbJob) produceCandidate(ctx context.Context) error {
 
 func (j *mbJob) makeCandidate(ctx context.Context) error {
 	var prop *mbProposal
-	var view *StreamViewImpl
+	var view *StreamView
 	var err error
 	if j.replicated {
 		prop, view, err = j.makeReplicatedProposal(ctx)
@@ -75,7 +75,7 @@ func (j *mbJob) makeCandidate(ctx context.Context) error {
 	return nil
 }
 
-func (j *mbJob) makeReplicatedProposal(ctx context.Context) (*mbProposal, *StreamViewImpl, error) {
+func (j *mbJob) makeReplicatedProposal(ctx context.Context) (*mbProposal, *StreamView, error) {
 	proposals, view, err := j.processRemoteProposals(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -93,7 +93,7 @@ func (j *mbJob) makeReplicatedProposal(ctx context.Context) (*mbProposal, *Strea
 	return combined, view, nil
 }
 
-func (j *mbJob) makeLocalProposal(ctx context.Context) (*mbProposal, *StreamViewImpl, error) {
+func (j *mbJob) makeLocalProposal(ctx context.Context) (*mbProposal, *StreamView, error) {
 	view, err := j.stream.GetView(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -109,7 +109,7 @@ func (j *mbJob) makeLocalProposal(ctx context.Context) (*mbProposal, *StreamView
 	return prop, view, nil
 }
 
-func (j *mbJob) processRemoteProposals(ctx context.Context) ([]*mbProposal, *StreamViewImpl, error) {
+func (j *mbJob) processRemoteProposals(ctx context.Context) ([]*mbProposal, *StreamView, error) {
 	view, err := j.stream.GetView(ctx)
 	if err != nil {
 		return nil, nil, err

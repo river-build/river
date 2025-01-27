@@ -249,7 +249,7 @@ func (ctc *cacheTestContext) createStreamNoCache(
 func (ctc *cacheTestContext) createStream(
 	streamId StreamId,
 	genesisMiniblock *Miniblock,
-) (SyncStream, *StreamViewImpl) {
+) (SyncStream, *StreamView) {
 	ctc.createStreamNoCache(streamId, genesisMiniblock)
 	s, err := ctc.instances[0].cache.GetStreamWaitForLocal(ctc.ctx, streamId)
 	ctc.require.NoError(err)
@@ -435,7 +435,7 @@ func (i *cacheTestInstance) makeMbCandidate(
 
 func (i *cacheTestInstance) makeMbCandidateForView(
 	ctx context.Context,
-	view *StreamViewImpl,
+	view *StreamView,
 ) (*MiniblockInfo, error) {
 	proposal := view.proposeNextMiniblock(ctx, i.params.ChainConfig.Get(), false)
 	mbCandidate, err := view.makeMiniblockCandidate(ctx, i.params, proposal)

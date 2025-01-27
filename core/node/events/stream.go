@@ -34,10 +34,10 @@ type Stream interface {
 	AddableStream
 	MiniblockStream
 
-	GetView(ctx context.Context) (*StreamViewImpl, error)
+	GetView(ctx context.Context) (*StreamView, error)
 
 	// GetViewIfLocal returns the stream view if the stream is local, otherwise returns nil, nil.
-	GetViewIfLocal(ctx context.Context) (*StreamViewImpl, error)
+	GetViewIfLocal(ctx context.Context) (*StreamView, error)
 }
 
 type SyncResultReceiver interface {
@@ -105,7 +105,7 @@ var _ SyncStream = (*streamImpl)(nil)
 type localStreamState struct {
 	// useGetterAndSetterToGetView contains pointer to current immutable view, if loaded, nil otherwise.
 	// Use view() and setView() to access it.
-	useGetterAndSetterToGetView *StreamViewImpl
+	useGetterAndSetterToGetView *StreamView
 
 	// lastScrubbedTime keeps track of when the stream was last scrubbed. Streams that
 	// are never scrubbed will not have this value modified.
@@ -131,12 +131,12 @@ func (s *streamImpl) IsLocal() bool {
 }
 
 // view should be called with at least a read lock.
-func (s *streamImpl) view() *StreamViewImpl {
+func (s *streamImpl) view() *StreamView {
 	return s.local.useGetterAndSetterToGetView
 }
 
 // This should be accessed under lock.
-func (s *streamImpl) setView(view *StreamViewImpl) {
+func (s *streamImpl) setView(view *StreamView) {
 	s.local.useGetterAndSetterToGetView = view
 	if view != nil && len(s.local.pendingCandidates) > 0 {
 		lastMbNum := view.LastBlock().Ref.Num
@@ -523,10 +523,10 @@ func (s *streamImpl) initFromBlockchain(ctx context.Context) error {
 // GetViewIfLocal returns stream view if stream is local, nil if stream is not local,
 // and error if stream is local and failed to load.
 // GetViewIfLocal is thread-safe.
-func (s *streamImpl) GetViewIfLocal(ctx context.Context) (*StreamViewImpl, error) {
+func (s *streamImpl) GetViewIfLocal(ctx context.Context) (*StreamView, error) {
 	s.mu.RLock()
 	isLocal := s.local != nil
-	var view *StreamViewImpl
+	var view *StreamView
 	if isLocal {
 		view = s.view()
 		if view != nil {
@@ -553,7 +553,7 @@ func (s *streamImpl) GetViewIfLocal(ctx context.Context) (*StreamViewImpl, error
 
 // GetView returns stream view if stream is local, and error if stream is not local or failed to load.
 // GetView is thread-safe.
-func (s *streamImpl) GetView(ctx context.Context) (*StreamViewImpl, error) {
+func (s *streamImpl) GetView(ctx context.Context) (*StreamView, error) {
 	view, err := s.GetViewIfLocal(ctx)
 	if err != nil {
 		return nil, err
@@ -566,7 +566,7 @@ func (s *streamImpl) GetView(ctx context.Context) (*StreamViewImpl, error) {
 
 // tryGetView returns StreamView if it's already loaded, or nil if it's not.
 // tryGetView is thread-safe.
-func (s *streamImpl) tryGetView() *StreamViewImpl {
+func (s *streamImpl) tryGetView() *StreamView {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if s.local != nil && s.view() != nil {

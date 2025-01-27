@@ -250,7 +250,7 @@ func TestSpaceViewState(t *testing.T) {
 	require.NoError(t, err)
 
 	// load up a brand new view from the latest snapshot result
-	var view3 *StreamViewImpl
+	var view3 *StreamView
 	view3, err = MakeStreamView(
 		ctx,
 		&storage.ReadStreamFromLastSnapshotResult{
@@ -269,7 +269,7 @@ func TestSpaceViewState(t *testing.T) {
 
 func spaceViewStateTest_CheckUserJoined(
 	t *testing.T,
-	view *StreamViewImpl,
+	view *StreamView,
 	userWallet *crypto.Wallet,
 	expected bool,
 ) {
@@ -315,7 +315,7 @@ func TestChannelViewState_JoinedMembers(t *testing.T) {
 	miniblock := miniblocks[0]
 	miniblockProtoBytes, _ := proto.Marshal(miniblock)
 	// create a stream view from the miniblock bytes
-	var streamView *StreamViewImpl
+	var streamView *StreamView
 	streamView, err = MakeStreamView(
 		ctx,
 		&storage.ReadStreamFromLastSnapshotResult{
@@ -376,7 +376,7 @@ func TestChannelViewState_RemainingMembers(t *testing.T) {
 	miniblock := miniblocks[0]
 	miniblockProtoBytes, _ := proto.Marshal(miniblock)
 	// create a stream view from the miniblock bytes
-	var streamView *StreamViewImpl
+	var streamView *StreamView
 	streamView, err = MakeStreamView(
 		ctx,
 		&storage.ReadStreamFromLastSnapshotResult{

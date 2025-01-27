@@ -10,9 +10,9 @@ type MediaStreamView interface {
 	GetMediaInception() (*MediaPayload_Inception, error)
 }
 
-var _ MediaStreamView = (*StreamViewImpl)(nil)
+var _ MediaStreamView = (*StreamView)(nil)
 
-func (r *StreamViewImpl) GetMediaInception() (*MediaPayload_Inception, error) {
+func (r *StreamView) GetMediaInception() (*MediaPayload_Inception, error) {
 	i := r.InceptionPayload()
 	c, ok := i.(*MediaPayload_Inception)
 	if ok {
