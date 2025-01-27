@@ -1092,7 +1092,7 @@ func (s *PostgresStreamStore) readMiniblocksTx(
 func (s *PostgresStreamStore) ReadMiniblocksByStream(
 	ctx context.Context,
 	streamId StreamId,
-	onEachMb func(blockdata []byte, seqNum int) error,
+	onEachMb func(blockdata []byte, seqNum int64) error,
 ) error {
 	return s.txRunner(
 		ctx,
@@ -1110,7 +1110,7 @@ func (s *PostgresStreamStore) readMiniblocksByStreamTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
-	onEachMb func(blockdata []byte, seqNum int) error,
+	onEachMb func(blockdata []byte, seqNum int64) error,
 ) error {
 	_, err := s.lockStream(ctx, tx, streamId, false)
 	if err != nil {
@@ -1129,9 +1129,9 @@ func (s *PostgresStreamStore) readMiniblocksByStreamTx(
 		return err
 	}
 
-	prevSeqNum := -1
+	prevSeqNum := int64(-1)
 	var blockdata []byte
-	var seqNum int
+	var seqNum int64
 	_, err = pgx.ForEachRow(rows, []any{&blockdata, &seqNum}, func() error {
 		if (prevSeqNum != -1) && (seqNum != prevSeqNum+1) {
 			// There is a gap in sequence numbers
@@ -1141,6 +1141,67 @@ func (s *PostgresStreamStore) readMiniblocksByStreamTx(
 
 		prevSeqNum = seqNum
 
+		return onEachMb(blockdata, seqNum)
+	})
+
+	return err
+}
+
+// ReadMiniblocksByIds returns miniblocks data of the given miniblocks by the given stream ID.
+func (s *PostgresStreamStore) ReadMiniblocksByIds(
+	ctx context.Context,
+	streamId StreamId,
+	mbs []int64,
+	onEachMb func(blockdata []byte, seqNum int64) error,
+) error {
+	return s.txRunner(
+		ctx,
+		"ReadMiniblocksByIds",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			return s.readMiniblocksByIdsTx(ctx, tx, streamId, mbs, onEachMb)
+		},
+		&txRunnerOpts{useStreamingPool: true},
+		"streamId", streamId,
+		"mbs", mbs,
+	)
+}
+
+func (s *PostgresStreamStore) readMiniblocksByIdsTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	streamId StreamId,
+	mbs []int64,
+	onEachMb func(blockdata []byte, seqNum int64) error,
+) error {
+	_, err := s.lockStream(ctx, tx, streamId, false)
+	if err != nil {
+		return err
+	}
+
+	// Prepare miniblock number placeholders and arguments list
+	placeholders := make([]string, len(mbs))
+	args := make([]interface{}, len(mbs)+1)
+	args[0] = streamId
+	for i := 1; i <= len(mbs); i++ {
+		// Adding +1 here since the first placeholder is the stream ID
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = mbs[i-1]
+	}
+
+	query := fmt.Sprintf(
+		"SELECT blockdata, seq_num FROM {{miniblocks}} WHERE stream_id = $1 AND seq_num IN (%s) ORDER BY seq_num",
+		strings.Join(placeholders, ", "),
+	)
+
+	rows, err := tx.Query(ctx, s.sqlForStream(query, streamId), args...)
+	if err != nil {
+		return err
+	}
+
+	var blockdata []byte
+	var seqNum int64
+	_, err = pgx.ForEachRow(rows, []any{&blockdata, &seqNum}, func() error {
 		return onEachMb(blockdata, seqNum)
 	})
 

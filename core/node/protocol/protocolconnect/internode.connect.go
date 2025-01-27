@@ -51,6 +51,9 @@ const (
 	// NodeToNodeGetMiniblocksByIdsProcedure is the fully-qualified name of the NodeToNode's
 	// GetMiniblocksByIds RPC.
 	NodeToNodeGetMiniblocksByIdsProcedure = "/river.NodeToNode/GetMiniblocksByIds"
+	// NodeToNodeGetMiniblockByIdProcedure is the fully-qualified name of the NodeToNode's
+	// GetMiniblockById RPC.
+	NodeToNodeGetMiniblockByIdProcedure = "/river.NodeToNode/GetMiniblockById"
 	// NodeToNodeAllocateEphemeralStreamProcedure is the fully-qualified name of the NodeToNode's
 	// AllocateEphemeralStream RPC.
 	NodeToNodeAllocateEphemeralStreamProcedure = "/river.NodeToNode/AllocateEphemeralStream"
@@ -71,6 +74,7 @@ var (
 	nodeToNodeProposeMiniblockMethodDescriptor        = nodeToNodeServiceDescriptor.Methods().ByName("ProposeMiniblock")
 	nodeToNodeSaveMiniblockCandidateMethodDescriptor  = nodeToNodeServiceDescriptor.Methods().ByName("SaveMiniblockCandidate")
 	nodeToNodeGetMiniblocksByIdsMethodDescriptor      = nodeToNodeServiceDescriptor.Methods().ByName("GetMiniblocksByIds")
+	nodeToNodeGetMiniblockByIdMethodDescriptor        = nodeToNodeServiceDescriptor.Methods().ByName("GetMiniblockById")
 	nodeToNodeAllocateEphemeralStreamMethodDescriptor = nodeToNodeServiceDescriptor.Methods().ByName("AllocateEphemeralStream")
 	nodeToNodeSaveEphemeralMiniblockMethodDescriptor  = nodeToNodeServiceDescriptor.Methods().ByName("SaveEphemeralMiniblock")
 	nodeToNodeSealEphemeralStreamMethodDescriptor     = nodeToNodeServiceDescriptor.Methods().ByName("SealEphemeralStream")
@@ -83,7 +87,8 @@ type NodeToNodeClient interface {
 	NewEventInPool(context.Context, *connect.Request[protocol.NewEventInPoolRequest]) (*connect.Response[protocol.NewEventInPoolResponse], error)
 	ProposeMiniblock(context.Context, *connect.Request[protocol.ProposeMiniblockRequest]) (*connect.Response[protocol.ProposeMiniblockResponse], error)
 	SaveMiniblockCandidate(context.Context, *connect.Request[protocol.SaveMiniblockCandidateRequest]) (*connect.Response[protocol.SaveMiniblockCandidateResponse], error)
-	GetMiniblocksByIds(context.Context, *connect.Request[protocol.GetMiniblocksByIdsRequest]) (*connect.ServerStreamForClient[protocol.GetMiniblocksByIdsResponse], error)
+	GetMiniblocksByIds(context.Context, *connect.Request[protocol.GetMiniblocksByIdsRequest]) (*connect.ServerStreamForClient[protocol.GetMiniblockResponse], error)
+	GetMiniblockById(context.Context, *connect.Request[protocol.GetMiniblockByIdRequest]) (*connect.Response[protocol.GetMiniblockResponse], error)
 	// Endpoints for ephemeral streams
 	AllocateEphemeralStream(context.Context, *connect.Request[protocol.AllocateEphemeralStreamRequest]) (*connect.Response[protocol.AllocateEphemeralStreamResponse], error)
 	SaveEphemeralMiniblock(context.Context, *connect.Request[protocol.SaveEphemeralMiniblockRequest]) (*connect.Response[protocol.SaveEphemeralMiniblockResponse], error)
@@ -130,10 +135,16 @@ func NewNodeToNodeClient(httpClient connect.HTTPClient, baseURL string, opts ...
 			connect.WithSchema(nodeToNodeSaveMiniblockCandidateMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		getMiniblocksByIds: connect.NewClient[protocol.GetMiniblocksByIdsRequest, protocol.GetMiniblocksByIdsResponse](
+		getMiniblocksByIds: connect.NewClient[protocol.GetMiniblocksByIdsRequest, protocol.GetMiniblockResponse](
 			httpClient,
 			baseURL+NodeToNodeGetMiniblocksByIdsProcedure,
 			connect.WithSchema(nodeToNodeGetMiniblocksByIdsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getMiniblockById: connect.NewClient[protocol.GetMiniblockByIdRequest, protocol.GetMiniblockResponse](
+			httpClient,
+			baseURL+NodeToNodeGetMiniblockByIdProcedure,
+			connect.WithSchema(nodeToNodeGetMiniblockByIdMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		allocateEphemeralStream: connect.NewClient[protocol.AllocateEphemeralStreamRequest, protocol.AllocateEphemeralStreamResponse](
@@ -164,7 +175,8 @@ type nodeToNodeClient struct {
 	newEventInPool          *connect.Client[protocol.NewEventInPoolRequest, protocol.NewEventInPoolResponse]
 	proposeMiniblock        *connect.Client[protocol.ProposeMiniblockRequest, protocol.ProposeMiniblockResponse]
 	saveMiniblockCandidate  *connect.Client[protocol.SaveMiniblockCandidateRequest, protocol.SaveMiniblockCandidateResponse]
-	getMiniblocksByIds      *connect.Client[protocol.GetMiniblocksByIdsRequest, protocol.GetMiniblocksByIdsResponse]
+	getMiniblocksByIds      *connect.Client[protocol.GetMiniblocksByIdsRequest, protocol.GetMiniblockResponse]
+	getMiniblockById        *connect.Client[protocol.GetMiniblockByIdRequest, protocol.GetMiniblockResponse]
 	allocateEphemeralStream *connect.Client[protocol.AllocateEphemeralStreamRequest, protocol.AllocateEphemeralStreamResponse]
 	saveEphemeralMiniblock  *connect.Client[protocol.SaveEphemeralMiniblockRequest, protocol.SaveEphemeralMiniblockResponse]
 	sealEphemeralStream     *connect.Client[protocol.SealEphemeralStreamRequest, protocol.SealEphemeralStreamResponse]
@@ -196,8 +208,13 @@ func (c *nodeToNodeClient) SaveMiniblockCandidate(ctx context.Context, req *conn
 }
 
 // GetMiniblocksByIds calls river.NodeToNode.GetMiniblocksByIds.
-func (c *nodeToNodeClient) GetMiniblocksByIds(ctx context.Context, req *connect.Request[protocol.GetMiniblocksByIdsRequest]) (*connect.ServerStreamForClient[protocol.GetMiniblocksByIdsResponse], error) {
+func (c *nodeToNodeClient) GetMiniblocksByIds(ctx context.Context, req *connect.Request[protocol.GetMiniblocksByIdsRequest]) (*connect.ServerStreamForClient[protocol.GetMiniblockResponse], error) {
 	return c.getMiniblocksByIds.CallServerStream(ctx, req)
+}
+
+// GetMiniblockById calls river.NodeToNode.GetMiniblockById.
+func (c *nodeToNodeClient) GetMiniblockById(ctx context.Context, req *connect.Request[protocol.GetMiniblockByIdRequest]) (*connect.Response[protocol.GetMiniblockResponse], error) {
+	return c.getMiniblockById.CallUnary(ctx, req)
 }
 
 // AllocateEphemeralStream calls river.NodeToNode.AllocateEphemeralStream.
@@ -222,7 +239,8 @@ type NodeToNodeHandler interface {
 	NewEventInPool(context.Context, *connect.Request[protocol.NewEventInPoolRequest]) (*connect.Response[protocol.NewEventInPoolResponse], error)
 	ProposeMiniblock(context.Context, *connect.Request[protocol.ProposeMiniblockRequest]) (*connect.Response[protocol.ProposeMiniblockResponse], error)
 	SaveMiniblockCandidate(context.Context, *connect.Request[protocol.SaveMiniblockCandidateRequest]) (*connect.Response[protocol.SaveMiniblockCandidateResponse], error)
-	GetMiniblocksByIds(context.Context, *connect.Request[protocol.GetMiniblocksByIdsRequest], *connect.ServerStream[protocol.GetMiniblocksByIdsResponse]) error
+	GetMiniblocksByIds(context.Context, *connect.Request[protocol.GetMiniblocksByIdsRequest], *connect.ServerStream[protocol.GetMiniblockResponse]) error
+	GetMiniblockById(context.Context, *connect.Request[protocol.GetMiniblockByIdRequest]) (*connect.Response[protocol.GetMiniblockResponse], error)
 	// Endpoints for ephemeral streams
 	AllocateEphemeralStream(context.Context, *connect.Request[protocol.AllocateEphemeralStreamRequest]) (*connect.Response[protocol.AllocateEphemeralStreamResponse], error)
 	SaveEphemeralMiniblock(context.Context, *connect.Request[protocol.SaveEphemeralMiniblockRequest]) (*connect.Response[protocol.SaveEphemeralMiniblockResponse], error)
@@ -271,6 +289,12 @@ func NewNodeToNodeHandler(svc NodeToNodeHandler, opts ...connect.HandlerOption) 
 		connect.WithSchema(nodeToNodeGetMiniblocksByIdsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	nodeToNodeGetMiniblockByIdHandler := connect.NewUnaryHandler(
+		NodeToNodeGetMiniblockByIdProcedure,
+		svc.GetMiniblockById,
+		connect.WithSchema(nodeToNodeGetMiniblockByIdMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	nodeToNodeAllocateEphemeralStreamHandler := connect.NewUnaryHandler(
 		NodeToNodeAllocateEphemeralStreamProcedure,
 		svc.AllocateEphemeralStream,
@@ -303,6 +327,8 @@ func NewNodeToNodeHandler(svc NodeToNodeHandler, opts ...connect.HandlerOption) 
 			nodeToNodeSaveMiniblockCandidateHandler.ServeHTTP(w, r)
 		case NodeToNodeGetMiniblocksByIdsProcedure:
 			nodeToNodeGetMiniblocksByIdsHandler.ServeHTTP(w, r)
+		case NodeToNodeGetMiniblockByIdProcedure:
+			nodeToNodeGetMiniblockByIdHandler.ServeHTTP(w, r)
 		case NodeToNodeAllocateEphemeralStreamProcedure:
 			nodeToNodeAllocateEphemeralStreamHandler.ServeHTTP(w, r)
 		case NodeToNodeSaveEphemeralMiniblockProcedure:
@@ -338,8 +364,12 @@ func (UnimplementedNodeToNodeHandler) SaveMiniblockCandidate(context.Context, *c
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NodeToNode.SaveMiniblockCandidate is not implemented"))
 }
 
-func (UnimplementedNodeToNodeHandler) GetMiniblocksByIds(context.Context, *connect.Request[protocol.GetMiniblocksByIdsRequest], *connect.ServerStream[protocol.GetMiniblocksByIdsResponse]) error {
+func (UnimplementedNodeToNodeHandler) GetMiniblocksByIds(context.Context, *connect.Request[protocol.GetMiniblocksByIdsRequest], *connect.ServerStream[protocol.GetMiniblockResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("river.NodeToNode.GetMiniblocksByIds is not implemented"))
+}
+
+func (UnimplementedNodeToNodeHandler) GetMiniblockById(context.Context, *connect.Request[protocol.GetMiniblockByIdRequest]) (*connect.Response[protocol.GetMiniblockResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NodeToNode.GetMiniblockById is not implemented"))
 }
 
 func (UnimplementedNodeToNodeHandler) AllocateEphemeralStream(context.Context, *connect.Request[protocol.AllocateEphemeralStreamRequest]) (*connect.Response[protocol.AllocateEphemeralStreamResponse], error) {

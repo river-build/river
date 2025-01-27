@@ -46,7 +46,15 @@ type StreamStorage interface {
 	ReadMiniblocksByStream(
 		ctx context.Context,
 		streamId StreamId,
-		onEachMb func(blockdata []byte, seqNum int) error,
+		onEachMb func(blockdata []byte, seqNum int64) error,
+	) error
+
+	// ReadMiniblocksByIds calls onEachMb for each specified miniblock
+	ReadMiniblocksByIds(
+		ctx context.Context,
+		streamId StreamId,
+		mbs []int64,
+		onEachMb func(blockdata []byte, seqNum int64) error,
 	) error
 
 	// ReadEphemeralMiniblockNums returns the list of ephemeral miniblock numbers for the given ephemeral stream.
