@@ -108,8 +108,8 @@ func MakeStreamView(
 		}
 		if !minipoolEvents.Set(parsed.Hash, parsed) {
 			return nil, RiverError(
-				Err_DUPLICATE_EVENT,
-				"duplicate event",
+				Err_DATA_LOSS,
+				"duplicate event found in saved stream minipool",
 			).Func("MakeStreamView").
 				Tags("streamId", streamId, "event", parsed.ShortDebugStr())
 		}
@@ -179,8 +179,8 @@ func MakeRemoteStreamView(ctx context.Context, stream *StreamAndCookie) (*stream
 		}
 		if !minipoolEvents.Set(parsed.Hash, parsed) {
 			return nil, RiverError(
-				Err_DUPLICATE_EVENT,
-				"duplicate event",
+				Err_DATA_LOSS,
+				"duplicate event found in received remote stream minipool",
 			).Func("MakeStreamView").
 				Tags("streamId", streamId, "event", parsed.ShortDebugStr())
 		}
@@ -795,7 +795,7 @@ func (r *streamViewImpl) ValidateNextEvent(
 					"event already exists in block",
 					"event",
 					parsedEvent.ShortDebugStr(),
-				)
+				).Func("ValidateNextEvent")
 			}
 		}
 	}
@@ -809,7 +809,7 @@ func (r *streamViewImpl) ValidateNextEvent(
 				parsedEvent.ShortDebugStr(),
 				"expected",
 				FormatHashShort(r.LastBlock().headerEvent.Hash),
-			)
+			).Func("ValidateNextEvent")
 		}
 	}
 	// success
