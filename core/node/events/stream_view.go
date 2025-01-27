@@ -30,35 +30,6 @@ type StreamViewStats struct {
 	TotalEventsEver       int // This is total number of events in the stream ever, not in the cache.
 }
 
-type StreamView interface {
-	StreamId() *StreamId
-	StreamParentId() *StreamId
-	InceptionPayload() IsInceptionPayload
-	LastEvent() *ParsedEvent
-	MinipoolEnvelopes() []*Envelope
-	MinipoolEvents() []*ParsedEvent
-	Miniblocks() []*MiniblockInfo
-	MiniblocksFromLastSnapshot() []*Miniblock
-	SyncCookie(localNodeAddress common.Address) *SyncCookie
-	LastBlock() *MiniblockInfo
-	Blocks() []*MiniblockInfo
-	ValidateNextEvent(
-		ctx context.Context,
-		cfg *crypto.OnChainSettings,
-		parsedEvent *ParsedEvent,
-		currentTime time.Time,
-	) error
-	GetStats() StreamViewStats
-	ProposeNextMiniblock(
-		ctx context.Context,
-		cfg *crypto.OnChainSettings,
-		req *ProposeMiniblockRequest,
-	) (*ProposeMiniblockResponse, error)
-	IsMember(userAddress []byte) (bool, error)
-	CopyAndPrependMiniblocks(mbs []*MiniblockInfo) (*StreamViewImpl, error)
-	AllEvents() iter.Seq[*ParsedEvent]
-}
-
 func MakeStreamView(
 	ctx context.Context,
 	streamData *storage.ReadStreamFromLastSnapshotResult,
@@ -208,8 +179,6 @@ type StreamViewImpl struct {
 	snapshot      *Snapshot
 	snapshotIndex int
 }
-
-var _ StreamView = (*StreamViewImpl)(nil)
 
 func (r *StreamViewImpl) copyAndAddEvent(event *ParsedEvent) (*StreamViewImpl, error) {
 	if event.Event.GetMiniblockHeader() != nil {

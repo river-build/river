@@ -833,9 +833,9 @@ func (tc *testClient) getStreamEx(streamId StreamId, onEachMb func(*Miniblock)) 
 func (tc *testClient) getStreamAndView(
 	streamId StreamId,
 	history ...bool,
-) (*StreamAndCookie, JoinableStreamView) {
+) (*StreamAndCookie, *StreamViewImpl) {
 	stream := tc.getStream(streamId)
-	var view JoinableStreamView
+	var view *StreamViewImpl
 	var err error
 	view, err = MakeRemoteStreamView(tc.ctx, stream)
 	tc.require.NoError(err)
@@ -852,7 +852,7 @@ func (tc *testClient) getStreamAndView(
 	return stream, view
 }
 
-func (tc *testClient) maybeDumpStreamView(view StreamView) {
+func (tc *testClient) maybeDumpStreamView(view *StreamViewImpl) {
 	if os.Getenv("RIVER_TEST_DUMP_STREAM") != "" {
 		testfmt.Print(
 			tc.t,
@@ -894,8 +894,8 @@ func (tc *testClient) getMiniblocks(streamId StreamId, fromInclusive, toExclusiv
 }
 
 func (tc *testClient) addHistoryToView(
-	view JoinableStreamView,
-) JoinableStreamView {
+	view *StreamViewImpl,
+) *StreamViewImpl {
 	firstMbNum := view.Miniblocks()[0].Ref.Num
 	if firstMbNum == 0 {
 		return view

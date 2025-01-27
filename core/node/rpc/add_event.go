@@ -20,7 +20,7 @@ func (s *Service) localAddEvent(
 	ctx context.Context,
 	req *connect.Request[AddEventRequest],
 	localStream SyncStream,
-	streamView StreamView,
+	streamView *StreamViewImpl,
 ) (*connect.Response[AddEventResponse], error) {
 	log := logging.FromCtx(ctx)
 
@@ -63,7 +63,7 @@ func (s *Service) addParsedEvent(
 	streamId StreamId,
 	parsedEvent *ParsedEvent,
 	localStream SyncStream,
-	streamView StreamView,
+	streamView *StreamViewImpl,
 ) ([]*EventRef, error) {
 	// TODO: here it should loop and re-check the rules if view was updated in the meantime.
 	canAddEvent, verifications, sideEffects, err := rules.CanAddEvent(

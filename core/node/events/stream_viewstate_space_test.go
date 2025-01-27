@@ -250,7 +250,7 @@ func TestSpaceViewState(t *testing.T) {
 	require.NoError(t, err)
 
 	// load up a brand new view from the latest snapshot result
-	var view3 StreamView
+	var view3 *StreamViewImpl
 	view3, err = MakeStreamView(
 		ctx,
 		&storage.ReadStreamFromLastSnapshotResult{
@@ -262,14 +262,14 @@ func TestSpaceViewState(t *testing.T) {
 	require.NotNil(t, view3)
 
 	// check that users are joined when loading from the snapshot
-	spaceViewStateTest_CheckUserJoined(t, view3.(JoinableStreamView), user1Wallet, true)
-	spaceViewStateTest_CheckUserJoined(t, view3.(JoinableStreamView), user2Wallet, true)
-	spaceViewStateTest_CheckUserJoined(t, view3.(JoinableStreamView), user3Wallet, true)
+	spaceViewStateTest_CheckUserJoined(t, view3, user1Wallet, true)
+	spaceViewStateTest_CheckUserJoined(t, view3, user2Wallet, true)
+	spaceViewStateTest_CheckUserJoined(t, view3, user3Wallet, true)
 }
 
 func spaceViewStateTest_CheckUserJoined(
 	t *testing.T,
-	view JoinableStreamView,
+	view *StreamViewImpl,
 	userWallet *crypto.Wallet,
 	expected bool,
 ) {
@@ -315,7 +315,7 @@ func TestChannelViewState_JoinedMembers(t *testing.T) {
 	miniblock := miniblocks[0]
 	miniblockProtoBytes, _ := proto.Marshal(miniblock)
 	// create a stream view from the miniblock bytes
-	var streamView StreamView
+	var streamView *StreamViewImpl
 	streamView, err = MakeStreamView(
 		ctx,
 		&storage.ReadStreamFromLastSnapshotResult{
@@ -327,8 +327,7 @@ func TestChannelViewState_JoinedMembers(t *testing.T) {
 
 	/* Act */
 	// create a channel view from the stream view
-	channelView := streamView.(JoinableStreamView)
-	allJoinedMembers, err := channelView.GetChannelMembers()
+	allJoinedMembers, err := streamView.GetChannelMembers()
 
 	/* Assert */
 	require.NoError(t, err)
@@ -377,7 +376,7 @@ func TestChannelViewState_RemainingMembers(t *testing.T) {
 	miniblock := miniblocks[0]
 	miniblockProtoBytes, _ := proto.Marshal(miniblock)
 	// create a stream view from the miniblock bytes
-	var streamView StreamView
+	var streamView *StreamViewImpl
 	streamView, err = MakeStreamView(
 		ctx,
 		&storage.ReadStreamFromLastSnapshotResult{
@@ -389,8 +388,7 @@ func TestChannelViewState_RemainingMembers(t *testing.T) {
 
 	/* Act */
 	// create a channel view from the stream view
-	channelView := streamView.(JoinableStreamView)
-	allJoinedMembers, err := channelView.GetChannelMembers()
+	allJoinedMembers, err := streamView.GetChannelMembers()
 
 	/* Assert */
 	require.NoError(t, err)

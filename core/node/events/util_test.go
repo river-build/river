@@ -249,7 +249,7 @@ func (ctc *cacheTestContext) createStreamNoCache(
 func (ctc *cacheTestContext) createStream(
 	streamId StreamId,
 	genesisMiniblock *Miniblock,
-) (SyncStream, StreamView) {
+) (SyncStream, *StreamViewImpl) {
 	ctc.createStreamNoCache(streamId, genesisMiniblock)
 	s, err := ctc.instances[0].cache.GetStreamWaitForLocal(ctc.ctx, streamId)
 	ctc.require.NoError(err)

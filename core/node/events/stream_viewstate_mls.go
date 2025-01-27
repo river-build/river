@@ -8,7 +8,6 @@ import (
 )
 
 type MlsStreamView interface {
-	StreamView
 	IsMlsInitialized() (bool, error)
 	GetMlsGroupState() (*mls_tools.MlsGroupState, error)
 	GetMlsEpochSecrets() (map[uint64][]byte, error)

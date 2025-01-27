@@ -51,7 +51,7 @@ type StreamCache interface {
 	// GetStreamNoWait is a transitional method to support existing GetStream API before block number are wired through APIs.
 	GetStreamNoWait(ctx context.Context, streamId StreamId) (SyncStream, error)
 	ForceFlushAll(ctx context.Context)
-	GetLoadedViews(ctx context.Context) []StreamView
+	GetLoadedViews(ctx context.Context) []*StreamViewImpl
 	GetMbCandidateStreams(ctx context.Context) []*streamImpl
 	CacheCleanup(ctx context.Context, enabled bool, expiration time.Duration) CacheCleanupResult
 }
@@ -445,8 +445,8 @@ func (s *streamCacheImpl) ForceFlushAll(ctx context.Context) {
 	})
 }
 
-func (s *streamCacheImpl) GetLoadedViews(ctx context.Context) []StreamView {
-	var result []StreamView
+func (s *streamCacheImpl) GetLoadedViews(ctx context.Context) []*StreamViewImpl {
+	var result []*StreamViewImpl
 	s.cache.Range(func(streamID StreamId, stream *streamImpl) bool {
 		view := stream.tryGetView()
 		if view != nil {

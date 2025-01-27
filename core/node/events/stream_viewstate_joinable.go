@@ -11,7 +11,6 @@ import (
 )
 
 type JoinableStreamView interface {
-	StreamView
 	GetChannelMembers() (mapset.Set[string], error)
 	GetMembership(userAddress []byte) (protocol.MembershipOp, error)
 	GetKeySolicitations(userAddress []byte) ([]*protocol.MemberPayload_KeySolicitation, error)
