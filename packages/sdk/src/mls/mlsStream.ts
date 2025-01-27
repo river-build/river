@@ -28,7 +28,7 @@ export class MlsStream implements StreamUpdateDelegate {
     public readonly stream: Stream
     private persistenceStore: IPersistenceStore
     public readonly decryptionFailures: Map<bigint, MlsEncryptedContentItem[]> = new Map()
-    private log: ELogger 
+    private log: ELogger
 
     public constructor(
         streamId: string,
