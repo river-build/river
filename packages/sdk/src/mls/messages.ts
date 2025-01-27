@@ -13,8 +13,7 @@ import {
     makeInitializeGroup,
 } from '../tests/multi_ne/mls/utils'
 import { MLS_ALGORITHM, MLS_ENCRYPTED_DATA_VERSION } from './constants'
-import { DerivedKeys, EpochEncryption } from './epochEncryption'
-import { DecryptedContent, EncryptedContent, toDecryptedContent } from '../encryptedContentTypes'
+import { EpochEncryption } from './epochEncryption'
 
 const crypto = new EpochEncryption()
 
@@ -47,15 +46,6 @@ export class MlsMessages {
                 },
             },
         }
-    }
-
-    public static async decryptEpochSecretMessage(
-        derivedKeys: DerivedKeys,
-        kind: EncryptedContent['kind'],
-        ciphertext: Uint8Array,
-    ): Promise<DecryptedContent> {
-        const cleartext = await crypto.open(derivedKeys, ciphertext)
-        return toDecryptedContent(kind, MLS_ENCRYPTED_DATA_VERSION, cleartext)
     }
 
     public static async prepareExternalJoinMessage(

@@ -1,7 +1,7 @@
 import TypedEmitter from 'typed-emitter'
 import { StreamEncryptionEvents, StreamStateEvents, SyncedStreamEvents } from '../streamEvents'
 import { MlsQueue, MlsQueueDelegate, StreamUpdate } from './mlsQueue'
-import { dlog } from '@river-build/dlog'
+import { bin_toHexString, dlog } from '@river-build/dlog'
 import { MlsLogger } from './logger'
 import { MlsStream } from './mlsStream'
 import { MlsProcessor } from './mlsProcessor'
@@ -9,8 +9,10 @@ import { Client } from '../client'
 import { MLS_ALGORITHM } from './constants'
 import { EncryptedContent } from '../encryptedContentTypes'
 import { Stream } from '../stream'
-import { DexieLocalViewStorage } from './localViewStorage'
 import { IPersistenceStore } from '../persistenceStore'
+import { MlsCryptoStore, toLocalEpochSecretDTO, toLocalViewDTO } from './mlsCryptoStore'
+import { LocalView } from './localView'
+import { IndefiniteValueAwaiter } from './awaiter'
 
 const defaultLogger = dlog('csb:mls:agent')
 
@@ -32,14 +34,16 @@ const defaultMlsAgentOpts = {
 export class MlsAgent implements MlsQueueDelegate {
     private readonly client: Client
     // private readonly mlsClient: MlsClient
-    private readonly persistenceStore?: IPersistenceStore
+    private readonly persistenceStore: IPersistenceStore
     private readonly encryptionEmitter?: TypedEmitter<StreamEncryptionEvents>
     private readonly stateEmitter?: TypedEmitter<StreamStateEvents>
 
     public readonly streams: Map<string, MlsStream> = new Map()
     public readonly processor: MlsProcessor
     public readonly queue: MlsQueue
-    public readonly localViewStorage: DexieLocalViewStorage
+    public readonly store: MlsCryptoStore
+
+    private initRequests: Map<string, IndefiniteValueAwaiter<MlsStream>> = new Map()
 
     private log: MlsLogger
     private started: boolean = false
@@ -50,8 +54,8 @@ export class MlsAgent implements MlsQueueDelegate {
         // mlsClient: MlsClient,
         processor: MlsProcessor,
         queue: MlsQueue,
-        localViewStorage: DexieLocalViewStorage,
-        persistenceStore?: IPersistenceStore,
+        store: MlsCryptoStore,
+        persistenceStore: IPersistenceStore,
         encryptionEmitter?: TypedEmitter<StreamEncryptionEvents>,
         stateEmitter?: TypedEmitter<StreamStateEvents>,
         opts: MlsAgentOpts = defaultMlsAgentOpts,
@@ -63,7 +67,7 @@ export class MlsAgent implements MlsQueueDelegate {
         this.stateEmitter = stateEmitter
         this.processor = processor
         this.queue = queue
-        this.localViewStorage = localViewStorage
+        this.store = store
         this.log = opts.log
         this.mlsAlwaysEnabled = opts.mlsAlwaysEnabled
     }
@@ -95,14 +99,17 @@ export class MlsAgent implements MlsQueueDelegate {
     public readonly onStreamInitialized: StreamStateEvents['streamInitialized'] = (
         streamId: string,
     ): void => {
-        this.log.debug?.('agent: onStreamInitialized', streamId)
+        this.log.debug?.('onStreamInitialized', streamId)
         this.queue.enqueueStreamUpdate(streamId)
     }
 
     public readonly onConfirmedEvent: StreamEncryptionEvents['mlsQueueConfirmedEvent'] = (
         ...args
     ): void => {
-        this.log.debug?.('agent: onConfirmedEvent', args)
+        this.log.debug?.('agent: onConfirmedEvent', {
+            confirmedEventNum: args[1].confirmedEventNum,
+            case: args[1].case,
+        })
         this.queue.enqueueConfirmedEvent(...args)
     }
 
@@ -126,7 +133,7 @@ export class MlsAgent implements MlsQueueDelegate {
         eventId: string,
         content: EncryptedContent,
     ): void => {
-        this.log.debug?.('agent: onNewEncryptedContent', streamId, eventId, content)
+        this.log.debug?.('onNewEncryptedContent', streamId, eventId, content.content.mls?.epoch)
         this.queue.enqueueNewEncryptedContent(streamId, eventId, content)
     }
 
@@ -140,7 +147,7 @@ export class MlsAgent implements MlsQueueDelegate {
 
     // This potentially involves loading from storage
     public async initMlsStream(stream: Stream): Promise<MlsStream> {
-        this.log.debug?.('agent: initStream', stream.streamId)
+        this.log.debug?.('initStream', stream.streamId)
 
         let mlsStream = this.streams.get(stream.streamId)
 
@@ -149,13 +156,51 @@ export class MlsAgent implements MlsQueueDelegate {
             return mlsStream
         }
 
+        const existingAwaiter = this.initRequests.get(stream.streamId)
+        if (existingAwaiter !== undefined) {
+            return existingAwaiter.promise
+        }
+
+        const innerAwaiter = new IndefiniteValueAwaiter<MlsStream>()
+        const awaiter = {
+            promise: innerAwaiter.promise.then((value) => {
+                this.initRequests.delete(stream.streamId)
+                return value
+            }),
+            resolve: innerAwaiter.resolve,
+        }
+
+        this.initRequests.set(stream.streamId, awaiter)
+
         // fetch localview from storage
-        const localView = await this.localViewStorage.getLocalView(stream.streamId, this.processor)
+        let localView: LocalView | undefined
+        const dtos = await this.store.getLocalViewDTO(stream.streamId)
+        if (dtos !== undefined) {
+            this.log.debug?.('loading local view', stream.streamId)
+            this.log.debug?.('loading group', bin_toHexString(dtos.viewDTO.groupId))
+            try {
+                localView = await this.processor.loadLocalView(dtos.viewDTO)
+                for (const localEpochSecretDTO of dtos.epochSecretDTOs) {
+                    const epochSecret = {
+                        epoch: BigInt(localEpochSecretDTO.epoch),
+                        secret: localEpochSecretDTO.secret,
+                        derivedKeys: {
+                            publicKey: localEpochSecretDTO.derivedKeys.publicKey,
+                            secretKey: localEpochSecretDTO.derivedKeys.secretKey,
+                        },
+                    }
+                    localView.epochSecrets.set(epochSecret.epoch, epochSecret)
+                }
+            } catch (e) {
+                this.log.error?.('loadLocalView error', stream.streamId, e)
+            }
+        }
 
         mlsStream = new MlsStream(stream.streamId, stream, this.persistenceStore, localView)
         this.streams.set(stream.streamId, mlsStream)
+        awaiter.resolve(mlsStream)
 
-        return mlsStream
+        return awaiter.promise
     }
 
     public async getMlsStream(stream: Stream): Promise<MlsStream> {
@@ -230,7 +275,12 @@ export class MlsAgent implements MlsQueueDelegate {
 
             // Persisting the group to storage
             if (mlsStream.localView !== undefined) {
-                await this.localViewStorage.saveLocalView(mlsStream.streamId, mlsStream.localView)
+                const localViewDTO = toLocalViewDTO(mlsStream.streamId, mlsStream.localView)
+                const epochSecretsDTOs = Array.from(mlsStream.localView.epochSecrets.values()).map(
+                    (epochSecret) => toLocalEpochSecretDTO(mlsStream.streamId, epochSecret),
+                )
+                await this.store.saveLocalViewDTO(localViewDTO, epochSecretsDTOs)
+                this.log.debug?.('saving group', bin_toHexString(mlsStream.localView.group.groupId))
                 await mlsStream.localView.group.writeToStorage()
             }
         }

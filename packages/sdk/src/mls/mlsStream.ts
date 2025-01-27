@@ -6,10 +6,10 @@ import { awaiter, IValueAwaiter } from './awaiter'
 import { MlsEncryptedContentItem } from './types'
 import { toDecryptedContent } from '../encryptedContentTypes'
 import { IPersistenceStore } from '../persistenceStore'
-import { MlsMessages } from './messages'
 import { Stream } from '../stream'
 import { MlsQueueDelegate, StreamUpdate } from './mlsQueue'
 import { MLS_ENCRYPTED_DATA_VERSION } from './constants'
+import { EpochEncryption } from './epochEncryption'
 
 export type MlsStreamOpts = {
     log: MlsLogger
@@ -24,13 +24,15 @@ const defaultMlsStreamOpts = {
     },
 }
 
+const crypto = new EpochEncryption()
+
 export class MlsStream implements MlsQueueDelegate {
     public readonly streamId: string
     private _onChainView = new OnChainView()
     private _localView?: LocalView
     public awaitingActiveLocalView?: IValueAwaiter<LocalView>
     public readonly stream: Stream
-    private persistenceStore?: IPersistenceStore
+    private persistenceStore: IPersistenceStore
     public readonly decryptionFailures: Map<bigint, MlsEncryptedContentItem[]> = new Map()
     private log: {
         info?: DLogger
@@ -42,7 +44,7 @@ export class MlsStream implements MlsQueueDelegate {
     public constructor(
         streamId: string,
         stream: Stream,
-        persistenceStore?: IPersistenceStore,
+        persistenceStore: IPersistenceStore,
         localView?: LocalView,
         opts: MlsStreamOpts = defaultMlsStreamOpts,
     ) {
@@ -150,13 +152,13 @@ export class MlsStream implements MlsQueueDelegate {
         const epoch = mlsEncryptedContentItem.epoch
         const ciphertext = mlsEncryptedContentItem.ciphertext
 
-        const clearText = await this.persistenceStore?.getCleartext(eventId)
-        if (clearText !== undefined) {
-            this.stream.updateDecryptedContent(
+        let cleartext = await this.persistenceStore.getCleartext(eventId)
+
+        if (cleartext !== undefined) {
+            return this.stream.updateDecryptedContent(
                 eventId,
-                toDecryptedContent(kind, MLS_ENCRYPTED_DATA_VERSION, clearText),
+                toDecryptedContent(kind, MLS_ENCRYPTED_DATA_VERSION, cleartext),
             )
-            return
         }
 
         const epochSecret = this.localView?.getEpochSecret(epoch)
@@ -164,13 +166,14 @@ export class MlsStream implements MlsQueueDelegate {
             return this.decryptionFailure(mlsEncryptedContentItem)
         }
 
-        const decryptedContent = await MlsMessages.decryptEpochSecretMessage(
-            epochSecret.derivedKeys,
-            kind,
-            ciphertext,
-        )
+        cleartext = await crypto.open(epochSecret.derivedKeys, ciphertext)
 
-        this.stream.updateDecryptedContent(eventId, decryptedContent)
+        await this.persistenceStore.saveCleartext(eventId, cleartext)
+
+        return this.stream.updateDecryptedContent(
+            eventId,
+            toDecryptedContent(kind, MLS_ENCRYPTED_DATA_VERSION, cleartext),
+        )
     }
 
     private decryptionFailure(mlsEncryptedContentItem: MlsEncryptedContentItem) {
@@ -203,13 +206,13 @@ export class MlsStream implements MlsQueueDelegate {
                 const kind = mlsEncryptedContentItem.kind
                 const ciphertext = mlsEncryptedContentItem.ciphertext
 
-                const decryptedContent = await MlsMessages.decryptEpochSecretMessage(
-                    epochSecret.derivedKeys,
-                    kind,
-                    ciphertext,
-                )
+                const cleartext = await crypto.open(epochSecret.derivedKeys, ciphertext)
 
-                this.stream.updateDecryptedContent(eventId, decryptedContent)
+                await this.persistenceStore.saveCleartext(eventId, cleartext)
+                this.stream.updateDecryptedContent(
+                    eventId,
+                    toDecryptedContent(kind, MLS_ENCRYPTED_DATA_VERSION, cleartext),
+                )
             }
 
             this.decryptionFailures.delete(epoch)

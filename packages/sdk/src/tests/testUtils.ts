@@ -261,6 +261,7 @@ export interface TestClientOpts {
     context?: SignerContext
     entitlementsDelegate?: EntitlementsDelegate
     deviceId?: string
+    nickname?: string
     mlsOpts?: MlsClientExtensionsOpts
 }
 
@@ -272,7 +273,7 @@ export const makeTestClient = async (opts?: TestClientOpts): Promise<Client> => 
     const dbName = `database-${userId}${deviceId}`
     const mlsDbName = `mls-${userId}${deviceId}`
     const persistenceDbName = `persistence-${userId}${deviceId}`
-    const nickname = opts?.mlsOpts?.nickname
+    const nickname = opts?.nickname
     const mlsOpts = opts?.mlsOpts
 
     // create a new client with store(s)

@@ -158,7 +158,6 @@ import { makeTags, makeTipTags } from './tags'
 import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
 import { MLS_ALGORITHM } from './mls'
 import { MlsClientExtensions, MlsClientExtensionsOpts } from './mls/mlsClientExtensions'
-import { randomBytes } from 'crypto'
 import { MlsCryptoStore } from './mls/mlsCryptoStore'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
@@ -209,12 +208,11 @@ export class Client
     private entitlementsDelegate: EntitlementsDelegate
     private decryptionExtensions?: BaseDecryptionExtensions
     private syncedStreamsExtensions?: SyncedStreamsExtension
-    public mlsExtensions?: MlsClientExtensions
+    public readonly mlsExtensions: MlsClientExtensions
     private persistenceStore: IPersistenceStore
     private validatedEvents: Record<string, { isValid: boolean; reason?: string }> = {}
     private defaultGroupEncryptionAlgorithm: GroupEncryptionAlgorithmId
     private userNickname?: string
-    private mlsClientExtensionsOpts: MlsClientExtensionsOpts
 
     constructor(
         signerContext: SignerContext,
@@ -265,11 +263,6 @@ export class Client
         this.logInfo = dlog('csb:cl:info', { defaultEnabled: true }).extend(shortId)
         this.logDebug = dlog('csb:cl:debug').extend(shortId)
         // TODO: refactor this to all debuggers that mls components need
-        this.mlsClientExtensionsOpts = {
-            log: dlog('csb:cl:mls').extend(shortId),
-            nickname: this.userNickname,
-            ...mlsClientExtensionsOpts,
-        }
 
         this.cryptoStore = cryptoStore
         this.mlsCryptoStore = mlsCryptoStore
@@ -279,6 +272,19 @@ export class Client
         } else {
             this.persistenceStore = new StubPersistenceStore()
         }
+
+        const mlsOpts = {
+            log: dlog('csb:cl:mls').extend(shortId),
+            nickname: this.userNickname,
+            ...mlsClientExtensionsOpts,
+        }
+
+        this.mlsExtensions = new MlsClientExtensions(
+            this,
+            this.mlsCryptoStore,
+            this.persistenceStore,
+            mlsOpts,
+        )
 
         this.streams = new SyncedStreams(this.userId, this.rpcClient, this, this.unpackEnvelopeOpts)
         this.syncedStreamsExtensions = new SyncedStreamsExtension({
@@ -2490,16 +2496,11 @@ export class Client
     /// Initialise MLS but do not start it
     private async initMls(): Promise<void> {
         this.logCall('initMls')
-        if (this.mlsExtensions) {
+        if (this.mlsExtensions.agent) {
             this.logCall('Attempt to re-init mls extensions, ignoring')
             return
         }
 
-        this.mlsExtensions = new MlsClientExtensions(
-            this,
-            this.persistenceStore,
-            this.mlsClientExtensionsOpts,
-        )
         await this.mlsExtensions.initialize()
     }
 

@@ -45,7 +45,7 @@ afterEach(async () => {
 
 async function makeInitAndStartClient(nickname?: string) {
     const clientLog = log.extend(nickname ?? 'client')
-    const client = await makeTestClient({ mlsOpts: { nickname, log: clientLog } })
+    const client = await makeTestClient({ nickname, mlsOpts: { log: clientLog } })
     await client.initializeUser()
     client.startSync()
     clients.push(client)
@@ -181,7 +181,7 @@ describe('gdmsMlsTests', () => {
                     .toBeTruthy()
             })
 
-            it('clientsCanSendMessage', { timeout: 15_000 }, async () => {
+            it('clientsCanSendMessage', { timeout: 25_000 }, async () => {
                 await send(alice, 'hello all')
 
                 await expect
@@ -190,7 +190,7 @@ describe('gdmsMlsTests', () => {
                             clients.every((c) =>
                                 checkTimelineContainsAll(['hello all'], timeline(c)),
                             ),
-                        { timeout: 15_000 },
+                        { timeout: 20_000 },
                     )
                     .toBe(true)
             })

@@ -30,7 +30,7 @@ const poll = (fn: () => boolean, opts = { timeout: 10_000 }) => expect.poll(fn, 
 
 async function makeInitAndStartClient(nickname?: string) {
     const clientLog = log.extend(nickname ?? 'client')
-    const client = await makeTestClient({ mlsOpts: { nickname, log: clientLog } })
+    const client = await makeTestClient({ nickname, mlsOpts: { log: clientLog } })
     await client.initializeUser()
     client.startSync()
     clients.push(client)

@@ -7,11 +7,10 @@ import { Client } from '../client'
 import { MlsProcessor, MlsProcessorOpts } from './mlsProcessor'
 import { IPersistenceStore } from '../persistenceStore'
 import { fromSingle, MlsLogger } from './logger'
-import { dlog, DLogger } from '@river-build/dlog'
+import { bin_fromHexString, bin_toHexString, dlog, DLogger } from '@river-build/dlog'
 import { Stream } from '../stream'
-import { DexieGroupStateStorage } from './groupStateStorage'
-import { genId } from '../id'
-import { DexieLocalViewStorage } from './localViewStorage'
+import { MlsCryptoStore } from './mlsCryptoStore'
+import { randomBytes } from 'crypto'
 
 const defaultMlsClientOpts: MlsClientOptions = {
     withAllowExternalCommit: true,
@@ -19,11 +18,9 @@ const defaultMlsClientOpts: MlsClientOptions = {
 }
 
 export type MlsClientExtensionsOpts = {
-    nickname?: string
     mlsAlwaysEnabled?: boolean
     delayMs?: number
     log: DLogger
-    deviceId?: string
 }
 
 function makeMlsProcessorOpts(log: DLogger): MlsProcessorOpts {
@@ -53,19 +50,18 @@ const defaultLogger = dlog('csb:mls:client')
 
 export class MlsClientExtensions {
     private readonly client: Client
-    private readonly persistenceStore?: IPersistenceStore
+    private readonly persistenceStore: IPersistenceStore
     public agent?: MlsAgent
     private mlsClient?: MlsClient
     private opts: MlsClientExtensionsOpts = { log: defaultLogger }
     private readonly mlsClientOptions: MlsClientOptions
     private log: MlsLogger
-    public storage: DexieGroupStateStorage
-    public localViewStorage: DexieLocalViewStorage
-    private readonly deviceKey: Uint8Array
+    private readonly store: MlsCryptoStore
 
     constructor(
         client: Client,
-        persistenceStore?: IPersistenceStore,
+        store: MlsCryptoStore,
+        persistenceStore: IPersistenceStore,
         mlsClientExtensionsOpts?: MlsClientExtensionsOpts,
     ) {
         this.client = client
@@ -74,17 +70,9 @@ export class MlsClientExtensions {
             this.opts = mlsClientExtensionsOpts
         }
         this.log = fromSingle(this.opts.log)
+        this.store = store
 
-        if (this.opts.deviceId === undefined) {
-            this.opts.deviceId = genId(5)
-        }
-        this.log.debug?.('device id', this.opts.deviceId)
-        this.deviceKey = new TextEncoder().encode(this.opts.deviceId)
-        // use in memory group storage by default
-        this.storage = new DexieGroupStateStorage(this.deviceKey)
-        this.localViewStorage = new DexieLocalViewStorage(this.deviceKey)
-
-        this.mlsClientOptions = { ...defaultMlsClientOpts, storage: this.storage }
+        this.mlsClientOptions = { ...defaultMlsClientOpts, storage: this.store }
     }
 
     public start(): void {
@@ -98,7 +86,19 @@ export class MlsClientExtensions {
     }
 
     public async initialize(): Promise<void> {
-        this.mlsClient = await MlsClient.create(this.deviceKey, this.mlsClientOptions)
+        let deviceKey = await this.store.getDeviceKey(this.client.userId)
+        if (deviceKey === undefined) {
+            deviceKey = randomBytes(16)
+            this.log.debug?.('deviceKey not found, generating new one')
+            await this.store.setDeviceKey(this.client.userId, deviceKey)
+        }
+        this.log.debug?.('deviceKey', bin_toHexString(deviceKey))
+        const userIdBytes = bin_fromHexString(this.client.userId)
+        const name = new Uint8Array(userIdBytes.length + deviceKey.length)
+        name.set(userIdBytes)
+        name.set(deviceKey, userIdBytes.length)
+        this.log.debug?.('name', bin_toHexString(name))
+        this.mlsClient = await MlsClient.create(name, this.mlsClientOptions)
         const queue = new MlsQueue(
             undefined,
             makeMlsQueueOpts(this.opts.log, this.opts.delayMs ?? 15),
@@ -113,7 +113,7 @@ export class MlsClientExtensions {
             this.client,
             processor,
             queue,
-            this.localViewStorage,
+            this.store,
             this.persistenceStore,
             this.client,
             this.client,

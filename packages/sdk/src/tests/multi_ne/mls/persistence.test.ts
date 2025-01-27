@@ -33,7 +33,7 @@ const bigIntAsc = (a: bigint, b: bigint) => (a < b ? -1 : a > b ? 1 : 0)
 async function makeInitAndStartClient(nickname?: string, opts?: TestClientOpts) {
     const clientLog = log.extend(nickname ?? 'client')
     const testClientOpts = {
-        ...{ mlsOpts: { nickname, log: clientLog, deviceId: opts?.deviceId } },
+        ...{ nickname, mlsOpts: { log: clientLog, deviceId: opts?.deviceId } },
         ...opts,
     }
     const client = await makeTestClient(testClientOpts)
@@ -119,6 +119,17 @@ describe('persistenceMlsTests', () => {
         await everyoneActive()
         await send(alice, 'hello bob')
         await alice.stop()
+    })
+
+    it('alice can come back online', { timeout: 30_000 }, async () => {
+        const aliceIsBack = await makeInitAndStartClient('alice', {
+            context: alice.signerContext,
+            deviceId: 'alice',
+        })
+
+        await poll(() => isActive(aliceIsBack), { timeout: 5_000 })
+        await poll(() => hasKeys(0)(aliceIsBack), { timeout: 5_000 })
+        await poll(() => sawAll(aliceIsBack), { timeout: 5_000 })
     })
 
     it('bob can join but not see messages', { timeout: 20_000 }, async () => {

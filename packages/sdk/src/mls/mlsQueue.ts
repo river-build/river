@@ -109,7 +109,12 @@ export class MlsQueue {
         eventId: string,
         encryptedContent: EncryptedContent,
     ) {
-        this.log.debug?.('enqueueNewEncryptedContent', streamId, eventId, encryptedContent)
+        this.log.debug?.(
+            'enqueueNewEncryptedContent',
+            streamId,
+            eventId,
+            encryptedContent.content.mls?.epoch,
+        )
 
         const kind = encryptedContent.kind
         const encryptedData = encryptedContent.content

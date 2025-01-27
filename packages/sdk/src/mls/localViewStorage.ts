@@ -50,7 +50,7 @@ export class DexieLocalViewStorage extends Dexie {
         super(databaseName)
         this.version(1).stores({
             localViews: 'streamId',
-            epochSecrets: '[streamId+epoch]',
+            epochSecrets: '[streamId+epoch],streamId',
         })
     }
 
