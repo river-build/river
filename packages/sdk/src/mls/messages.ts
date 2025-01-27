@@ -6,7 +6,7 @@ import {
 } from '@river-build/proto'
 import { LocalEpochSecret } from './view/local'
 import { Message, PlainMessage } from '@bufbuild/protobuf'
-import { ExternalInfo } from './view/remote'
+import { RemoteGroupInfo } from './view/remote'
 import {
     Client as MlsClient,
     ExternalClient as MlsExternalClient,
@@ -50,7 +50,7 @@ export function epochSecretsMessage(
     }
 }
 
-export async function prepareExternalJoinMessage(mlsClient: MlsClient, externalInfo: ExternalInfo) {
+export async function prepareExternalJoinMessage(mlsClient: MlsClient, externalInfo: RemoteGroupInfo) {
     const groupInfoMessage = MlsMessage.fromBytes(externalInfo.latestGroupInfo)
     const exportedTree = MlsExportedTree.fromBytes(externalInfo.exportedTree)
     const { group, commit } = await mlsClient.commitExternal(groupInfoMessage, exportedTree)

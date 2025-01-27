@@ -3,7 +3,7 @@
  */
 
 import { beforeAll, beforeEach, describe } from 'vitest'
-import { ExternalInfo, OnChainView } from '../../../../mls/view/remote'
+import { RemoteGroupInfo, RemoteView } from '../../../../mls/view/remote'
 import { MlsConfirmedEvent, MlsEvent } from '../../../../mls/types'
 import {
     Client as MlsClient,
@@ -35,10 +35,10 @@ let mlsClient: MlsClient
 beforeAll(async () => {})
 
 describe('onChainViewTests', () => {
-    let view: OnChainView
+    let view: RemoteView
 
     beforeEach(() => {
-        view = new OnChainView()
+        view = new RemoteView()
     })
 
     const processInitializeGroup = async () => {
@@ -50,7 +50,7 @@ describe('onChainViewTests', () => {
         return { event: confirmedEvent, group: prepareInitializeGroup.group }
     }
 
-    const processExternalJoin = async (externalInfo: ExternalInfo) => {
+    const processExternalJoin = async (externalInfo: RemoteGroupInfo) => {
         const mlsClientName = randomBytes(32)
         mlsClient = await MlsClient.create(mlsClientName, mlsClientOptions)
         const prepareExternalJoin = await MlsMessages.prepareExternalJoinMessage(
@@ -116,7 +116,7 @@ describe('onChainViewTests', () => {
         it('rejects external join before group established', async () => {
             await processInitializeGroup()
             const externalInfo = view.externalInfo!
-            view = new OnChainView()
+            view = new RemoteView()
             const { event: confirmedEvent } = await processExternalJoin(externalInfo)
             expect(view.rejected.size).toBe(1)
             expect(view.rejected.get(confirmedEvent.eventId)).toStrictEqual(confirmedEvent)

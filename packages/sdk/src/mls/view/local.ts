@@ -1,5 +1,5 @@
 import { Group as MlsGroup, MlsMessage } from '@river-build/mls-rs-wasm'
-import { OnChainView } from './remote'
+import { RemoteView } from './remote'
 import { ELogger, elogger } from '@river-build/dlog'
 import { EpochEncryption } from './../epochEncryption'
 
@@ -64,7 +64,7 @@ export class LocalView {
         this.log = opts?.log ?? defaultLogger
     }
 
-    public async processOnChainView(view: OnChainView) {
+    public async processOnChainView(view: RemoteView) {
         if (this.rejectedEpoch !== undefined) {
             // Group is corrupted
             return

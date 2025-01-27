@@ -20,16 +20,38 @@ import { MemberPayload_Snapshot_Mls } from '@river-build/proto'
 
 const defaultLogger = elogger('csb:mls:view:remote')
 
-export type OnChainViewOpts = {
+export type RemoteViewOpts = {
     log: ELogger
 }
 
-type ExternalGroup = {
-    group: MlsExternalGroup
-    groupInfoWithExternalKey: Uint8Array
+class RemoteGroup {
+    constructor(
+        public group: MlsExternalGroup,
+        public groupInfoWithExternalKey: Uint8Array,
+    ) {}
+
+    static async loadExternalGroupSnapshotWithError(
+        snapshot: Uint8Array,
+        groupInfoWithExternalKey: Uint8Array,
+    ): Promise<RemoteGroup> {
+        const externalClient = new MlsExternalClient()
+        const externalSnapshot = MlsExternalSnapshot.fromBytes(snapshot)
+        const group = await externalClient.loadGroup(externalSnapshot)
+        return new RemoteGroup(group, groupInfoWithExternalKey)
+    }
+
+
+    async processCommitWithError(
+        commit: Uint8Array,
+        groupInfo: Uint8Array,
+    ): Promise<void> {
+        const message = MlsMessage.fromBytes(commit)
+        await this.group.processIncomingMessage(message)
+        this.groupInfoWithExternalKey = groupInfo
+    }
 }
 
-export type ExternalInfo = {
+export type RemoteGroupInfo = {
     exportedTree: Uint8Array
     latestGroupInfo: Uint8Array
     epoch: bigint
@@ -132,13 +154,13 @@ export function extractFromTimeLine(timeline: StreamTimelineEvent[]): SnapshotAn
 }
 
 /// Class to represent on-chain view of MLS
-export class OnChainView {
+export class RemoteView {
     // for bookkeeping
     private lastConfirmedEventNumFor = {
         mlsEvent: BigInt(-1),
         snapshot: BigInt(-1),
     }
-    private externalGroup?: ExternalGroup
+    private remoteGroup?: RemoteGroup
 
     // confirmed events by event id
     public readonly accepted: Map<string, MlsConfirmedEvent> = new Map()
@@ -152,7 +174,7 @@ export class OnChainView {
 
     private log: ELogger
 
-    public constructor(opts?: OnChainViewOpts) {
+    public constructor(opts?: RemoteViewOpts) {
         this.log = opts?.log ?? defaultLogger
     }
 
@@ -160,15 +182,15 @@ export class OnChainView {
         return this.accepted.size + this.rejected.size
     }
 
-    get externalInfo(): ExternalInfo | undefined {
-        if (this.externalGroup === undefined) {
+    get externalInfo(): RemoteGroupInfo | undefined {
+        if (this.remoteGroup === undefined) {
             return undefined
         }
 
         return {
-            exportedTree: this.externalGroup.group.exportTree(),
-            latestGroupInfo: this.externalGroup.groupInfoWithExternalKey,
-            epoch: this.externalGroup.group.epoch,
+            exportedTree: this.remoteGroup.group.exportTree(),
+            latestGroupInfo: this.remoteGroup.groupInfoWithExternalKey,
+            epoch: this.remoteGroup.group.epoch,
         }
     }
 
@@ -176,11 +198,13 @@ export class OnChainView {
     public async processSnapshot(snapshot: MlsSnapshot): Promise<void> {
         const externalGroupSnapshot = snapshot.externalGroupSnapshot
         const groupInfoMessage = snapshot.groupInfoMessage
-        if (externalGroupSnapshot.length > 0 && groupInfoMessage.length > 0) {
-            this.externalGroup = await this.loadExternalGroupSnapshotWithError(
+        try {
+            this.remoteGroup = await RemoteGroup.loadExternalGroupSnapshotWithError(
                 externalGroupSnapshot,
                 groupInfoMessage,
             )
+        } catch (e) {
+            this.log.error('processSnapshot', snapshot, e)
         }
     }
 
@@ -217,28 +241,7 @@ export class OnChainView {
         }
     }
 
-    private async loadExternalGroupSnapshotWithError(
-        snapshot: Uint8Array,
-        groupInfoWithExternalKey: Uint8Array,
-    ): Promise<ExternalGroup> {
-        const externalClient = new MlsExternalClient()
-        const externalSnapshot = MlsExternalSnapshot.fromBytes(snapshot)
-        const group = await externalClient.loadGroup(externalSnapshot)
-        return {
-            group,
-            groupInfoWithExternalKey,
-        }
-    }
 
-    private async processCommitWithError(
-        externalGroup: ExternalGroup,
-        commit: Uint8Array,
-        groupInfo: Uint8Array,
-    ): Promise<void> {
-        const message = MlsMessage.fromBytes(commit)
-        await externalGroup.group.processIncomingMessage(message)
-        externalGroup.groupInfoWithExternalKey = groupInfo
-    }
 
     private async processInitializeGroup(event: ConfirmedInitializeGroup): Promise<void> {
         this.log.log('processInitializeGroup', {
@@ -246,7 +249,7 @@ export class OnChainView {
             confirmedEventNum: event.confirmedEventNum,
         })
 
-        if (this.externalGroup !== undefined) {
+        if (this.remoteGroup !== undefined) {
             this.log.log('processInitializeGroup: already loaded')
             this.rejected.set(event.eventId, event)
             return
@@ -255,7 +258,7 @@ export class OnChainView {
         try {
             const snapshot = event.value.externalGroupSnapshot
             const groupInfoWithExternalKey = event.value.groupInfoMessage
-            this.externalGroup = await this.loadExternalGroupSnapshotWithError(
+            this.remoteGroup = await RemoteGroup.loadExternalGroupSnapshotWithError(
                 snapshot,
                 groupInfoWithExternalKey,
             )
@@ -267,7 +270,7 @@ export class OnChainView {
     }
 
     private async processEventWithCommit(event: ConfirmedMlsEventWithCommit): Promise<void> {
-        if (this.externalGroup === undefined) {
+        if (this.remoteGroup === undefined) {
             this.log.log('processCommit: externalGroup not loaded')
             this.rejected.set(event.eventId, event)
             return
@@ -276,8 +279,8 @@ export class OnChainView {
         try {
             const commit = event.value.commit
             const groupInfo = event.value.groupInfoMessage
-            const epoch = this.externalGroup.group.epoch
-            await this.processCommitWithError(this.externalGroup, commit, groupInfo)
+            const epoch = this.remoteGroup.group.epoch
+            await this.remoteGroup.processCommitWithError(commit, groupInfo)
             this.accepted.set(event.eventId, event)
             this.commits.set(epoch, commit)
         } catch (e) {
@@ -288,11 +291,11 @@ export class OnChainView {
 
     public static async loadFromStreamStateView(
         streamView: IStreamStateView,
-        opts?: OnChainViewOpts,
-    ): Promise<OnChainView> {
+        opts?: RemoteViewOpts,
+    ): Promise<RemoteView> {
         const { snapshot, confirmedEvents } = extractFromTimeLine(streamView.timeline)
 
-        const onChainView = new OnChainView(opts)
+        const onChainView = new RemoteView(opts)
         await onChainView.processSnapshot(snapshot)
         for (const confirmedEvent of confirmedEvents) {
             await onChainView.processConfirmedMlsEvent(confirmedEvent)
