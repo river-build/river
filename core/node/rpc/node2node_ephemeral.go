@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/river-build/river/core/node/storage"
-
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/proto"
 
@@ -13,6 +11,7 @@ import (
 	. "github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
+	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/node/utils"
 )
 
@@ -130,7 +129,10 @@ func (s *Service) SealEphemeralStream(
 	return connect.NewResponse(r), nil
 }
 
-func (s *Service) sealEphemeralStream(ctx context.Context, req *SealEphemeralStreamRequest) (*SealEphemeralStreamResponse, error) {
+func (s *Service) sealEphemeralStream(
+	ctx context.Context,
+	req *SealEphemeralStreamRequest,
+) (*SealEphemeralStreamResponse, error) {
 	streamId, err := StreamIdFromBytes(req.GetStreamId())
 	if err != nil {
 		return nil, AsRiverError(err).Func("sealEphemeralStream")
@@ -138,6 +140,12 @@ func (s *Service) sealEphemeralStream(ctx context.Context, req *SealEphemeralStr
 
 	// Normalize stream locally
 	if _, err = s.storage.NormalizeEphemeralStream(ctx, streamId); err != nil {
+		// TODO: Implement
+		// if IsRiverErrorCode(err, Err_NOT_FOUND) {
+		// Something is missing in the stream, so we can't normalize it.
+		// Run the process to fetch missing data from replicas.
+		// }
+
 		return nil, err
 	}
 

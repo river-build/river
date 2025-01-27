@@ -22,6 +22,37 @@ func TestCreateEphemeralStream(t *testing.T) {
 	spaceId, _ := alice.createSpace()
 	channelId, _ := alice.createChannel(spaceId)
 
+	// Nodes should accept ephemeral miniblocks even if a stream does not exist.
+	t.Run("Send ephemeral miniblock for non-existing stream", func(t *testing.T) {
+		mediaStreamId, err := StreamIdFromString(STREAM_MEDIA_PREFIX + strings.Repeat("4", 62))
+		tt.require.NoError(err)
+
+		mb := &MiniblockRef{
+			Hash: common.BytesToHash([]byte{1, 2, 3}),
+			Num:  0,
+		}
+
+		mp := events.Make_MediaPayload_Chunk([]byte("non-existing stream"), 0)
+		envelope, err := events.MakeEnvelopeWithPayload(alice.wallet, mp, mb)
+		tt.require.NoError(err)
+
+		header, err := events.MakeEnvelopeWithPayload(alice.wallet, events.Make_MiniblockHeader(&MiniblockHeader{
+			MiniblockNum:      mb.Num + 1,
+			PrevMiniblockHash: mb.Hash.Bytes(),
+			EventHashes:       [][]byte{envelope.Hash},
+		}), mb)
+		tt.require.NoError(err)
+
+		_, err = alice.node2nodeClient.SaveEphemeralMiniblock(alice.ctx, connect.NewRequest(&SaveEphemeralMiniblockRequest{
+			StreamId: mediaStreamId[:],
+			Miniblock: &Miniblock{
+				Events: []*Envelope{envelope},
+				Header: header,
+			},
+		}))
+		tt.require.NoError(err)
+	})
+
 	mediaStreamId, err := StreamIdFromString(STREAM_MEDIA_PREFIX + strings.Repeat("0", 62))
 	tt.require.NoError(err)
 
@@ -65,14 +96,9 @@ func TestCreateEphemeralStream(t *testing.T) {
 		tt.require.NoError(err)
 
 		header, err := events.MakeEnvelopeWithPayload(alice.wallet, events.Make_MiniblockHeader(&MiniblockHeader{
-			MiniblockNum:             int64(i + 1),
-			PrevMiniblockHash:        mb.Hash[:],
-			Timestamp:                nil,
-			EventHashes:              [][]byte{envelope.Hash},
-			Snapshot:                 nil,
-			EventNumOffset:           0,
-			PrevSnapshotMiniblockNum: 0,
-			Content:                  nil,
+			MiniblockNum:      int64(i + 1),
+			PrevMiniblockHash: mb.Hash[:],
+			EventHashes:       [][]byte{envelope.Hash},
 		}), mb)
 		tt.require.NoError(err)
 
