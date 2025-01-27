@@ -327,11 +327,11 @@ func TestStreamMiniblockBatchProduction(t *testing.T) {
 	)
 }
 
-func isCacheEmpty(streamCache *streamCacheImpl) bool {
+func isCacheEmpty(streamCache *StreamCacheImpl) bool {
 	return streamCache.cache.Size() == 0
 }
 
-func cleanUpCache(streamCache *streamCacheImpl) bool {
+func cleanUpCache(streamCache *StreamCacheImpl) bool {
 	cleanedUp := true
 	streamCache.cache.Range(func(key StreamId, streamVal *Stream) bool {
 		cleanedUp = cleanedUp && streamVal.tryCleanup(0)
@@ -340,7 +340,7 @@ func cleanUpCache(streamCache *streamCacheImpl) bool {
 	return cleanedUp
 }
 
-func areAllViewsDropped(streamCache *streamCacheImpl) bool {
+func areAllViewsDropped(streamCache *StreamCacheImpl) bool {
 	allDropped := true
 	streamCache.cache.Range(func(key StreamId, streamVal *Stream) bool {
 		st := streamVal.getStatus()

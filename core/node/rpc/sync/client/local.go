@@ -19,7 +19,7 @@ type localSyncer struct {
 	syncStreamCtx      context.Context
 	cancelGlobalSyncOp context.CancelCauseFunc
 
-	streamCache StreamCache
+	streamCache *StreamCacheImpl
 	cookies     []*SyncCookie
 	messages    chan<- *SyncStreamsResponse
 	localAddr   common.Address
@@ -33,7 +33,7 @@ func newLocalSyncer(
 	globalSyncOpID string,
 	cancelGlobalSyncOp context.CancelCauseFunc,
 	localAddr common.Address,
-	streamCache StreamCache,
+	streamCache *StreamCacheImpl,
 	cookies []*SyncCookie,
 	messages chan<- *SyncStreamsResponse,
 ) (*localSyncer, error) {
