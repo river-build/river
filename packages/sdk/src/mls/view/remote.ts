@@ -11,26 +11,17 @@ import {
     ConfirmedMlsEventWithCommit,
     MlsSnapshot,
     MlsConfirmedSnapshot,
-} from './types'
-import { dlog } from '@river-build/dlog'
-import { logNever } from '../check'
-import { IStreamStateView } from '../streamStateView'
-import { MlsLogger } from './logger'
-import { StreamTimelineEvent } from '../types'
+} from '../types'
+import { elogger, ELogger } from '@river-build/dlog'
+import { logNever } from '../../check'
+import { IStreamStateView } from '../../streamStateView'
+import { StreamTimelineEvent } from '../../types'
 import { MemberPayload_Snapshot_Mls } from '@river-build/proto'
-import { MlsQueueDelegate, StreamUpdate } from './mlsQueue'
 
-const defaultLogger = dlog('csb:mls:onChainView')
+const defaultLogger = elogger('csb:mls:view:remote')
 
 export type OnChainViewOpts = {
-    log: MlsLogger
-}
-
-const defaultOnChainViewOpts = {
-    log: {
-        info: defaultLogger.extend('info'),
-        error: defaultLogger.extend('error'),
-    },
+    log: ELogger
 }
 
 type ExternalGroup = {
@@ -141,7 +132,7 @@ export function extractFromTimeLine(timeline: StreamTimelineEvent[]): SnapshotAn
 }
 
 /// Class to represent on-chain view of MLS
-export class OnChainView implements MlsQueueDelegate {
+export class OnChainView {
     // for bookkeeping
     private lastConfirmedEventNumFor = {
         mlsEvent: BigInt(-1),
@@ -159,19 +150,10 @@ export class OnChainView implements MlsQueueDelegate {
     public readonly commits: Map<bigint, Uint8Array> = new Map()
     public readonly sealedEpochSecrets: Map<bigint, Uint8Array> = new Map()
 
-    private log: MlsLogger
+    private log: ELogger
 
-    public constructor(opts: OnChainViewOpts = defaultOnChainViewOpts) {
-        this.log = opts.log
-    }
-
-    public async handleStreamUpdate(streamUpdate: StreamUpdate): Promise<void> {
-        for (const snapshot of streamUpdate.snapshots) {
-            await this.processSnapshot(snapshot)
-        }
-        for (const confirmedEvent of streamUpdate.confirmedEvents) {
-            await this.processConfirmedMlsEvent(confirmedEvent)
-        }
+    public constructor(opts?: OnChainViewOpts) {
+        this.log = opts?.log ?? defaultLogger
     }
 
     get processedCount(): number {
@@ -192,19 +174,6 @@ export class OnChainView implements MlsQueueDelegate {
 
     /// Processing snapshot will reload the external group from the snapshot
     public async processSnapshot(snapshot: MlsSnapshot): Promise<void> {
-        // this.log.debug?.('processSnapshot', {
-        //     miniblockNum: snapshot.miniblockNum,
-        //     confirmedEventNum: snapshot.confirmedEventNum,
-        // })
-        //
-        // if (this.lastConfirmedEventNumFor.snapshot >= snapshot.confirmedEventNum) {
-        //     this.log.warn?.('processSnapshot: snapshot older than last one', {
-        //         prev: this.lastConfirmedEventNumFor.snapshot,
-        //         curr: snapshot.confirmedEventNum,
-        //     })
-        // }
-        // this.lastConfirmedEventNumFor.snapshot = snapshot.confirmedEventNum
-        // nop
         const externalGroupSnapshot = snapshot.externalGroupSnapshot
         const groupInfoMessage = snapshot.groupInfoMessage
         if (externalGroupSnapshot.length > 0 && groupInfoMessage.length > 0) {
@@ -217,14 +186,14 @@ export class OnChainView implements MlsQueueDelegate {
 
     /// Process event
     public async processConfirmedMlsEvent(event: MlsConfirmedEvent): Promise<void> {
-        this.log.debug?.('processConfirmedMlsEvent', {
+        this.log.log('processConfirmedMlsEvent', {
             miniblockNum: event.miniblockNum,
             confirmedEventNum: event.confirmedEventNum,
             case: event.case,
         })
 
         if (this.lastConfirmedEventNumFor.mlsEvent >= event.confirmedEventNum) {
-            this.log.warn?.('processConfirmedMlsEvent: event older than last one', {
+            this.log.log('processConfirmedMlsEvent: event older than last one', {
                 prev: this.lastConfirmedEventNumFor.mlsEvent,
                 curr: event.confirmedEventNum,
             })
@@ -272,13 +241,13 @@ export class OnChainView implements MlsQueueDelegate {
     }
 
     private async processInitializeGroup(event: ConfirmedInitializeGroup): Promise<void> {
-        this.log.debug?.('processInitializeGroup', {
+        this.log.log('processInitializeGroup', {
             miniblockNum: event.miniblockNum,
             confirmedEventNum: event.confirmedEventNum,
         })
 
         if (this.externalGroup !== undefined) {
-            this.log.debug?.('processInitializeGroup: already loaded')
+            this.log.log('processInitializeGroup: already loaded')
             this.rejected.set(event.eventId, event)
             return
         }
@@ -299,7 +268,7 @@ export class OnChainView implements MlsQueueDelegate {
 
     private async processEventWithCommit(event: ConfirmedMlsEventWithCommit): Promise<void> {
         if (this.externalGroup === undefined) {
-            this.log.debug?.('processCommit: externalGroup not loaded')
+            this.log.log('processCommit: externalGroup not loaded')
             this.rejected.set(event.eventId, event)
             return
         }
@@ -319,7 +288,7 @@ export class OnChainView implements MlsQueueDelegate {
 
     public static async loadFromStreamStateView(
         streamView: IStreamStateView,
-        opts: OnChainViewOpts = defaultOnChainViewOpts,
+        opts?: OnChainViewOpts,
     ): Promise<OnChainView> {
         const { snapshot, confirmedEvents } = extractFromTimeLine(streamView.timeline)
 

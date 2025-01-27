@@ -1,8 +1,7 @@
 import { Group as MlsGroup, MlsMessage } from '@river-build/mls-rs-wasm'
-import { OnChainView } from './onChainView'
-import { dlog } from '@river-build/dlog'
-import { EpochEncryption } from './epochEncryption'
-import { MlsLogger } from './logger'
+import { OnChainView } from './remote'
+import { ELogger, elogger } from '@river-build/dlog'
+import { EpochEncryption } from './../epochEncryption'
 
 type PendingInfo = {
     eventId: string
@@ -10,17 +9,10 @@ type PendingInfo = {
     miniblockBefore: bigint
 }
 
-const defaultLogger = dlog('csb:mls:view:remote')
+const defaultLogger = elogger('csb:mls:view:remote')
 
 export type LocalViewOpts = {
-    log: MlsLogger
-}
-
-const defaultOnChainViewOpts = {
-    log: {
-        info: defaultLogger.extend('info'),
-        error: defaultLogger.extend('error'),
-    },
+    log: ELogger
 }
 
 export type LocalEpochSecret = {
@@ -45,7 +37,7 @@ export class LocalView {
 
     // public readonly pending: Map<bigint, Uint8Array> = new Map()
 
-    private log: MlsLogger
+    private log: ELogger
 
     public get status(): LocalViewStatus {
         if (this.rejectedEpoch === this.group.currentEpoch) {
@@ -64,12 +56,12 @@ export class LocalView {
         group: MlsGroup,
         pendingInfo?: PendingInfo,
         rejectedEpoch?: bigint,
-        opts = defaultOnChainViewOpts,
+        opts?: LocalViewOpts,
     ) {
         this.group = group
         this.pendingInfo = pendingInfo
         this.rejectedEpoch = rejectedEpoch
-        this.log = opts.log
+        this.log = opts?.log ?? defaultLogger
     }
 
     public async processOnChainView(view: OnChainView) {
