@@ -25,10 +25,7 @@ export type RemoteViewOpts = {
 }
 
 class RemoteGroup {
-    constructor(
-        public group: MlsExternalGroup,
-        public groupInfoWithExternalKey: Uint8Array,
-    ) {}
+    constructor(public group: MlsExternalGroup, public groupInfoWithExternalKey: Uint8Array) {}
 
     static async loadExternalGroupSnapshotWithError(
         snapshot: Uint8Array,
@@ -40,11 +37,7 @@ class RemoteGroup {
         return new RemoteGroup(group, groupInfoWithExternalKey)
     }
 
-
-    async processCommitWithError(
-        commit: Uint8Array,
-        groupInfo: Uint8Array,
-    ): Promise<void> {
+    async processCommitWithError(commit: Uint8Array, groupInfo: Uint8Array): Promise<void> {
         const message = MlsMessage.fromBytes(commit)
         await this.group.processIncomingMessage(message)
         this.groupInfoWithExternalKey = groupInfo
@@ -240,8 +233,6 @@ export class RemoteView {
                 logNever(event)
         }
     }
-
-
 
     private async processInitializeGroup(event: ConfirmedInitializeGroup): Promise<void> {
         this.log.log('processInitializeGroup', {

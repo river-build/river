@@ -50,7 +50,10 @@ export function epochSecretsMessage(
     }
 }
 
-export async function prepareExternalJoinMessage(mlsClient: MlsClient, externalInfo: RemoteGroupInfo) {
+export async function prepareExternalJoinMessage(
+    mlsClient: MlsClient,
+    externalInfo: RemoteGroupInfo,
+) {
     const groupInfoMessage = MlsMessage.fromBytes(externalInfo.latestGroupInfo)
     const exportedTree = MlsExportedTree.fromBytes(externalInfo.exportedTree)
     const { group, commit } = await mlsClient.commitExternal(groupInfoMessage, exportedTree)
