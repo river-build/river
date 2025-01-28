@@ -2,7 +2,7 @@ import TypedEmitter from 'typed-emitter'
 import { StreamEncryptionEvents, StreamStateEvents, SyncedStreamEvents } from '../streamEvents'
 import { MlsLoop } from './mlsLoop'
 import { bin_toHexString, elogger, ELogger, shortenHexString } from '@river-build/dlog'
-import { MlsStream } from './mlsStream'
+import { DEFAULT_MLS_TIMEOUT, MlsStream, MlsStreamOpts } from './mlsStream'
 import { MlsProcessor } from './mlsProcessor'
 import { Client } from '../client'
 import { MLS_ALGORITHM } from './constants'
@@ -19,13 +19,14 @@ const defaultLogger = elogger('csb:mls:agent')
 export type MlsAgentOpts = {
     log?: ELogger
     mlsAlwaysEnabled?: boolean
-}
+} & MlsStreamOpts
 
 const defaultMlsAgentOpts = {
     log: defaultLogger,
     mlsAlwaysEnabled: false,
     delayMs: 15,
     sendingOptions: {},
+    awaitLocalViewTimeout: DEFAULT_MLS_TIMEOUT,
 }
 
 export class MlsAgent implements StreamUpdateDelegate {
@@ -44,6 +45,7 @@ export class MlsAgent implements StreamUpdateDelegate {
 
     private log: ELogger
     public mlsAlwaysEnabled: boolean = false
+    private readonly awaitLocaViewTimeout
 
     public constructor(
         client: Client,
@@ -69,6 +71,7 @@ export class MlsAgent implements StreamUpdateDelegate {
         }
         this.log = mlsAgentOpts.log
         this.mlsAlwaysEnabled = mlsAgentOpts.mlsAlwaysEnabled
+        this.awaitLocaViewTimeout = mlsAgentOpts.awaitLocalViewTimeout
     }
 
     public start(): void {
@@ -186,7 +189,10 @@ export class MlsAgent implements StreamUpdateDelegate {
             }
         }
 
-        const mlsStreamOpts = { log: this.log.extend(shortenHexString(stream.streamId)) }
+        const mlsStreamOpts = {
+            log: this.log.extend(shortenHexString(stream.streamId)),
+            awaitLocalViewTimeout: this.awaitLocaViewTimeout,
+        }
         mlsStream = new MlsStream(
             stream.streamId,
             stream,

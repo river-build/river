@@ -143,7 +143,11 @@ export const test = baseTest.extend<MlsFixture>({
             const logId = opts.logId ?? 'client'
             const clientLog = logger.get().extend(logId)
             const testClientOpts = {
-                mlsOpts: { mlsAlwaysEnabled: false, log: clientLog },
+                mlsOpts: {
+                    mlsAlwaysEnabled: false,
+                    log: clientLog,
+                    awaitActiveLocalViewTimeout: 60_000,
+                },
                 ...opts,
             }
             const client = await makeTestClient(testClientOpts)

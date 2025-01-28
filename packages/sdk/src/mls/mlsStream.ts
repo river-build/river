@@ -10,7 +10,8 @@ import { MLS_ENCRYPTED_DATA_VERSION } from './constants'
 import { EpochEncryption } from './epochEncryption'
 
 export type MlsStreamOpts = {
-    log: ELogger
+    log?: ELogger
+    awaitActiveLocalViewTimeoutMS?: number
 }
 
 const defaultLogger = elogger('csb:mls:stream')
@@ -18,6 +19,10 @@ const defaultLogger = elogger('csb:mls:stream')
 const crypto = new EpochEncryption()
 
 export const DEFAULT_MLS_TIMEOUT = 30_000
+
+const defaultMlsStreamOpts = {
+    awaitActiveLocalViewTimeout: DEFAULT_MLS_TIMEOUT,
+}
 
 export class MlsStream implements StreamUpdateDelegate {
     public readonly streamId: string
@@ -28,6 +33,7 @@ export class MlsStream implements StreamUpdateDelegate {
     private persistenceStore: IPersistenceStore
     public readonly decryptionFailures: Map<bigint, MlsEncryptedContentItem[]> = new Map()
     private log: ELogger
+    private readonly awaitLocaViewTimeout: number
 
     public constructor(
         streamId: string,
@@ -42,9 +48,11 @@ export class MlsStream implements StreamUpdateDelegate {
         this.persistenceStore = persistenceStore
         const mlsStreamOpts = {
             log: defaultLogger.extend(shortenHexString(streamId)),
+            ...defaultMlsStreamOpts,
             ...opts,
         }
         this.log = mlsStreamOpts.log
+        this.awaitLocaViewTimeout = mlsStreamOpts.awaitActiveLocalViewTimeout
     }
 
     public get onChainView(): RemoteView {
@@ -63,7 +71,7 @@ export class MlsStream implements StreamUpdateDelegate {
         this._localView = undefined
     }
 
-    public awaitActiveLocalView(timeoutMS: number = DEFAULT_MLS_TIMEOUT): Promise<LocalView> {
+    public awaitActiveLocalView(): Promise<LocalView> {
         if (this._localView?.status === 'active') {
             return Promise.resolve(this._localView)
         }
@@ -73,7 +81,7 @@ export class MlsStream implements StreamUpdateDelegate {
         }
 
         if (this.awaitingActiveLocalView === undefined) {
-            const internalAwaiter: IValueAwaiter<LocalView> = awaiter(timeoutMS)
+            const internalAwaiter: IValueAwaiter<LocalView> = awaiter(this.awaitLocaViewTimeout)
             const promise = internalAwaiter.promise.finally(() => {
                 this.awaitingActiveLocalView = undefined
             })
