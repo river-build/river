@@ -31,20 +31,26 @@ func Test_Node2Node_GetMiniblocksByIds(t *testing.T) {
 	const messagesNumber = 100
 	for count := range messagesNumber {
 		alice.say(channelId, fmt.Sprintf("hello from Alice %d", count))
-		mbNums = append(mbNums, mbNums[len(mbNums)-1]+1)
+		newMb, err := makeMiniblock(tt.ctx, alice.client, channelId, false, mbNums[len(mbNums)-1])
+		tt.require.NoError(err)
+		mbNums = append(mbNums, newMb.Num)
 	}
 
+	// Expected number of events is messagesNumber+2 because the first event is the channel creation event (inception),
+	// the second event is the joining the channel event (membership), and the rest are the messages.
+	const expectedEventsNumber = messagesNumber + 2
+
 	tt.require.Eventually(func() bool {
-		mbs := make([]*Miniblock, 0, len(mbNums))
+		mbs := make([]*Miniblock, 0, expectedEventsNumber)
 		alice.getMiniblocksByIds(channelId, mbNums, func(mb *protocol.Miniblock) {
 			mbs = append(mbs, mb)
 		})
 
-		events := make([]*Envelope, 0, len(mbNums))
+		events := make([]*Envelope, 0, expectedEventsNumber)
 		for _, mb := range mbs {
 			events = append(events, mb.GetEvents()...)
 		}
 
-		return len(events) == len(mbNums)
+		return len(events) == expectedEventsNumber
 	}, time.Second*5, time.Millisecond*200)
 }
