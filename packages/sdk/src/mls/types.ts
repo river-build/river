@@ -61,3 +61,27 @@ export type MlsEncryptedContentItem = {
     epoch: bigint
     ciphertext: Uint8Array
 }
+export class StreamUpdate {
+    constructor(
+        public readonly streamId: string,
+        public readonly snapshots: MlsConfirmedSnapshot[] = [],
+        public readonly confirmedEvents: MlsConfirmedEvent[] = [],
+        public readonly encryptedContentItems: MlsEncryptedContentItem[] = [],
+    ) {}
+
+    public enqueueMlsEncryptedContentItem(mlsEncryptedContentItem: MlsEncryptedContentItem) {
+        this.encryptedContentItems.push(mlsEncryptedContentItem)
+    }
+
+    public enqueueMlsConfirmedSnapshot(snapshot: MlsConfirmedSnapshot) {
+        this.snapshots.push(snapshot)
+    }
+
+    public enqueueMlsConfirmedEvent(event: MlsConfirmedEvent) {
+        this.confirmedEvents.push(event)
+    }
+}
+
+export type StreamUpdateDelegate = {
+    handleStreamUpdate(streamUpdate: StreamUpdate): Promise<void>
+}
