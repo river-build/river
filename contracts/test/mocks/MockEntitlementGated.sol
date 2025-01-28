@@ -70,6 +70,28 @@ contract MockEntitlementGated is EntitlementGated {
     return transactionId;
   }
 
+  function requestLegacyEntitlementCheckV3(
+    uint256[] calldata roleIds,
+    IRuleEntitlement.RuleData calldata ruleData
+  ) external returns (bytes32) {
+    for (uint256 i = 0; i < roleIds.length; i++) {
+      ruleDatasByRoleId[roleIds[i]] = ruleData;
+    }
+    bytes32 transactionId = keccak256(
+      abi.encodePacked(tx.origin, block.number)
+    );
+
+    for (uint256 i = 0; i < roleIds.length; i++) {
+      _requestEntitlementCheckV2(
+        msg.sender,
+        transactionId,
+        IRuleEntitlement(address(this)),
+        roleIds[i]
+      );
+    }
+    return transactionId;
+  }
+
   function requestEntitlementCheckV3(
     uint256[] calldata roleIds,
     IRuleEntitlement.RuleDataV2 calldata ruleData
