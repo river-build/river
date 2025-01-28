@@ -13,11 +13,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/ethereum/go-ethereum/common"
-	"go.uber.org/zap"
 	"go.uber.org/zap/buffer"
 	"go.uber.org/zap/zapcore"
-	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // For JSON-escaping; see jsonEncoder.safeAddString below.
@@ -28,7 +25,6 @@ var (
 	// Get retrieves a buffer from the pool, creating one if necessary.
 	getBufferPool = _pool.Get
 )
-
 
 var _jsonPool = NewPool(func() *jsonEncoder {
 	return &jsonEncoder{}
@@ -607,30 +603,7 @@ func addFields(enc zapcore.ObjectEncoder, fields []zapcore.Field) {
 
 		// Use a switch statement here on the field type to avoid
 		// double computation of reflected types.
-		switch (field.Type) { //nolint
-		// common.Addresses and protos come in a a stringer type.
-		case zapcore.StringerType:
-			if address, ok := field.Interface.(common.Address); ok {
-				enc.AddString(field.Key, hex.EncodeToString(address[:]))
-			} else if pb, ok := field.Interface.(protoreflect.ProtoMessage); ok {
-				b, err := json.Marshal(pb)
-				// If for some reason json marshalling of the proto fails, just encode
-				// it the default way. It won't be pretty but at least it's in the logs.
-				if err != nil {
-					field.AddTo(enc)
-					continue
-				}
-				var m map[string]interface{}
-				if err := json.Unmarshal(b, &m); err != nil {
-					field.AddTo(enc)
-					continue
-				}
-
-				// Add the actual JSON object to get inline rendered fields
-				zap.Any(field.Key, m).AddTo(enc)
-			} else {
-				field.AddTo(enc)
-			}
+		switch field.Type { //nolint
 
 		// byte arrays come in as ReflectType. These are already a bit slow because they
 		// require reflection.
@@ -645,13 +618,13 @@ func addFields(enc zapcore.ObjectEncoder, fields []zapcore.Field) {
 			// Byte array
 			if reflectType.Kind() == reflect.Array && reflectType.Elem() == byteType {
 				value := reflect.ValueOf(field.Interface)
-			 	// Allocate a new []byte of the same length.
+				// Allocate a new []byte of the same length.
 				// (The value here is difficult to extract an unsafe pointer from to use
 				// in the construction of a new slice, because it is considered unaddressible.)
 				b := make([]byte, value.Len())
 
 				// Use reflect.Copy to copy from the reflection value into b.
-	 			reflect.Copy(reflect.ValueOf(b), value)
+				reflect.Copy(reflect.ValueOf(b), value)
 
 				enc.AddString(
 					field.Key,
@@ -661,7 +634,6 @@ func addFields(enc zapcore.ObjectEncoder, fields []zapcore.Field) {
 				// default behavior
 				field.AddTo(enc)
 			}
-
 
 		default:
 			field.AddTo(enc)
