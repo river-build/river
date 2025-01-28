@@ -14,8 +14,14 @@ import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 // contracts
 import {EntitlementGated} from "contracts/src/spaces/facets/gated/EntitlementGated.sol";
 import {Facet} from "@river-build/diamond/src/facets/Facet.sol";
+import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
 
-contract XChain is IEntitlementGated, IEntitlementCheckerBase, Facet {
+contract XChain is
+  IEntitlementGated,
+  IEntitlementCheckerBase,
+  ReentrancyGuard,
+  Facet
+{
   using EnumerableSet for EnumerableSet.AddressSet;
   using EnumerableSet for EnumerableSet.UintSet;
 
@@ -34,7 +40,7 @@ contract XChain is IEntitlementGated, IEntitlementCheckerBase, Facet {
     bytes32 transactionId,
     uint256 requestId,
     NodeVoteStatus result
-  ) external {
+  ) external nonReentrant {
     XChainLib.Request storage request = XChainLib.layout().requests[
       transactionId
     ];

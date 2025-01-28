@@ -15,7 +15,6 @@ library XChainLib {
     0xf501c51c066c21fd640901535874a71171bb35113f6dc2832fce1b1f9da0cc00;
 
   struct Check {
-    bytes32 txId;
     EnumerableSet.UintSet requestIds;
     mapping(uint256 requestId => EnumerableSet.AddressSet) nodes;
     mapping(uint256 requestId => IEntitlementGatedBase.NodeVote[]) votes;

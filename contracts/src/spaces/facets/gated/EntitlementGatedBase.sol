@@ -175,11 +175,6 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
       .layout();
     Transaction storage transaction = ds.transactions[transactionId];
 
-    // if the entitlement checker has not been set, set it
-    if (address(ds.entitlementChecker) == address(0)) {
-      _setFallbackEntitlementChecker();
-    }
-
     transaction.finalized = true;
     transaction.entitlement = entitlement;
 
