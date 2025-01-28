@@ -107,7 +107,7 @@ export const test = baseTest.extend<MlsFixture>({
 
     // eslint-disable-next-line no-empty-pattern
     poll: async ({}, use) => {
-        async function poll(fn: () => boolean, opts: TimeoutOpts) {
+        async function poll(fn: () => boolean, opts: TimeoutOpts = { timeout: 10_000 }) {
             await expect.poll(fn, opts).toBeTruthy()
         }
 

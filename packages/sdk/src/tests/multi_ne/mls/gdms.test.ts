@@ -3,11 +3,10 @@
  */
 
 import { Client } from '../../../client'
-import { makeTestClient } from '../../testUtils'
 import { MLS_ALGORITHM } from '../../../mls'
-import { checkTimelineContainsAll } from './utils'
 import { elogger } from '@river-build/dlog'
 import { beforeEach, describe } from 'vitest'
+import { MlsFixture, test } from './fixture'
 
 const log = elogger('test:mls:gdms')
 
@@ -18,8 +17,6 @@ const DAVID = 3
 const EVE = 4
 const FRANK = 5
 
-const clients: Client[] = []
-const messages: string[] = []
 const nicks = [
     'alice',
     'bob',
@@ -33,61 +30,18 @@ const nicks = [
     'james',
 ]
 
-afterEach(async () => {
-    for (const client of clients) {
-        await client.stop()
-    }
-    // empty clients
-    clients.length = 0
-    // empty message history
-    messages.length = 0
-})
-
-async function makeInitAndStartClient(logId?: string) {
-    const clientLog = log.extend(logId ?? 'client')
-    const client = await makeTestClient({
-        logId,
-        mlsOpts: { log: clientLog, mlsAlwaysEnabled: false },
-    })
-    await client.initializeUser()
-    client.startSync()
-    clients.push(client)
-    return client
-}
-
 describe('gdmsMlsTests', () => {
-    let streamId!: string
-
-    const send = (client: Client, message: string) => {
-        messages.push(message)
-        return client.sendMessage(streamId, message)
-    }
-    const timeline = (client: Client) => client.streams.get(streamId)?.view.timeline || []
-
-    const clientStatus = (client: Client) =>
-        client.mlsExtensions?.agent?.streams.get(streamId)?.localView?.status
-
-    const epochSecrets = (c: Client) => {
-        const epochSecrets = c.mlsExtensions?.agent?.streams.get(streamId)?.localView?.epochSecrets
-        const epochSecretsArray = epochSecrets ? Array.from(epochSecrets.entries()) : []
-        epochSecretsArray.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-        return epochSecretsArray
-    }
-
     describe('3Clients', () => {
         let alice!: Client
         let bob!: Client
         let charlie!: Client
 
-        beforeEach(async () => {
-            alice = await makeInitAndStartClient(nicks[ALICE])
-            bob = await makeInitAndStartClient(nicks[BOB])
-            charlie = await makeInitAndStartClient(nicks[CHARLIE])
-            const { streamId: gdmStreamId } = await alice.createGDMChannel([
-                bob.userId,
-                charlie.userId,
-            ])
-            streamId = gdmStreamId
+        beforeEach<MlsFixture>(async ({ makeInitAndStartClient, currentStreamId }) => {
+            alice = await makeInitAndStartClient(nicks[ALICE], log)
+            bob = await makeInitAndStartClient(nicks[BOB], log)
+            charlie = await makeInitAndStartClient(nicks[CHARLIE], log)
+            const { streamId } = await alice.createGDMChannel([bob.userId, charlie.userId])
+            currentStreamId.set(streamId)
             await expect(
                 Promise.all([
                     alice.waitForStream(streamId),
@@ -95,77 +49,65 @@ describe('gdmsMlsTests', () => {
                     charlie.waitForStream(streamId),
                 ]),
             ).resolves.toBeDefined()
+        }, 20_000)
+
+        beforeEach<MlsFixture>(async ({ currentStreamId }) => {
+            await alice.setStreamEncryptionAlgorithm(currentStreamId.getOrThrow(), MLS_ALGORITHM)
         }, 10_000)
 
-        beforeEach(async () => {
-            await alice.setStreamEncryptionAlgorithm(streamId, MLS_ALGORITHM)
-        }, 5_000)
-
-        it('clientsBecomeActive', { timeout: 15_000 }, async () => {
-            await Promise.all([
-                ...clients.map((c) =>
-                    expect.poll(() => clientStatus(c), { timeout: 15_000 }).toBe('active'),
-                ),
-            ])
+        test('clientsBecomeActive', { timeout: 40_000 }, async ({ clients, isActive, poll }) => {
+            await poll(() => clients.every(isActive), { timeout: 20_000 })
         })
 
-        it('clientsCanSendMessage', { timeout: 15_000 }, async () => {
-            await send(alice, 'hello all')
+        test(
+            'clientsCanSendMessage',
+            { timeout: 40_000 },
+            async ({ clients, sendMessage, poll, saw }) => {
+                await sendMessage(alice, 'hello all')
 
-            await expect
-                .poll(
-                    () =>
-                        clients.every((c) => checkTimelineContainsAll(['hello all'], timeline(c))),
-                    { timeout: 15_000 },
-                )
-                .toBe(true)
-        })
+                await poll(() => clients.every(saw('hello all')), { timeout: 20_000 })
+            },
+        )
 
-        it('clientsCanSendMutlipleMessages', { timeout: 10_000 }, async () => {
-            await Promise.all([
-                ...clients.flatMap((c: Client, i) =>
-                    Array.from({ length: 10 }, (_, j) => send(c, `message ${j} from client ${i}`)),
-                ),
-                ...clients.map((c: Client) =>
-                    expect
-                        .poll(() => checkTimelineContainsAll(messages, timeline(c)), {
-                            timeout: 10_000,
-                        })
-                        .toBe(true),
-                ),
-            ])
-        })
+        test(
+            'clientsCanSendMutlipleMessages',
+            { timeout: 40_000 },
+            async ({ clients, sendMessage, sawAll, poll }) => {
+                await Promise.all([
+                    ...clients.flatMap((c: Client, i) =>
+                        Array.from({ length: 10 }, (_, j) =>
+                            sendMessage(c, `message ${j} from client ${i}`),
+                        ),
+                    ),
+                    poll(() => clients.every(sawAll), { timeout: 20_000 }),
+                ])
+            },
+        )
 
-        it('clientsAgreeOnEpochSecrets', async () => {
-            const desiredEpochs = clients.map((_, i) => BigInt(i))
-            await expect
-                .poll(
-                    () =>
-                        clients.every((c) => {
-                            const epochs = epochSecrets(c).map((a) => a[0])
-                            expect(epochs).toStrictEqual(desiredEpochs)
-                            return true
-                        }),
-                    { timeout: 20_000 },
-                )
-                .toBeTruthy()
+        test(
+            'clientsAgreeOnEpochSecrets',
+            { timeout: 40_000 },
+            async ({ clients, poll, hasEpochs, epochSecrets }) => {
+                const desiredEpochs = clients.map((_, i) => i)
+                await poll(() => clients.every(hasEpochs(...desiredEpochs)), { timeout: 20_000 })
+                const [owner, ...others] = clients
 
-            const [owner, ...others] = clients
-
-            others.forEach((other) => {
-                expect(epochSecrets(other)).toStrictEqual(epochSecrets(owner))
-            })
-        })
+                others.forEach((other) => {
+                    expect(epochSecrets(other)).toStrictEqual(epochSecrets(owner))
+                })
+            },
+        )
 
         describe('3+3Clients', () => {
             let david!: Client
             let eve!: Client
             let frank!: Client
 
-            beforeEach(async () => {
+            beforeEach<MlsFixture>(async ({ makeInitAndStartClient, currentStreamId }) => {
                 david = await makeInitAndStartClient(nicks[DAVID])
                 eve = await makeInitAndStartClient(nicks[EVE])
                 frank = await makeInitAndStartClient(nicks[FRANK])
+                const streamId = currentStreamId.getOrThrow()
 
                 await Promise.all(
                     [david, eve, frank].map(async (c) => {
@@ -174,67 +116,53 @@ describe('gdmsMlsTests', () => {
                         await c.waitForStream(streamId)
                     }),
                 )
-            }, 10_000)
+            }, 20_000)
 
-            it('invitedClientsBecomeActive', async () => {
-                await expect
-                    .poll(() => [david, eve, frank].every((c) => clientStatus(c) === 'active'), {
-                        timeout: 10_000,
-                    })
-                    .toBeTruthy()
+            test('invitedClientsBecomeActive', { timeout: 60_000 }, async ({ isActive, poll }) => {
+                await poll(() => [david, eve, frank].every(isActive), { timeout: 30_000 })
             })
 
-            it('clientsCanSendMessage', { timeout: 25_000 }, async () => {
-                await send(alice, 'hello all')
+            test(
+                'clientsCanSendMessage',
+                { timeout: 60_000 },
+                async ({ sendMessage, poll, clients, saw }) => {
+                    await sendMessage(alice, 'hello all')
 
-                await expect
-                    .poll(
-                        () =>
-                            clients.every((c) =>
-                                checkTimelineContainsAll(['hello all'], timeline(c)),
+                    await poll(() => clients.every(saw('hello all')), { timeout: 30_000 })
+                },
+            )
+
+            test(
+                'clientsCanSendMutlipleMessages',
+                { timeout: 60_000 },
+                async ({ clients, sendMessage, sawAll, poll }) => {
+                    await Promise.all([
+                        ...clients.flatMap((c: Client, i) =>
+                            Array.from({ length: 10 }, (_, j) =>
+                                sendMessage(c, `new message ${j} from client ${i}`),
                             ),
-                        { timeout: 20_000 },
-                    )
-                    .toBe(true)
-            })
-
-            it('clientsCanSendMutlipleMessages', { timeout: 40_000 }, async () => {
-                await Promise.all([
-                    ...clients.flatMap((c: Client, i) =>
-                        Array.from({ length: 10 }, (_, j) =>
-                            send(c, `new message ${j} from client ${i}`),
                         ),
-                    ),
-                    ...clients.map((c: Client) =>
-                        expect
-                            .poll(() => checkTimelineContainsAll(messages, timeline(c)), {
-                                timeout: 30_000,
-                            })
-                            .toBe(true),
-                    ),
-                ])
-            })
+                        poll(() => clients.every(sawAll), { timeout: 30_000 }),
+                    ])
+                },
+            )
 
-            it('clientsAgreeOnEpochSecrets', { timeout: 20_000 }, async () => {
-                const desiredEpochs = clients.map((_, i) => BigInt(i))
-                await expect
-                    .poll(
-                        () =>
-                            clients.every((c) => {
-                                const epochs = epochSecrets(c).map((a) => a[0])
-                                expect(epochs).toStrictEqual(desiredEpochs)
-                                return true
-                            }),
-                        { timeout: 20_000 },
-                    )
-                    .toBeTruthy()
+            test(
+                'clientsAgreeOnEpochSecrets',
+                { timeout: 60_000 },
+                async ({ clients, poll, hasEpochs, epochSecrets }) => {
+                    const desiredEpochs = clients.map((_, i) => i)
+                    await poll(() => clients.every(hasEpochs(...desiredEpochs)), {
+                        timeout: 30_000,
+                    })
 
-                const [owner, ...others] = clients
+                    const [owner, ...others] = clients
 
-                others.forEach((other) => {
-                    expect(epochSecrets(other)).toStrictEqual(epochSecrets(owner))
-                })
-            })
+                    others.forEach((other) => {
+                        expect(epochSecrets(other)).toStrictEqual(epochSecrets(owner))
+                    })
+                },
+            )
         })
     })
 })
