@@ -57,8 +57,9 @@ export type MlsFixture = {
     epochs: (client: Client) => bigint[]
 
     // predicates
-    saw: (client: Client, ...messages: string[]) => boolean
+    saw: (...messages: string[]) => (client: Client) => boolean
     sawAll: (client: Client) => boolean
+    hasEpochs: (...epochs: number[]) => (client: Client) => boolean
 
     // Check if a client is "active" in the "current" stream
     isActive: (client: Client) => boolean
@@ -202,21 +203,31 @@ export const test = baseTest.extend<MlsFixture>({
 
         await use(epochs)
     },
+    // Predicates
     saw: async ({ timeline }, use) => {
-        function saw(client: Client, ...messages: string[]) {
-            return checkTimelineContainsAll(messages, timeline(client))
-        }
+        const saw =
+            (...messages: string[]) =>
+            (client: Client) =>
+                checkTimelineContainsAll(messages, timeline(client))
 
         await use(saw)
     },
     sawAll: async ({ saw, messages }, use) => {
-        function sawAll(client: Client) {
-            return saw(client, ...messages)
-        }
+        const sawAll = saw(...messages)
 
         await use(sawAll)
     },
+    hasEpochs: async ({ epochs }, use) => {
+        const hasEpochs =
+            (...epochNumbers: number[]) =>
+            (client: Client) => {
+                const clientEpochs = new Set(epochs(client))
+                const desiredEpochs = epochNumbers.map((i) => BigInt(i))
+                return desiredEpochs.every((e) => clientEpochs.has(e))
+            }
 
+        await use(hasEpochs)
+    },
     isActive: async ({ status }, use) => {
         function isActive(client: Client) {
             return status(client) === 'active'
@@ -227,7 +238,7 @@ export const test = baseTest.extend<MlsFixture>({
 
     waitForAllActive: async ({ clients, poll, isActive }, use) => {
         async function waitForAllActive(opts: TimeoutOpts = { timeout: 10_000 }) {
-            await poll(() => clients.every((c) => isActive(c)), opts)
+            await poll(() => clients.every(isActive), opts)
         }
 
         await use(waitForAllActive)
