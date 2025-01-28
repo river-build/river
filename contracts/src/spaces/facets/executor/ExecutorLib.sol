@@ -254,7 +254,7 @@ library ExecutorLib {
       revert IExecutorBase.UnauthorizedCall(
         caller,
         target,
-        _checkSelector(data)
+        checkSelector(data)
       );
     }
 
@@ -311,7 +311,7 @@ library ExecutorLib {
       revert IExecutorBase.UnauthorizedCall(
         caller,
         target,
-        _checkSelector(data)
+        checkSelector(data)
       );
     }
 
@@ -326,7 +326,7 @@ library ExecutorLib {
 
     // Mark the target and selector as authorized
     bytes32 executionIdBefore = layout().executionId;
-    layout().executionId = _hashExecutionId(target, _checkSelector(data));
+    layout().executionId = _hashExecutionId(target, checkSelector(data));
 
     // Call the target
     Address.functionCallWithValue(target, data, msg.value);
@@ -342,7 +342,7 @@ library ExecutorLib {
     bytes calldata data
   ) internal returns (uint32) {
     address sender = msg.sender;
-    bytes4 selector = _checkSelector(data);
+    bytes4 selector = checkSelector(data);
 
     bytes32 operationId = hashOperation(caller, target, data);
     if (layout().schedules[operationId].timepoint == 0) {
@@ -414,33 +414,38 @@ library ExecutorLib {
     bytes calldata data
   ) private view returns (bool allowed, uint32 delay) {
     if (target == address(this)) {
-      return _canCallSelf(caller, data);
+      return canCallSelf(caller, data);
     } else {
       return
         data.length < 4
           ? (false, 0)
-          : canCall(caller, target, _checkSelector(data));
+          : canCall(caller, target, checkSelector(data));
     }
   }
 
-  function _canCallSelf(
+  function canCallSelf(
     address caller,
     bytes calldata data
-  ) private view returns (bool immediate, uint32 delay) {
+  ) internal view returns (bool immediate, uint32 delay) {
     if (data.length < 4) {
       return (false, 0);
     }
 
     if (caller == address(this)) {
       // Caller is Space, this means the call was sent through {execute} and it already checked permissions. We verify that the call "identifier", which is set during {execute}, is correct.
-      return (_isExecuting(address(this), _checkSelector(data)), 0);
+      return (_isExecuting(address(this), checkSelector(data)), 0);
     }
 
     if (isTargetDisabled(address(this))) {
       return (false, 0);
     }
 
-    return (false, 0);
+    uint64 groupId = getTargetFunctionGroupId(
+      address(this),
+      checkSelector(data)
+    );
+    (bool isMember, uint32 currentDelay) = hasGroupAccess(groupId, caller);
+    return isMember ? (currentDelay == 0, currentDelay) : (false, 0);
   }
 
   function _isExpired(
@@ -467,7 +472,7 @@ library ExecutorLib {
     return keccak256(abi.encode(target, selector));
   }
 
-  function _checkSelector(bytes calldata data) private pure returns (bytes4) {
+  function checkSelector(bytes calldata data) internal pure returns (bytes4) {
     return bytes4(data[0:4]);
   }
 }

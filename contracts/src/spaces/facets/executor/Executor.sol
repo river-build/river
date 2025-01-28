@@ -24,17 +24,8 @@ contract Executor is TokenOwnableBase, IExecutor {
    * @dev Prevents delegate calls to critical system contracts
    * @param target The contract address to check
    */
-  modifier checkAllowed(address target) {
-    address factory = MembershipStorage.layout().spaceFactory;
-
-    // Check factory and fetch implementations in single block to optimize caching
-    if (
-      target == factory ||
-      target == _getImplementation(factory, bytes32("RiverAirdrop")) ||
-      target == _getImplementation(factory, bytes32("SpaceOperator"))
-    ) {
-      revert UnauthorizedTarget(target);
-    }
+  modifier onlyAuthorized(address target) {
+    _checkAuthorized(target);
     _;
   }
 
@@ -107,7 +98,7 @@ contract Executor is TokenOwnableBase, IExecutor {
     address target,
     bytes4 selector,
     uint64 groupId
-  ) external checkAllowed(target) onlyOwner {
+  ) external onlyAuthorized(target) onlyOwner {
     // Disallow setting any diamond functions
     if (target == DiamondLoupeBase.facetAddress(selector))
       revert UnauthorizedTarget(target);
@@ -118,7 +109,7 @@ contract Executor is TokenOwnableBase, IExecutor {
   function setTargetFunctionDisabled(
     address target,
     bool disabled
-  ) external checkAllowed(target) onlyOwner {
+  ) external onlyAuthorized(target) onlyOwner {
     ExecutorLib.setTargetFunctionDisabled(target, disabled);
   }
 
@@ -149,7 +140,7 @@ contract Executor is TokenOwnableBase, IExecutor {
   function execute(
     address target,
     bytes calldata data
-  ) external payable checkAllowed(target) returns (uint32 nonce) {
+  ) external payable onlyAuthorized(target) returns (uint32 nonce) {
     return ExecutorLib.execute(target, data);
   }
 
@@ -162,10 +153,27 @@ contract Executor is TokenOwnableBase, IExecutor {
     return ExecutorLib.cancel(caller, target, data);
   }
 
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                        Internal                            */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   function _getImplementation(
     address factory,
     bytes32 id
   ) internal view returns (address) {
     return IImplementationRegistry(factory).getLatestImplementation(id);
+  }
+
+  function _checkAuthorized(address target) internal virtual {
+    address factory = MembershipStorage.layout().spaceFactory;
+
+    // Unauthorized targets
+    if (
+      target == factory ||
+      target == _getImplementation(factory, bytes32("RiverAirdrop")) ||
+      target == _getImplementation(factory, bytes32("SpaceOperator"))
+    ) {
+      revert UnauthorizedTarget(target);
+    }
   }
 }
