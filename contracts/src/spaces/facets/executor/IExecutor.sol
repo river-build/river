@@ -149,7 +149,8 @@ interface IExecutor is IExecutorBase {
   function setTargetFunctionGroup(
     address target,
     bytes4 selector,
-    uint64 groupId
+    uint64 groupId,
+    bytes calldata signature
   ) external;
 
   /**

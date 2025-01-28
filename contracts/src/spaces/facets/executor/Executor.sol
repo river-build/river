@@ -8,17 +8,24 @@ import {IImplementationRegistry} from "contracts/src/factory/facets/registry/IIm
 // libraries
 import {ExecutorLib} from "./ExecutorLib.sol";
 import {DiamondLoupeBase} from "@river-build/diamond/src/facets/loupe/DiamondLoupeBase.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 // contracts
 import {TokenOwnableBase} from "@river-build/diamond/src/facets/ownable/token/TokenOwnableBase.sol";
 import {MembershipStorage} from "contracts/src/spaces/facets/membership/MembershipStorage.sol";
-
+import {EIP712Base} from "@river-build/diamond/src/utils/cryptography/signature/EIP712Base.sol";
+import {Nonces} from "@river-build/diamond/src/utils/Nonces.sol";
 /**
  * @title Executor
  * @notice Facet that enables permissioned delegate calls from a Space
  * @dev This facet must be carefully controlled as delegate calls can be dangerous
  */
-contract Executor is TokenOwnableBase, IExecutor {
+contract Executor is TokenOwnableBase, EIP712Base, Nonces, IExecutor {
+  bytes32 private constant TYPEHASH =
+    keccak256(
+      "SetTargetFunctionGroup(address target,bytes4 selector,uint64 groupId,uint256 nonce)"
+    );
+
   /**
    * @notice Validates if the target address is allowed for delegate calls
    * @dev Prevents delegate calls to critical system contracts
@@ -102,6 +109,26 @@ contract Executor is TokenOwnableBase, IExecutor {
     // Disallow setting any diamond functions
     if (target == DiamondLoupeBase.facetAddress(selector))
       revert UnauthorizedTarget(target);
+    ExecutorLib.setTargetFunctionGroup(target, selector, groupId);
+  }
+
+  function setTargetFunctionGroupWithSignature(
+    address target,
+    bytes4 selector,
+    uint64 groupId,
+    bytes calldata signature
+  ) external onlyAuthorized(target) {
+    if (target == DiamondLoupeBase.facetAddress(selector))
+      revert UnauthorizedTarget(target);
+
+    uint256 nonce = _useNonce(msg.sender);
+    bytes32 structHash = keccak256(
+      abi.encode(TYPEHASH, target, selector, groupId, nonce)
+    );
+    bytes32 hashTypedData = _hashTypedDataV4(structHash);
+    address signer = ECDSA.recover(hashTypedData, signature);
+    if (signer != _owner()) revert UnauthorizedTarget(target);
+
     ExecutorLib.setTargetFunctionGroup(target, selector, groupId);
   }
 
