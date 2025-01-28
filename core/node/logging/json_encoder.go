@@ -111,10 +111,9 @@ func (enc *jsonEncoder) AddBinary(key string, val []byte) {
 	enc.AddString(key, hex.EncodeToString(val))
 }
 
-// Note: we have updated this method to use hex encoding. The original code added the byte
-// string directly.
 func (enc *jsonEncoder) AddByteString(key string, val []byte) {
-	enc.AddString(key, hex.EncodeToString(val))
+	enc.addKey(key)
+	enc.AppendByteString(val)
 }
 
 func (enc *jsonEncoder) AddBool(key string, val bool) {

@@ -150,10 +150,8 @@ func TestByteSliceType(t *testing.T) {
 	assert := assert.New(t)
 
 	log, buf := testutils.ZapJsonLogger()
-	decoded, err := hex.DecodeString("0d0e0f")
-	assert.NoError(err)
 
-	log.Infow("byte slice", "byte_slice", []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, "slice2", decoded)
+	log.Infow("byte slice", "byte_slice", []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, "slice2", bytesFromHex("0d0e0f"))
 	assert.Contains(buf.String(), "0102030405060708090a")
 	assert.Contains(buf.String(), "0d0e0f")
 }
@@ -165,7 +163,7 @@ func TestCommonAddress(t *testing.T) {
 
 	b := common.Address{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	log.Infow("byte array", "byte_array", b)
-	assert.Contains(buf.String(), "0102030405060708090a00000000000000000000")
+	assert.Contains(buf.String(), "0102030405060708090A00000000000000000000")
 }
 
 func TestMapWithCommonAddress(t *testing.T) {
