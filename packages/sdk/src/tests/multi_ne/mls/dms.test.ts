@@ -3,50 +3,24 @@
  */
 
 import { Client } from '../../../client'
-import { makeTestClient } from '../../testUtils'
 import { MLS_ALGORITHM } from '../../../mls'
-import { checkTimelineContainsAll } from './utils'
 import { elogger } from '@river-build/dlog'
+import { MlsFixture, test } from './fixture'
+import { expect, describe } from 'vitest'
 
 const log = elogger('test:mls:dms')
-
-const clients: Client[] = []
-const messages: string[] = []
-
-beforeEach(async () => {})
-
-afterEach(async () => {
-    for (const client of clients) {
-        await client.stop()
-    }
-    // empty clients
-    clients.length = 0
-    // empty message history
-    messages.length = 0
-})
-
-async function makeInitAndStartClient(logId?: string) {
-    const clientLog = log.extend(logId ?? 'client')
-    const client = await makeTestClient({
-        logId,
-        mlsOpts: { log: clientLog, mlsAlwaysEnabled: false },
-    })
-    await client.initializeUser()
-    client.startSync()
-    clients.push(client)
-    return client
-}
 
 describe('dmsMlsTests', () => {
     let alice!: Client
     let bob!: Client
     let streamId!: string
 
-    beforeEach(async () => {
-        alice = await makeInitAndStartClient('alice')
-        bob = await makeInitAndStartClient('bob')
+    beforeEach<MlsFixture>(async ({ makeInitAndStartClient, currentStreamId }) => {
+        alice = await makeInitAndStartClient('alice', log)
+        bob = await makeInitAndStartClient('bob', log)
         const { streamId: dmStreamId } = await alice.createDMChannel(bob.userId)
         streamId = dmStreamId
+        currentStreamId.set(streamId)
         await expect(alice.waitForStream(streamId)).resolves.toBeDefined()
         await expect(bob.waitForStream(streamId)).resolves.toBeDefined()
     }, 10_000)
@@ -55,7 +29,7 @@ describe('dmsMlsTests', () => {
         await alice.setStreamEncryptionAlgorithm(streamId, MLS_ALGORITHM)
     }, 5_000)
 
-    it('clientCanCreateDM', async () => {
+    test('clientCanCreateDM', async () => {
         expect(alice).toBeDefined()
         expect(bob).toBeDefined()
         expect(streamId).toBeDefined()
@@ -63,7 +37,7 @@ describe('dmsMlsTests', () => {
     const clientStatus = (client: Client) =>
         client.mlsExtensions?.agent?.streams.get(streamId)?.localView?.status
 
-    it('clientsBecomeActive', { timeout: 5_000 }, async () => {
+    test('clientsBecomeActive', { timeout: 5_000 }, async ({ clients }) => {
         await Promise.all([
             ...clients.map((c) =>
                 expect.poll(() => clientStatus(c), { timeout: 10_000 }).toBe('active'),
@@ -71,50 +45,39 @@ describe('dmsMlsTests', () => {
         ])
     })
 
-    const send = (client: Client, message: string) => {
-        messages.push(message)
-        return client.sendMessage(streamId, message)
-    }
-    const timeline = (client: Client) => client.streams.get(streamId)?.view.timeline || []
+    test('clientsCanSendMessage', { timeout: 15_000 }, async ({ sendMessage, saw, poll }) => {
+        await sendMessage(alice, 'hello bob')
 
-    it('clientsCanSendMessage', { timeout: 15_000 }, async () => {
-        await send(alice, 'hello bob')
-
-        await expect
-            .poll(() => checkTimelineContainsAll(['hello bob'], timeline(bob)), { timeout: 15_000 })
-            .toBe(true)
+        await poll(() => saw(bob, 'hello bob'), {
+            timeout: 15_000,
+        })
     })
 
-    it('clientsCanSendMutlipleMessages', { timeout: 10_000 }, async () => {
-        await Promise.all([
-            ...clients.flatMap((c: Client, i) =>
-                Array.from({ length: 10 }, (_, j) => send(c, `message ${j} from client ${i}`)),
-            ),
-            ...clients.map((c: Client) =>
-                expect
-                    .poll(() => checkTimelineContainsAll(messages, timeline(c)), {
-                        timeout: 10_000,
-                    })
-                    .toBe(true),
-            ),
-        ])
-    })
+    test(
+        'clientsCanSendMutlipleMessages',
+        { timeout: 10_000 },
+        async ({ clients, sendMessage, sawAll, poll }) => {
+            await Promise.all([
+                ...clients.flatMap((c: Client, i) =>
+                    Array.from({ length: 10 }, (_, j) =>
+                        sendMessage(c, `message ${j} from client ${i}`),
+                    ),
+                ),
+                poll(() => clients.every(sawAll), { timeout: 10_000 }),
+            ])
+        },
+    )
 
-    const epochSecrets = (c: Client) => {
-        const epochSecrets = c.mlsExtensions?.agent?.streams.get(streamId)?.localView?.epochSecrets
-        const epochSecretsArray = epochSecrets ? Array.from(epochSecrets.entries()) : []
-        epochSecretsArray.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-        return epochSecretsArray
-    }
-
-    it('clientsAgreeOnEpochSecrets', async () => {
-        await Promise.all([
-            ...clients.map((c) =>
-                expect
-                    .poll(() => epochSecrets(c).map((a) => a[0]), { timeout: 10_000 })
-                    .toStrictEqual(clients.map((_, i) => BigInt(i))),
-            ),
-        ])
+    test('clientsAgreeOnEpochSecrets', async ({ clients, epochs, poll, epochSecrets }) => {
+        const desiredEpochs = clients.map((_, i) => BigInt(i))
+        await poll(
+            () =>
+                clients.every((c) => {
+                    expect(epochs(c)).toStrictEqual(desiredEpochs)
+                    return true
+                }),
+            { timeout: 10_000 },
+        )
 
         expect(epochSecrets(bob)).toStrictEqual(epochSecrets(alice))
     })

@@ -3,11 +3,12 @@ import { test as baseTest, expect } from 'vitest'
 import { makeTestClient } from '../../testUtils'
 import { Client } from '../../../client'
 import { MembershipOp } from '@river-build/proto'
-import { dlog } from '@river-build/dlog'
-import { checkTimelineContainsAll as rawCheckTimelineContainsAll } from './utils'
+import { ELogger, elogger } from '@river-build/dlog'
+import { checkTimelineContainsAll } from './utils'
 import { StreamTimelineEvent } from '../../../types'
+import { LocalViewStatus } from '../../../mls/view/local'
 
-const log = dlog('test:mls:fixture')
+const log = elogger('test:mls:fixture')
 
 /**
  * We define each fixture property at top level.
@@ -15,11 +16,13 @@ const log = dlog('test:mls:fixture')
  * but rely on `currentStreamId.get()` or `currentStreamId.set()`.
  */
 type StreamIdController = {
-    get: () => string | undefined
+    getOrThrow: () => string
     set: (streamId: string) => void
 }
 
-type MlsFixture = {
+const bigIntAscending = (a: bigint, b: bigint) => (a > b ? 1 : a < b ? -1 : 0)
+
+export type MlsFixture = {
     // The usual array of clients
     clients: Client[]
 
@@ -31,9 +34,15 @@ type MlsFixture = {
 
     // Utility to poll a function until true
     poll: (fn: () => boolean, opts?: { timeout?: number }) => Promise<void>
+    // Wait for all known clients to be active in the "current" stream
+    waitForAllActive: (opts?: { timeout?: number }) => Promise<void>
 
     // Creates and starts a client
-    makeInitAndStartClient: (nickname?: string) => Promise<Client>
+    makeInitAndStartClient: (
+        logId?: string,
+        baseLogger?: ELogger,
+        mlsAlwaysEnabled?: boolean,
+    ) => Promise<Client>
 
     // Joins the "current" stream
     joinStream: (client: Client) => Promise<void>
@@ -41,18 +50,18 @@ type MlsFixture = {
     // Sends a message to the "current" stream
     sendMessage: (client: Client, message: string) => Promise<{ eventId: string }>
 
-    // Returns the timeline of the "current" stream
-    timeline: (client: Client) => any[]
+    // Getters
+    timeline: (client: Client) => StreamTimelineEvent[]
+    status: (client: Client) => LocalViewStatus | undefined
+    epochSecrets: (client: Client) => [bigint, Uint8Array][]
+    epochs: (client: Client) => bigint[]
 
-    // If you're storing messages globally, you can reuse this
-    checkTimelineContainsAll: (msgs: string[], timeline: any[]) => boolean
-    sawAll: (client: Client, msgs: string[]) => boolean
+    // predicates
+    saw: (client: Client, ...messages: string[]) => boolean
+    sawAll: (client: Client) => boolean
 
     // Check if a client is "active" in the "current" stream
     isActive: (client: Client) => boolean
-
-    // Wait for all known clients to be active in the "current" stream
-    waitForAllActive: (opts?: { timeout?: number }) => Promise<void>
 }
 
 type TimeoutOpts = { timeout?: number } | undefined
@@ -82,7 +91,12 @@ export const test = baseTest.extend<MlsFixture>({
     currentStreamId: async ({}, use) => {
         let _streamId: string | undefined
         const controller: StreamIdController = {
-            get: () => _streamId,
+            getOrThrow: () => {
+                if (!_streamId) {
+                    throw new Error('No streamId is set, please call setCurrentStreamId first.')
+                }
+                return _streamId
+            },
             set: (id: string) => {
                 _streamId = id
             },
@@ -100,9 +114,16 @@ export const test = baseTest.extend<MlsFixture>({
     },
 
     makeInitAndStartClient: async ({ clients }, use) => {
-        async function makeInitAndStartClient(nickname?: string) {
-            const clientLog = log.extend(nickname ?? 'client')
-            const client = await makeTestClient({ nickname, mlsOpts: { log: clientLog } })
+        const makeInitAndStartClient: MlsFixture['makeInitAndStartClient'] = async (
+            logId: string = 'client',
+            baseLogger: ELogger = log,
+            mlsAlwaysEnabled = false,
+        ) => {
+            const clientLog = baseLogger.extend(logId)
+            const client = await makeTestClient({
+                logId,
+                mlsOpts: { log: clientLog, mlsAlwaysEnabled },
+            })
             await client.initializeUser()
             client.startSync()
             clients.push(client)
@@ -118,12 +139,7 @@ export const test = baseTest.extend<MlsFixture>({
      */
     joinStream: async ({ currentStreamId }, use) => {
         async function joinStream(client: Client) {
-            const streamId = currentStreamId.get()
-            if (!streamId) {
-                throw new Error(
-                    'No currentStreamId is set. Please call setCurrentStreamId before joinStream.',
-                )
-            }
+            const streamId = currentStreamId.getOrThrow()
             await client.joinStream(streamId)
             const stream = await client.waitForStream(streamId)
             await stream.waitForMembership(MembershipOp.SO_JOIN)
@@ -137,12 +153,7 @@ export const test = baseTest.extend<MlsFixture>({
      */
     sendMessage: async ({ messages, currentStreamId }, use) => {
         async function sendMessage(client: Client, message: string) {
-            const streamId = currentStreamId.get()
-            if (!streamId) {
-                throw new Error(
-                    'No currentStreamId is set. Please call setCurrentStreamId before sendMessage.',
-                )
-            }
+            const streamId = currentStreamId.getOrThrow()
             messages.push(message)
             return client.sendMessage(streamId, message)
         }
@@ -155,45 +166,60 @@ export const test = baseTest.extend<MlsFixture>({
      */
     timeline: async ({ currentStreamId }, use) => {
         function timeline(client: Client) {
-            const streamId = currentStreamId.get()
-            if (!streamId) {
-                throw new Error(
-                    'No currentStreamId is set. Please call setCurrentStreamId before timeline().',
-                )
-            }
+            const streamId = currentStreamId.getOrThrow()
             return client.streams.get(streamId)?.view.timeline || []
         }
 
         await use(timeline)
     },
-
-    // eslint-disable-next-line no-empty-pattern
-    checkTimelineContainsAll: async ({}, use) => {
-        function checkTimelineContainsAll(messages: string[], tl: StreamTimelineEvent[]) {
-            return rawCheckTimelineContainsAll(messages, tl)
+    status: async ({ currentStreamId }, use) => {
+        const status = (client: Client) => {
+            const streamId = currentStreamId.getOrThrow()
+            return client.mlsExtensions?.agent?.streams.get(streamId)?.localView?.status
         }
 
-        await use(checkTimelineContainsAll)
+        await use(status)
     },
+    epochSecrets: async ({ currentStreamId }, use) => {
+        const epochSecrets = (client: Client) => {
+            const streamId = currentStreamId.getOrThrow()
+            const iterator = client.mlsExtensions?.agent?.streams
+                .get(streamId)
+                ?.localView?.epochSecrets.values()
+            if (iterator === undefined) {
+                return []
+            }
+            const epochs: [bigint, Uint8Array][] = Array.from(iterator, (v) => [v.epoch, v.secret])
+            return epochs.sort((a, b) => bigIntAscending(a[0], b[0]))
+        }
 
-    sawAll: async ({ checkTimelineContainsAll, timeline }, use) => {
-        function sawAll(client: Client, messages: string[]) {
+        await use(epochSecrets)
+    },
+    epochs: async ({ epochSecrets }, use) => {
+        const epochs = (client: Client) => {
+            return epochSecrets(client).map((a) => a[0])
+        }
+
+        await use(epochs)
+    },
+    saw: async ({ timeline }, use) => {
+        function saw(client: Client, ...messages: string[]) {
             return checkTimelineContainsAll(messages, timeline(client))
+        }
+
+        await use(saw)
+    },
+    sawAll: async ({ saw, messages }, use) => {
+        function sawAll(client: Client) {
+            return saw(client, ...messages)
         }
 
         await use(sawAll)
     },
 
-    isActive: async ({ currentStreamId }, use) => {
+    isActive: async ({ status }, use) => {
         function isActive(client: Client) {
-            const streamId = currentStreamId.get()
-            if (!streamId) {
-                throw new Error(
-                    'No currentStreamId is set. Please call setCurrentStreamId before isActive().',
-                )
-            }
-            const status = client.mlsExtensions?.agent?.streams.get(streamId)?.localView?.status
-            return status === 'active'
+            return status(client) === 'active'
         }
 
         await use(isActive)
