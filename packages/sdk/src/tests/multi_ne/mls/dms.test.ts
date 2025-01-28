@@ -11,7 +11,7 @@ import { expect, describe, beforeEach } from 'vitest'
 const log = elogger('test:mls:dms')
 
 beforeEach<MlsFixture>(({ logger }) => {
-   logger.set(log)
+    logger.set(log)
 })
 
 describe('dmsMlsTests', () => {
