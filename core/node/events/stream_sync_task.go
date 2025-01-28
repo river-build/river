@@ -10,7 +10,6 @@ import (
 	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/registries"
-	. "github.com/river-build/river/core/node/shared"
 )
 
 func (s *streamCacheImpl) submitSyncStreamTask(
