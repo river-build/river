@@ -401,7 +401,7 @@ func (e *RiverErrorImpl) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 		zap.Any(name, value).AddTo(enc)
 		return true
 	})
-	
+
 	return nil
 }
 
@@ -428,4 +428,3 @@ func TruncateErrorToConnectLimit(err error) error {
 	}
 	return err
 }
-
