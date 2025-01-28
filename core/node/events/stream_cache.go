@@ -10,7 +10,6 @@ import (
 	"github.com/gammazero/workerpool"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/puzpuzpuz/xsync/v3"
-
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
@@ -41,6 +40,7 @@ type StreamCacheParams struct {
 	Metrics                 infra.MetricsFactory
 	RemoteMiniblockProvider RemoteMiniblockProvider
 	Scrubber                Scrubber
+	disableCallbacks        bool // for test purposes
 }
 
 type StreamCache interface {
@@ -74,9 +74,13 @@ type streamCacheImpl struct {
 	streamCacheRemoteGauge   prometheus.Gauge
 
 	onlineSyncWorkerPool *workerpool.WorkerPool
+
+	disableCallbacks bool
 }
 
-var _ StreamCache = (*streamCacheImpl)(nil)
+var (
+	_ StreamCache = (*streamCacheImpl)(nil)
+)
 
 func NewStreamCache(
 	ctx context.Context,
@@ -108,6 +112,7 @@ func NewStreamCache(
 		),
 		chainConfig:          params.ChainConfig,
 		onlineSyncWorkerPool: workerpool.New(params.Config.StreamReconciliation.OnlineWorkerPoolSize),
+		disableCallbacks:     params.disableCallbacks,
 	}
 }
 
@@ -156,15 +161,15 @@ func (s *streamCacheImpl) Start(ctx context.Context) error {
 	s.appliedBlockNum.Store(uint64(s.params.AppliedBlockNum))
 
 	// Close initial worker pool after all tasks are executed.
-	go func() {
-		initialSyncWorkerPool.StopWait()
-	}()
+	go initialSyncWorkerPool.StopWait()
 
 	// TODO: add buffered channel to avoid blocking ChainMonitor
-	s.params.RiverChain.ChainMonitor.OnBlockWithLogs(
-		s.params.AppliedBlockNum+1,
-		s.onBlockWithLogs,
-	)
+	if !s.disableCallbacks {
+		s.params.RiverChain.ChainMonitor.OnBlockWithLogs(
+			s.params.AppliedBlockNum+1,
+			s.onBlockWithLogs,
+		)
+	}
 
 	go s.runCacheCleanup(ctx)
 

@@ -353,12 +353,8 @@ func (s *streamImpl) promoteCandidate(ctx context.Context, mb *MiniblockRef) err
 	return s.promoteCandidateLocked(ctx, mb)
 }
 
-// promoteCandidateLocked shouldbe called with a lock held.
+// promoteCandidateLocked should be called with a lock held.
 func (s *streamImpl) promoteCandidateLocked(ctx context.Context, mb *MiniblockRef) error {
-	if s.local == nil {
-		return nil
-	}
-
 	if s.local == nil {
 		return nil
 	}
@@ -381,6 +377,7 @@ func (s *streamImpl) promoteCandidateLocked(ctx context.Context, mb *MiniblockRe
 				"lastBlockHash", s.view().LastBlock().Ref.Hash,
 			)
 		}
+
 		return nil
 	}
 
