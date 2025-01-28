@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/protocol"
 )
 
@@ -42,7 +41,7 @@ func Test_Node2Node_GetMiniblocksByIds(t *testing.T) {
 
 	tt.require.Eventually(func() bool {
 		mbs := make([]*Miniblock, 0, expectedEventsNumber)
-		alice.getMiniblocksByIds(channelId, mbNums, func(mb *protocol.Miniblock) {
+		alice.getMiniblocksByIds(channelId, mbNums, func(mb *Miniblock) {
 			mbs = append(mbs, mb)
 		})
 
