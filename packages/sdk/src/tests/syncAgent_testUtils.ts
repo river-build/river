@@ -24,6 +24,10 @@ export function makeClientParams(config: SyncAgentConfig, spaceDapp: SpaceDapp):
             userId,
             makeTestCryptoDbName(userId, config.deviceId),
         ),
+        mlsCryptoStore: RiverDbManager.getMlsCryptoDb(
+            userId,
+            makeTestMlsCryptoDbName(userId, config.deviceId),
+        ),
         entitlementsDelegate: new Entitlements(config.riverConfig, spaceDapp),
         persistenceStoreName: makeTestPersistenceDbName(userId, config.deviceId),
         logNamespaceFilter: undefined,
@@ -38,6 +42,10 @@ export function makeTestPersistenceDbName(userId: string, deviceId?: string) {
 
 export function makeTestCryptoDbName(userId: string, deviceId?: string) {
     return makeTestDbName('c', userId, deviceId)
+}
+
+export function makeTestMlsCryptoDbName(userId: string, deviceId?: string) {
+    return makeTestDbName('m', userId, deviceId)
 }
 
 export function makeTestSyncDbName(userId: string, deviceId?: string) {

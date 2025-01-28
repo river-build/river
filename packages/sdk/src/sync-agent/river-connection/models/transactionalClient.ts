@@ -4,6 +4,7 @@ import { StreamRpcClient } from '../../../makeStreamRpcClient'
 import { SignerContext } from '../../../signerContext'
 import { Store } from '../../../store/store'
 import { UnpackEnvelopeOpts } from '../../../sign'
+import { MlsCryptoStore } from '../../../mls/mlsCryptoStore'
 
 export class TransactionalClient extends Client {
     store: Store
@@ -12,6 +13,7 @@ export class TransactionalClient extends Client {
         signerContext: SignerContext,
         rpcClient: StreamRpcClient,
         cryptoStore: CryptoStore,
+        mlsCryptoStore: MlsCryptoStore,
         entitlementsDelegate: EntitlementsDelegate,
         persistenceStoreName?: string,
         logNamespaceFilter?: string,
@@ -22,6 +24,7 @@ export class TransactionalClient extends Client {
             signerContext,
             rpcClient,
             cryptoStore,
+            mlsCryptoStore,
             entitlementsDelegate,
             persistenceStoreName,
             logNamespaceFilter,

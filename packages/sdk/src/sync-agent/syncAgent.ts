@@ -79,6 +79,7 @@ export class SyncAgent {
         this.riverConnection = new RiverConnection(this.store, spaceDapp, riverRegistryDapp, {
             signerContext: config.context,
             cryptoStore: RiverDbManager.getCryptoDb(this.userId, this.cryptoDbName()),
+            mlsCryptoStore: RiverDbManager.getMlsCryptoDb(this.userId, this.mlsDbName()),
             entitlementsDelegate: new Entitlements(this.config.riverConfig, spaceDapp),
             persistenceStoreName:
                 config.disablePersistenceStore !== true ? this.persistenceDbName() : undefined,
@@ -136,6 +137,10 @@ export class SyncAgent {
 
     cryptoDbName(): string {
         return this.dbName('database')
+    }
+
+    mlsDbName(): string {
+        return this.dbName('mls')
     }
 
     dbName(db: string): string {
