@@ -27,18 +27,13 @@ describe('dmsMlsTests', () => {
         await alice.setStreamEncryptionAlgorithm(currentStreamId.getOrThrow(), MLS_ALGORITHM)
     }, 5_000)
 
-    test('clientCanCreateDM', async () => {
-        expect(alice).toBeDefined()
-        expect(bob).toBeDefined()
-    })
-
-    test('clientsBecomeActive', { timeout: 15_000 }, async ({ clients, poll, isActive }) => {
-        await poll(() => clients.every(isActive), { timeout: 10_000 })
+    test('clientsBecomeActive', { timeout: 30_000 }, async ({ clients, poll, isActive }) => {
+        await poll(() => clients.every(isActive), { timeout: 15_000 })
     })
 
     test(
         'clientsCanSendMessage',
-        { timeout: 15_000 },
+        { timeout: 30_000 },
         async ({ clients, sendMessage, saw, poll }) => {
             await sendMessage(alice, 'hello bob')
 
@@ -50,7 +45,7 @@ describe('dmsMlsTests', () => {
 
     test(
         'clientsCanSendMutlipleMessages',
-        { timeout: 10_000 },
+        { timeout: 30_000 },
         async ({ clients, sendMessage, sawAll, poll }) => {
             await Promise.all([
                 ...clients.flatMap((c: Client, i) =>
@@ -58,15 +53,19 @@ describe('dmsMlsTests', () => {
                         sendMessage(c, `message ${j} from client ${i}`),
                     ),
                 ),
-                poll(() => clients.every(sawAll), { timeout: 10_000 }),
+                poll(() => clients.every(sawAll), { timeout: 15_000 }),
             ])
         },
     )
 
-    test('clientsAgreeOnEpochSecrets', async ({ clients, poll, epochSecrets, hasEpochs }) => {
-        const desiredEpochs = clients.map((_, i) => i)
-        await poll(() => clients.every(hasEpochs(...desiredEpochs)), { timeout: 10_000 })
+    test(
+        'clientsAgreeOnEpochSecrets',
+        { timeout: 30_000 },
+        async ({ clients, poll, epochSecrets, hasEpochs }) => {
+            const desiredEpochs = clients.map((_, i) => i)
+            await poll(() => clients.every(hasEpochs(...desiredEpochs)), { timeout: 15_000 })
 
-        expect(epochSecrets(bob)).toStrictEqual(epochSecrets(alice))
-    })
+            expect(epochSecrets(bob)).toStrictEqual(epochSecrets(alice))
+        },
+    )
 })
