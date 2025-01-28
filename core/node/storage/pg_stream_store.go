@@ -1179,22 +1179,15 @@ func (s *PostgresStreamStore) readMiniblocksByIdsTx(
 		return err
 	}
 
-	// Prepare miniblock number placeholders and arguments list
-	placeholders := make([]string, len(mbs))
-	args := make([]interface{}, len(mbs)+1)
-	args[0] = streamId
-	for i := 1; i <= len(mbs); i++ {
-		// Adding +1 here since the first placeholder is the stream ID
-		placeholders[i] = fmt.Sprintf("$%d", i+1)
-		args[i] = mbs[i-1]
-	}
-
-	query := fmt.Sprintf(
-		"SELECT blockdata, seq_num FROM {{miniblocks}} WHERE stream_id = $1 AND seq_num IN (%s) ORDER BY seq_num",
-		strings.Join(placeholders, ", "),
+	rows, err := tx.Query(
+		ctx,
+		s.sqlForStream(
+			"SELECT blockdata, seq_num FROM {{miniblocks}} WHERE stream_id = $1 AND seq_num IN (SELECT unnest($2::int[])) ORDER BY seq_num",
+			streamId,
+		),
+		streamId,
+		mbs,
 	)
-
-	rows, err := tx.Query(ctx, s.sqlForStream(query, streamId), args...)
 	if err != nil {
 		return err
 	}

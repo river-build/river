@@ -26,7 +26,7 @@ func (s *streamCacheImpl) onStreamCreated(
 	}
 
 	if event.Stream.Flags&uint64(registries.StreamFlagSealed) == 0 {
-		// Stream is node sealed, no need to process it yet.
+		// Stream is not sealed, no need to process it yet.
 		return
 	}
 
@@ -39,9 +39,11 @@ func (s *streamCacheImpl) onStreamCreated(
 	}
 	stream.nodesLocked.Reset(event.Stream.Nodes, s.params.Wallet.Address)
 
-	if err := s.normalizeEphemeralStream(ctx, stream, event); err != nil {
-		logging.FromCtx(ctx).Errorw("Failed to normalize ephemeral stream", "err", err, "streamId", event.GetStreamId())
-	}
+	go func() {
+		if err := s.normalizeEphemeralStream(ctx, stream, event); err != nil {
+			logging.FromCtx(ctx).Errorw("Failed to normalize ephemeral stream", "err", err, "streamId", event.GetStreamId())
+		}
+	}()
 }
 
 func (s *streamCacheImpl) normalizeEphemeralStream(
