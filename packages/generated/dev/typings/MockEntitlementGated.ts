@@ -146,6 +146,7 @@ export interface MockEntitlementGatedInterface extends utils.Interface {
     "requestEntitlementCheck(uint256,((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[]))": FunctionFragment;
     "requestEntitlementCheckV2(uint256[],((uint8,uint8)[],(uint8,uint256,address,bytes)[],(uint8,uint8,uint8)[]))": FunctionFragment;
     "requestEntitlementCheckV3(uint256[],((uint8,uint8)[],(uint8,uint256,address,bytes)[],(uint8,uint8,uint8)[]))": FunctionFragment;
+    "requestLegacyEntitlementCheckV3(uint256[],((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[]))": FunctionFragment;
   };
 
   getFunction(
@@ -160,6 +161,7 @@ export interface MockEntitlementGatedInterface extends utils.Interface {
       | "requestEntitlementCheck"
       | "requestEntitlementCheckV2"
       | "requestEntitlementCheckV3"
+      | "requestLegacyEntitlementCheckV3"
   ): FunctionFragment;
 
   encodeFunctionData(
@@ -216,6 +218,13 @@ export interface MockEntitlementGatedInterface extends utils.Interface {
       IRuleEntitlementBase.RuleDataV2Struct
     ]
   ): string;
+  encodeFunctionData(
+    functionFragment: "requestLegacyEntitlementCheckV3",
+    values: [
+      PromiseOrValue<BigNumberish>[],
+      IRuleEntitlementBase.RuleDataStruct
+    ]
+  ): string;
 
   decodeFunctionResult(
     functionFragment: "__EntitlementGated_init",
@@ -255,6 +264,10 @@ export interface MockEntitlementGatedInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "requestEntitlementCheckV3",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "requestLegacyEntitlementCheckV3",
     data: BytesLike
   ): Result;
 
@@ -398,6 +411,12 @@ export interface MockEntitlementGated extends BaseContract {
       ruleData: IRuleEntitlementBase.RuleDataV2Struct,
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
+
+    requestLegacyEntitlementCheckV3(
+      roleIds: PromiseOrValue<BigNumberish>[],
+      ruleData: IRuleEntitlementBase.RuleDataStruct,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
   };
 
   __EntitlementGated_init(
@@ -459,6 +478,12 @@ export interface MockEntitlementGated extends BaseContract {
     overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
+  requestLegacyEntitlementCheckV3(
+    roleIds: PromiseOrValue<BigNumberish>[],
+    ruleData: IRuleEntitlementBase.RuleDataStruct,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
   callStatic: {
     __EntitlementGated_init(
       entitlementChecker: PromiseOrValue<string>,
@@ -516,6 +541,12 @@ export interface MockEntitlementGated extends BaseContract {
     requestEntitlementCheckV3(
       roleIds: PromiseOrValue<BigNumberish>[],
       ruleData: IRuleEntitlementBase.RuleDataV2Struct,
+      overrides?: CallOverrides
+    ): Promise<string>;
+
+    requestLegacyEntitlementCheckV3(
+      roleIds: PromiseOrValue<BigNumberish>[],
+      ruleData: IRuleEntitlementBase.RuleDataStruct,
       overrides?: CallOverrides
     ): Promise<string>;
   };
@@ -607,6 +638,12 @@ export interface MockEntitlementGated extends BaseContract {
       ruleData: IRuleEntitlementBase.RuleDataV2Struct,
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
+
+    requestLegacyEntitlementCheckV3(
+      roleIds: PromiseOrValue<BigNumberish>[],
+      ruleData: IRuleEntitlementBase.RuleDataStruct,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
   };
 
   populateTransaction: {
@@ -667,6 +704,12 @@ export interface MockEntitlementGated extends BaseContract {
       roleIds: PromiseOrValue<BigNumberish>[],
       ruleData: IRuleEntitlementBase.RuleDataV2Struct,
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    requestLegacyEntitlementCheckV3(
+      roleIds: PromiseOrValue<BigNumberish>[],
+      ruleData: IRuleEntitlementBase.RuleDataStruct,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
   };
 }

@@ -334,19 +334,19 @@ func (x *xchain) Run(ctx context.Context) {
 		[][]common.Hash{{x.checkerABI.Events["EntitlementCheckRequested"].ID}},
 		onEntitlementCheckRequestedCallback)
 
-	// register callback for Base EntitlementCheckRequested events
+	// Register callback for Base EntitlementCheckRequested V2 events
 	x.baseChain.ChainMonitor.OnContractWithTopicsEvent(
 		x.baseChainStartBlock,
 		entitlementAddress,
 		[][]common.Hash{{x.checkerABI.Events["EntitlementCheckRequestedV2"].ID}},
 		onEntitlementCheckRequestedV2Callback)
 
-	// read entitlement check results from entitlementCheckReceipts and write the result to Base
+	// Read entitlement check results from entitlementCheckReceipts and write the result to Base
 	x.writeEntitlementCheckResults(runCtx, entitlementCheckReceipts)
 }
 
 // onEntitlementCheckRequested is the callback that the chain monitor calls for each EntitlementCheckRequested
-// event raised on Base in the entitlement contract.
+// event emitted on Base from the entitlement contract.
 func (x *xchain) onEntitlementCheckRequested(
 	ctx context.Context,
 	event types.Log,
@@ -387,10 +387,13 @@ func (x *xchain) onEntitlementCheckRequested(
 			"err", err, "xchain.req.txid", hex.EncodeToString(entitlementCheckRequest.TransactionId[:]))
 		return
 	}
-	if outcome != nil { // request was not intended for this xchain instance.
+
+	// outcome is nil if request was not intended for this xchain instance.
+	if outcome != nil {
 		x.entitlementCheckRequested.IncPass()
 
-		// Convert outcome back to a V1 outcome
+		// Convert outcome back to a V1 outcome so that the post method knows
+		// how to branch
 		outcome.Event = entitlementCheckRequest
 		outcome.EventV2 = base.IEntitlementCheckerEntitlementCheckRequestedV2{}
 
@@ -410,8 +413,8 @@ func (x *xchain) onEntitlementCheckRequested(
 	}
 }
 
-// onEntitlementCheckRequestedV2 is the callback that the chain monitor calls for each EntitlementCheckRequestedV2
-// event raised on Base in the entitlement contract.
+// onEntitlementCheckRequestedV2 is the callback that the chain monitor calls for each
+// EntitlementCheckRequestedV2 event emitted on Base from the entitlement contract.
 func (x *xchain) onEntitlementCheckRequestedV2(
 	ctx context.Context,
 	event types.Log,
@@ -540,7 +543,8 @@ func (x *xchain) writeEntitlementCheckResults(ctx context.Context, checkResults 
 					}
 				} else {
 					// If the check was a V2 check, we want to post it using the resolver address on the V2 event.
-					// (We use an xchain interface below, but it's the same selector and would work either way.)
+					// (We use the  Xchain interface below, but it's the same selector and would work either way,
+					// this is just good hygiene.)
 					log.Infow("Posting V2 result", "transactionId", receipt.TransactionID, "resolverAddress", receipt.EventV2.ResolverAddress)
 					createPostResultTx = func(opts *bind.TransactOpts) (*types.Transaction, error) {
 						xchain, err := base.NewXchain(
