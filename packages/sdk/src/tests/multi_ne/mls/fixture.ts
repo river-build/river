@@ -16,8 +16,9 @@ const log = elogger('test:mls:fixture')
  * but rely on `currentStreamId.get()` or `currentStreamId.set()`.
  */
 type StreamIdController = {
-    getOrThrow: () => string
-    set: (streamId: string) => void
+    get: () => string[]
+    lastOrThrow: () => string
+    add: (streamId: string) => void
 }
 
 const bigIntAscending = (a: bigint, b: bigint) => (a > b ? 1 : a < b ? -1 : 0)
@@ -30,7 +31,7 @@ export type MlsFixture = {
     messages: string[]
 
     // A "controller" for the current stream ID
-    currentStreamId: StreamIdController
+    streams: StreamIdController
 
     // Utility to poll a function until true
     poll: (fn: () => boolean, opts?: { timeout?: number }) => Promise<void>
@@ -45,7 +46,7 @@ export type MlsFixture = {
     ) => Promise<Client>
 
     // Joins the "current" stream
-    joinStream: (client: Client) => Promise<void>
+    joinStreams: (client: Client) => Promise<void>
 
     // Sends a message to the "current" stream
     sendMessage: (client: Client, message: string) => Promise<{ eventId: string }>
@@ -89,22 +90,23 @@ export const test = baseTest.extend<MlsFixture>({
      * currentStreamId fixture: a simple object holding get()/set() for the "main" stream ID
      */
     // eslint-disable-next-line no-empty-pattern
-    currentStreamId: async ({}, use) => {
-        let _streamId: string | undefined
+    streams: async ({}, use) => {
+        const streams: string[] = []
         const controller: StreamIdController = {
-            getOrThrow: () => {
-                if (!_streamId) {
-                    throw new Error('No streamId is set, please call setCurrentStreamId first.')
+            get: () => streams,
+            lastOrThrow: () => {
+                if (streams.length <= 0) {
+                    throw new Error('No streamId, please add one first')
                 }
-                return _streamId
+                return streams[streams.length - 1]
             },
-            set: (id: string) => {
-                _streamId = id
+            add: (id: string) => {
+                streams.push(id)
             },
         }
         await use(controller)
+        streams.length = 0
     },
-
     // eslint-disable-next-line no-empty-pattern
     poll: async ({}, use) => {
         async function poll(fn: () => boolean, opts: TimeoutOpts = { timeout: 10_000 }) {
@@ -138,23 +140,24 @@ export const test = baseTest.extend<MlsFixture>({
      * Now `joinStream` references `currentStreamId.get()`
      * instead of requiring the test to pass a streamId.
      */
-    joinStream: async ({ currentStreamId }, use) => {
-        async function joinStream(client: Client) {
-            const streamId = currentStreamId.getOrThrow()
-            await client.joinStream(streamId)
-            const stream = await client.waitForStream(streamId)
-            await stream.waitForMembership(MembershipOp.SO_JOIN)
+    joinStreams: async ({ streams }, use) => {
+        async function joinStreams(client: Client) {
+            for (const streamId of streams.get()) {
+                await client.joinStream(streamId)
+                const stream = await client.waitForStream(streamId)
+                await stream.waitForMembership(MembershipOp.SO_JOIN)
+            }
         }
 
-        await use(joinStream)
+        await use(joinStreams)
     },
 
     /**
      * sendMessage references the "current" stream
      */
-    sendMessage: async ({ messages, currentStreamId }, use) => {
+    sendMessage: async ({ messages, streams }, use) => {
         async function sendMessage(client: Client, message: string) {
-            const streamId = currentStreamId.getOrThrow()
+            const streamId = streams.lastOrThrow()
             messages.push(message)
             return client.sendMessage(streamId, message)
         }
@@ -165,25 +168,25 @@ export const test = baseTest.extend<MlsFixture>({
     /**
      * timeline references the "current" stream
      */
-    timeline: async ({ currentStreamId }, use) => {
+    timeline: async ({ streams }, use) => {
         function timeline(client: Client) {
-            const streamId = currentStreamId.getOrThrow()
+            const streamId = streams.lastOrThrow()
             return client.streams.get(streamId)?.view.timeline || []
         }
 
         await use(timeline)
     },
-    status: async ({ currentStreamId }, use) => {
+    status: async ({ streams }, use) => {
         const status = (client: Client) => {
-            const streamId = currentStreamId.getOrThrow()
+            const streamId = streams.lastOrThrow()
             return client.mlsExtensions?.agent?.streams.get(streamId)?.localView?.status
         }
 
         await use(status)
     },
-    epochSecrets: async ({ currentStreamId }, use) => {
+    epochSecrets: async ({ streams }, use) => {
         const epochSecrets = (client: Client) => {
-            const streamId = currentStreamId.getOrThrow()
+            const streamId = streams.lastOrThrow()
             const iterator = client.mlsExtensions?.agent?.streams
                 .get(streamId)
                 ?.localView?.epochSecrets.values()

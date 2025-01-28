@@ -14,17 +14,17 @@ describe('dmsMlsTests', () => {
     let alice!: Client
     let bob!: Client
 
-    beforeEach<MlsFixture>(async ({ makeInitAndStartClient, currentStreamId }) => {
+    beforeEach<MlsFixture>(async ({ makeInitAndStartClient, streams }) => {
         alice = await makeInitAndStartClient('alice', log)
         bob = await makeInitAndStartClient('bob', log)
         const { streamId } = await alice.createDMChannel(bob.userId)
-        currentStreamId.set(streamId)
+        streams.add(streamId)
         await expect(alice.waitForStream(streamId)).resolves.toBeDefined()
         await expect(bob.waitForStream(streamId)).resolves.toBeDefined()
     }, 10_000)
 
-    beforeEach<MlsFixture>(async ({ currentStreamId }) => {
-        await alice.setStreamEncryptionAlgorithm(currentStreamId.getOrThrow(), MLS_ALGORITHM)
+    beforeEach<MlsFixture>(async ({ streams }) => {
+        await alice.setStreamEncryptionAlgorithm(streams.lastOrThrow(), MLS_ALGORITHM)
     }, 5_000)
 
     test('clientsBecomeActive', { timeout: 30_000 }, async ({ clients, poll, isActive }) => {

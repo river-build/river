@@ -36,12 +36,12 @@ describe('gdmsMlsTests', () => {
         let bob!: Client
         let charlie!: Client
 
-        beforeEach<MlsFixture>(async ({ makeInitAndStartClient, currentStreamId }) => {
+        beforeEach<MlsFixture>(async ({ makeInitAndStartClient, streams }) => {
             alice = await makeInitAndStartClient(nicks[ALICE], log)
             bob = await makeInitAndStartClient(nicks[BOB], log)
             charlie = await makeInitAndStartClient(nicks[CHARLIE], log)
             const { streamId } = await alice.createGDMChannel([bob.userId, charlie.userId])
-            currentStreamId.set(streamId)
+            streams.add(streamId)
             await expect(
                 Promise.all([
                     alice.waitForStream(streamId),
@@ -51,8 +51,8 @@ describe('gdmsMlsTests', () => {
             ).resolves.toBeDefined()
         }, 20_000)
 
-        beforeEach<MlsFixture>(async ({ currentStreamId }) => {
-            await alice.setStreamEncryptionAlgorithm(currentStreamId.getOrThrow(), MLS_ALGORITHM)
+        beforeEach<MlsFixture>(async ({ streams }) => {
+            await alice.setStreamEncryptionAlgorithm(streams.lastOrThrow(), MLS_ALGORITHM)
         }, 10_000)
 
         test('clientsBecomeActive', { timeout: 40_000 }, async ({ clients, isActive, poll }) => {
@@ -103,11 +103,11 @@ describe('gdmsMlsTests', () => {
             let eve!: Client
             let frank!: Client
 
-            beforeEach<MlsFixture>(async ({ makeInitAndStartClient, currentStreamId }) => {
+            beforeEach<MlsFixture>(async ({ makeInitAndStartClient, streams }) => {
                 david = await makeInitAndStartClient(nicks[DAVID])
                 eve = await makeInitAndStartClient(nicks[EVE])
                 frank = await makeInitAndStartClient(nicks[FRANK])
-                const streamId = currentStreamId.getOrThrow()
+                const streamId = streams.lastOrThrow()
 
                 await Promise.all(
                     [david, eve, frank].map(async (c) => {
