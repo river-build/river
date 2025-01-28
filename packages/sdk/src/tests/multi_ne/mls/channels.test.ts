@@ -12,11 +12,15 @@ import { MlsFixture, test } from './fixture'
 
 const log = elogger('test:mls:channel')
 
+beforeEach<MlsFixture>(({ logger }) => {
+    logger.set(log)
+})
+
 describe('channelMlsTests', () => {
     let alice: Client
 
     beforeEach<MlsFixture>(async ({ makeInitAndStartClient, streams }) => {
-        alice = await makeInitAndStartClient('alice', log)
+        alice = await makeInitAndStartClient({ logId: 'alice' })
         const spaceId = makeUniqueSpaceStreamId()
         await alice.createSpace(spaceId)
         await alice.waitForStream(spaceId)
@@ -68,7 +72,7 @@ describe('channelMlsTests', () => {
         }, 10_000)
 
         beforeEach<MlsFixture>(async ({ makeInitAndStartClient, joinStreams }) => {
-            bob = await makeInitAndStartClient('bob', log)
+            bob = await makeInitAndStartClient({ logId: 'bob' })
             await joinStreams(bob)
         }, 10_000)
 
@@ -91,7 +95,7 @@ describe('channelMlsTests', () => {
 
         beforeEach<MlsFixture>(async ({ makeInitAndStartClient, joinStreams }) => {
             const newcomers = await Promise.all(
-                nicknames.map((n) => makeInitAndStartClient(n, log)),
+                nicknames.map((n) => makeInitAndStartClient({ logId: n })),
             )
             await Promise.all(newcomers.map(joinStreams))
         }, 10_000)

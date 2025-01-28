@@ -17,8 +17,8 @@ import { StreamUpdate, StreamUpdateDelegate } from './types'
 const defaultLogger = elogger('csb:mls:agent')
 
 export type MlsAgentOpts = {
-    log: ELogger
-    mlsAlwaysEnabled: boolean
+    log?: ELogger
+    mlsAlwaysEnabled?: boolean
 }
 
 const defaultMlsAgentOpts = {

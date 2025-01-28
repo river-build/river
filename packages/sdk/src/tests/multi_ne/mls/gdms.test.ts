@@ -30,6 +30,10 @@ const nicks = [
     'james',
 ]
 
+beforeEach<MlsFixture>(({ logger }) => {
+    logger.set(log)
+})
+
 describe('gdmsMlsTests', () => {
     describe('3Clients', () => {
         let alice!: Client
@@ -37,9 +41,9 @@ describe('gdmsMlsTests', () => {
         let charlie!: Client
 
         beforeEach<MlsFixture>(async ({ makeInitAndStartClient, streams }) => {
-            alice = await makeInitAndStartClient(nicks[ALICE], log)
-            bob = await makeInitAndStartClient(nicks[BOB], log)
-            charlie = await makeInitAndStartClient(nicks[CHARLIE], log)
+            alice = await makeInitAndStartClient({ logId: nicks[ALICE] })
+            bob = await makeInitAndStartClient({ logId: nicks[BOB] })
+            charlie = await makeInitAndStartClient({ logId: nicks[CHARLIE] })
             const { streamId } = await alice.createGDMChannel([bob.userId, charlie.userId])
             streams.add(streamId)
             await expect(
@@ -104,9 +108,9 @@ describe('gdmsMlsTests', () => {
             let frank!: Client
 
             beforeEach<MlsFixture>(async ({ makeInitAndStartClient, streams }) => {
-                david = await makeInitAndStartClient(nicks[DAVID])
-                eve = await makeInitAndStartClient(nicks[EVE])
-                frank = await makeInitAndStartClient(nicks[FRANK])
+                david = await makeInitAndStartClient({ logId: nicks[DAVID] })
+                eve = await makeInitAndStartClient({ logId: nicks[EVE] })
+                frank = await makeInitAndStartClient({ logId: nicks[FRANK] })
                 const streamId = streams.lastOrThrow()
 
                 await Promise.all(

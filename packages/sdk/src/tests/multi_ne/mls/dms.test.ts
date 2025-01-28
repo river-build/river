@@ -6,17 +6,21 @@ import { Client } from '../../../client'
 import { MLS_ALGORITHM } from '../../../mls'
 import { elogger } from '@river-build/dlog'
 import { MlsFixture, test } from './fixture'
-import { expect, describe } from 'vitest'
+import { expect, describe, beforeEach } from 'vitest'
 
 const log = elogger('test:mls:dms')
+
+beforeEach<MlsFixture>(({ logger }) => {
+   logger.set(log)
+})
 
 describe('dmsMlsTests', () => {
     let alice!: Client
     let bob!: Client
 
     beforeEach<MlsFixture>(async ({ makeInitAndStartClient, streams }) => {
-        alice = await makeInitAndStartClient('alice', log)
-        bob = await makeInitAndStartClient('bob', log)
+        alice = await makeInitAndStartClient({ logId: 'alice' })
+        bob = await makeInitAndStartClient({ logId: 'bob' })
         const { streamId } = await alice.createDMChannel(bob.userId)
         streams.add(streamId)
         await expect(alice.waitForStream(streamId)).resolves.toBeDefined()

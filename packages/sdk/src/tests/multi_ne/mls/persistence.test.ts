@@ -2,189 +2,146 @@
  * @group main
  */
 
-import { makeTestClient, makeUniqueSpaceStreamId, TestClientOpts, waitFor } from '../../testUtils'
+import { makeUniqueSpaceStreamId } from '../../testUtils'
 import { elogger } from '@river-build/dlog'
-import { MembershipOp } from '@river-build/proto'
 import { makeUniqueChannelStreamId } from '../../../id'
 import { Client } from '../../../client'
 import { beforeEach, describe, expect } from 'vitest'
-import { checkTimelineContainsAll } from './utils'
-import { SyncState } from '../../../syncedStreamsLoop'
 import { MLS_ALGORITHM } from '../../../mls'
+import { MlsFixture, test } from './fixture'
 
 const log = elogger('test:mls:channel')
 
-const clients: Client[] = []
-const messages: string[] = []
-
-afterEach(async () => {
-    for (const client of clients) {
-        await client.stop()
-    }
-    // empty clients
-    clients.length = 0
-    // empty message history
-    messages.length = 0
+beforeEach<MlsFixture>(({ logger }) => {
+    logger.set(log)
 })
-
-const bigIntAsc = (a: bigint, b: bigint) => (a < b ? -1 : a > b ? 1 : 0)
-// const bigIntDesc = (a: bigint, b: bigint) => (a > b ? -1 : a < b ? 1 : 0)
-
-async function makeInitAndStartClient(logId?: string, opts?: TestClientOpts) {
-    const clientLog = log.extend(logId ?? 'client')
-    const testClientOpts = {
-        ...{ logId, mlsOpts: { log: clientLog, mlsAlwaysEnabled: false } },
-        ...opts,
-    }
-    const client = await makeTestClient(testClientOpts)
-    await client.initializeUser()
-    client.startSync()
-    await waitFor(() => expect(client.streams.syncState).toBe(SyncState.Syncing))
-    clients.push(client)
-    return client
-}
 
 describe('persistenceMlsTests', () => {
     let alice: Client
-    let spaceId: string
-    let channelId: string
 
-    const send = (client: Client, message: string) => {
-        messages.push(message)
-        return client.sendMessage(channelId, message)
-    }
-    const timeline = (client: Client) => client.streams.get(channelId)?.view.timeline || []
+    beforeEach<MlsFixture>(
+        async ({ makeInitAndStartClient, streams, poll, isActive, sendMessage }) => {
+            alice = await makeInitAndStartClient({ logId: 'alice', deviceId: 'alice' })
 
-    const clientStatus = (client: Client) =>
-        client.mlsExtensions?.agent?.streams.get(channelId)?.localView?.status
+            const spaceId = makeUniqueSpaceStreamId()
+            await alice.createSpace(spaceId)
+            await alice.waitForStream(spaceId)
+            streams.add(spaceId)
 
-    const epochSecrets = (c: Client) => {
-        const epochSecrets = c.mlsExtensions?.agent?.streams.get(channelId)?.localView?.epochSecrets
-        const epochSecretsArray = epochSecrets ? Array.from(epochSecrets.entries()) : []
-        epochSecretsArray.sort(([a], [b]) => bigIntAsc(a, b))
-        return epochSecretsArray
-    }
+            const channelId = makeUniqueChannelStreamId(spaceId)
+            await alice.createChannel(spaceId, 'channel', 'topic', channelId)
+            await alice.waitForStream(channelId)
+            streams.add(channelId)
 
-    const isActive = (client: Client) => clientStatus(client) === 'active'
+            await alice.setStreamEncryptionAlgorithm(channelId, MLS_ALGORITHM)
 
-    const everyone = (fn: (client: Client) => boolean) => clients.every(fn)
+            await poll(() => isActive(alice), { timeout: 10_000 })
+            await sendMessage(alice, 'hello bob')
+            await alice.stop()
+        },
+        10_000,
+    )
 
-    const hasKeys = (...epochs: number[]) => {
-        const desiredEpochs = epochs.map((i) => BigInt(i))
-        desiredEpochs.sort(bigIntAsc)
-        return (client: Client) => {
-            expect(epochSecrets(client).map((a) => a[0])).toStrictEqual(desiredEpochs)
-            return true
-        }
-    }
+    test(
+        'alice can come back online',
+        { timeout: 30_000 },
+        async ({ makeInitAndStartClient, poll, isActive, hasEpochs, sawAll }) => {
+            const aliceIsBack = await makeInitAndStartClient({
+                logId: 'alice2',
+                context: alice.signerContext,
+                deviceId: 'alice',
+            })
 
-    const sawMessage =
-        (...messages: string[]) =>
-        (client: Client) =>
-            checkTimelineContainsAll(messages, timeline(client))
+            await poll(() => isActive(aliceIsBack), { timeout: 10_000 })
+            await poll(() => hasEpochs(0)(aliceIsBack), { timeout: 10_000 })
+            await poll(() => sawAll(aliceIsBack), { timeout: 10_000 })
+        },
+    )
 
-    const sawAll = sawMessage(...messages)
+    test(
+        'bob can join but not see messages',
+        { timeout: 20_000 },
+        async ({ makeInitAndStartClient, joinStreams, poll, isActive, saw }) => {
+            const bob = await makeInitAndStartClient({ logId: 'bob', deviceId: 'bob' })
+            await joinStreams(bob)
+            await poll(() => isActive(bob))
+            await expect(poll(() => saw('hello bob')(bob), { timeout: 10_000 })).rejects.toThrow()
+        },
+    )
 
-    const poll = (fn: () => boolean, opts = { timeout: 10_000 }) =>
-        expect.poll(fn, opts).toBeTruthy()
+    test(
+        'alice comes back online',
+        { timeout: 30_000 },
+        async ({ makeInitAndStartClient, joinStreams, poll, isActive, sawAll, hasEpochs }) => {
+            const bob = await makeInitAndStartClient({ logId: 'bob', deviceId: 'bob' })
+            await joinStreams(bob)
+            await poll(() => isActive(bob))
 
-    const everyoneActive = (opts = { timeout: 10_000 }) => poll(() => everyone(isActive), opts)
+            const aliceIsBack = await makeInitAndStartClient({
+                logId: 'alice2',
+                context: alice.signerContext,
+                deviceId: 'alice',
+            })
 
-    const joinStream = async (client: Client, streamId: string) => {
-        await client.joinStream(streamId)
-        const stream = await client.waitForStream(streamId)
-        await stream.waitForMembership(MembershipOp.SO_JOIN)
-    }
+            await poll(() => isActive(aliceIsBack), { timeout: 10_000 })
+            await poll(() => hasEpochs(0, 1)(aliceIsBack), { timeout: 10_000 })
+            await poll(() => sawAll(aliceIsBack), { timeout: 10_000 })
+        },
+    )
 
-    const join = async (client: Client) => {
-        await joinStream(client, spaceId)
-        await joinStream(client, channelId)
-    }
-
-    beforeEach(async () => {
-        alice = await makeInitAndStartClient('alice', { deviceId: 'alice' })
-        spaceId = makeUniqueSpaceStreamId()
-        await alice.createSpace(spaceId)
-        await alice.waitForStream(spaceId)
-        channelId = makeUniqueChannelStreamId(spaceId)
-
-        await alice.createChannel(spaceId, 'channel', 'topic', channelId)
-        await alice.waitForStream(channelId)
-        await alice.setStreamEncryptionAlgorithm(channelId, MLS_ALGORITHM)
-        await everyoneActive()
-        await send(alice, 'hello bob')
-        await alice.stop()
-    })
-
-    it('alice can come back online', { timeout: 30_000 }, async () => {
-        const aliceIsBack = await makeInitAndStartClient('alice', {
-            context: alice.signerContext,
-            deviceId: 'alice',
-        })
-
-        await poll(() => isActive(aliceIsBack), { timeout: 5_000 })
-        await poll(() => hasKeys(0)(aliceIsBack), { timeout: 5_000 })
-        await poll(() => sawAll(aliceIsBack), { timeout: 5_000 })
-    })
-
-    it('bob can join but not see messages', { timeout: 20_000 }, async () => {
-        const bob = await makeInitAndStartClient('bob', { deviceId: 'bob' })
-        await join(bob)
-        await poll(() => isActive(bob))
-        await expect(poll(() => sawMessage('hello bob')(bob), { timeout: 5_000 })).rejects.toThrow()
-    })
-
-    it('alice comes back online', { timeout: 30_000 }, async () => {
-        const bob = await makeInitAndStartClient('bob', { deviceId: 'bob' })
-        await join(bob)
-        await poll(() => isActive(bob))
-
-        const aliceIsBack = await makeInitAndStartClient('alice', {
-            context: alice.signerContext,
-            deviceId: 'alice',
-        })
-
-        await poll(() => isActive(aliceIsBack), { timeout: 5_000 })
-        await poll(() => hasKeys(0, 1)(aliceIsBack), { timeout: 5_000 })
-        await poll(() => sawAll(aliceIsBack), { timeout: 5_000 })
-    })
-
-    it(
+    test(
         'alice comes back online and bob can see all the messages',
         { timeout: 30_000 },
-        async () => {
+        async ({ makeInitAndStartClient, joinStreams, poll, isActive, hasEpochs, sawAll }) => {
             const bobAndAliceIsBack = await Promise.all([
-                makeInitAndStartClient('bob', { deviceId: 'bob' }).then(async (bob) => {
-                    await join(bob)
+                makeInitAndStartClient({ logId: 'bob', deviceId: 'bob' }).then(async (bob) => {
+                    await joinStreams(bob)
                     return bob
                 }),
-                makeInitAndStartClient('alice', {
+                makeInitAndStartClient({
+                    logId: 'alice2',
                     context: alice.signerContext,
                     deviceId: 'alice',
                 }),
             ])
 
-            await poll(() => bobAndAliceIsBack.every(isActive), { timeout: 5_000 })
-            await poll(() => bobAndAliceIsBack.every(hasKeys(0, 1)), { timeout: 5_000 })
-            await poll(() => bobAndAliceIsBack.every(sawAll), { timeout: 5_000 })
+            await poll(() => bobAndAliceIsBack.every(isActive), { timeout: 10_000 })
+            await poll(() => bobAndAliceIsBack.every(hasEpochs(0, 1)), { timeout: 10_000 })
+            await poll(() => bobAndAliceIsBack.every(sawAll), { timeout: 10_000 })
         },
     )
 
-    it('bob sends a message while alice is offline', { timeout: 30_000 }, async () => {
-        const bob = await makeInitAndStartClient('bob', { deviceId: 'bob' })
-        await join(bob)
-        await poll(() => isActive(bob))
-        await send(bob, 'hello bob')
-        await bob.stop()
+    test(
+        'bob sends a message while alice is offline',
+        { timeout: 30_000 },
+        async ({
+            makeInitAndStartClient,
+            joinStreams,
+            poll,
+            isActive,
+            sendMessage,
+            hasEpochs,
+            sawAll,
+        }) => {
+            const bob = await makeInitAndStartClient({
+                logId: 'bob',
+                deviceId: 'bob',
+            })
+            await joinStreams(bob)
+            await poll(() => isActive(bob))
+            await sendMessage(bob, 'hello bob')
+            await bob.stop()
 
-        const aliceIsBack = await makeInitAndStartClient('alice', {
-            context: alice.signerContext,
-            deviceId: 'alice',
-        })
+            const aliceIsBack = await makeInitAndStartClient({
+                logId: 'alice2',
+                context: alice.signerContext,
+                deviceId: 'alice',
+            })
 
-        const activeUsers = [aliceIsBack]
-        await poll(() => activeUsers.every(isActive), { timeout: 5_000 })
-        await poll(() => activeUsers.every(hasKeys(0, 1)), { timeout: 5_000 })
-        await poll(() => activeUsers.every(sawAll), { timeout: 5_000 })
-    })
+            const activeUsers = [aliceIsBack]
+            await poll(() => activeUsers.every(isActive), { timeout: 10_000 })
+            await poll(() => activeUsers.every(hasEpochs(0, 1)), { timeout: 10_000 })
+            await poll(() => activeUsers.every(sawAll), { timeout: 10_000 })
+        },
+    )
 })

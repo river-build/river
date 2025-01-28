@@ -1,12 +1,13 @@
 // mlsFixture.ts
 import { test as baseTest, expect } from 'vitest'
-import { makeTestClient } from '../../testUtils'
+import { makeTestClient, TestClientOpts } from '../../testUtils'
 import { Client } from '../../../client'
 import { MembershipOp } from '@river-build/proto'
 import { ELogger, elogger } from '@river-build/dlog'
 import { checkTimelineContainsAll } from './utils'
 import { StreamTimelineEvent } from '../../../types'
 import { LocalViewStatus } from '../../../mls/view/local'
+import { SyncState } from '../../../syncedStreamsLoop'
 
 const log = elogger('test:mls:fixture')
 
@@ -21,6 +22,11 @@ type StreamIdController = {
     add: (streamId: string) => void
 }
 
+type LoggerController = {
+    get: () => ELogger
+    set: (logger: ELogger) => void
+}
+
 const bigIntAscending = (a: bigint, b: bigint) => (a > b ? 1 : a < b ? -1 : 0)
 
 export type MlsFixture = {
@@ -33,6 +39,8 @@ export type MlsFixture = {
     // A "controller" for the current stream ID
     streams: StreamIdController
 
+    logger: LoggerController
+
     // Utility to poll a function until true
     poll: (fn: () => boolean, opts?: { timeout?: number }) => Promise<void>
     // Wait for all known clients to be active in the "current" stream
@@ -40,9 +48,8 @@ export type MlsFixture = {
 
     // Creates and starts a client
     makeInitAndStartClient: (
-        logId?: string,
-        baseLogger?: ELogger,
-        mlsAlwaysEnabled?: boolean,
+        opts?: TestClientOpts,
+        clientSyncingTimeout?: number,
     ) => Promise<Client>
 
     // Joins the "current" stream
@@ -108,6 +115,18 @@ export const test = baseTest.extend<MlsFixture>({
         streams.length = 0
     },
     // eslint-disable-next-line no-empty-pattern
+    logger: async ({}, use) => {
+        let logger: ELogger = log
+        const controller: LoggerController = {
+            get: () => logger,
+            set(newLogger: ELogger) {
+                logger = newLogger
+            },
+        }
+
+        await use(controller)
+    },
+    // eslint-disable-next-line no-empty-pattern
     poll: async ({}, use) => {
         async function poll(fn: () => boolean, opts: TimeoutOpts = { timeout: 10_000 }) {
             await expect.poll(fn, opts).toBeTruthy()
@@ -116,19 +135,23 @@ export const test = baseTest.extend<MlsFixture>({
         await use(poll)
     },
 
-    makeInitAndStartClient: async ({ clients }, use) => {
+    makeInitAndStartClient: async ({ clients, poll, logger }, use) => {
         const makeInitAndStartClient: MlsFixture['makeInitAndStartClient'] = async (
-            logId: string = 'client',
-            baseLogger: ELogger = log,
-            mlsAlwaysEnabled = false,
+            opts: TestClientOpts = {},
+            clientSyncingTimeout = 10_000,
         ) => {
-            const clientLog = baseLogger.extend(logId)
-            const client = await makeTestClient({
-                logId,
-                mlsOpts: { log: clientLog, mlsAlwaysEnabled },
-            })
+            const logId = opts.logId ?? 'client'
+            const clientLog = logger.get().extend(logId)
+            const testClientOpts = {
+                mlsOpts: { mlsAlwaysEnabled: false, log: clientLog },
+                ...opts,
+            }
+            const client = await makeTestClient(testClientOpts)
             await client.initializeUser()
             client.startSync()
+            await poll(() => client.streams.syncState === SyncState.Syncing, {
+                timeout: clientSyncingTimeout,
+            })
             clients.push(client)
             return client
         }
