@@ -31,7 +31,7 @@ type (
 	// In addition, it keeps track of which notifications are processed to prevent double event processing.
 	TrackedNotificationStreamView struct {
 		streamID        shared.StreamId
-		view            *streamViewImpl
+		view            *StreamView
 		cfg             crypto.OnChainConfiguration
 		listener        StreamEventListener
 		userPreferences UserPreferencesStore
