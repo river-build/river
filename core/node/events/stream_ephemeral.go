@@ -124,15 +124,22 @@ func (s *streamCacheImpl) normalizeEphemeralStream(
 
 			// Start processing miniblocks from the stream.
 			// If the processing breaks in the middle, the rest of missing miniblocks will be fetched from the next sticky peer.
+			var toNextPeer bool
 			for resp.Receive() {
 				mbInfo, err := NewMiniblockInfoFromProto(resp.Msg().GetMiniblock(), NewParsedMiniblockInfoOpts())
 				if err != nil {
-					return err
+					logging.FromCtx(ctx).Errorw("Failed to parse miniblock info", "err", err, "streamId", stream.streamId)
+					_ = resp.Close()
+					toNextPeer = true
+					break
 				}
 
 				mbBytes, err := mbInfo.ToBytes()
 				if err != nil {
-					return err
+					logging.FromCtx(ctx).Errorw("Failed to serialize miniblock", "err", err, "streamId", stream.streamId)
+					_ = resp.Close()
+					toNextPeer = true
+					break
 				}
 
 				if err = s.params.Storage.WriteEphemeralMiniblock(ctx, stream.streamId, &storage.WriteMiniblockData{
@@ -141,7 +148,10 @@ func (s *streamCacheImpl) normalizeEphemeralStream(
 					Snapshot: mbInfo.IsSnapshot(),
 					Data:     mbBytes,
 				}); err != nil {
-					return err
+					logging.FromCtx(ctx).Errorw("Failed to write miniblock to storage", "err", err, "streamId", stream.streamId)
+					_ = resp.Close()
+					toNextPeer = true
+					break
 				}
 
 				// Delete the processed miniblock from the missingMbs slice
@@ -157,8 +167,14 @@ func (s *streamCacheImpl) normalizeEphemeralStream(
 
 				// No missing miniblocks left, just return.
 				if len(missingMbs) == 0 {
-					return resp.Close()
+					_ = resp.Close()
+					return nil
 				}
+			}
+
+			if toNextPeer {
+				currentStickyPeer = stream.AdvanceStickyPeer(currentStickyPeer)
+				continue
 			}
 
 			// There are still missing miniblocks and something went wrong with the receiving miniblocks from the
