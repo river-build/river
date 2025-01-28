@@ -13,6 +13,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 contract DeployTownsBase is Deployer {
   address public bridgeBase; // L2StandardBridge
   address public l1Token;
+  address public superChain;
 
   function versionName() public pure override returns (string memory) {
     return "towns";
@@ -24,7 +25,11 @@ contract DeployTownsBase is Deployer {
 
     vm.startBroadcast(deployer);
     address implementation = address(
-      new Towns({_bridge: bridgeBase, _remoteToken: l1Token})
+      new Towns({
+        _bridge: bridgeBase,
+        _superChain: superChain,
+        _remoteToken: l1Token
+      })
     );
 
     address proxy = address(
@@ -47,15 +52,23 @@ contract DeployTownsBase is Deployer {
     }
   }
 
+  function _getSuperChain(address deployer) internal view returns (address) {
+    if (block.chainid == 31337 || block.chainid == 31338) {
+      return deployer;
+    } else {
+      return 0x4200000000000000000000000000000000000028;
+    }
+  }
+
   function _getToken() internal view returns (address) {
     if (block.chainid == 8453) {
       // if deploying to base use mainnet token
-      return address(0);
+      return 0x000000Fa00b200406de700041CFc6b19BbFB4d13;
     } else if (block.chainid == 84532) {
       // if deploying to base-sepolia use sepolia token
       return 0xfc85ff424F1b55fB3f9e920A47EC7255488C3bA3;
     } else if (block.chainid == 31337 || block.chainid == 31338) {
-      // if deploying to base-sepolia use sepolia token
+      // if deploying locally use base-sepolia token
       return 0xfc85ff424F1b55fB3f9e920A47EC7255488C3bA3;
     } else {
       revert("Invalid chain");

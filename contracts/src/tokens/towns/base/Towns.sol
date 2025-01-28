@@ -10,6 +10,7 @@ import {IERC6372} from "@openzeppelin/contracts/interfaces/IERC6372.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import {IOptimismMintableERC20, ILegacyMintableERC20} from "contracts/src/tokens/towns/base/IOptimismMintableERC20.sol";
 import {ISemver} from "contracts/src/tokens/towns/base/ISemver.sol";
+import {IERC7802} from "contracts/src/tokens/towns/base/IERC7802.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 
 // libraries
@@ -42,8 +43,6 @@ contract Towns is
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                  Constants & Immutables                    */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
-  /// @notice Semantic version.
-  string public constant version = "1.3.0";
 
   /// @notice The name of the token
   string internal constant NAME = "Towns";
@@ -60,6 +59,9 @@ contract Towns is
   /// @notice Address of the StandardBridge on this network.
   address public immutable BRIDGE;
 
+  /// @notice Address of the SuperchainTokenBridge on this network.
+  address public immutable SUPER_CHAIN;
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                        Modifiers                           */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -70,9 +72,21 @@ contract Towns is
     _;
   }
 
-  constructor(address _bridge, address _remoteToken) {
+  /// @notice A modifier that only allows the super chain to call
+  modifier onlySuperChain() {
+    require(
+      msg.sender == SUPER_CHAIN,
+      "Towns: only super chain can mint and burn"
+    );
+    _;
+  }
+
+  constructor(address _bridge, address _superChain, address _remoteToken) {
     // set the bridge
     BRIDGE = _bridge;
+
+    // set the super chain
+    SUPER_CHAIN = _superChain;
 
     // set the remote token
     REMOTE_TOKEN = _remoteToken;
@@ -97,6 +111,13 @@ contract Towns is
     _addInterface(type(IOptimismMintableERC20).interfaceId);
     _addInterface(type(ILegacyMintableERC20).interfaceId);
     _addInterface(type(ISemver).interfaceId);
+    _addInterface(type(IERC7802).interfaceId);
+  }
+
+  /// @notice Semantic version
+  /// @custom:semver 1.0.0-beta.8
+  function version() external view virtual returns (string memory) {
+    return "1.0.0-beta.8";
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -125,6 +146,31 @@ contract Towns is
   /// @notice Legacy getter for BRIDGE.
   function bridge() external view returns (address) {
     return BRIDGE;
+  }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                      Super Chain                           */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+  /// @notice Allows the SuperchainTokenBridge to mint tokens.
+  /// @param _to     Address to mint tokens to.
+  /// @param _amount Amount of tokens to mint.
+  function crosschainMint(
+    address _to,
+    uint256 _amount
+  ) external onlySuperChain {
+    _mint(_to, _amount);
+    emit IERC7802.CrosschainMint(_to, _amount, msg.sender);
+  }
+
+  /// @notice Allows the SuperchainTokenBridge to burn tokens.
+  /// @param _from   Address to burn tokens from.
+  /// @param _amount Amount of tokens to burn.
+  function crosschainBurn(
+    address _from,
+    uint256 _amount
+  ) external onlySuperChain {
+    _burn(_from, _amount);
+    emit IERC7802.CrosschainBurn(_from, _amount, msg.sender);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
