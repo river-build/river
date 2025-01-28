@@ -46,6 +46,9 @@ func (s *streamCacheImpl) onStreamCreated(
 	}()
 }
 
+// normalizeEphemeralStream normalizes the ephemeral stream.
+// Loads the missing miniblocks from the sticky peers and writes them to the storage.
+// Seals the stream if it is ephemeral and all miniblocks are loaded.
 func (s *streamCacheImpl) normalizeEphemeralStream(
 	ctx context.Context,
 	stream *streamImpl,
