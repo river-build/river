@@ -3,14 +3,13 @@ package events
 import (
 	"context"
 
-	"github.com/river-build/river/core/node/registries"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gammazero/workerpool"
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
+	"github.com/river-build/river/core/node/registries"
 	. "github.com/river-build/river/core/node/shared"
 )
 

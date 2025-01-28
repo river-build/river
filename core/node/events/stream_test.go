@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	. "github.com/river-build/river/core/node/base"
@@ -12,8 +13,6 @@ import (
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/testutils"
-
-	"github.com/stretchr/testify/require"
 )
 
 func MakeGenesisMiniblockForSpaceStream(
