@@ -43,6 +43,7 @@ import {
     dlog,
     dlogError,
     bin_fromString,
+    elogger,
 } from '@river-build/dlog'
 import {
     AES_GCM_DERIVED_ALGORITHM,
@@ -157,7 +158,8 @@ import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from
 import { makeTags, makeTipTags } from './tags'
 import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
 import { extractMlsExternalGroup, ExtractMlsExternalGroupResult } from './mls/utils/mlsutils'
-import { MlsAdapter, MLS_ALGORITHM } from './mls'
+import { MLS_ALGORITHM } from './mls'
+import { MlsClientExtensions, MlsClientExtensionsOpts } from './mls/mlsClientExtensions'
 import { MlsCryptoStore } from './mls/mlsCryptoStore'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
@@ -208,7 +210,7 @@ export class Client
     private entitlementsDelegate: EntitlementsDelegate
     private decryptionExtensions?: BaseDecryptionExtensions
     private syncedStreamsExtensions?: SyncedStreamsExtension
-    private mlsAdapter?: MlsAdapter
+    public readonly mlsExtensions: MlsClientExtensions
     private persistenceStore: IPersistenceStore
     private validatedEvents: Record<string, { isValid: boolean; reason?: string }> = {}
     private defaultGroupEncryptionAlgorithm: GroupEncryptionAlgorithmId
@@ -225,6 +227,7 @@ export class Client
         unpackEnvelopeOpts?: UnpackEnvelopeOpts,
         defaultGroupEncryptionAlgorithm?: GroupEncryptionAlgorithmId,
         logId?: string,
+        mlsClientExtensionsOpts?: MlsClientExtensionsOpts,
     ) {
         super()
         if (logNamespaceFilter) {
@@ -268,12 +271,25 @@ export class Client
             this.persistenceStore = new StubPersistenceStore()
         }
 
+        const mlsOpts = {
+            log: elogger('csb:cl:mls').extend(shortId),
+            mlsAlwaysEnabled: false,
+            ...mlsClientExtensionsOpts,
+        }
+
+        this.mlsExtensions = new MlsClientExtensions(
+            this,
+            this.mlsCryptoStore,
+            this.persistenceStore,
+            mlsOpts,
+        )
+
         this.streams = new SyncedStreams(this.userId, this.rpcClient, this, this.unpackEnvelopeOpts)
         this.syncedStreamsExtensions = new SyncedStreamsExtension({
             startSyncStreams: async () => {
                 await this.streams.startSyncStreams()
                 this.decryptionExtensions?.start()
-                this.mlsAdapter?.start()
+                this.mlsExtensions.start()
             },
             initStream: (streamId, allowGetStream) => this.initStream(streamId, allowGetStream),
             emitClientInitStatus: (status) => this.emit('clientInitStatusUpdated', status),
@@ -300,6 +316,7 @@ export class Client
         this.logCall('stop')
         await this.decryptionExtensions?.stop()
         await this.syncedStreamsExtensions?.stop()
+        await this.mlsExtensions.stop()
         await this.stopSync()
     }
 
@@ -415,7 +432,7 @@ export class Client
 
         check(isDefined(this.decryptionExtensions), 'decryptionExtensions must be defined')
         check(isDefined(this.syncedStreamsExtensions), 'syncedStreamsExtensions must be defined')
-        check(isDefined(this.mlsAdapter), 'mlsAdapter must be defined')
+        check(isDefined(this.mlsExtensions), 'mlsExtensions must be defined')
 
         const [
             initUserStream,
@@ -1421,6 +1438,7 @@ export class Client
         } finally {
             this.initStreamRequests.delete(streamIdStr)
         }
+        await this.mlsExtensions.initMlsStream(stream)
         return stream
     }
 
@@ -2476,13 +2494,12 @@ export class Client
     /// Initialise MLS but do not start it
     private async initMls(): Promise<void> {
         this.logCall('initMls')
-        if (this.mlsAdapter) {
-            this.logCall('Attempt to re-init mls adapter, ignoring')
+        if (this.mlsExtensions.agent) {
+            this.logCall('Attempt to re-init mls extensions, ignoring')
             return
         }
 
-        this.mlsAdapter = new MlsAdapter(this)
-        await this.mlsAdapter.initialize()
+        await this.mlsExtensions.initialize()
     }
 
     /**
@@ -2736,10 +2753,10 @@ export class Client
         payload: Message,
         streamId: string,
     ): Promise<EncryptedData> {
-        if (this.mlsAdapter === undefined) {
+        if (this.mlsExtensions === undefined) {
             throw new Error('mls adapter not initialized')
         }
-        return this.mlsAdapter.encryptGroupEventEpochSecret(streamId, payload)
+        return this.mlsExtensions.encryptMessage(streamId, payload)
     }
 }
 
