@@ -123,6 +123,15 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
             default:
                 break
         }
+
+        const confirmedEvent = {
+            confirmedEventNum: event.confirmedEventNum,
+            miniblockNum: event.miniblockNum,
+            eventId: event.remoteEvent.hashStr,
+            ...payload.clone().content,
+        }
+
+        encryptionEmitter?.emit('mlsNewConfirmedEvent', this.streamId, confirmedEvent)
     }
 
     addSignaturePublicKey(userId: string, signaturePublicKey: Uint8Array): void {
