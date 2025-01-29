@@ -120,6 +120,12 @@ func (ts *TrackedNotificationStreamView) applyBlock(
 	miniblock *MiniblockInfo,
 	cfg *crypto.OnChainSettings,
 ) error {
+	if lastBlock := ts.view.LastBlock(); lastBlock != nil {
+		if miniblock.Ref.Num <= lastBlock.Ref.Num {
+			return nil
+		}
+	}
+
 	view, _, err := ts.view.copyAndApplyBlock(miniblock, cfg)
 	if err != nil {
 		return err
