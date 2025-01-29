@@ -585,7 +585,7 @@
         ],
         "stateMutability": "nonpayable",
         "type": "function",
-        "name": "requestEntitlementCheck",
+        "name": "requestEntitlementCheckV1RuleDataV1",
         "outputs": [
           {
             "internalType": "bytes32",
@@ -677,7 +677,7 @@
         ],
         "stateMutability": "nonpayable",
         "type": "function",
-        "name": "requestEntitlementCheckV2",
+        "name": "requestEntitlementCheckV1RuleDataV2",
         "outputs": [
           {
             "internalType": "bytes32",
@@ -769,7 +769,7 @@
         ],
         "stateMutability": "payable",
         "type": "function",
-        "name": "requestEntitlementCheckV3",
+        "name": "requestEntitlementCheckV2RuleDataV2",
         "outputs": [
           {
             "internalType": "bytes32",
@@ -859,7 +859,7 @@
             ]
           }
         ],
-        "stateMutability": "nonpayable",
+        "stateMutability": "payable",
         "type": "function",
         "name": "requestLegacyEntitlementCheckV3",
         "outputs": [
@@ -874,6 +874,9 @@
     "devdoc": {
       "kind": "dev",
       "methods": {
+        "getRuleDataV2(uint256)": {
+          "details": "This function is used to get the RuleDataV2 for the requestEntitlementCheck function"
+        },
         "postEntitlementCheckResultV2(bytes32,uint256,uint8)": {
           "details": "Only the entitlement checker can call this function",
           "params": {
@@ -881,6 +884,18 @@
             "roleId": "The role ID for the entitlement check",
             "transactionId": "The unique identifier for the transaction"
           }
+        },
+        "requestEntitlementCheckV1RuleDataV1(uint256,((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[]))": {
+          "details": "This function is used to request a v1 entitlement check for a roleId and RuleData v1"
+        },
+        "requestEntitlementCheckV1RuleDataV2(uint256[],((uint8,uint8)[],(uint8,uint256,address,bytes)[],(uint8,uint8,uint8)[]))": {
+          "details": "This function is used to request a v1 entitlement check for a roleId and RuleData v2"
+        },
+        "requestEntitlementCheckV2RuleDataV2(uint256[],((uint8,uint8)[],(uint8,uint256,address,bytes)[],(uint8,uint8,uint8)[]))": {
+          "details": "This function is used to request a v2 entitlement check for a roleId and RuleData v2"
+        },
+        "requestLegacyEntitlementCheckV3(uint256[],((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[]))": {
+          "details": "This function is used to request an entitlement check v2 for a roleId and RuleData v1"
         }
       },
       "version": 1
@@ -926,10 +941,10 @@
   },
   "sources": {
     "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol": {
-      "keccak256": "0x5fedd251a11f4b902aadde51d63a3a4b62daeef46bf918ba0a8037fec0138cad",
+      "keccak256": "0x09bb1a23de39267836f97b670edcde8efd72255afd54529f5e6b3b9aa6603e4b",
       "urls": [
-        "bzz-raw://73552f66c55a3a2864653044d0c658115c80101a07384883e106496b5570e3b3",
-        "dweb:/ipfs/QmdqfyCGaBvbwtibcUtfq91hSMhJuv5rn79j9eDdyJzzrE"
+        "bzz-raw://5ef2fb19a74acd625fa47e518cd9a09d182d381e0822a206545febede0bd4a44",
+        "dweb:/ipfs/Qmb9BSPvBkb2MihJAcPu96R6HeCYGx9QJJZpSy3pfi82GB"
       ],
       "license": "MIT"
     },
@@ -1014,10 +1029,10 @@
       "license": "MIT"
     },
     "contracts/test/mocks/MockEntitlementGated.sol": {
-      "keccak256": "0xefae18e048265d92329e35ff408ef772444b9df8818b1ca3a80691e57b872a7f",
+      "keccak256": "0x25d427079bd60e13a251a6d5fb71edcb208014288e6acf06b76d6d6d07680772",
       "urls": [
-        "bzz-raw://ce9d5b9a8ef9012021640fecaafe7e54871b5459f447454cdf3647acaab10a40",
-        "dweb:/ipfs/QmWyVG6P4wN4Cy3ukCW4LqB1GqABEi6pJ7vzN63ZGUYw1C"
+        "bzz-raw://30dc5e61b40ccbfcb4a1ad4531330fc09dfffc395f36615fc788c68a969bba23",
+        "dweb:/ipfs/QmfCB9dQrcwXoTBvFysbKYQQRZDfXxQQ7tQ5U24duv25UW"
       ],
       "license": "MIT"
     },

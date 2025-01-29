@@ -143,9 +143,9 @@ export interface MockEntitlementGatedInterface extends utils.Interface {
     "getRuleDataV2(uint256)": FunctionFragment;
     "postEntitlementCheckResult(bytes32,uint256,uint8)": FunctionFragment;
     "postEntitlementCheckResultV2(bytes32,uint256,uint8)": FunctionFragment;
-    "requestEntitlementCheck(uint256,((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[]))": FunctionFragment;
-    "requestEntitlementCheckV2(uint256[],((uint8,uint8)[],(uint8,uint256,address,bytes)[],(uint8,uint8,uint8)[]))": FunctionFragment;
-    "requestEntitlementCheckV3(uint256[],((uint8,uint8)[],(uint8,uint256,address,bytes)[],(uint8,uint8,uint8)[]))": FunctionFragment;
+    "requestEntitlementCheckV1RuleDataV1(uint256,((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[]))": FunctionFragment;
+    "requestEntitlementCheckV1RuleDataV2(uint256[],((uint8,uint8)[],(uint8,uint256,address,bytes)[],(uint8,uint8,uint8)[]))": FunctionFragment;
+    "requestEntitlementCheckV2RuleDataV2(uint256[],((uint8,uint8)[],(uint8,uint256,address,bytes)[],(uint8,uint8,uint8)[]))": FunctionFragment;
     "requestLegacyEntitlementCheckV3(uint256[],((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[]))": FunctionFragment;
   };
 
@@ -158,9 +158,9 @@ export interface MockEntitlementGatedInterface extends utils.Interface {
       | "getRuleDataV2"
       | "postEntitlementCheckResult"
       | "postEntitlementCheckResultV2"
-      | "requestEntitlementCheck"
-      | "requestEntitlementCheckV2"
-      | "requestEntitlementCheckV3"
+      | "requestEntitlementCheckV1RuleDataV1"
+      | "requestEntitlementCheckV1RuleDataV2"
+      | "requestEntitlementCheckV2RuleDataV2"
       | "requestLegacyEntitlementCheckV3"
   ): FunctionFragment;
 
@@ -201,18 +201,18 @@ export interface MockEntitlementGatedInterface extends utils.Interface {
     ]
   ): string;
   encodeFunctionData(
-    functionFragment: "requestEntitlementCheck",
+    functionFragment: "requestEntitlementCheckV1RuleDataV1",
     values: [PromiseOrValue<BigNumberish>, IRuleEntitlementBase.RuleDataStruct]
   ): string;
   encodeFunctionData(
-    functionFragment: "requestEntitlementCheckV2",
+    functionFragment: "requestEntitlementCheckV1RuleDataV2",
     values: [
       PromiseOrValue<BigNumberish>[],
       IRuleEntitlementBase.RuleDataV2Struct
     ]
   ): string;
   encodeFunctionData(
-    functionFragment: "requestEntitlementCheckV3",
+    functionFragment: "requestEntitlementCheckV2RuleDataV2",
     values: [
       PromiseOrValue<BigNumberish>[],
       IRuleEntitlementBase.RuleDataV2Struct
@@ -255,15 +255,15 @@ export interface MockEntitlementGatedInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "requestEntitlementCheck",
+    functionFragment: "requestEntitlementCheckV1RuleDataV1",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "requestEntitlementCheckV2",
+    functionFragment: "requestEntitlementCheckV1RuleDataV2",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "requestEntitlementCheckV3",
+    functionFragment: "requestEntitlementCheckV2RuleDataV2",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -394,19 +394,19 @@ export interface MockEntitlementGated extends BaseContract {
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
-    requestEntitlementCheck(
+    requestEntitlementCheckV1RuleDataV1(
       roleId: PromiseOrValue<BigNumberish>,
       ruleData: IRuleEntitlementBase.RuleDataStruct,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
-    requestEntitlementCheckV2(
+    requestEntitlementCheckV1RuleDataV2(
       roleIds: PromiseOrValue<BigNumberish>[],
       ruleData: IRuleEntitlementBase.RuleDataV2Struct,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
-    requestEntitlementCheckV3(
+    requestEntitlementCheckV2RuleDataV2(
       roleIds: PromiseOrValue<BigNumberish>[],
       ruleData: IRuleEntitlementBase.RuleDataV2Struct,
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
@@ -415,7 +415,7 @@ export interface MockEntitlementGated extends BaseContract {
     requestLegacyEntitlementCheckV3(
       roleIds: PromiseOrValue<BigNumberish>[],
       ruleData: IRuleEntitlementBase.RuleDataStruct,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
   };
 
@@ -460,19 +460,19 @@ export interface MockEntitlementGated extends BaseContract {
     overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
-  requestEntitlementCheck(
+  requestEntitlementCheckV1RuleDataV1(
     roleId: PromiseOrValue<BigNumberish>,
     ruleData: IRuleEntitlementBase.RuleDataStruct,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
-  requestEntitlementCheckV2(
+  requestEntitlementCheckV1RuleDataV2(
     roleIds: PromiseOrValue<BigNumberish>[],
     ruleData: IRuleEntitlementBase.RuleDataV2Struct,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
-  requestEntitlementCheckV3(
+  requestEntitlementCheckV2RuleDataV2(
     roleIds: PromiseOrValue<BigNumberish>[],
     ruleData: IRuleEntitlementBase.RuleDataV2Struct,
     overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
@@ -481,7 +481,7 @@ export interface MockEntitlementGated extends BaseContract {
   requestLegacyEntitlementCheckV3(
     roleIds: PromiseOrValue<BigNumberish>[],
     ruleData: IRuleEntitlementBase.RuleDataStruct,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
   callStatic: {
@@ -526,19 +526,19 @@ export interface MockEntitlementGated extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
-    requestEntitlementCheck(
+    requestEntitlementCheckV1RuleDataV1(
       roleId: PromiseOrValue<BigNumberish>,
       ruleData: IRuleEntitlementBase.RuleDataStruct,
       overrides?: CallOverrides
     ): Promise<string>;
 
-    requestEntitlementCheckV2(
+    requestEntitlementCheckV1RuleDataV2(
       roleIds: PromiseOrValue<BigNumberish>[],
       ruleData: IRuleEntitlementBase.RuleDataV2Struct,
       overrides?: CallOverrides
     ): Promise<string>;
 
-    requestEntitlementCheckV3(
+    requestEntitlementCheckV2RuleDataV2(
       roleIds: PromiseOrValue<BigNumberish>[],
       ruleData: IRuleEntitlementBase.RuleDataV2Struct,
       overrides?: CallOverrides
@@ -621,19 +621,19 @@ export interface MockEntitlementGated extends BaseContract {
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
-    requestEntitlementCheck(
+    requestEntitlementCheckV1RuleDataV1(
       roleId: PromiseOrValue<BigNumberish>,
       ruleData: IRuleEntitlementBase.RuleDataStruct,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
-    requestEntitlementCheckV2(
+    requestEntitlementCheckV1RuleDataV2(
       roleIds: PromiseOrValue<BigNumberish>[],
       ruleData: IRuleEntitlementBase.RuleDataV2Struct,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
-    requestEntitlementCheckV3(
+    requestEntitlementCheckV2RuleDataV2(
       roleIds: PromiseOrValue<BigNumberish>[],
       ruleData: IRuleEntitlementBase.RuleDataV2Struct,
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
@@ -642,7 +642,7 @@ export interface MockEntitlementGated extends BaseContract {
     requestLegacyEntitlementCheckV3(
       roleIds: PromiseOrValue<BigNumberish>[],
       ruleData: IRuleEntitlementBase.RuleDataStruct,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
   };
 
@@ -688,19 +688,19 @@ export interface MockEntitlementGated extends BaseContract {
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
-    requestEntitlementCheck(
+    requestEntitlementCheckV1RuleDataV1(
       roleId: PromiseOrValue<BigNumberish>,
       ruleData: IRuleEntitlementBase.RuleDataStruct,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
-    requestEntitlementCheckV2(
+    requestEntitlementCheckV1RuleDataV2(
       roleIds: PromiseOrValue<BigNumberish>[],
       ruleData: IRuleEntitlementBase.RuleDataV2Struct,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
-    requestEntitlementCheckV3(
+    requestEntitlementCheckV2RuleDataV2(
       roleIds: PromiseOrValue<BigNumberish>[],
       ruleData: IRuleEntitlementBase.RuleDataV2Struct,
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
@@ -709,7 +709,7 @@ export interface MockEntitlementGated extends BaseContract {
     requestLegacyEntitlementCheckV3(
       roleIds: PromiseOrValue<BigNumberish>[],
       ruleData: IRuleEntitlementBase.RuleDataStruct,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
   };
 }

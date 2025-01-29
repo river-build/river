@@ -373,7 +373,7 @@ export default [
   },
   {
     "type": "function",
-    "name": "requestEntitlementCheck",
+    "name": "requestEntitlementCheckV1RuleDataV1",
     "inputs": [
       {
         "name": "roleId",
@@ -465,7 +465,7 @@ export default [
   },
   {
     "type": "function",
-    "name": "requestEntitlementCheckV2",
+    "name": "requestEntitlementCheckV1RuleDataV2",
     "inputs": [
       {
         "name": "roleIds",
@@ -557,7 +557,7 @@ export default [
   },
   {
     "type": "function",
-    "name": "requestEntitlementCheckV3",
+    "name": "requestEntitlementCheckV2RuleDataV2",
     "inputs": [
       {
         "name": "roleIds",
@@ -737,7 +737,7 @@ export default [
         "internalType": "bytes32"
       }
     ],
-    "stateMutability": "nonpayable"
+    "stateMutability": "payable"
   },
   {
     "type": "event",
