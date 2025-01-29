@@ -101,7 +101,7 @@ contract EntitlementGatedTest is
 
     vm.recordLogs();
     vm.prank(caller);
-    bytes32 realRequestId = gated.requestLegacyEntitlementCheckV3{
+    bytes32 realRequestId = gated.requestEntitlementCheckV2RuleDataV1{
       value: 1 ether
     }(roleIds, RuleEntitlementUtil.getLegacyNoopRuleData());
     Vm.Log[] memory requestLogs = vm.getRecordedLogs();

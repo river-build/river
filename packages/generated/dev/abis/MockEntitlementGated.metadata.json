@@ -694,6 +694,98 @@
             "type": "uint256[]"
           },
           {
+            "internalType": "struct IRuleEntitlementBase.RuleData",
+            "name": "ruleData",
+            "type": "tuple",
+            "components": [
+              {
+                "internalType": "struct IRuleEntitlementBase.Operation[]",
+                "name": "operations",
+                "type": "tuple[]",
+                "components": [
+                  {
+                    "internalType": "enum IRuleEntitlementBase.CombinedOperationType",
+                    "name": "opType",
+                    "type": "uint8"
+                  },
+                  {
+                    "internalType": "uint8",
+                    "name": "index",
+                    "type": "uint8"
+                  }
+                ]
+              },
+              {
+                "internalType": "struct IRuleEntitlementBase.CheckOperation[]",
+                "name": "checkOperations",
+                "type": "tuple[]",
+                "components": [
+                  {
+                    "internalType": "enum IRuleEntitlementBase.CheckOperationType",
+                    "name": "opType",
+                    "type": "uint8"
+                  },
+                  {
+                    "internalType": "uint256",
+                    "name": "chainId",
+                    "type": "uint256"
+                  },
+                  {
+                    "internalType": "address",
+                    "name": "contractAddress",
+                    "type": "address"
+                  },
+                  {
+                    "internalType": "uint256",
+                    "name": "threshold",
+                    "type": "uint256"
+                  }
+                ]
+              },
+              {
+                "internalType": "struct IRuleEntitlementBase.LogicalOperation[]",
+                "name": "logicalOperations",
+                "type": "tuple[]",
+                "components": [
+                  {
+                    "internalType": "enum IRuleEntitlementBase.LogicalOperationType",
+                    "name": "logOpType",
+                    "type": "uint8"
+                  },
+                  {
+                    "internalType": "uint8",
+                    "name": "leftOperationIndex",
+                    "type": "uint8"
+                  },
+                  {
+                    "internalType": "uint8",
+                    "name": "rightOperationIndex",
+                    "type": "uint8"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "stateMutability": "payable",
+        "type": "function",
+        "name": "requestEntitlementCheckV2RuleDataV1",
+        "outputs": [
+          {
+            "internalType": "bytes32",
+            "name": "",
+            "type": "bytes32"
+          }
+        ]
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256[]",
+            "name": "roleIds",
+            "type": "uint256[]"
+          },
+          {
             "internalType": "struct IRuleEntitlementBase.RuleDataV2",
             "name": "ruleData",
             "type": "tuple",
@@ -777,98 +869,6 @@
             "type": "bytes32"
           }
         ]
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256[]",
-            "name": "roleIds",
-            "type": "uint256[]"
-          },
-          {
-            "internalType": "struct IRuleEntitlementBase.RuleData",
-            "name": "ruleData",
-            "type": "tuple",
-            "components": [
-              {
-                "internalType": "struct IRuleEntitlementBase.Operation[]",
-                "name": "operations",
-                "type": "tuple[]",
-                "components": [
-                  {
-                    "internalType": "enum IRuleEntitlementBase.CombinedOperationType",
-                    "name": "opType",
-                    "type": "uint8"
-                  },
-                  {
-                    "internalType": "uint8",
-                    "name": "index",
-                    "type": "uint8"
-                  }
-                ]
-              },
-              {
-                "internalType": "struct IRuleEntitlementBase.CheckOperation[]",
-                "name": "checkOperations",
-                "type": "tuple[]",
-                "components": [
-                  {
-                    "internalType": "enum IRuleEntitlementBase.CheckOperationType",
-                    "name": "opType",
-                    "type": "uint8"
-                  },
-                  {
-                    "internalType": "uint256",
-                    "name": "chainId",
-                    "type": "uint256"
-                  },
-                  {
-                    "internalType": "address",
-                    "name": "contractAddress",
-                    "type": "address"
-                  },
-                  {
-                    "internalType": "uint256",
-                    "name": "threshold",
-                    "type": "uint256"
-                  }
-                ]
-              },
-              {
-                "internalType": "struct IRuleEntitlementBase.LogicalOperation[]",
-                "name": "logicalOperations",
-                "type": "tuple[]",
-                "components": [
-                  {
-                    "internalType": "enum IRuleEntitlementBase.LogicalOperationType",
-                    "name": "logOpType",
-                    "type": "uint8"
-                  },
-                  {
-                    "internalType": "uint8",
-                    "name": "leftOperationIndex",
-                    "type": "uint8"
-                  },
-                  {
-                    "internalType": "uint8",
-                    "name": "rightOperationIndex",
-                    "type": "uint8"
-                  }
-                ]
-              }
-            ]
-          }
-        ],
-        "stateMutability": "payable",
-        "type": "function",
-        "name": "requestLegacyEntitlementCheckV3",
-        "outputs": [
-          {
-            "internalType": "bytes32",
-            "name": "",
-            "type": "bytes32"
-          }
-        ]
       }
     ],
     "devdoc": {
@@ -891,11 +891,11 @@
         "requestEntitlementCheckV1RuleDataV2(uint256[],((uint8,uint8)[],(uint8,uint256,address,bytes)[],(uint8,uint8,uint8)[]))": {
           "details": "This function is used to request a v1 entitlement check for a roleId and RuleData v2"
         },
+        "requestEntitlementCheckV2RuleDataV1(uint256[],((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[]))": {
+          "details": "This function is used to request an entitlement check v2 for a roleId and RuleData v1"
+        },
         "requestEntitlementCheckV2RuleDataV2(uint256[],((uint8,uint8)[],(uint8,uint256,address,bytes)[],(uint8,uint8,uint8)[]))": {
           "details": "This function is used to request a v2 entitlement check for a roleId and RuleData v2"
-        },
-        "requestLegacyEntitlementCheckV3(uint256[],((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[]))": {
-          "details": "This function is used to request an entitlement check v2 for a roleId and RuleData v1"
         }
       },
       "version": 1
@@ -1029,10 +1029,10 @@
       "license": "MIT"
     },
     "contracts/test/mocks/MockEntitlementGated.sol": {
-      "keccak256": "0x25d427079bd60e13a251a6d5fb71edcb208014288e6acf06b76d6d6d07680772",
+      "keccak256": "0xd93ef3d7c938cb34d13730826186b64ea230960d233479ed578a73a7881afce3",
       "urls": [
-        "bzz-raw://30dc5e61b40ccbfcb4a1ad4531330fc09dfffc395f36615fc788c68a969bba23",
-        "dweb:/ipfs/QmfCB9dQrcwXoTBvFysbKYQQRZDfXxQQ7tQ5U24duv25UW"
+        "bzz-raw://6d4629b02d4ec9ca6014f6b37d8cc2670db2437e38862b9a88f9edceec676e02",
+        "dweb:/ipfs/Qmdm2BHhnUt119hwyzvVUCiGX2TR1iH3yvEQZQWL1GMUhS"
       ],
       "license": "MIT"
     },

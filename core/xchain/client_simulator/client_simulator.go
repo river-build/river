@@ -252,8 +252,8 @@ func (cs *clientSimulator) executeCheck(
 				emitV2Event,
 			)
 			if emitV2Event {
-				log.Infow("Calling RequestLegacyEntitlementCheckV3", "opts", opts, "ruleData", ruleData)
-				return cs.entitlementGated.RequestLegacyEntitlementCheckV3(opts, [](*big.Int){big.NewInt(0)}, *ruleData)
+				log.Infow("Calling RequestEntitlementCheckV2RuleDataV1", "opts", opts, "ruleData", ruleData)
+				return cs.entitlementGated.RequestEntitlementCheckV2RuleDataV1(opts, [](*big.Int){big.NewInt(0)}, *ruleData)
 			} else {
 				log.Infow("Calling RequestEntitlementCheckV1RuleDataV1", "opts", opts, "ruleData", ruleData)
 				return cs.entitlementGated.RequestEntitlementCheckV1RuleDataV1(opts, big.NewInt(0), *ruleData)

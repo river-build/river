@@ -74,7 +74,7 @@ contract MockEntitlementGated is EntitlementGated {
   }
 
   /// @dev This function is used to request an entitlement check v2 for a roleId and RuleData v1
-  function requestLegacyEntitlementCheckV3(
+  function requestEntitlementCheckV2RuleDataV1(
     uint256[] calldata roleIds,
     IRuleEntitlement.RuleData calldata ruleData
   ) external payable returns (bytes32) {
