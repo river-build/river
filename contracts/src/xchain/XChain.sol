@@ -38,9 +38,11 @@ contract XChain is IXChain, ReentrancyGuard, Facet {
   /// @inheritdoc IXChain
   function requestRefund() external {
     XChainLib.Layout storage layout = XChainLib.layout();
-    bytes32[] memory transactionIds = layout
-      .requestsBySender[msg.sender]
-      .values();
+    EnumerableSet.Bytes32Set storage senderRequests = layout.requestsBySender[
+      msg.sender
+    ];
+
+    bytes32[] memory transactionIds = senderRequests.values();
 
     if (transactionIds.length == 0)
       revert EntitlementChecker_NoPendingRequests();
@@ -57,7 +59,7 @@ contract XChain is IXChain, ReentrancyGuard, Facet {
 
         totalRefund += request.value;
         request.completed = true;
-        layout.requestsBySender[msg.sender].remove(transactionId);
+        senderRequests.remove(transactionId);
       }
     }
 
