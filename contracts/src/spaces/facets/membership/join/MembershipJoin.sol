@@ -88,6 +88,7 @@ abstract contract MembershipJoin is
 
     (bool isEntitled, bool isCrosschainPending) = _checkEntitlement(
       receiver,
+      sender,
       transactionId
     );
 
@@ -166,6 +167,7 @@ abstract contract MembershipJoin is
   /// @return isCrosschainPending A boolean indicating if a crosschain entitlement check is pending
   function _checkEntitlement(
     address receiver,
+    address sender,
     bytes32 transactionId
   ) internal virtual returns (bool isEntitled, bool isCrosschainPending) {
     IRolesBase.Role[] memory roles = _getRolesWithPermission(
@@ -190,6 +192,7 @@ abstract contract MembershipJoin is
         if (entitlement.isCrosschain()) {
           _requestEntitlementCheckV2(
             receiver,
+            sender,
             transactionId,
             IRuleEntitlement(address(entitlement)),
             role.id

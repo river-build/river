@@ -24,6 +24,7 @@ contract XChain is
 {
   using EnumerableSet for EnumerableSet.AddressSet;
   using EnumerableSet for EnumerableSet.UintSet;
+  using EnumerableSet for EnumerableSet.Bytes32Set;
 
   function __XChain_init() external onlyInitializing {
     _addInterface(type(IEntitlementGated).interfaceId);
@@ -107,10 +108,13 @@ contract XChain is
       bool allRoleIdsCompleted = checkAllRequestsCompleted(transactionId);
 
       if (finalStatusForRole == NodeVoteStatus.PASSED || allRoleIdsCompleted) {
+        request.completed = true;
+        XChainLib.layout().requestsBySender[request.caller].remove(
+          transactionId
+        );
         EntitlementGated(request.caller).postEntitlementCheckResultV2{
           value: request.value
         }(transactionId, 0, finalStatusForRole);
-        request.completed = true;
       }
     }
   }

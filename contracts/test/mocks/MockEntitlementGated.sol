@@ -84,6 +84,7 @@ contract MockEntitlementGated is EntitlementGated {
     for (uint256 i = 0; i < roleIds.length; i++) {
       _requestEntitlementCheckV2(
         msg.sender,
+        address(this),
         transactionId,
         IRuleEntitlement(address(this)),
         roleIds[i]
@@ -106,6 +107,7 @@ contract MockEntitlementGated is EntitlementGated {
     for (uint256 i = 0; i < roleIds.length; i++) {
       _requestEntitlementCheckV2(
         msg.sender,
+        address(this),
         transactionId,
         IRuleEntitlement(address(this)),
         roleIds[i]

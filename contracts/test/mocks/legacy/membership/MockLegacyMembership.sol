@@ -21,7 +21,7 @@ contract MockLegacyMembership is MembershipFacet {
   function _checkEntitlement(
     address receiver,
     bytes32 transactionId
-  ) internal override returns (bool isEntitled, bool isCrosschainPending) {
+  ) internal returns (bool isEntitled, bool isCrosschainPending) {
     IRolesBase.Role[] memory roles = _getRolesWithPermission(
       Permissions.JoinSpace
     );

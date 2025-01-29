@@ -10,13 +10,14 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {EntitlementCheckerStorage} from "./EntitlementCheckerStorage.sol";
 import {NodeOperatorStorage, NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
 import {XChainLib} from "contracts/src/xchain/XChainLib.sol";
-
+import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
 // contracts
 import {Facet} from "@river-build/diamond/src/facets/Facet.sol";
 
 contract EntitlementChecker is IEntitlementChecker, Facet {
   using EnumerableSet for EnumerableSet.AddressSet;
   using EnumerableSet for EnumerableSet.UintSet;
+  using EnumerableSet for EnumerableSet.Bytes32Set;
   // =============================================================
   //                           Initializer
   // =============================================================
@@ -162,15 +163,61 @@ contract EntitlementChecker is IEntitlementChecker, Facet {
     );
   }
 
+  function requestRefund() external {
+    XChainLib.Layout storage layout = XChainLib.layout();
+    bytes32[] memory transactionIds = layout
+      .requestsBySender[msg.sender]
+      .values();
+
+    if (transactionIds.length == 0)
+      revert EntitlementChecker_NoPendingRequests();
+
+    uint256 totalRefund;
+
+    unchecked {
+      for (uint256 i; i < transactionIds.length; ++i) {
+        bytes32 transactionId = transactionIds[i];
+        XChainLib.Request storage request = layout.requests[transactionId];
+
+        // Skip if already completed or not yet eligible for refund
+        // TODO: make this configurable
+        if (request.completed || block.number - request.blockNumber <= 900)
+          continue;
+
+        totalRefund += request.value;
+        request.completed = true;
+        layout.requestsBySender[msg.sender].remove(transactionId);
+      }
+    }
+
+    if (totalRefund == 0) revert EntitlementChecker_NoRefundsAvailable();
+    if (address(this).balance < totalRefund)
+      revert EntitlementChecker_InsufficientFunds();
+
+    // Single transfer for all eligible refunds
+    CurrencyTransfer.transferCurrency(
+      CurrencyTransfer.NATIVE_TOKEN,
+      address(this),
+      msg.sender,
+      totalRefund
+    );
+  }
+
   function requestEntitlementCheckV2(
     address walletAddress,
     bytes32 transactionId,
-    uint256 requestId
+    uint256 requestId,
+    bytes memory extraData
   ) external payable {
     address space = msg.sender;
+    address senderAddress = abi.decode(extraData, (address));
 
-    XChainLib.layout().requests[transactionId] = XChainLib.Request({
+    XChainLib.Layout storage layout = XChainLib.layout();
+
+    layout.requestsBySender[senderAddress].add(transactionId);
+    layout.requests[transactionId] = XChainLib.Request({
       caller: space,
+      blockNumber: block.number,
       value: msg.value,
       completed: false
     });

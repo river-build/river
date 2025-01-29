@@ -8,6 +8,9 @@ interface IEntitlementCheckerBase {
   error EntitlementChecker_InvalidNodeOperator();
   error EntitlementChecker_InvalidOperator();
   error EntitlementChecker_OperatorNotActive();
+  error EntitlementChecker_NoPendingRequests();
+  error EntitlementChecker_InsufficientFunds();
+  error EntitlementChecker_NoRefundsAvailable();
 
   // Events
   event NodeRegistered(address indexed nodeAddress);
@@ -57,7 +60,8 @@ interface IEntitlementChecker is IEntitlementCheckerBase {
   function requestEntitlementCheckV2(
     address walletAddress,
     bytes32 transactionId,
-    uint256 requestId
+    uint256 requestId,
+    bytes memory extraData
   ) external payable;
 
   function getNodesByOperator(

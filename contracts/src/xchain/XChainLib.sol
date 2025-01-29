@@ -22,15 +22,17 @@ library XChainLib {
   }
 
   struct Request {
-    address caller;
     uint256 value;
+    uint256 blockNumber;
+    address caller;
     bool completed;
   }
 
   struct Layout {
     IEntitlementChecker entitlementChecker;
-    mapping(bytes32 txId => Request) requests;
-    mapping(bytes32 txId => Check) checks;
+    mapping(address => EnumerableSet.Bytes32Set) requestsBySender;
+    mapping(bytes32 => Request) requests;
+    mapping(bytes32 => Check) checks;
   }
 
   function layout() internal pure returns (Layout storage l) {

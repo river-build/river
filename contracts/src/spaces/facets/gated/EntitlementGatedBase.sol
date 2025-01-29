@@ -162,6 +162,7 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
   function _requestEntitlementCheckV2(
     address walletAddress,
+    address senderAddress,
     bytes32 transactionId,
     IRuleEntitlement entitlement,
     uint256 requestId
@@ -178,10 +179,13 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
     transaction.finalized = true;
     transaction.entitlement = entitlement;
 
+    bytes memory extraData = abi.encode(senderAddress);
+
     ds.entitlementChecker.requestEntitlementCheckV2{value: msg.value}(
       walletAddress,
       transactionId,
-      requestId
+      requestId,
+      extraData
     );
   }
 
