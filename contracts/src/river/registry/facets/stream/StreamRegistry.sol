@@ -61,6 +61,39 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
   }
 
   /// @inheritdoc IStreamRegistry
+  function allocateStream(
+    bytes32 streamId,
+    address[] memory nodes,
+    bytes32 genesisMiniblockHash
+  ) external onlyNode(msg.sender) {
+    // verify that the streamId is not already in the registry
+    if (ds.streams.contains(streamId))
+      revert(RiverRegistryErrors.ALREADY_EXISTS);
+
+    // verify that the nodes stream is placed on are in the registry
+    uint256 nodeCount = nodes.length;
+    for (uint256 i = 0; i < nodeCount; ++i) {
+      if (!ds.nodes.contains(nodes[i]))
+        revert(RiverRegistryErrors.NODE_NOT_FOUND);
+    }
+
+    // Add the stream to the registry
+    Stream memory stream = Stream({
+      lastMiniblockHash: genesisMiniblockHash,
+      lastMiniblockNum: 0,
+      flags: 0,
+      reserved0: 0,
+      nodes: nodes
+    });
+
+    ds.streams.add(streamId);
+    ds.streamById[streamId] = stream;
+    ds.genesisMiniblockHashByStreamId[streamId] = genesisMiniblockHash;
+
+    emit StreamAllocated(streamId, nodes, genesisMiniblockHash);
+  }
+
+  /// @inheritdoc IStreamRegistry
   function getStream(bytes32 streamId) external view returns (Stream memory) {
     if (!ds.streams.contains(streamId)) revert(RiverRegistryErrors.NOT_FOUND);
     return ds.streamById[streamId];
@@ -198,6 +231,18 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
       ds.streamById[streamId],
       ds.genesisMiniblockHashByStreamId[streamId],
       ds.genesisMiniblockByStreamId[streamId]
+    );
+  }
+
+  /// @inheritdoc IStreamRegistry
+  function getStreamWithGenesisHash(
+    bytes32 streamId
+  ) external view returns (Stream memory, bytes32) {
+    if (!ds.streams.contains(streamId)) revert(RiverRegistryErrors.NOT_FOUND);
+
+    return (
+      ds.streamById[streamId],
+      ds.genesisMiniblockHashByStreamId[streamId]
     );
   }
 

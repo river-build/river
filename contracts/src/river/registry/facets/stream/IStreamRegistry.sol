@@ -18,6 +18,12 @@ interface IStreamRegistryBase {
     bytes genesisMiniblock
   );
 
+  event StreamAllocated(
+    bytes32 streamId,
+    address[] nodes,
+    bytes32 genesisMiniblockHash
+  );
+
   event StreamLastMiniblockUpdated(
     bytes32 streamId,
     bytes32 lastMiniblockHash,
@@ -57,13 +63,26 @@ interface IStreamRegistry is IStreamRegistryBase {
    * @param nodes The list of nodes to place the stream on
    * @param genesisMiniblockHash The hash of the genesis miniblock
    * @param genesisMiniblock The genesis miniblock data
-   * @dev Only callable by registered nodes
+   * @dev Only callable by registered nodes and is succeeded by allocateStream(bytes32, address[], bytes32)
    */
   function allocateStream(
     bytes32 streamId,
     address[] memory nodes,
     bytes32 genesisMiniblockHash,
     bytes memory genesisMiniblock
+  ) external;
+
+  /**
+   * @notice Allocate a new stream in the registry
+   * @param streamId The ID of the stream to allocate
+   * @param nodes The list of nodes to place the stream on
+   * @param genesisMiniblockHash The hash of the genesis miniblock
+   * @dev Only callable by registered nodes
+   */
+  function allocateStream(
+    bytes32 streamId,
+    address[] memory nodes,
+    bytes32 genesisMiniblockHash
   ) external;
 
   /**
@@ -135,6 +154,16 @@ interface IStreamRegistry is IStreamRegistryBase {
   function getStreamWithGenesis(
     bytes32 streamId
   ) external view returns (Stream memory, bytes32, bytes memory);
+
+  /**
+   * @notice Get a stream and its genesis information from the registry
+   * @param streamId The ID of the stream to get
+   * @return Stream The stream data
+   * @return bytes32 The genesis miniblock hash
+   */
+  function getStreamWithGenesisHash(
+    bytes32 streamId
+  ) external view returns (Stream memory, bytes32);
 
   /**
    * @notice Update the last miniblock information for a stream
