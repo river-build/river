@@ -1980,7 +1980,7 @@ func (s *PostgresStreamStore) getLastMiniblockNumberTx(
 		),
 		streamID,
 	).Scan(&maxSeqNum); err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return 0, RiverError(Err_INTERNAL, "Stream exists in es table, but no miniblocks in DB")
 		}
 		return 0, err
