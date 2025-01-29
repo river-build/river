@@ -5,8 +5,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/river-build/river/core/node/registries"
-
 	"connectrpc.com/connect"
 
 	"github.com/river-build/river/core/contracts/river"
@@ -14,10 +12,11 @@ import (
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
+	"github.com/river-build/river/core/node/registries"
 	"github.com/river-build/river/core/node/storage"
 )
 
-func (s *streamCacheImpl) onStreamCreated(
+func (s *StreamCache) onStreamCreated(
 	ctx context.Context,
 	event *river.StreamCreated,
 	blockNum crypto.BlockNumber,
@@ -26,7 +25,7 @@ func (s *streamCacheImpl) onStreamCreated(
 		return
 	}
 
-	stream := &streamImpl{
+	stream := &Stream{
 		params:              s.params,
 		streamId:            event.GetStreamId(),
 		lastAppliedBlockNum: blockNum,
@@ -50,9 +49,9 @@ func (s *streamCacheImpl) onStreamCreated(
 // normalizeEphemeralStream normalizes the ephemeral stream.
 // Loads the missing miniblocks from the sticky peers and writes them to the storage.
 // Seals the stream if it is ephemeral and all miniblocks are loaded.
-func (s *streamCacheImpl) normalizeEphemeralStream(
+func (s *StreamCache) normalizeEphemeralStream(
 	ctx context.Context,
-	stream *streamImpl,
+	stream *Stream,
 	lastMiniblockNum int64,
 	isSealed bool,
 ) error {
