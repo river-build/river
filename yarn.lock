@@ -30659,6 +30659,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"xchain-monitor@workspace:packages/xchain-monitor":
+  version: 0.0.0-use.local
+  resolution: "xchain-monitor@workspace:packages/xchain-monitor"
+  dependencies:
+    "@river-build/generated": "workspace:^"
+    "@river-build/web3": "workspace:^"
+    tsx: ^4.7.1
+    typescript: ^5.1.6
+    viem: ^2.21.51
+  languageName: unknown
+  linkType: soft
+
 "xdg-basedir@npm:^5.1.0":
   version: 5.1.0
   resolution: "xdg-basedir@npm:5.1.0"
