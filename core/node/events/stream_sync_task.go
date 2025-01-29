@@ -15,7 +15,7 @@ import (
 func (s *StreamCache) submitSyncStreamTask(
 	ctx context.Context,
 	pool *workerpool.WorkerPool,
-	stream *streamImpl,
+	stream *Stream,
 	streamRecord *registries.GetStreamResult,
 ) {
 	pool.Submit(func() {
@@ -34,7 +34,7 @@ func (s *StreamCache) submitSyncStreamTask(
 // TODO: change. It is assumed that stream is already in the local DB and only miniblocks maybe in the need of syncing.
 func (s *StreamCache) syncStreamFromPeers(
 	ctx context.Context,
-	stream *streamImpl,
+	stream *Stream,
 	streamRecord *registries.GetStreamResult,
 ) error {
 	lastContractMbNum := int64(streamRecord.LastMiniblockNum)
