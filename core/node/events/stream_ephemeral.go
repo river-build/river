@@ -71,7 +71,7 @@ func (s *StreamCache) normalizeEphemeralStream(
 
 		// Stream does not exist in the storage - the entire stream is missing.
 		for i := int64(0); i <= lastMiniblockNum; i++ {
-			missingMbs = append(missingMbs, int64(i))
+			missingMbs = append(missingMbs, i)
 		}
 	} else if !ephemeral {
 		// Stream exists in the storage and sealed already.
