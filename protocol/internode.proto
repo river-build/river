@@ -55,6 +55,16 @@ message SaveMiniblockCandidateRequest {
 message SaveMiniblockCandidateResponse {
 }
 
+message GetMiniblocksByIdsRequest {
+    bytes stream_id = 1;
+    repeated int64 miniblock_ids = 2;
+}
+
+message GetMiniblockResponse {
+    Miniblock miniblock = 1;
+    int64 num = 2;
+}
+
 /*
   * Ephemeral stream related messages
  */
@@ -89,6 +99,7 @@ service NodeToNode {
     rpc NewEventInPool(NewEventInPoolRequest) returns (NewEventInPoolResponse);
     rpc ProposeMiniblock(ProposeMiniblockRequest) returns (ProposeMiniblockResponse); 
     rpc SaveMiniblockCandidate(SaveMiniblockCandidateRequest) returns (SaveMiniblockCandidateResponse);
+    rpc GetMiniblocksByIds(GetMiniblocksByIdsRequest) returns (stream GetMiniblockResponse);
 
     // Endpoints for ephemeral streams
     rpc AllocateEphemeralStream(AllocateEphemeralStreamRequest) returns (AllocateEphemeralStreamResponse);

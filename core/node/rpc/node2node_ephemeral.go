@@ -63,38 +63,34 @@ func (s *Service) SaveEphemeralMiniblock(
 	ctx, cancel := utils.UncancelContext(ctx, 5*time.Second, 10*time.Second)
 	defer cancel()
 	log.Debug("SaveEphemeralMiniblock ENTER")
-	r, e := s.saveEphemeralMiniblock(ctx, req.Msg)
-	if e != nil {
-		return nil, AsRiverError(
-			e,
-		).Func("SaveEphemeralMiniblock").
+	if err := s.saveEphemeralMiniblock(ctx, req.Msg); err != nil {
+		return nil, AsRiverError(err).Func("SaveEphemeralMiniblock").
 			Tag("streamId", req.Msg.StreamId).
 			LogWarn(log).
 			AsConnectError()
 	}
-	log.Debug("SaveEphemeralMiniblock LEAVE", "response", r)
-	return connect.NewResponse(r), nil
+	log.Debug("SaveEphemeralMiniblock LEAVE")
+	return connect.NewResponse(&SaveEphemeralMiniblockResponse{}), nil
 }
 
-func (s *Service) saveEphemeralMiniblock(
-	ctx context.Context,
-	req *SaveEphemeralMiniblockRequest,
-) (*SaveEphemeralMiniblockResponse, error) {
-	streamId, err := StreamIdFromBytes(req.StreamId)
+func (s *Service) saveEphemeralMiniblock(ctx context.Context, req *SaveEphemeralMiniblockRequest) error {
+	streamId, err := StreamIdFromBytes(req.GetStreamId())
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	mbInfo, err := NewMiniblockInfoFromProto(req.Miniblock, NewParsedMiniblockInfoOpts())
+	mbInfo, err := NewMiniblockInfoFromProto(req.GetMiniblock(), NewParsedMiniblockInfoOpts())
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	mbBytes, err := mbInfo.ToBytes()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
+	// Save the ephemeral miniblock.
+	// Here we are sure that the record of the stream exists in the storage.
 	err = s.storage.WriteEphemeralMiniblock(ctx, streamId, &storage.WriteMiniblockData{
 		Number:   mbInfo.Ref.Num,
 		Hash:     mbInfo.Ref.Hash,
@@ -102,10 +98,10 @@ func (s *Service) saveEphemeralMiniblock(
 		Data:     mbBytes,
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &SaveEphemeralMiniblockResponse{}, nil
+	return nil
 }
 
 func (s *Service) SealEphemeralStream(
@@ -116,38 +112,29 @@ func (s *Service) SealEphemeralStream(
 	ctx, cancel := utils.UncancelContext(ctx, 10*time.Second, 20*time.Second)
 	defer cancel()
 	log.Debug("SealEphemeralStream ENTER")
-	r, e := s.sealEphemeralStream(ctx, req.Msg)
-	if e != nil {
-		return nil, AsRiverError(
-			e,
-		).Func("SealEphemeralStream").
+
+	if err := s.sealEphemeralStream(ctx, req.Msg); err != nil {
+		return nil, AsRiverError(err).Func("SealEphemeralStream").
 			Tag("streamId", req.Msg.StreamId).
 			LogWarn(log).
 			AsConnectError()
 	}
-	log.Debug("SealEphemeralStream LEAVE", "response", r)
-	return connect.NewResponse(r), nil
+	log.Debug("SealEphemeralStream LEAVE")
+	return connect.NewResponse(&SealEphemeralStreamResponse{}), nil
 }
 
 func (s *Service) sealEphemeralStream(
 	ctx context.Context,
 	req *SealEphemeralStreamRequest,
-) (*SealEphemeralStreamResponse, error) {
+) error {
 	streamId, err := StreamIdFromBytes(req.GetStreamId())
 	if err != nil {
-		return nil, AsRiverError(err).Func("sealEphemeralStream")
+		return AsRiverError(err).Func("sealEphemeralStream")
 	}
 
-	// Normalize stream locally
-	if _, err = s.storage.NormalizeEphemeralStream(ctx, streamId); err != nil {
-		// TODO: Implement
-		// if IsRiverErrorCode(err, Err_NOT_FOUND) {
-		// Something is missing in the stream, so we can't normalize it.
-		// Run the process to fetch missing data from replicas.
-		// }
-
-		return nil, err
+	if _, err = s.storage.NormalizeEphemeralStream(ctx, streamId); err == nil {
+		return nil
 	}
 
-	return &SealEphemeralStreamResponse{}, nil
+	return err
 }

@@ -115,6 +115,12 @@ func TestCreateEphemeralStream(t *testing.T) {
 		mb.Hash = common.BytesToHash(header.Hash)
 	}
 
+	// Seal the stream
+	_, err = alice.node2nodeClient.SealEphemeralStream(alice.ctx, connect.NewRequest(&SealEphemeralStreamRequest{
+		StreamId: mediaStreamId[:],
+	}))
+	tt.require.NoError(err)
+
 	// No events in storage since the stream still ephemeral.
 	// The first miniblock is the stream creation miniblock, the rest 10 are media chunks.
 	tt.compareStreamDataInStorage(t, mediaStreamId, 11, 0)

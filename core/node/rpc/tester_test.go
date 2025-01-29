@@ -893,6 +893,19 @@ func (tc *testClient) getMiniblocks(streamId StreamId, fromInclusive, toExclusiv
 	return mbs
 }
 
+func (tc *testClient) getMiniblocksByIds(streamId StreamId, ids []int64, onEachMb func(*Miniblock)) {
+	resp, err := tc.node2nodeClient.GetMiniblocksByIds(tc.ctx, connect.NewRequest(&GetMiniblocksByIdsRequest{
+		StreamId:     streamId[:],
+		MiniblockIds: ids,
+	}))
+	tc.require.NoError(err)
+	for resp.Receive() {
+		onEachMb(resp.Msg().GetMiniblock())
+	}
+	tc.require.NoError(resp.Err())
+	tc.require.NoError(resp.Close())
+}
+
 func (tc *testClient) addHistoryToView(
 	view JoinableStreamView,
 ) JoinableStreamView {

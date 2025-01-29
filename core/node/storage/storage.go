@@ -46,8 +46,19 @@ type StreamStorage interface {
 	ReadMiniblocksByStream(
 		ctx context.Context,
 		streamId StreamId,
-		onEachMb func(blockdata []byte, seqNum int) error,
+		onEachMb func(blockdata []byte, seqNum int64) error,
 	) error
+
+	// ReadMiniblocksByIds calls onEachMb for each specified miniblock
+	ReadMiniblocksByIds(
+		ctx context.Context,
+		streamId StreamId,
+		mbs []int64,
+		onEachMb func(blockdata []byte, seqNum int64) error,
+	) error
+
+	// ReadEphemeralMiniblockNums returns the list of ephemeral miniblock numbers for the given ephemeral stream.
+	ReadEphemeralMiniblockNums(ctx context.Context, streamId StreamId) ([]int, error)
 
 	// WriteEvent adds event to the given minipool.
 	// Current generation of minipool should match minipoolGeneration,
@@ -136,6 +147,9 @@ type StreamStorage interface {
 	// NormalizeEphemeralStream normalizes the given ephemeral stream.
 	// Returns the hash of the first and last miniblock of the normalized stream.
 	NormalizeEphemeralStream(ctx context.Context, streamId StreamId) (common.Hash, error)
+
+	// IsStreamEphemeral returns true if the stream is ephemeral.
+	IsStreamEphemeral(ctx context.Context, streamId StreamId) (bool, error)
 
 	Close(ctx context.Context)
 }

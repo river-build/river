@@ -1092,7 +1092,7 @@ func (s *PostgresStreamStore) readMiniblocksTx(
 func (s *PostgresStreamStore) ReadMiniblocksByStream(
 	ctx context.Context,
 	streamId StreamId,
-	onEachMb func(blockdata []byte, seqNum int) error,
+	onEachMb func(blockdata []byte, seqNum int64) error,
 ) error {
 	return s.txRunner(
 		ctx,
@@ -1110,7 +1110,7 @@ func (s *PostgresStreamStore) readMiniblocksByStreamTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
-	onEachMb func(blockdata []byte, seqNum int) error,
+	onEachMb func(blockdata []byte, seqNum int64) error,
 ) error {
 	_, err := s.lockStream(ctx, tx, streamId, false)
 	if err != nil {
@@ -1129,9 +1129,9 @@ func (s *PostgresStreamStore) readMiniblocksByStreamTx(
 		return err
 	}
 
-	prevSeqNum := -1
+	prevSeqNum := int64(-1)
 	var blockdata []byte
-	var seqNum int
+	var seqNum int64
 	_, err = pgx.ForEachRow(rows, []any{&blockdata, &seqNum}, func() error {
 		if (prevSeqNum != -1) && (seqNum != prevSeqNum+1) {
 			// There is a gap in sequence numbers
@@ -1145,6 +1145,110 @@ func (s *PostgresStreamStore) readMiniblocksByStreamTx(
 	})
 
 	return err
+}
+
+// ReadMiniblocksByIds returns miniblocks data of the given miniblocks by the given stream ID.
+func (s *PostgresStreamStore) ReadMiniblocksByIds(
+	ctx context.Context,
+	streamId StreamId,
+	mbs []int64,
+	onEachMb func(blockdata []byte, seqNum int64) error,
+) error {
+	return s.txRunner(
+		ctx,
+		"ReadMiniblocksByIds",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			return s.readMiniblocksByIdsTx(ctx, tx, streamId, mbs, onEachMb)
+		},
+		&txRunnerOpts{useStreamingPool: true},
+		"streamId", streamId,
+		"mbs", mbs,
+	)
+}
+
+func (s *PostgresStreamStore) readMiniblocksByIdsTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	streamId StreamId,
+	mbs []int64,
+	onEachMb func(blockdata []byte, seqNum int64) error,
+) error {
+	_, err := s.lockStream(ctx, tx, streamId, false)
+	if err != nil {
+		return err
+	}
+
+	rows, err := tx.Query(
+		ctx,
+		s.sqlForStream(
+			"SELECT blockdata, seq_num FROM {{miniblocks}} WHERE stream_id = $1 AND seq_num IN (SELECT unnest($2::int[])) ORDER BY seq_num",
+			streamId,
+		),
+		streamId,
+		mbs,
+	)
+	if err != nil {
+		return err
+	}
+
+	var blockdata []byte
+	var seqNum int64
+	_, err = pgx.ForEachRow(rows, []any{&blockdata, &seqNum}, func() error {
+		return onEachMb(blockdata, seqNum)
+	})
+
+	return err
+}
+
+// ReadEphemeralMiniblockNums returns ephemeral miniblock numbers stream by the given stream ID.
+func (s *PostgresStreamStore) ReadEphemeralMiniblockNums(
+	ctx context.Context,
+	streamId StreamId,
+) ([]int, error) {
+	var nums []int
+	err := s.txRunner(
+		ctx,
+		"ReadEphemeralMiniblockNums",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) (err error) {
+			nums, err = s.readEphemeralMiniblockNumsTx(ctx, tx, streamId)
+			return err
+		},
+		nil,
+		"streamId", streamId,
+	)
+	return nums, err
+}
+
+func (s *PostgresStreamStore) readEphemeralMiniblockNumsTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	streamId StreamId,
+) ([]int, error) {
+	if _, err := s.lockEphemeralStream(ctx, tx, streamId, false); err != nil {
+		return nil, err
+	}
+
+	rows, err := tx.Query(
+		ctx,
+		s.sqlForStream(
+			"SELECT seq_num FROM {{miniblocks}} WHERE stream_id = $1 ORDER BY seq_num",
+			streamId,
+		),
+		streamId,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var nums []int
+	var seqNum int
+	_, err = pgx.ForEachRow(rows, []any{&seqNum}, func() error {
+		nums = append(nums, seqNum)
+		return nil
+	})
+	return nums, err
 }
 
 // WriteMiniblockCandidate adds a miniblock proposal candidate. When the miniblock is finalized, the node will promote the
@@ -2160,7 +2264,7 @@ func (s *PostgresStreamStore) getLastMiniblockNumberTx(
 		streamID,
 	).Scan(&maxSeqNum)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return 0, RiverError(Err_INTERNAL, "Stream exists in es table, but no miniblocks in DB")
 		}
 		return 0, err
@@ -2200,6 +2304,7 @@ func (s *PostgresStreamStore) normalizeEphemeralStreamTx(
 	streamId StreamId,
 ) (common.Hash, error) {
 	if _, err := s.lockEphemeralStream(ctx, tx, streamId, true); err != nil {
+		// The given stream might be already normalized. In this case, return the genesis miniblock hash.
 		return common.Hash{}, err
 	}
 
@@ -2282,6 +2387,33 @@ func (s *PostgresStreamStore) normalizeEphemeralStreamTx(
 	}
 
 	return common.BytesToHash(genesisMb.Header.Hash), nil
+}
+
+// IsStreamEphemeral returns true if the stream is ephemeral, false otherwise.
+func (s *PostgresStreamStore) IsStreamEphemeral(ctx context.Context, streamId StreamId) (ephemeral bool, err error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	err = s.txRunner(
+		ctx,
+		"IsStreamEphemeral",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			if err := tx.QueryRow(
+				ctx,
+				"SELECT ephemeral from es WHERE stream_id = $1",
+				streamId,
+			).Scan(&ephemeral); err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					return RiverError(Err_NOT_FOUND, "Stream not found", "streamId", streamId)
+				}
+				return err
+			}
+			return nil
+		},
+		nil,
+		"streamId", streamId,
+	)
+	return
 }
 
 func getCurrentNodeProcessInfo(currentSchemaName string) string {
