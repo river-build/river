@@ -145,11 +145,14 @@ func (e *RiverErrorImpl) WriteMessage(sb *strings.Builder) {
 	}
 
 	for i, base := range e.Bases {
-		sb.WriteString(" <<base ")
-		sb.WriteString(strconv.Itoa(i))
+		sb.WriteString("\n<<base ")
+		num := strconv.Itoa(i)
+		sb.WriteString(num)
 		sb.WriteString(": ")
 		sb.WriteString(base.Error())
-		sb.WriteString("<<base_end")
+		sb.WriteString("\n<< ")
+		sb.WriteString(num)
+		sb.WriteString(" base_end")
 	}
 }
 
