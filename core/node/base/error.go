@@ -179,7 +179,8 @@ func WriteTag(sb *strings.Builder, tag RiverErrorTag) {
 
 func (e *RiverErrorImpl) tag(name string, value any, duplicateCheck int) *RiverErrorImpl {
 	for i := 0; i < duplicateCheck; i++ {
-		if e.NamedTags[i].Name == name && e.NamedTags[i].Value == value {
+		if e.NamedTags[i].Name == name {
+			e.NamedTags[i].Value = value
 			return e
 		}
 	}
