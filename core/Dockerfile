@@ -3,9 +3,10 @@ FROM golang:1.23.3-alpine3.20 AS builder
 
 # Install build-base for GCC (C compiler and related tools), git, and other dependencies.
 # Install libsecp256k1-dev if available or compile it from source.
-RUN apk add --no-cache build-base git libsecp256k1-dev
+RUN apk add --no-cache build-base git libsecp256k1-dev sudo
 RUN apk add cargo=1.78.0-r0
 RUN apk add protobuf-dev=24.4-r1
+RUN apk add binutils
 
 ARG VER_VERSION=version_unset
 ARG VER_BRANCH=branch_unset
@@ -24,8 +25,8 @@ RUN cp -f ../../target/release/libmls* /build
 WORKDIR /build
 RUN CGO_LDFLAGS="-L/build" \
     go build \
-    -trimpath \
     -o /bin/river_node \
+    -trimpath \
     -ldflags="-X github.com/river-build/river/core/river_node/version.version=$VER_VERSION -X github.com/river-build/river/core/river_node/version.branch=$VER_BRANCH -X github.com/river-build/river/core/river_node/version.commit=$VER_COMMIT" \
     ./river_node
 
