@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 // interfaces
+import {IXChain} from "./IXChain.sol";
 import {IEntitlementGated} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {IEntitlementCheckerBase} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
@@ -10,18 +11,14 @@ import {IEntitlementCheckerBase} from "contracts/src/base/registry/facets/checke
 import {XChainLib} from "./XChainLib.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
+import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
 
 // contracts
 import {EntitlementGated} from "contracts/src/spaces/facets/gated/EntitlementGated.sol";
 import {Facet} from "@river-build/diamond/src/facets/Facet.sol";
 import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
 
-contract XChain is
-  IEntitlementGated,
-  IEntitlementCheckerBase,
-  ReentrancyGuard,
-  Facet
-{
+contract XChain is IXChain, ReentrancyGuard, Facet {
   using EnumerableSet for EnumerableSet.AddressSet;
   using EnumerableSet for EnumerableSet.UintSet;
   using EnumerableSet for EnumerableSet.Bytes32Set;
@@ -30,13 +27,54 @@ contract XChain is
     _addInterface(type(IEntitlementGated).interfaceId);
   }
 
-  function isCompleted(
+  /// @inheritdoc IXChain
+  function isCheckCompleted(
     bytes32 transactionId,
     uint256 requestId
   ) external view returns (bool) {
     return XChainLib.layout().checks[transactionId].voteCompleted[requestId];
   }
 
+  /// @inheritdoc IXChain
+  function requestRefund() external {
+    XChainLib.Layout storage layout = XChainLib.layout();
+    bytes32[] memory transactionIds = layout
+      .requestsBySender[msg.sender]
+      .values();
+
+    if (transactionIds.length == 0)
+      revert EntitlementChecker_NoPendingRequests();
+
+    uint256 totalRefund;
+
+    unchecked {
+      for (uint256 i; i < transactionIds.length; ++i) {
+        bytes32 transactionId = transactionIds[i];
+        XChainLib.Request storage request = layout.requests[transactionId];
+
+        if (request.completed || block.number - request.blockNumber <= 900)
+          continue;
+
+        totalRefund += request.value;
+        request.completed = true;
+        layout.requestsBySender[msg.sender].remove(transactionId);
+      }
+    }
+
+    if (totalRefund == 0) revert EntitlementChecker_NoRefundsAvailable();
+    if (address(this).balance < totalRefund)
+      revert EntitlementChecker_InsufficientFunds();
+
+    // Single transfer for all eligible refunds
+    CurrencyTransfer.transferCurrency(
+      CurrencyTransfer.NATIVE_TOKEN,
+      address(this),
+      msg.sender,
+      totalRefund
+    );
+  }
+
+  /// @inheritdoc IXChain
   function postEntitlementCheckResult(
     bytes32 transactionId,
     uint256 requestId,
@@ -105,7 +143,7 @@ contract XChain is
         ? NodeVoteStatus.PASSED
         : NodeVoteStatus.FAILED;
 
-      bool allRoleIdsCompleted = checkAllRequestsCompleted(transactionId);
+      bool allRoleIdsCompleted = _checkAllRequestsCompleted(transactionId);
 
       if (finalStatusForRole == NodeVoteStatus.PASSED || allRoleIdsCompleted) {
         request.completed = true;
@@ -119,7 +157,11 @@ contract XChain is
     }
   }
 
-  function checkAllRequestsCompleted(
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           Internal                         */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  function _checkAllRequestsCompleted(
     bytes32 transactionId
   ) internal view returns (bool) {
     XChainLib.Check storage check = XChainLib.layout().checks[transactionId];
@@ -132,9 +174,4 @@ contract XChain is
     }
     return true;
   }
-
-  function getRuleData(
-    bytes32 transactionId,
-    uint256 roleId
-  ) external view returns (IRuleEntitlement.RuleData memory) {}
 }

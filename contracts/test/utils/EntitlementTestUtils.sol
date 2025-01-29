@@ -29,7 +29,7 @@ abstract contract EntitlementTestUtils {
   }
 
   /// @dev Capture the requested entitlement data from the logs emitted by the EntitlementChecker
-  function _getLegacyEntitlementEventData(
+  function _getRequestV1EventData(
     Vm.Log[] memory requestLogs
   )
     internal
@@ -56,7 +56,7 @@ abstract contract EntitlementTestUtils {
     revert("Entitlement check request not found");
   }
 
-  function _getEntitlementCheckRequestCount(
+  function _getRequestV2EventCount(
     Vm.Log[] memory logs
   ) internal pure returns (uint256 count) {
     for (uint256 i = 0; i < logs.length; i++) {
@@ -66,10 +66,10 @@ abstract contract EntitlementTestUtils {
     }
   }
 
-  function _getEntitlementEventRequests(
+  function _getRequestV2Events(
     Vm.Log[] memory requestLogs
   ) internal pure returns (EntitlementCheckRequestEvent[] memory) {
-    uint256 numRequests = _getEntitlementCheckRequestCount(requestLogs);
+    uint256 numRequests = _getRequestV2EventCount(requestLogs);
 
     EntitlementCheckRequestEvent[]
       memory entitlementCheckRequests = new EntitlementCheckRequestEvent[](
@@ -109,7 +109,7 @@ abstract contract EntitlementTestUtils {
     return entitlementCheckRequests;
   }
 
-  function _getEntitlementEventData(
+  function _getRequestV2EventData(
     Vm.Log[] memory requestLogs
   )
     internal

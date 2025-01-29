@@ -107,6 +107,11 @@ export default [
   },
   {
     "type": "error",
+    "name": "EntitlementChecker_InsufficientFunds",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "EntitlementChecker_InsufficientNumberOfNodes",
     "inputs": []
   },
@@ -118,6 +123,16 @@ export default [
   {
     "type": "error",
     "name": "EntitlementChecker_InvalidOperator",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "EntitlementChecker_NoPendingRequests",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "EntitlementChecker_NoRefundsAvailable",
     "inputs": []
   },
   {

@@ -8,6 +8,11 @@
       {
         "inputs": [],
         "type": "error",
+        "name": "EntitlementChecker_InsufficientFunds"
+      },
+      {
+        "inputs": [],
+        "type": "error",
         "name": "EntitlementChecker_InsufficientNumberOfNodes"
       },
       {
@@ -19,6 +24,16 @@
         "inputs": [],
         "type": "error",
         "name": "EntitlementChecker_InvalidOperator"
+      },
+      {
+        "inputs": [],
+        "type": "error",
+        "name": "EntitlementChecker_NoPendingRequests"
+      },
+      {
+        "inputs": [],
+        "type": "error",
+        "name": "EntitlementChecker_NoRefundsAvailable"
       },
       {
         "inputs": [],
@@ -181,10 +196,10 @@
   },
   "sources": {
     "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol": {
-      "keccak256": "0x0d41ad479e18ed91cdfd04a44e1cf3f64ca82e0ec91f8c3557339a0dfdf2d4c7",
+      "keccak256": "0x5fedd251a11f4b902aadde51d63a3a4b62daeef46bf918ba0a8037fec0138cad",
       "urls": [
-        "bzz-raw://f204765ac52c227e5c7530d9ac829a76bed1e8ee2aa132472b0a9d870177a83b",
-        "dweb:/ipfs/QmWNitZhNG5fijDzVERLFtzU24DJTvnyYPZ2gkJE8o57B6"
+        "bzz-raw://73552f66c55a3a2864653044d0c658115c80101a07384883e106496b5570e3b3",
+        "dweb:/ipfs/QmdqfyCGaBvbwtibcUtfq91hSMhJuv5rn79j9eDdyJzzrE"
       ],
       "license": "MIT"
     }

@@ -10,7 +10,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {EntitlementCheckerStorage} from "./EntitlementCheckerStorage.sol";
 import {NodeOperatorStorage, NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
 import {XChainLib} from "contracts/src/xchain/XChainLib.sol";
-import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
+
 // contracts
 import {Facet} from "@river-build/diamond/src/facets/Facet.sol";
 
@@ -58,11 +58,7 @@ contract EntitlementChecker is IEntitlementChecker, Facet {
   //                           External
   // =============================================================
 
-  /**
-   * @notice Register a node
-   * @param node The address of the node to register
-   * @dev Only valid operators can register a node
-   */
+  /// @inheritdoc IEntitlementChecker
   function registerNode(address node) external onlyRegisteredApprovedOperator {
     EntitlementCheckerStorage.Layout storage layout = EntitlementCheckerStorage
       .layout();
@@ -76,11 +72,7 @@ contract EntitlementChecker is IEntitlementChecker, Facet {
     emit NodeRegistered(node);
   }
 
-  /**
-   * @notice Unregister a node
-   * @param node The address of the node to unregister
-   * @dev Only the operator of the node can unregister it
-   */
+  /// @inheritdoc IEntitlementChecker
   function unregisterNode(
     address node
   ) external onlyNodeOperator(node, msg.sender) {
@@ -96,33 +88,21 @@ contract EntitlementChecker is IEntitlementChecker, Facet {
     emit NodeUnregistered(node);
   }
 
-  /**
-   * @notice Check if a node is registered
-   * @param node The address of the node to check
-   * @return true if the node is registered, false otherwise
-   */
+  /// @inheritdoc IEntitlementChecker
   function isValidNode(address node) external view returns (bool) {
     EntitlementCheckerStorage.Layout storage layout = EntitlementCheckerStorage
       .layout();
     return layout.nodes.contains(node);
   }
 
-  /**
-   * @notice Get the number of registered nodes
-   * @return The number of registered nodes
-   */
+  /// @inheritdoc IEntitlementChecker
   function getNodeCount() external view returns (uint256) {
     EntitlementCheckerStorage.Layout storage layout = EntitlementCheckerStorage
       .layout();
     return layout.nodes.length();
   }
 
-  /**
-   * @notice Get the node at a specific index
-   * @param index The index of the node to get
-   * @dev Reverts if the index is out of bounds
-   * @return The address of the node at the specified index
-   */
+  /// @inheritdoc IEntitlementChecker
   function getNodeAtIndex(uint256 index) external view returns (address) {
     EntitlementCheckerStorage.Layout storage layout = EntitlementCheckerStorage
       .layout();
@@ -131,23 +111,14 @@ contract EntitlementChecker is IEntitlementChecker, Facet {
     return layout.nodes.at(index);
   }
 
-  /**
-   * @notice Get a random selection of nodes
-   * @param count The number of nodes to select
-   * @dev Reverts if the requested count exceeds the number of available nodes
-   * @return An array of randomly selected node addresses
-   */
+  /// @inheritdoc IEntitlementChecker
   function getRandomNodes(
     uint256 count
   ) external view returns (address[] memory) {
     return _getRandomNodes(count);
   }
 
-  /**
-   * @notice Emit an EntitlementCheckRequested event
-   * @param transactionId The hash of the transaction
-   * @param nodes The selected nodes
-   */
+  /// @inheritdoc IEntitlementChecker
   function requestEntitlementCheck(
     address walletAddress,
     bytes32 transactionId,
@@ -163,46 +134,7 @@ contract EntitlementChecker is IEntitlementChecker, Facet {
     );
   }
 
-  function requestRefund() external {
-    XChainLib.Layout storage layout = XChainLib.layout();
-    bytes32[] memory transactionIds = layout
-      .requestsBySender[msg.sender]
-      .values();
-
-    if (transactionIds.length == 0)
-      revert EntitlementChecker_NoPendingRequests();
-
-    uint256 totalRefund;
-
-    unchecked {
-      for (uint256 i; i < transactionIds.length; ++i) {
-        bytes32 transactionId = transactionIds[i];
-        XChainLib.Request storage request = layout.requests[transactionId];
-
-        // Skip if already completed or not yet eligible for refund
-        // TODO: make this configurable
-        if (request.completed || block.number - request.blockNumber <= 900)
-          continue;
-
-        totalRefund += request.value;
-        request.completed = true;
-        layout.requestsBySender[msg.sender].remove(transactionId);
-      }
-    }
-
-    if (totalRefund == 0) revert EntitlementChecker_NoRefundsAvailable();
-    if (address(this).balance < totalRefund)
-      revert EntitlementChecker_InsufficientFunds();
-
-    // Single transfer for all eligible refunds
-    CurrencyTransfer.transferCurrency(
-      CurrencyTransfer.NATIVE_TOKEN,
-      address(this),
-      msg.sender,
-      totalRefund
-    );
-  }
-
+  /// @inheritdoc IEntitlementChecker
   function requestEntitlementCheckV2(
     address walletAddress,
     bytes32 transactionId,
@@ -248,11 +180,7 @@ contract EntitlementChecker is IEntitlementChecker, Facet {
     );
   }
 
-  /**
-   * @notice Get the nodes registered by an operator
-   * @param operator The address of the operator
-   * @return nodes An array of node addresses
-   */
+  /// @inheritdoc IEntitlementChecker
   function getNodesByOperator(
     address operator
   ) external view returns (address[] memory nodes) {

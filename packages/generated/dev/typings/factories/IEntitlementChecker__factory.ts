@@ -159,6 +159,11 @@ const _abi = [
         type: "uint256",
         internalType: "uint256",
       },
+      {
+        name: "extraData",
+        type: "bytes",
+        internalType: "bytes",
+      },
     ],
     outputs: [],
     stateMutability: "payable",
@@ -284,6 +289,11 @@ const _abi = [
   },
   {
     type: "error",
+    name: "EntitlementChecker_InsufficientFunds",
+    inputs: [],
+  },
+  {
+    type: "error",
     name: "EntitlementChecker_InsufficientNumberOfNodes",
     inputs: [],
   },
@@ -295,6 +305,16 @@ const _abi = [
   {
     type: "error",
     name: "EntitlementChecker_InvalidOperator",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "EntitlementChecker_NoPendingRequests",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "EntitlementChecker_NoRefundsAvailable",
     inputs: [],
   },
   {

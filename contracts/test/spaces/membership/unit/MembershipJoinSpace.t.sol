@@ -94,8 +94,8 @@ contract MembershipJoinSpaceTest is
       bytes32 transactionId,
       uint256 roleId,
       address[] memory selectedNodes
-    ) = _getEntitlementEventData(requestLogs);
-    uint256 numCheckRequests = _getEntitlementCheckRequestCount(requestLogs);
+    ) = _getRequestV2EventData(requestLogs);
+    uint256 numCheckRequests = _getRequestV2EventCount(requestLogs);
 
     assertEq(numCheckRequests, 3);
     assertEq(membershipToken.balanceOf(bob), 0);
@@ -146,16 +146,14 @@ contract MembershipJoinSpaceTest is
 
     Vm.Log[] memory requestLogs = vm.getRecordedLogs(); // Retrieve the recorded logs
 
-    uint256 numCheckRequests = _getEntitlementCheckRequestCount(requestLogs);
+    uint256 numCheckRequests = _getRequestV2EventCount(requestLogs);
 
     // Validate that a check requested event was emitted and no tokens were minted.
     assertEq(numCheckRequests, 3);
     assertEq(membershipToken.balanceOf(bob), 0);
 
     EntitlementCheckRequestEvent[]
-      memory entitlementCheckRequests = _getEntitlementEventRequests(
-        requestLogs
-      );
+      memory entitlementCheckRequests = _getRequestV2Events(requestLogs);
 
     EntitlementCheckRequestEvent memory firstRequest = entitlementCheckRequests[
       0
@@ -233,7 +231,7 @@ contract MembershipJoinSpaceTest is
       bytes32 transactionId,
       uint256 roleId,
       address[] memory selectedNodes
-    ) = _getEntitlementEventData(requestLogs);
+    ) = _getRequestV2EventData(requestLogs);
 
     // Validate that a check requested event was emitted and no tokens were minted.
     assertEq(membershipToken.balanceOf(bob), 0);
@@ -282,7 +280,7 @@ contract MembershipJoinSpaceTest is
       bytes32 transactionId,
       uint256 roleId,
       address[] memory selectedNodes
-    ) = _getEntitlementEventData(logs);
+    ) = _getRequestV2EventData(logs);
 
     for (uint256 i = 0; i < 3; i++) {
       vm.prank(selectedNodes[i]);
@@ -323,7 +321,7 @@ contract MembershipJoinSpaceTest is
       bytes32 transactionId,
       uint256 roleId,
       address[] memory selectedNodes
-    ) = _getEntitlementEventData(requestLogs);
+    ) = _getRequestV2EventData(requestLogs);
 
     for (uint256 k = 0; k < 3; k++) {
       if (k == 2) {
@@ -423,7 +421,7 @@ contract MembershipJoinSpaceTest is
       bytes32 transactionId,
       uint256 roleId,
       address[] memory selectedNodes
-    ) = _getEntitlementEventData(logs);
+    ) = _getRequestV2EventData(logs);
 
     for (uint256 i = 0; i < 3; i++) {
       vm.prank(selectedNodes[i]);
@@ -463,7 +461,7 @@ contract MembershipJoinSpaceTest is
       bytes32 transactionId,
       uint256 roleId,
       address[] memory selectedNodes
-    ) = _getEntitlementEventData(logs);
+    ) = _getRequestV2EventData(logs);
 
     for (uint256 i = 0; i < 3; i++) {
       vm.prank(selectedNodes[i]);
@@ -565,7 +563,7 @@ contract MembershipJoinSpaceTest is
       bytes32 transactionId,
       uint256 roleId,
       address[] memory selectedNodes
-    ) = _getLegacyEntitlementEventData(logs);
+    ) = _getRequestV1EventData(logs);
 
     // posting to space
     IEntitlementGated entitlementGated = IEntitlementGated(resolverAddress);

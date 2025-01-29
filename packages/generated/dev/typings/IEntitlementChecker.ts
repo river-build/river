@@ -37,7 +37,7 @@ export interface IEntitlementCheckerInterface extends utils.Interface {
     "isValidNode(address)": FunctionFragment;
     "registerNode(address)": FunctionFragment;
     "requestEntitlementCheck(address,bytes32,uint256,address[])": FunctionFragment;
-    "requestEntitlementCheckV2(address,bytes32,uint256)": FunctionFragment;
+    "requestEntitlementCheckV2(address,bytes32,uint256,bytes)": FunctionFragment;
     "unregisterNode(address)": FunctionFragment;
   };
 
@@ -92,7 +92,8 @@ export interface IEntitlementCheckerInterface extends utils.Interface {
     values: [
       PromiseOrValue<string>,
       PromiseOrValue<BytesLike>,
-      PromiseOrValue<BigNumberish>
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BytesLike>
     ]
   ): string;
   encodeFunctionData(
@@ -270,6 +271,7 @@ export interface IEntitlementChecker extends BaseContract {
       walletAddress: PromiseOrValue<string>,
       transactionId: PromiseOrValue<BytesLike>,
       requestId: PromiseOrValue<BigNumberish>,
+      extraData: PromiseOrValue<BytesLike>,
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
@@ -318,6 +320,7 @@ export interface IEntitlementChecker extends BaseContract {
     walletAddress: PromiseOrValue<string>,
     transactionId: PromiseOrValue<BytesLike>,
     requestId: PromiseOrValue<BigNumberish>,
+    extraData: PromiseOrValue<BytesLike>,
     overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
@@ -366,6 +369,7 @@ export interface IEntitlementChecker extends BaseContract {
       walletAddress: PromiseOrValue<string>,
       transactionId: PromiseOrValue<BytesLike>,
       requestId: PromiseOrValue<BigNumberish>,
+      extraData: PromiseOrValue<BytesLike>,
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -463,6 +467,7 @@ export interface IEntitlementChecker extends BaseContract {
       walletAddress: PromiseOrValue<string>,
       transactionId: PromiseOrValue<BytesLike>,
       requestId: PromiseOrValue<BigNumberish>,
+      extraData: PromiseOrValue<BytesLike>,
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
@@ -512,6 +517,7 @@ export interface IEntitlementChecker extends BaseContract {
       walletAddress: PromiseOrValue<string>,
       transactionId: PromiseOrValue<BytesLike>,
       requestId: PromiseOrValue<BigNumberish>,
+      extraData: PromiseOrValue<BytesLike>,
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
