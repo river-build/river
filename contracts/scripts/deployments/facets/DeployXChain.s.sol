@@ -8,7 +8,7 @@ pragma solidity ^0.8.23;
 //contracts
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 import {FacetHelper} from "contracts/test/diamond/Facet.t.sol";
-import {XChain} from "contracts/src/xchain/XChain.sol";
+import {XChain} from "contracts/src/base/registry/facets/xchain/XChain.sol";
 
 contract DeployXChain is Deployer, FacetHelper {
   // FacetHelper

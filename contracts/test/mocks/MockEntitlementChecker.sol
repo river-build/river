@@ -12,7 +12,7 @@ import {NodeOperatorFacet} from "contracts/src/base/registry/facets/operator/Nod
 import {EntitlementChecker} from "contracts/src/base/registry/facets/checker/EntitlementChecker.sol";
 import {NodeOperatorStorage, NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
 import {OwnableBase} from "@river-build/diamond/src/facets/ownable/OwnableBase.sol";
-import {XChain} from "contracts/src/xchain/XChain.sol";
+import {XChain} from "contracts/src/base/registry/facets/xchain/XChain.sol";
 
 contract MockEntitlementChecker is
   OwnableBase,

@@ -4,8 +4,6 @@ pragma solidity ^0.8.23;
 // interfaces
 import {IXChain} from "./IXChain.sol";
 import {IEntitlementGated} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
-import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
-import {IEntitlementCheckerBase} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
 
 // libraries
 import {XChainLib} from "./XChainLib.sol";

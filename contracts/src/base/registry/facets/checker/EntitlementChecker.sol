@@ -9,7 +9,7 @@ import {IEntitlementGatedBase} from "contracts/src/spaces/facets/gated/IEntitlem
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {EntitlementCheckerStorage} from "./EntitlementCheckerStorage.sol";
 import {NodeOperatorStorage, NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
-import {XChainLib} from "contracts/src/xchain/XChainLib.sol";
+import {XChainLib} from "contracts/src/base/registry/facets/xchain/XChainLib.sol";
 
 // contracts
 import {Facet} from "@river-build/diamond/src/facets/Facet.sol";
