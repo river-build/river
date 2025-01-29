@@ -679,6 +679,11 @@ func (r *StreamView) shouldSnapshot(cfg *crypto.OnChainSettings) bool {
 	return false
 }
 
+// ValidateNextEvent validates that the event can be added to the stream.
+// It checks that the preceding miniblock hash references a recent block,
+// that the event does not already exist in any blocks after the referenced miniblock,
+// and that the event does not exist in the minipool.
+// Time-based recency check is disabled if currentTime is zero.
 func (r *StreamView) ValidateNextEvent(
 	ctx context.Context,
 	cfg *crypto.OnChainSettings,
@@ -744,7 +749,8 @@ func (r *StreamView) ValidateNextEvent(
 
 	// make sure we're recent
 	// if the user isn't adding the latest block, allow it if the block after was recently created
-	if foundBlockAt < len(r.blocks)-1 && !r.isRecentBlock(cfg, r.blocks[foundBlockAt+1], currentTime) {
+	// if time is zero, disable recency check - this is used for replicated add after ValidateNextEvent was already called as part of CanAddEvent
+	if !currentTime.IsZero() && foundBlockAt < len(r.blocks)-1 && !r.isRecentBlock(cfg, r.blocks[foundBlockAt+1], currentTime) {
 		return RiverError(
 			Err_BAD_PREV_MINIBLOCK_HASH,
 			"prevMiniblockHash did not reference a recent block",

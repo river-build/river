@@ -5,6 +5,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
+	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
@@ -25,6 +26,7 @@ var _ AddableStream = (*replicatedStream)(nil)
 func (r *replicatedStream) AddEvent(ctx context.Context, event *ParsedEvent) error {
 	remotes, _ := r.nodes.GetRemotesAndIsLocal()
 	if len(remotes) == 0 {
+		RiverError()
 		return r.localStream.AddEvent(ctx, event)
 	}
 
