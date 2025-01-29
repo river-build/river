@@ -110,7 +110,7 @@ func addEventToStream(
 	t *testing.T,
 	ctx context.Context,
 	streamCacheParams *StreamCacheParams,
-	stream SyncStream,
+	stream *Stream,
 	data string,
 	prevMiniblock *MiniblockRef,
 ) {
@@ -129,10 +129,10 @@ func addEventToStream(
 func addEventToView(
 	t *testing.T,
 	streamCacheParams *StreamCacheParams,
-	view *streamViewImpl,
+	view *StreamView,
 	data string,
 	prevMiniblock *MiniblockRef,
-) *streamViewImpl {
+) *StreamView {
 	view, err := view.copyAndAddEvent(
 		MakeEvent(
 			t,
@@ -146,8 +146,8 @@ func addEventToView(
 	return view
 }
 
-func getView(t *testing.T, ctx context.Context, stream *streamImpl) *streamViewImpl {
-	view, err := stream.getViewIfLocal(ctx)
+func getView(t *testing.T, ctx context.Context, stream *Stream) *StreamView {
+	view, err := stream.GetViewIfLocal(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, view)
 	return view
@@ -240,9 +240,8 @@ func TestCandidatePromotionCandidateInPlace(t *testing.T) {
 		spaceStreamId,
 	)
 
-	syncStream, viewInt := tt.createStream(spaceStreamId, genesisMb.Proto)
-	stream := syncStream.(*streamImpl)
-	view := viewInt.(*streamViewImpl)
+	syncStream, view := tt.createStream(spaceStreamId, genesisMb.Proto)
+	stream := syncStream
 
 	addEventToStream(t, ctx, tt.instances[0].params, stream, "1", view.LastBlock().Ref)
 	addEventToStream(t, ctx, tt.instances[0].params, stream, "2", view.LastBlock().Ref)
@@ -266,7 +265,7 @@ func TestCandidatePromotionCandidateInPlace(t *testing.T) {
 
 	require.NoError(stream.promoteCandidate(ctx, candidate.Ref))
 
-	view, err = stream.getViewIfLocal(ctx)
+	view, err = stream.GetViewIfLocal(ctx)
 	require.NoError(err)
 	require.EqualValues(candidate.Ref, view.LastBlock().Ref)
 	require.Equal(0, view.minipool.events.Len())
@@ -287,9 +286,8 @@ func TestCandidatePromotionCandidateIsDelayed(t *testing.T) {
 		spaceStreamId,
 	)
 
-	syncStream, viewInt := tt.createStream(spaceStreamId, genesisMb.Proto)
-	stream := syncStream.(*streamImpl)
-	view := viewInt.(*streamViewImpl)
+	syncStream, view := tt.createStream(spaceStreamId, genesisMb.Proto)
+	stream := syncStream
 
 	addEventToStream(t, ctx, params, stream, "1", view.LastBlock().Ref)
 	addEventToStream(t, ctx, params, stream, "2", view.LastBlock().Ref)
