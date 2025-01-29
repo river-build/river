@@ -69,6 +69,7 @@ abstract contract MembershipJoin is
     _validateJoinSpace(receiver);
     _validatePayment();
     _validateUserReferral(receiver, referral);
+
     address sender = msg.sender;
     bool isNotReferral = _isNotReferral(referral);
 
