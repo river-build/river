@@ -84,11 +84,21 @@ func RiverError(code protocol.Err, msg string, tags ...any) *RiverErrorImpl {
 	return e
 }
 
+func RiverErrorWithBase(code protocol.Err, msg string, base error, tags ...any) *RiverErrorImpl {
+	return RiverErrorWithBases(code, msg, []error{base}, tags...)
+}
+
+func RiverErrorWithBases(code protocol.Err, msg string, bases []error, tags ...any) *RiverErrorImpl {
+	e := RiverError(code, msg, tags...)
+	e.Bases = bases
+	return e
+}
+
 type RiverErrorImpl struct {
 	Code      protocol.Err
 	Msg       string
 	NamedTags []RiverErrorTag
-	Base      error
+	Bases     []error
 	Funcs     []string
 }
 
@@ -106,15 +116,15 @@ func (e *RiverErrorImpl) Error() string {
 	return sb.String()
 }
 
-func (e *RiverErrorImpl) Unwrap() error {
-	return e.Base
+func (e *RiverErrorImpl) Unwrap() []error {
+	return e.Bases
 }
 
 func (e *RiverErrorImpl) Is(target error) bool {
 	if riverErr, ok := target.(*RiverErrorImpl); ok && riverErr.Code == e.Code {
 		return true
 	}
-	return errors.Is(e.Base, target)
+	return false
 }
 
 func (e *RiverErrorImpl) WriteMessage(sb *strings.Builder) {
@@ -134,11 +144,12 @@ func (e *RiverErrorImpl) WriteMessage(sb *strings.Builder) {
 		sb.WriteString(e.Msg)
 	}
 
-	if e.Base != nil {
-		if e.Msg != "" {
-			sb.WriteString(" base_error: ")
-		}
-		sb.WriteString(e.Base.Error())
+	for i, base := range e.Bases {
+		sb.WriteString("<<base ")
+		sb.WriteString(strconv.Itoa(i))
+		sb.WriteString(": ")
+		sb.WriteString(base.Error())
+		sb.WriteString("<<base_end")
 	}
 }
 
@@ -258,8 +269,8 @@ func AsRiverError(err error, defaultCode ...protocol.Err) *RiverErrorImpl {
 			code = protocol.Err_DOWNSTREAM_NETWORK_ERROR
 		}
 		return &RiverErrorImpl{
-			Code: code,
-			Base: err,
+			Code:  code,
+			Bases: []error{err},
 		}
 	}
 
@@ -290,7 +301,7 @@ func AsRiverError(err error, defaultCode ...protocol.Err) *RiverErrorImpl {
 		}
 		return &RiverErrorImpl{
 			Code:      code,
-			Base:      err,
+			Bases:     []error{err},
 			Msg:       "Contract Returned Error",
 			NamedTags: tags,
 		}
@@ -303,8 +314,8 @@ func AsRiverError(err error, defaultCode ...protocol.Err) *RiverErrorImpl {
 			code = protocol.Err_DEADLINE_EXCEEDED
 		}
 		return &RiverErrorImpl{
-			Code: code,
-			Base: err,
+			Code:  code,
+			Bases: []error{err},
 		}
 	} else {
 		return &RiverErrorImpl{
