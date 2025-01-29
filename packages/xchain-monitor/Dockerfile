@@ -42,13 +42,13 @@ COPY --from=builder /river/packages/xchain-monitor/dist /river/packages/xchain-m
 # install dd-trace again (because the bundler excludes some of the sub-dependencies)
 WORKDIR /river/packages/xchain-monitor
 RUN yarn init --yes
-#RUN yarn add dd-trace@^5.19.0
+RUN yarn add dd-trace@^5.19.0
 
 # run the service
 ARG GIT_SHA
 
-# ENV DD_GIT_REPOSITORY_URL="https://github.com/river-build/river" \
-#     DD_GIT_COMMIT_SHA=${GIT_SHA} \
-#     NODE_ENV=production
+ENV DD_GIT_REPOSITORY_URL="https://github.com/river-build/river" \
+    DD_GIT_COMMIT_SHA=${GIT_SHA} \
+    NODE_ENV=production
 
 CMD ["node", "--enable-source-maps", "./dist/node_esbuild.cjs"]
