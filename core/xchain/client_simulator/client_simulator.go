@@ -240,7 +240,7 @@ func (cs *clientSimulator) executeCheck(
 
 	pendingTx, err := cs.baseChain.TxPool.Submit(
 		ctx,
-		"RequestEntitlementCheck",
+		"RequestEntitlementCheckV1RuleDataV1",
 		func(opts *bind.TransactOpts) (*types.Transaction, error) {
 			log.Infow(
 				"Requesting entitlement check for legacy space",
@@ -255,8 +255,8 @@ func (cs *clientSimulator) executeCheck(
 				log.Infow("Calling RequestLegacyEntitlementCheckV3", "opts", opts, "ruleData", ruleData)
 				return cs.entitlementGated.RequestLegacyEntitlementCheckV3(opts, [](*big.Int){big.NewInt(0)}, *ruleData)
 			} else {
-				log.Infow("Calling RequestEntitlementCheck", "opts", opts, "ruleData", ruleData)
-				return cs.entitlementGated.RequestEntitlementCheck(opts, big.NewInt(0), *ruleData)
+				log.Infow("Calling RequestEntitlementCheckV1RuleDataV1", "opts", opts, "ruleData", ruleData)
+				return cs.entitlementGated.RequestEntitlementCheckV1RuleDataV1(opts, big.NewInt(0), *ruleData)
 			}
 		})
 
@@ -311,13 +311,13 @@ func (cs *clientSimulator) executeV2Check(
 			)
 
 			if emitV2Event {
-				tx, err := cs.entitlementGated.RequestEntitlementCheckV3(opts, []*big.Int{big.NewInt(0)}, *ruleData)
-				log.Infow("RequestEntitlementCheckV3 called", "tx", tx, "err", err)
+				tx, err := cs.entitlementGated.RequestEntitlementCheckV2RuleDataV2(opts, []*big.Int{big.NewInt(0)}, *ruleData)
+				log.Infow("RequestEntitlementCheckV2RuleDataV2 called", "tx", tx, "err", err)
 				return tx, err
 
 			} else {
-				tx, err := cs.entitlementGated.RequestEntitlementCheckV2(opts, []*big.Int{big.NewInt(0)}, *ruleData)
-				log.Infow("RequestEntitlementCheckV2 called", "tx", tx, "err", err)
+				tx, err := cs.entitlementGated.RequestEntitlementCheckV1RuleDataV2(opts, []*big.Int{big.NewInt(0)}, *ruleData)
+				log.Infow("RequestEntitlementCheckV1RuleDataV2 called", "tx", tx, "err", err)
 				return tx, err
 			}
 		})
