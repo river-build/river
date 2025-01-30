@@ -1752,6 +1752,45 @@ func (s *PostgresStreamStore) getStreamsTx(ctx context.Context, tx pgx.Tx) ([]St
 	return ret, nil
 }
 
+// GetEphemeralStreams returns a list of all ephemeral event streams
+func (s *PostgresStreamStore) GetEphemeralStreams(ctx context.Context) ([]StreamId, error) {
+	var streams []StreamId
+	err := s.txRunner(
+		ctx,
+		"GetEphemeralStreams",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			var err error
+			streams, err = s.getEphemeralStreamsTx(ctx, tx)
+			return err
+		},
+		nil,
+	)
+	return streams, err
+}
+
+func (s *PostgresStreamStore) getEphemeralStreamsTx(ctx context.Context, tx pgx.Tx) ([]StreamId, error) {
+	rows, err := tx.Query(ctx, "SELECT stream_id FROM es WHERE ephemeral = true")
+	if err != nil {
+		return nil, err
+	}
+
+	var streams []StreamId
+	var stream string
+	if _, err := pgx.ForEachRow(rows, []any{&stream}, func() error {
+		streamId, err := StreamIdFromString(stream)
+		if err != nil {
+			return err
+		}
+
+		streams = append(streams, streamId)
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return streams, nil
+}
+
 func (s *PostgresStreamStore) DeleteStream(ctx context.Context, streamId StreamId) error {
 	return s.txRunner(
 		ctx,
@@ -1776,6 +1815,40 @@ func (s *PostgresStreamStore) deleteStreamTx(ctx context.Context, tx pgx.Tx, str
 			`DELETE from {{miniblocks}} WHERE stream_id = $1;
 				DELETE from {{minipools}} WHERE stream_id = $1;
 				DELETE from {{miniblock_candidates}} where stream_id = $1;
+				DELETE FROM es WHERE stream_id = $1`,
+			streamId,
+		),
+		streamId,
+	)
+	return err
+}
+
+// DeleteEphemeralStream deletes the given ephemeral stream by its ID.
+func (s *PostgresStreamStore) DeleteEphemeralStream(ctx context.Context, streamId StreamId) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	return s.txRunner(
+		ctx,
+		"DeleteEphemeralStream",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			return s.deleteEphemeralStreamTx(ctx, tx, streamId)
+		},
+		nil,
+		"streamId", streamId,
+	)
+}
+
+func (s *PostgresStreamStore) deleteEphemeralStreamTx(ctx context.Context, tx pgx.Tx, streamId StreamId) error {
+	if _, err := s.lockEphemeralStream(ctx, tx, streamId, true); err != nil {
+		return err
+	}
+
+	_, err := tx.Exec(
+		ctx,
+		s.sqlForStream(
+			`DELETE from {{miniblocks}} WHERE stream_id = $1;
+				DELETE from {{minipools}} WHERE stream_id = $1;
 				DELETE FROM es WHERE stream_id = $1`,
 			streamId,
 		),

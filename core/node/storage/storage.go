@@ -151,6 +151,12 @@ type StreamStorage interface {
 	// IsStreamEphemeral returns true if the stream is ephemeral.
 	IsStreamEphemeral(ctx context.Context, streamId StreamId) (bool, error)
 
+	// GetEphemeralStreams returns the list of ephemeral stream IDs.
+	GetEphemeralStreams(ctx context.Context) ([]StreamId, error)
+
+	// DeleteEphemeralStream deletes the ephemeral stream by its ID.
+	DeleteEphemeralStream(ctx context.Context, streamId StreamId) error
+
 	Close(ctx context.Context)
 }
 
