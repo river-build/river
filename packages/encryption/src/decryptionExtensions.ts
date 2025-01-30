@@ -404,7 +404,7 @@ export abstract class BaseDecryptionExtensions {
                 .catch((e) => this.log.error('ProcessTick Error', e))
                 .finally(() => {
                     this.timeoutId = undefined
-                    this.checkStartTicking()
+                    setTimeout(() => this.checkStartTicking())
                 })
         }, this.getDelayMs())
     }
