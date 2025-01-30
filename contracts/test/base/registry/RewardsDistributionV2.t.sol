@@ -476,7 +476,7 @@ contract RewardsDistributionV2Test is
       address(this)
     );
 
-    vm.expectRevert(Towns.Towns__DelegateeSameAsCurrent.selector);
+    vm.expectRevert(Towns.DelegateeSameAsCurrent.selector);
     rewardsDistributionFacet.redelegate(depositId, operator);
   }
 
@@ -714,7 +714,7 @@ contract RewardsDistributionV2Test is
   function test_initiateWithdraw_revertIf_initiateWithdrawAgain() public {
     uint256 depositId = test_initiateWithdraw();
 
-    vm.expectRevert(Towns.Towns__DelegateeSameAsCurrent.selector);
+    vm.expectRevert(Towns.DelegateeSameAsCurrent.selector);
     rewardsDistributionFacet.initiateWithdraw(depositId);
   }
 

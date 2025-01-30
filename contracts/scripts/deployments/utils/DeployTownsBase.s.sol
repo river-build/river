@@ -8,12 +8,19 @@ pragma solidity ^0.8.19;
 //contracts
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 import {Towns} from "contracts/src/tokens/towns/base/Towns.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {TownsDeployer} from "contracts/src/tokens/towns/base/TownsDeployer.sol";
 
 contract DeployTownsBase is Deployer {
-  address public bridgeBase; // L2StandardBridge
   address public l1Token;
-  address public superChain;
+
+  bytes32 internal IMPLEMENTATION_SALT =
+    0xf39fd6e51aad88f6f4ce6ab8827279cfffb922668abffef9bc4ea2f118000040;
+
+  bytes32 internal TOKEN_DEPLOYER_SALT =
+    0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226608f610eaf062efbe0b0000c0;
+
+  bytes32 internal TOKEN_SALT =
+    0x0000005173af2a4b7d865e16dffd2d8be6f5420f07840b014c80361e8c000020;
 
   function versionName() public pure override returns (string memory) {
     return "towns";
@@ -21,43 +28,16 @@ contract DeployTownsBase is Deployer {
 
   function __deploy(address deployer) public override returns (address) {
     l1Token = _getToken();
-    bridgeBase = _getBridge(deployer);
 
     vm.startBroadcast(deployer);
-    address implementation = address(
-      new Towns({
-        _bridge: bridgeBase,
-        _superChain: superChain,
-        _remoteToken: l1Token
-      })
-    );
-
-    address proxy = address(
-      new ERC1967Proxy(
-        implementation,
-        abi.encodeCall(Towns.initialize, deployer)
-      )
-    );
-
+    address implementation = address(new Towns{salt: IMPLEMENTATION_SALT}());
+    TownsDeployer tokenDeployer = new TownsDeployer{
+      salt: TOKEN_DEPLOYER_SALT
+    }();
+    address proxy = tokenDeployer.deploy(implementation, l1Token, TOKEN_SALT);
     vm.stopBroadcast();
 
     return proxy;
-  }
-
-  function _getBridge(address deployer) internal view returns (address) {
-    if (block.chainid == 31337 || block.chainid == 31338) {
-      return deployer;
-    } else {
-      return 0x4200000000000000000000000000000000000010;
-    }
-  }
-
-  function _getSuperChain(address deployer) internal view returns (address) {
-    if (block.chainid == 31337 || block.chainid == 31338) {
-      return deployer;
-    } else {
-      return 0x4200000000000000000000000000000000000028;
-    }
   }
 
   function _getToken() internal view returns (address) {
