@@ -2,7 +2,7 @@ package rpc
 
 import (
 	"context"
-	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -14,6 +14,33 @@ import (
 )
 
 func (s *Service) replicatedAddEvent(ctx context.Context, stream *Stream, event *ParsedEvent) error {
+	for {
+		err := s.replicatedAddEventImpl(ctx, stream, event)
+		if err == nil {
+			return nil
+		} else {
+			// Look for Err_MINIBLOCK_TOO_NEW is base errors.
+			riverErr := AsRiverError(err)
+			retry := false
+			for _, base := range riverErr.Bases {
+				if AsRiverError(base).Code == Err_MINIBLOCK_TOO_NEW {
+					retry = true
+					break
+				}
+			}
+			if !retry {
+				return err
+			}
+		}
+
+		err = SleepWithContext(ctx, 100*time.Millisecond)
+		if err != nil {
+			return err
+		}
+	}
+}
+
+func (s *Service) replicatedAddEventImpl(ctx context.Context, stream *Stream, event *ParsedEvent) error {
 	remotes, isLocal := stream.GetRemotesAndIsLocal()
 	if !isLocal {
 		return RiverError(Err_INTERNAL, "replicatedAddEvent: stream must be local")
@@ -49,20 +76,5 @@ func (s *Service) replicatedAddEvent(ctx context.Context, stream *Stream, event 
 		})
 	}
 
-	err := sender.Wait()
-	if err != nil {
-		// Count Err_MINIBLOCK_TOO_NEW is base errors.
-		riverErr := AsRiverError(err)
-		count := 0
-		for _, base := range riverErr.Bases {
-			fmt.Printf("base type: %T\n", base)
-			if AsRiverError(base).Code == Err_MINIBLOCK_TOO_NEW {
-				count++
-			}
-		}
-		fmt.Println("========================================= MINIBLOCK_TOO_NEW", count)
-		return err
-	}
-
-	return nil
+	return sender.Wait()
 }
