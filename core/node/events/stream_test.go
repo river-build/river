@@ -64,6 +64,31 @@ func MakeGenesisMiniblockForUserSettingsStream(
 	return mbInfo
 }
 
+func MakeGenesisMiniblockForMediaStream(
+	t *testing.T,
+	userWallet *crypto.Wallet,
+	nodeWallet *crypto.Wallet,
+	media *MediaPayload_Inception,
+) *MiniblockInfo {
+	inception, err := MakeParsedEventWithPayload(
+		userWallet,
+		Make_MediaPayload_Inception(media),
+		&MiniblockRef{},
+	)
+	require.NoError(t, err)
+
+	mb, err := MakeGenesisMiniblock(nodeWallet, []*ParsedEvent{inception})
+	require.NoError(t, err)
+
+	mbInfo, err := NewMiniblockInfoFromProto(
+		mb,
+		NewParsedMiniblockInfoOpts().WithExpectedBlockNumber(0).WithDoNotParseEvents(true),
+	)
+	require.NoError(t, err)
+
+	return mbInfo
+}
+
 func MakeTestBlockForUserSettingsStream(
 	t *testing.T,
 	userWallet *crypto.Wallet,

@@ -12,4 +12,5 @@ packages:
     github.com/river-build/river/core/node/protocol/protocolconnect:
         interfaces:
             StreamServiceClient:
+            NodeToNodeHandler:
 

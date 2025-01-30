@@ -90,7 +90,7 @@ func (s *StreamCache) normalizeEphemeralStream(
 			existingMbsMap[int64(num)] = struct{}{}
 		}
 
-		for num := int64(0); num <= int64(lastMiniblockNum)+1; num++ {
+		for num := int64(0); num <= lastMiniblockNum; num++ {
 			if _, exists := existingMbsMap[num]; !exists {
 				missingMbs = append(missingMbs, num)
 			}
