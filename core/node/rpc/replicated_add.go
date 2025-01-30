@@ -2,9 +2,11 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 
+	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
@@ -57,5 +59,20 @@ func (r *replicatedStream) AddEvent(ctx context.Context, event *ParsedEvent) err
 		})
 	}
 
-	return sender.Wait()
+	err := sender.Wait()
+	if err != nil {
+		// Count Err_MINIBLOCK_TOO_NEW is base errors.
+		riverErr := AsRiverError(err)
+		count := 0
+		for _, base := range riverErr.Bases {
+			fmt.Printf("base type: %T\n", base)
+			if AsRiverError(base).Code == Err_MINIBLOCK_TOO_NEW {
+				count++
+			}
+		}
+		fmt.Println("========================================= MINIBLOCK_TOO_NEW", count)
+		return err
+	}
+
+	return nil
 }
