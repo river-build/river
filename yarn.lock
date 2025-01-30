@@ -6724,6 +6724,7 @@ __metadata:
     typescript: ^5.1.6
     vite-plugin-wasm: ^3.4.1
     vitest: ^2.1.5
+    vitest-fetch-mock: ^0.4.3
   languageName: unknown
   linkType: soft
 
@@ -6830,6 +6831,25 @@ __metadata:
     typescript: ^5.1.6
     viem: ^2.21.51
     vitest: ^2.1.5
+    zod: ^3.21.4
+  languageName: unknown
+  linkType: soft
+
+"@river-build/xchain-monitor@workspace:packages/xchain-monitor":
+  version: 0.0.0-use.local
+  resolution: "@river-build/xchain-monitor@workspace:packages/xchain-monitor"
+  dependencies:
+    "@river-build/generated": "workspace:^"
+    "@river-build/web3": "workspace:^"
+    "@types/uuid": ^10.0.0
+    dotenv: ^16.4.5
+    esbuild-plugin-pino: ^2.2.0
+    pino: ^8.17.1
+    pino-pretty: ^13.0.0
+    tsx: ^4.7.1
+    typescript: ^5.1.6
+    uuid: ^8.3.2
+    viem: ^2.21.51
     zod: ^3.21.4
   languageName: unknown
   linkType: soft
@@ -29947,6 +29967,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"vitest-fetch-mock@npm:^0.4.3":
+  version: 0.4.3
+  resolution: "vitest-fetch-mock@npm:0.4.3"
+  peerDependencies:
+    vitest: ">=2.0.0"
+  checksum: e0a4d46b38ec5d50c7cc8756f8818325496f19299c5a0b4dff664085e92a9a7e2797b388627ccd607e979404fb53d4633ca2d54857f009b7938b39c2ea8a6149
+  languageName: node
+  linkType: hard
+
 "vitest@npm:^2.1.5":
   version: 2.1.5
   resolution: "vitest@npm:2.1.5"
@@ -30658,18 +30687,6 @@ __metadata:
   checksum: 442badcce1f1178ec87a0b5372ae2e9771e07c4929a3180321901f226127f252441e8689d765aa5cfba5f50ac60dd830954afc5aeae81609aefa11d3ddf5cecf
   languageName: node
   linkType: hard
-
-"xchain-monitor@workspace:packages/xchain-monitor":
-  version: 0.0.0-use.local
-  resolution: "xchain-monitor@workspace:packages/xchain-monitor"
-  dependencies:
-    "@river-build/generated": "workspace:^"
-    "@river-build/web3": "workspace:^"
-    tsx: ^4.7.1
-    typescript: ^5.1.6
-    viem: ^2.21.51
-  languageName: unknown
-  linkType: soft
 
 "xdg-basedir@npm:^5.1.0":
   version: 5.1.0
