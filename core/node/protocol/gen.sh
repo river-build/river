@@ -9,7 +9,8 @@ buf generate --template core/node/protocol/buf.gen.yaml \
   --path protocol/protocol.proto \
   --path protocol/internode.proto \
   --path protocol/auth.proto \
-  --path protocol/notifications.proto
+  --path protocol/notifications.proto \
+  --path protocol/bots.proto
 popd > /dev/null
 
 cd ../protocol_extensions
