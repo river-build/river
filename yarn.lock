@@ -6834,6 +6834,25 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@river-build/xchain-monitor@workspace:packages/xchain-monitor":
+  version: 0.0.0-use.local
+  resolution: "@river-build/xchain-monitor@workspace:packages/xchain-monitor"
+  dependencies:
+    "@river-build/generated": "workspace:^"
+    "@river-build/web3": "workspace:^"
+    "@types/uuid": ^10.0.0
+    dotenv: ^16.4.5
+    esbuild-plugin-pino: ^2.2.0
+    pino: ^8.17.1
+    pino-pretty: ^13.0.0
+    tsx: ^4.7.1
+    typescript: ^5.1.6
+    uuid: ^8.3.2
+    viem: ^2.21.51
+    zod: ^3.21.4
+  languageName: unknown
+  linkType: soft
+
 "@rollup/plugin-inject@npm:^5.0.5":
   version: 5.0.5
   resolution: "@rollup/plugin-inject@npm:5.0.5"
@@ -30658,18 +30677,6 @@ __metadata:
   checksum: 442badcce1f1178ec87a0b5372ae2e9771e07c4929a3180321901f226127f252441e8689d765aa5cfba5f50ac60dd830954afc5aeae81609aefa11d3ddf5cecf
   languageName: node
   linkType: hard
-
-"xchain-monitor@workspace:packages/xchain-monitor":
-  version: 0.0.0-use.local
-  resolution: "xchain-monitor@workspace:packages/xchain-monitor"
-  dependencies:
-    "@river-build/generated": "workspace:^"
-    "@river-build/web3": "workspace:^"
-    tsx: ^4.7.1
-    typescript: ^5.1.6
-    viem: ^2.21.51
-  languageName: unknown
-  linkType: soft
 
 "xdg-basedir@npm:^5.1.0":
   version: 5.1.0
