@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -13,6 +14,32 @@ import (
 )
 
 func (s *Service) replicatedAddEvent(ctx context.Context, stream *Stream, event *ParsedEvent) error {
+	backoff := BackoffTracker{
+		NextDelay:   100 * time.Millisecond,
+		MaxAttempts: 10,
+		Multiplier:  2,
+		Divisor:     1,
+	}
+
+	for {
+		err := s.replicatedAddEventImpl(ctx, stream, event)
+		if err == nil {
+			return nil
+		}
+
+		// Check if Err_MINIBLOCK_TOO_NEW code is present.
+		if AsRiverError(err).IsCodeWithBases(Err_MINIBLOCK_TOO_NEW) {
+			err = backoff.Wait(ctx, err)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+		return err
+	}
+}
+
+func (s *Service) replicatedAddEventImpl(ctx context.Context, stream *Stream, event *ParsedEvent) error {
 	remotes, isLocal := stream.GetRemotesAndIsLocal()
 	if !isLocal {
 		return RiverError(Err_INTERNAL, "replicatedAddEvent: stream must be local")
