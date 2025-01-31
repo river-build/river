@@ -8,6 +8,7 @@ pragma solidity ^0.8.19;
 //contracts
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 import {Towns} from "contracts/src/tokens/towns/base/Towns.sol";
+import {MockTowns} from "contracts/test/mocks/MockTowns.sol";
 import {TownsDeployer} from "contracts/src/tokens/towns/base/TownsDeployer.sol";
 
 contract DeployTownsBase is Deployer {
@@ -20,8 +21,9 @@ contract DeployTownsBase is Deployer {
   function __deploy(address deployer) public override returns (address) {
     l1Token = _getToken();
 
+    address implementation = _getImplementation(deployer);
+
     vm.startBroadcast(deployer);
-    address implementation = address(new Towns());
     TownsDeployer tokenDeployer = new TownsDeployer();
     address proxy = tokenDeployer.deploy(
       implementation,
@@ -29,8 +31,19 @@ contract DeployTownsBase is Deployer {
       keccak256(abi.encodePacked(deployer, implementation, tokenDeployer))
     );
     vm.stopBroadcast();
-
     return proxy;
+  }
+
+  function _getImplementation(
+    address deployer
+  ) internal returns (address implementation) {
+    vm.startBroadcast(deployer);
+    if (block.chainid == 31337 || block.chainid == 31338) {
+      implementation = address(new MockTowns());
+    } else {
+      implementation = address(new Towns());
+    }
+    vm.stopBroadcast();
   }
 
   function _getToken() internal view returns (address) {
