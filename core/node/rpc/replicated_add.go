@@ -14,29 +14,28 @@ import (
 )
 
 func (s *Service) replicatedAddEvent(ctx context.Context, stream *Stream, event *ParsedEvent) error {
+	backoff := BackoffTracker{
+		NextDelay:   100 * time.Millisecond,
+		MaxAttempts: 10,
+		Multiplier:  2,
+		Divisor:     1,
+	}
+
 	for {
 		err := s.replicatedAddEventImpl(ctx, stream, event)
 		if err == nil {
 			return nil
-		} else {
-			// Look for Err_MINIBLOCK_TOO_NEW is base errors.
-			riverErr := AsRiverError(err)
-			retry := false
-			for _, base := range riverErr.Bases {
-				if AsRiverError(base).Code == Err_MINIBLOCK_TOO_NEW {
-					retry = true
-					break
-				}
-			}
-			if !retry {
-				return err
-			}
 		}
 
-		err = SleepWithContext(ctx, 100*time.Millisecond)
-		if err != nil {
-			return err
+		// Check if Err_MINIBLOCK_TOO_NEW code is present.
+		if AsRiverError(err).IsCodeWithBases(Err_MINIBLOCK_TOO_NEW) {
+			err = backoff.Wait(ctx, err)
+			if err != nil {
+				return err
+			}
+			continue
 		}
+		return err
 	}
 }
 
