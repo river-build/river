@@ -390,7 +390,7 @@ func (s *Service) prepareStore() error {
 		case ServerModeNotification:
 			schema = storage.DbSchemaNameForNotifications(s.config.RiverChain.ChainId)
 		case ServerModeBotRegistry:
-			schema = storage.DbSchemaNameForBotRegistryService(s.config.RiverChain.ChainId)
+			schema = storage.DbSchemaNameForBotRegistryService(s.config.BotRegistry.BotRegistryId)
 		default:
 			return RiverError(
 				Err_BAD_CONFIG,

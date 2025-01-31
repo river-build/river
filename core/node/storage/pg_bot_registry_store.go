@@ -71,8 +71,8 @@ var _ BotRegistryStore = (*PostgresBotRegistryStore)(nil)
 //go:embed bot_registry_migrations/*.sql
 var botRegistryDir embed.FS
 
-func DbSchemaNameForBotRegistryService(riverChainId uint64) string {
-	return fmt.Sprintf("b_%d", riverChainId)
+func DbSchemaNameForBotRegistryService(botServiceId string) string {
+	return fmt.Sprintf("bot_%s", hex.EncodeToString([]byte(botServiceId)))
 }
 
 // NewPostgresBotRegistryStore instantiates a new PostgreSQL persistent storage for the bot registry service.
