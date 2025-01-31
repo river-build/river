@@ -70,12 +70,45 @@ func (s *Service) RegisterWebhook(
 }
 
 func (s *Service) GetStatus(
-	context.Context,
-	*connect.Request[GetStatusRequest],
+	ctx context.Context,
+	req *connect.Request[GetStatusRequest],
 ) (
 	*connect.Response[GetStatusResponse],
 	error,
 ) {
-	// TODO
-	return &connect.Response[GetStatusResponse]{}, nil
+	bot, err := base.BytesToAddress(req.Msg.BotId)
+	if err != nil {
+		return nil, base.WrapRiverError(Err_INVALID_ARGUMENT, err).
+			Message("Invalid bot id").
+			Tag("bot_id", req.Msg.BotId).
+			Func("GetStatus")
+	}
+
+	// TODO: implement 2 second caching here
+
+	if _, err = s.store.GetBotInfo(ctx, bot); err != nil {
+		// Bot does not exist
+		if base.IsRiverErrorCode(err, Err_NOT_FOUND) {
+			return &connect.Response[GetStatusResponse]{
+				Msg: &GetStatusResponse{
+					IsRegistered: false,
+				},
+			}, nil
+		} else {
+			// Error fetching bot
+			return nil, base.WrapRiverError(Err_INTERNAL, err).
+				Message("Unable to fetch info for bot").
+				Tag("bot_id", bot).
+				Func("GetStatus")
+		}
+	}
+
+	// TODO: issue request to bot service, confirm 200 response, and
+	// validate returned version info. Return in the response.
+
+	return &connect.Response[GetStatusResponse]{
+		Msg: &GetStatusResponse{
+			IsRegistered: true,
+		},
+	}, nil
 }
