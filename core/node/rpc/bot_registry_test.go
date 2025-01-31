@@ -2,9 +2,12 @@ package rpc
 
 import (
 	"context"
+	"crypto/rand"
 	"testing"
 
 	"connectrpc.com/connect"
+
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
@@ -49,10 +52,41 @@ func initBotRegistryService(
 	return botRegistry, url
 }
 
+// invalidAddressBytes is an array of bytes that cannot be parsed into an address, because
+// it is too long. Valid addresses are 20 bytes.
+var invalidAddressBytes = [21]byte{
+	'a',
+	'a',
+	'a',
+	'a',
+	'a',
+	'a',
+	'a',
+	'a',
+	'a',
+	'a',
+	'a',
+	'a',
+	'a',
+	'a',
+	'a',
+	'a',
+	'a',
+	'a',
+	'a',
+	'a',
+	'a',
+}
+
 func TestBotRegistry(t *testing.T) {
-	tester := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true, printTestLogs: true})
+	tester := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
 	service, _ := initBotRegistryService(tester.ctx, tester)
 
+	var unregisteredBot common.Address
+	_, err := rand.Read(unregisteredBot[:])
+	tester.require.NoError(err)
+
+	// TODO: bot and bot owner need to authenticate for the RegisterWebhook endpoint
 	botWallet, err := crypto.NewWallet(tester.ctx)
 	tester.require.NoError(err)
 	ownerWallet, err := crypto.NewWallet(tester.ctx)
@@ -72,35 +106,11 @@ func TestBotRegistry(t *testing.T) {
 	tester.require.NoError(err)
 	tester.require.NotNil(resp)
 
-	tooLong := [21]byte{
-		'a',
-		'a',
-		'a',
-		'a',
-		'a',
-		'a',
-		'a',
-		'a',
-		'a',
-		'a',
-		'a',
-		'a',
-		'a',
-		'a',
-		'a',
-		'a',
-		'a',
-		'a',
-		'a',
-		'a',
-		'a',
-	}
-
 	resp, err = service.BotRegistryService.RegisterWebhook(
 		tester.ctx,
 		&connect.Request[protocol.RegisterWebhookRequest]{
 			Msg: &protocol.RegisterWebhookRequest{
-				BotId:      tooLong[:],
+				BotId:      invalidAddressBytes[:],
 				BotOwnerId: ownerWallet.Address[:],
 				WebhookUrl: "localhost:1234/abc",
 			},
@@ -108,6 +118,29 @@ func TestBotRegistry(t *testing.T) {
 	)
 	tester.require.Nil(resp)
 	tester.require.ErrorContains(err, "Invalid bot id")
-	tester.t.Log(err)
 	tester.require.True(base.IsRiverErrorCode(err, protocol.Err_BAD_ADDRESS))
+
+	status, err := service.BotRegistryService.GetStatus(
+		tester.ctx,
+		&connect.Request[protocol.GetStatusRequest]{
+			Msg: &protocol.GetStatusRequest{
+				BotId: botWallet.Address[:],
+			},
+		},
+	)
+	tester.require.NoError(err)
+	tester.require.NotNil(status)
+	tester.require.True(status.Msg.IsRegistered)
+
+	status, err = service.BotRegistryService.GetStatus(
+		tester.ctx,
+		&connect.Request[protocol.GetStatusRequest]{
+			Msg: &protocol.GetStatusRequest{
+				BotId: unregisteredBot[:],
+			},
+		},
+	)
+	tester.require.NoError(err)
+	tester.require.NotNil(status)
+	tester.require.False(status.Msg.IsRegistered)
 }
