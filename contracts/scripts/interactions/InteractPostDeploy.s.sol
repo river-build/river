@@ -44,7 +44,6 @@ contract InteractPostDeploy is Interaction {
     // this is for anvil deployment only
     MockTowns(townsBase).localMint(riverAirdrop, MAX_CLAIMABLE_SUPPLY);
     ISpaceOwner(spaceOwner).setFactory(spaceFactory);
-    ISpaceOwner(spaceOwner).setFactory(spaceFactory);
     IImplementationRegistry(spaceFactory).addImplementation(baseRegistry);
     IImplementationRegistry(spaceFactory).addImplementation(riverAirdrop);
     SpaceDelegationFacet(baseRegistry).setRiverToken(townsBase);

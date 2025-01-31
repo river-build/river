@@ -9,9 +9,10 @@ import {Create2Utils} from "contracts/src/utils/Create2Utils.sol";
 
 // contracts
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {MockTowns} from "contracts/test/mocks/MockTowns.sol";
 import {Towns} from "contracts/src/tokens/towns/base/Towns.sol";
 
-contract TownsDeployer is ITownsDeployer {
+contract MockTownsDeployer is ITownsDeployer {
   function deploy(
     address l1Token,
     address owner,
@@ -20,7 +21,7 @@ contract TownsDeployer is ITownsDeployer {
   ) external returns (address) {
     address implementation = Create2Utils.create2Deploy(
       implementationSalt,
-      abi.encodePacked(type(Towns).creationCode)
+      abi.encodePacked(type(MockTowns).creationCode)
     );
 
     // Create proxy initialization bytecode

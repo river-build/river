@@ -2,13 +2,14 @@
 pragma solidity ^0.8.19;
 
 //interfaces
+import {ITownsDeployer} from "contracts/src/tokens/towns/base/ITownsDeployer.sol";
 
 //libraries
 
 //contracts
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
-import {Towns} from "contracts/src/tokens/towns/base/Towns.sol";
-import {MockTowns} from "contracts/test/mocks/MockTowns.sol";
+import {TownsDeployer} from "contracts/src/tokens/towns/base/TownsDeployer.sol";
+import {MockTownsDeployer} from "contracts/test/mocks/MockTownsDeployer.sol";
 import {TownsDeployer} from "contracts/src/tokens/towns/base/TownsDeployer.sol";
 
 contract DeployTownsBase is Deployer {
@@ -21,16 +22,26 @@ contract DeployTownsBase is Deployer {
   function __deploy(address deployer) public override returns (address) {
     l1Token = _getToken();
 
-    address implementation = _getImplementation(deployer);
+    address deployerImplementation = _getImplementation(deployer);
+    ITownsDeployer tokenDeployer = ITownsDeployer(deployerImplementation);
 
     vm.startBroadcast(deployer);
-    TownsDeployer tokenDeployer = new TownsDeployer();
     address proxy = tokenDeployer.deploy(
-      implementation,
       l1Token,
-      keccak256(abi.encodePacked(deployer, implementation, tokenDeployer))
+      deployer,
+      keccak256(
+        abi.encodePacked(
+          deployer,
+          deployerImplementation,
+          "TownsImplementation"
+        )
+      ),
+      keccak256(
+        abi.encodePacked(deployer, deployerImplementation, "TownsDeployerProxy")
+      )
     );
     vm.stopBroadcast();
+
     return proxy;
   }
 
@@ -39,9 +50,9 @@ contract DeployTownsBase is Deployer {
   ) internal returns (address implementation) {
     vm.startBroadcast(deployer);
     if (block.chainid == 31337 || block.chainid == 31338) {
-      implementation = address(new MockTowns());
+      implementation = address(new MockTownsDeployer());
     } else {
-      implementation = address(new Towns());
+      implementation = address(new TownsDeployer());
     }
     vm.stopBroadcast();
   }
