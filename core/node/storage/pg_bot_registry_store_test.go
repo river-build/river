@@ -116,13 +116,13 @@ func TestBotRegistryStorage(t *testing.T) {
 	require.NoError(err)
 	require.Equal(bot, info.Bot)
 	require.Equal(owner, info.Owner)
-	require.Equal(hook, info.Webhook)
+	require.Equal(hook, info.WebhookUrl)
 
 	info, err = store.GetBotInfo(params.ctx, bot2)
 	require.NoError(err)
 	require.Equal(info.Bot, bot2)
 	require.Equal(info.Owner, owner)
-	require.Equal(info.Webhook, hook2)
+	require.Equal(info.WebhookUrl, hook2)
 
 	info, err = store.GetBotInfo(params.ctx, bot3)
 	require.Nil(info)

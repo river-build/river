@@ -36,7 +36,7 @@ func (s *Service) startBotRegistryMode(opts *ServerStartOpts) error {
 		return AsRiverError(err).Message("Failed to init store").LogError(s.defaultLogger)
 	}
 
-	s.BotRegistryService, err = bot_registry.NewService(s.serverCtx)
+	s.BotRegistryService, err = bot_registry.NewService(s.serverCtx, s.botStore)
 	if err != nil {
 		return AsRiverError(err).Message("Failed to instantiate notification service").LogError(s.defaultLogger)
 	}

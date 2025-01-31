@@ -25,9 +25,9 @@ type (
 	}
 
 	BotInfo struct {
-		Bot     common.Address
-		Owner   common.Address
-		Webhook string
+		Bot        common.Address
+		Owner      common.Address
+		WebhookUrl string
 	}
 
 	BotRegistryStore interface {
@@ -35,7 +35,7 @@ type (
 			ctx context.Context,
 			owner common.Address,
 			bot common.Address,
-			webhook string,
+			webhookUrl string,
 		) error
 		GetBotInfo(
 			ctx context.Context,
@@ -108,19 +108,19 @@ func (s *PostgresBotRegistryStore) CreateBot(
 	ctx context.Context,
 	owner common.Address,
 	bot common.Address,
-	webhook string,
+	webhookUrl string,
 ) error {
 	return s.txRunner(
 		ctx,
 		"CreateBot",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
-			return s.createBot(ctx, owner, bot, webhook, tx)
+			return s.createBot(ctx, owner, bot, webhookUrl, tx)
 		},
 		nil,
-		"bot_address", bot,
-		"owner_address", owner,
-		"webhook", webhook,
+		"botAddress", bot,
+		"ownerAddress", owner,
+		"webhookUrl", webhookUrl,
 	)
 }
 
@@ -164,7 +164,7 @@ func (s *PostgresBotRegistryStore) GetBotInfo(
 			return err
 		},
 		nil,
-		"bot_address", bot,
+		"botAddress", bot,
 	)
 	if err != nil {
 		return nil, err
@@ -184,7 +184,7 @@ func (s *PostgresBotRegistryStore) getBotInfo(
 	bot.address = botAddr
 	var botInfo BotInfo
 	if err := tx.QueryRow(ctx, "select bot_id, bot_owner_id, webhook from bot_registry where bot_id = $1", bot).
-		Scan(&bot, &owner, &botInfo.Webhook); err != nil {
+		Scan(&bot, &owner, &botInfo.WebhookUrl); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, RiverError(protocol.Err_NOT_FOUND, "Bot does not exist")
 		} else {

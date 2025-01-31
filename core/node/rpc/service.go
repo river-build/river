@@ -59,6 +59,9 @@ type Service struct {
 	// Notifications
 	notifications notifications.UserPreferencesStore
 
+	// Bot Registry
+	botStore storage.BotRegistryStore
+
 	// River chain
 	riverChain       *crypto.Blockchain
 	registryContract *registries.RiverRegistryContract

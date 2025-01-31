@@ -650,8 +650,8 @@ func (s *Service) initBotRegistryStore() error {
 	log := s.defaultLogger
 
 	switch s.config.StorageType {
-	case storage.NotificationStorageTypePostgres:
-		pgstore, err := storage.NewPostgresNotificationStore(
+	case storage.BotRegistryStorageTypePostgres:
+		pgstore, err := storage.NewPostgresBotRegistryStore(
 			ctx,
 			s.storagePoolInfo,
 			s.exitSignal,
@@ -660,9 +660,8 @@ func (s *Service) initBotRegistryStore() error {
 		if err != nil {
 			return err
 		}
-
-		s.notifications = notifications.NewUserPreferencesCache(pgstore)
 		s.onClose(pgstore.Close)
+		s.botStore = pgstore
 
 		if !s.config.Log.Simplify {
 			log.Infow(
