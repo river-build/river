@@ -2,7 +2,6 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {ITownsDeployer} from "contracts/src/tokens/towns/base/ITownsDeployer.sol";
 
 // libraries
 import {Create2Utils} from "contracts/src/utils/Create2Utils.sol";
@@ -12,16 +11,16 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {MockTowns} from "contracts/test/mocks/MockTowns.sol";
 import {Towns} from "contracts/src/tokens/towns/base/Towns.sol";
 
-contract MockTownsDeployer is ITownsDeployer {
-  function deploy(
+contract MockTownsDeployer {
+  constructor(
     address l1Token,
     address owner,
     bytes32 implementationSalt,
     bytes32 proxySalt
-  ) external returns (address) {
+  ) {
     address implementation = Create2Utils.create2Deploy(
       implementationSalt,
-      abi.encodePacked(type(MockTowns).creationCode)
+      type(MockTowns).creationCode
     );
 
     // Create proxy initialization bytecode
@@ -34,6 +33,6 @@ contract MockTownsDeployer is ITownsDeployer {
     );
 
     // Deploy proxy using create2
-    return Create2Utils.create2Deploy(proxySalt, proxyBytecode);
+    Create2Utils.create2Deploy(proxySalt, proxyBytecode);
   }
 }

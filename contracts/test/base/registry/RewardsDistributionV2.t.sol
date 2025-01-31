@@ -92,6 +92,7 @@ contract RewardsDistributionV2Test is
   function test_reinitialize() public {
     uint256 depositId = test_stake();
 
+    deployTokenBase.setSalts(_randomBytes32(), _randomBytes32());
     address newTowns = deployTokenBase.deploy(deployer);
 
     address implementation = address(new RewardsDistribution());

@@ -26,7 +26,7 @@ contract TownsBaseTest is TestUtils, EIP712Utils, ILockBase {
   address internal bridge;
 
   function setUp() external {
-    deployer = getDeployer();
+    deployer = 0x9f2667b9Ec9a7d09A47D87156f032c6735a077Ad;
     towns = Towns(deployTownsBase.deploy(deployer));
     bridge = TownsLib.L2_STANDARD_BRIDGE;
   }
