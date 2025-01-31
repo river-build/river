@@ -88,7 +88,12 @@ func ConfigureDB(ctx context.Context) (*config.DatabaseConfig, string, func(), e
 		return cfg,
 			dbSchemaName,
 			func() {
-				_ = DeleteTestSchema(ctx, cfg.GetUrl(), dbSchemaName)
+				// lint:ignore context.Background() is fine here
+				err := DeleteTestSchema(context.Background(), cfg.GetUrl(), dbSchemaName)
+				// Force test writers to properly clean up schemas if this fails for some reason.
+				if err != nil {
+					panic(err)
+				}
 			},
 			nil
 	}
