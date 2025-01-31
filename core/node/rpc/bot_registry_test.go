@@ -58,7 +58,7 @@ func initBotRegistryService(
 var invalidAddressBytes = bytes.Repeat([]byte("a"), 21)
 
 func TestBotRegistry(t *testing.T) {
-	tester := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true, printTestLogs: true})
+	tester := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
 	service, _ := initBotRegistryService(tester.ctx, tester)
 
 	var unregisteredBot common.Address
