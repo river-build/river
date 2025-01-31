@@ -13,15 +13,6 @@ import {TownsDeployer} from "contracts/src/tokens/towns/base/TownsDeployer.sol";
 contract DeployTownsBase is Deployer {
   address public l1Token;
 
-  bytes32 internal IMPLEMENTATION_SALT =
-    0xf39fd6e51aad88f6f4ce6ab8827279cfffb922668abffef9bc4ea2f118000040;
-
-  bytes32 internal TOKEN_DEPLOYER_SALT =
-    0xf39fd6e51aad88f6f4ce6ab8827279cfffb9226608f610eaf062efbe0b0000c0;
-
-  bytes32 internal TOKEN_SALT =
-    0x0000005173af2a4b7d865e16dffd2d8be6f5420f07840b014c80361e8c000020;
-
   function versionName() public pure override returns (string memory) {
     return "towns";
   }
@@ -30,11 +21,13 @@ contract DeployTownsBase is Deployer {
     l1Token = _getToken();
 
     vm.startBroadcast(deployer);
-    address implementation = address(new Towns{salt: IMPLEMENTATION_SALT}());
-    TownsDeployer tokenDeployer = new TownsDeployer{
-      salt: TOKEN_DEPLOYER_SALT
-    }();
-    address proxy = tokenDeployer.deploy(implementation, l1Token, TOKEN_SALT);
+    address implementation = address(new Towns());
+    TownsDeployer tokenDeployer = new TownsDeployer();
+    address proxy = tokenDeployer.deploy(
+      implementation,
+      l1Token,
+      keccak256(abi.encodePacked(deployer, implementation, tokenDeployer))
+    );
     vm.stopBroadcast();
 
     return proxy;
