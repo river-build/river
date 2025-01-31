@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"embed"
+	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -43,15 +44,15 @@ type (
 	}
 )
 
+// WrappedAddress automatically serializes and deserializes addresses into and out of
+// pg.
 type WrappedAddress struct {
 	address common.Address
 }
 
-// Here abstraction leaks to implement marshalling for pgx.
-// TODO: This can be avoided by registering a custom type with pgx.
 func (wa WrappedAddress) TextValue() (pgtype.Text, error) {
 	return pgtype.Text{
-		String: wa.address.String(),
+		String: hex.EncodeToString(wa.address[:]),
 		Valid:  true,
 	}, nil
 }
@@ -179,8 +180,6 @@ func (s *PostgresBotRegistryStore) getBotInfo(
 	*BotInfo,
 	error,
 ) {
-	// Use StreamId to encode address because it already has functionality for scanning
-	// to/from pg.
 	var owner, bot WrappedAddress
 	bot.address = botAddr
 	var botInfo BotInfo
