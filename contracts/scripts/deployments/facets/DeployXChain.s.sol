@@ -14,6 +14,7 @@ contract DeployXChain is Deployer, FacetHelper {
   // FacetHelper
   constructor() {
     addSelector(XChain.postEntitlementCheckResult.selector);
+    addSelector(XChain.isCheckCompleted.selector);
   }
 
   // Deploying
