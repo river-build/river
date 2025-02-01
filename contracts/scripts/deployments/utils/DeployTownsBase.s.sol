@@ -28,7 +28,7 @@ contract DeployTownsBase is Deployer {
   function __deploy(address deployer) public override returns (address) {
     l1Token = _getToken();
 
-    (implSalt, proxySalt) = _getSalt();
+    (implSalt, proxySalt) = _getSalts();
     address proxy = _proxyAddress(
       _implAddress(implSalt),
       proxySalt,
@@ -83,7 +83,7 @@ contract DeployTownsBase is Deployer {
     proxySalt = proxy;
   }
 
-  function _getSalt() internal view returns (bytes32 impl, bytes32 proxy) {
+  function _getSalts() internal view returns (bytes32 impl, bytes32 proxy) {
     if (implSalt != bytes32(0) && proxySalt != bytes32(0)) {
       return (implSalt, proxySalt);
     }

@@ -25,8 +25,7 @@ library Create2Utils {
     if (isContractDeployed(computed)) {
       return computed;
     } else {
-      bytes memory returnData = performCreate2Call(salt, bytecode);
-      address deployedAt = address(uint160(bytes20(returnData)));
+      address deployedAt = performCreate2Call(salt, bytecode);
       if (deployedAt != computed) {
         CustomRevert.revertWith(Create2AddressDerivationFailed.selector);
       }
@@ -35,10 +34,10 @@ library Create2Utils {
   }
 
   function isContractDeployed(
-    address _addr
+    address addr
   ) internal view returns (bool isContract) {
     assembly {
-      isContract := gt(extcodesize(_addr), 0)
+      isContract := gt(extcodesize(addr), 0)
     }
   }
 
@@ -57,28 +56,29 @@ library Create2Utils {
   function performCreate2Call(
     bytes32 salt,
     bytes memory bytecode
-  ) internal returns (bytes memory returnData) {
+  ) internal returns (address deployedAt) {
     bytes memory data = abi.encodePacked(salt, bytecode);
-    bool success;
 
     assembly {
-      // Allocate memory for the return data (32 bytes)
-      returnData := mload(0x40) // Get free memory pointer
-      mstore(returnData, 0x20) // Store length of return data (32 bytes)
-      mstore(0x40, add(returnData, 0x40)) // Update free memory pointer
-
-      success := call(
-        gas(), // Forward all available gas
-        CREATE2_FACTORY, // Address of the CREATE2 factory
-        0, // No ETH value
-        add(data, 0x20), // Pointer to input data (skip length prefix)
-        mload(data), // Length of input data
-        add(returnData, 0x20), // Pointer to output data
-        0x20 // Expecting 32 bytes (address size) as output
-      )
+      // If call failed, revert with empty data
+      if iszero(
+        call(
+          gas(), // Forward all available gas
+          CREATE2_FACTORY, // Address of the CREATE2 factory
+          0, // No ETH value
+          add(data, 0x20), // Pointer to data (skip length prefix)
+          mload(data), // Data size
+          0, // Output location
+          0x20 // Output size (32 bytes)
+        )
+      ) {
+        // Inline revert with empty data
+        revert(0, 0)
+      }
+      deployedAt := shr(96, mload(0))
     }
 
-    if (!success) {
+    if (deployedAt == address(0)) {
       CustomRevert.revertWith(Create2CallFailed.selector);
     }
   }
