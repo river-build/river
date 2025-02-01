@@ -304,6 +304,7 @@ func (st *serviceTester) getConfig(opts ...startOpts) *config.Config {
 	}
 
 	cfg := config.GetDefaultConfig()
+	cfg.Port = 0
 	cfg.DisableBaseChain = true
 	cfg.DisableHttps = false
 	cfg.RegistryContract = st.btc.RegistryConfig()
