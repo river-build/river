@@ -538,7 +538,11 @@ _test-from-dir $DIR *args: build-mls
     #!/usr/bin/env -S bash {{BASH_OPTS}}
     cd $DIR
     echo "Running go test from $(git rev-parse --show-prefix)"
-    CGO_LDFLAGS="-L{{justfile_directory()}}/run_files/mls" go test {{args}} | yarn exec pino-pretty
+    if [[ $GITHUB_ACTIONS == "true" ]]; then
+        CGO_LDFLAGS="-L{{justfile_directory()}}/run_files/mls" go test {{args}}
+    else
+        CGO_LDFLAGS="-L{{justfile_directory()}}/run_files/mls" go test {{args}} | yarn exec pino-pretty
+    fi
 
 # Run go tests from current directory
 test *args: (_test-from-dir invocation_directory() args)
