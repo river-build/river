@@ -36,7 +36,7 @@ library Create2Utils {
   function isContractDeployed(
     address addr
   ) internal view returns (bool isContract) {
-    assembly {
+    assembly ("memory-safe") {
       isContract := gt(extcodesize(addr), 0)
     }
   }
@@ -59,7 +59,7 @@ library Create2Utils {
   ) internal returns (address deployedAt) {
     bytes memory data = abi.encodePacked(salt, bytecode);
 
-    assembly {
+    assembly ("memory-safe") {
       // If call failed, revert with empty data
       if iszero(
         call(
