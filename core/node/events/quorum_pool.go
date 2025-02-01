@@ -18,6 +18,7 @@ type QuorumPool struct {
 	remotes          int
 	remoteErrChannel chan error
 	tags             []any
+	Timeout          time.Duration
 }
 
 func NewQuorumPool(tags ...any) *QuorumPool {
@@ -50,10 +51,16 @@ func (q *QuorumPool) GoRemotes(
 	q.remoteErrChannel = make(chan error, len(nodes))
 	q.remotes += len(nodes)
 	for _, node := range nodes {
-		ctx, cancel := utils.UncancelContext(ctx, 5*time.Second, 10*time.Second)
+		var ctx2 context.Context
+		var cancel context.CancelFunc
+		if q.Timeout > 0 {
+			ctx2, cancel = utils.UncancelContextWithTimeout(ctx, q.Timeout)
+		} else {
+			ctx2, cancel = utils.UncancelContext(ctx, 5*time.Second, 10*time.Second)
+		}
 		go func() {
 			defer cancel()
-			q.executeRemote(ctx, node, f)
+			q.executeRemote(ctx2, node, f)
 		}()
 	}
 }
