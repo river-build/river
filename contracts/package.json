@@ -13,6 +13,7 @@
         "snapshot": "make snapshot",
         "sync": "make update",
         "test": "yarn test:unit",
+        "turbo": "yarn top:turbo",
         "test:unit": "make test"
     },
     "dependencies": {
@@ -29,7 +30,6 @@
         "forge-std": "github:foundry-rs/forge-std#v1.9.4",
         "prettier": "^2.8.8",
         "prettier-plugin-solidity": "^1.4.1",
-        "solhint": "^5.0.3",
-        "turbo": "^2.0.12"
+        "solhint": "^5.0.3"
     }
 }
