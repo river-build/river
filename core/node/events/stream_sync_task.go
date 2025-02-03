@@ -19,7 +19,12 @@ func (s *StreamCache) submitSyncStreamTask(
 	streamRecord *registries.GetStreamResult,
 ) {
 	pool.Submit(func() {
-		if err := s.syncStreamFromPeers(ctx, stream, streamRecord); err != nil {
+		if err := s.syncStreamFromPeers(
+			ctx,
+			stream,
+			int64(streamRecord.LastMiniblockNum),
+			streamRecord.IsSealed,
+		); err != nil {
 			logging.FromCtx(ctx).
 				Errorw("Unable to sync stream from peers",
 					"stream", stream.streamId,
@@ -35,12 +40,11 @@ func (s *StreamCache) submitSyncStreamTask(
 func (s *StreamCache) syncStreamFromPeers(
 	ctx context.Context,
 	stream *Stream,
-	streamRecord *registries.GetStreamResult,
+	lastContractMbNum int64,
+	isSealed bool,
 ) error {
-	lastContractMbNum := int64(streamRecord.LastMiniblockNum)
-
 	// Try to normalize the given stream if needed.
-	err := s.normalizeEphemeralStream(ctx, stream, lastContractMbNum, streamRecord.IsSealed)
+	err := s.normalizeEphemeralStream(ctx, stream, lastContractMbNum, isSealed)
 	if err != nil {
 		return err
 	}
