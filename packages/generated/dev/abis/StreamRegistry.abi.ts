@@ -29,6 +29,29 @@ export default [
   },
   {
     "type": "function",
+    "name": "allocateStream",
+    "inputs": [
+      {
+        "name": "streamId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "nodes",
+        "type": "address[]",
+        "internalType": "address[]"
+      },
+      {
+        "name": "genesisMiniblockHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "getPaginatedStreams",
     "inputs": [
       {
@@ -231,6 +254,57 @@ export default [
   },
   {
     "type": "function",
+    "name": "getStreamWithGenesisHash",
+    "inputs": [
+      {
+        "name": "streamId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct Stream",
+        "components": [
+          {
+            "name": "lastMiniblockHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "lastMiniblockNum",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "reserved0",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "flags",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "nodes",
+            "type": "address[]",
+            "internalType": "address[]"
+          }
+        ]
+      },
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "isStream",
     "inputs": [
       {
@@ -384,6 +458,31 @@ export default [
         "type": "bytes",
         "indexed": false,
         "internalType": "bytes"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "StreamAllocated",
+    "inputs": [
+      {
+        "name": "streamId",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "nodes",
+        "type": "address[]",
+        "indexed": false,
+        "internalType": "address[]"
+      },
+      {
+        "name": "genesisMiniblockHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
       }
     ],
     "anonymous": false

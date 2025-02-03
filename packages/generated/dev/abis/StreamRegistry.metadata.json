@@ -45,6 +45,31 @@
             "indexed": false
           },
           {
+            "internalType": "address[]",
+            "name": "nodes",
+            "type": "address[]",
+            "indexed": false
+          },
+          {
+            "internalType": "bytes32",
+            "name": "genesisMiniblockHash",
+            "type": "bytes32",
+            "indexed": false
+          }
+        ],
+        "type": "event",
+        "name": "StreamAllocated",
+        "anonymous": false
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "bytes32",
+            "name": "streamId",
+            "type": "bytes32",
+            "indexed": false
+          },
+          {
             "internalType": "bytes32",
             "name": "lastMiniblockHash",
             "type": "bytes32",
@@ -144,6 +169,28 @@
             "internalType": "bytes",
             "name": "genesisMiniblock",
             "type": "bytes"
+          }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function",
+        "name": "allocateStream"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "bytes32",
+            "name": "streamId",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "address[]",
+            "name": "nodes",
+            "type": "address[]"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "genesisMiniblockHash",
+            "type": "bytes32"
           }
         ],
         "stateMutability": "nonpayable",
@@ -362,6 +409,57 @@
         ],
         "stateMutability": "view",
         "type": "function",
+        "name": "getStreamWithGenesisHash",
+        "outputs": [
+          {
+            "internalType": "struct Stream",
+            "name": "",
+            "type": "tuple",
+            "components": [
+              {
+                "internalType": "bytes32",
+                "name": "lastMiniblockHash",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "uint64",
+                "name": "lastMiniblockNum",
+                "type": "uint64"
+              },
+              {
+                "internalType": "uint64",
+                "name": "reserved0",
+                "type": "uint64"
+              },
+              {
+                "internalType": "uint64",
+                "name": "flags",
+                "type": "uint64"
+              },
+              {
+                "internalType": "address[]",
+                "name": "nodes",
+                "type": "address[]"
+              }
+            ]
+          },
+          {
+            "internalType": "bytes32",
+            "name": "",
+            "type": "bytes32"
+          }
+        ]
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "bytes32",
+            "name": "streamId",
+            "type": "bytes32"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function",
         "name": "isStream",
         "outputs": [
           {
@@ -480,8 +578,16 @@
     "devdoc": {
       "kind": "dev",
       "methods": {
-        "allocateStream(bytes32,address[],bytes32,bytes)": {
+        "allocateStream(bytes32,address[],bytes32)": {
           "details": "Only callable by registered nodes",
+          "params": {
+            "genesisMiniblockHash": "The hash of the genesis miniblock",
+            "nodes": "The list of nodes to place the stream on",
+            "streamId": "The ID of the stream to allocate"
+          }
+        },
+        "allocateStream(bytes32,address[],bytes32,bytes)": {
+          "details": "Only callable by registered nodes and is succeeded by allocateStream(bytes32, address[], bytes32)",
           "params": {
             "genesisMiniblock": "The genesis miniblock data",
             "genesisMiniblockHash": "The hash of the genesis miniblock",
@@ -531,6 +637,15 @@
             "_2": "bytes The genesis miniblock data"
           }
         },
+        "getStreamWithGenesisHash(bytes32)": {
+          "params": {
+            "streamId": "The ID of the stream to get"
+          },
+          "returns": {
+            "_0": "Stream The stream data",
+            "_1": "bytes32 The genesis miniblock hash"
+          }
+        },
         "isStream(bytes32)": {
           "params": {
             "streamId": "The ID of the stream to check"
@@ -573,6 +688,9 @@
     "userdoc": {
       "kind": "user",
       "methods": {
+        "allocateStream(bytes32,address[],bytes32)": {
+          "notice": "Allocate a new stream in the registry"
+        },
         "allocateStream(bytes32,address[],bytes32,bytes)": {
           "notice": "Allocate a new stream in the registry"
         },
@@ -589,6 +707,9 @@
           "notice": "Get the number of streams placed on a specific node"
         },
         "getStreamWithGenesis(bytes32)": {
+          "notice": "Get a stream and its genesis information from the registry"
+        },
+        "getStreamWithGenesisHash(bytes32)": {
           "notice": "Get a stream and its genesis information from the registry"
         },
         "isStream(bytes32)": {
@@ -638,18 +759,18 @@
   },
   "sources": {
     "contracts/src/river/registry/facets/stream/IStreamRegistry.sol": {
-      "keccak256": "0x5e8bd4aa3130035d463d4fbc0214aaeb7c23a7042d29a10c593b422d6d2a47b4",
+      "keccak256": "0xc0a420360c35be7e19b72e96586cc2e101332c0d0eb791b11b07e0de68324553",
       "urls": [
-        "bzz-raw://928c460af3995f8df31e48557a6d9eb16a6d89307f268709570bdfc932dc3a58",
-        "dweb:/ipfs/QmTpiActnDg7Kvzezvvj9JCQWM2EsRmrZbXhXnzjhpCzCT"
+        "bzz-raw://92511bdd7ab73a8eae06ea366312f4592dd79d5f2d43f6d624a085921d4cc723",
+        "dweb:/ipfs/QmbqvDRDGVKeaqyqDyUw1C4kQa4fVDaNBioVmjLPKh882a"
       ],
       "license": "MIT"
     },
     "contracts/src/river/registry/facets/stream/StreamRegistry.sol": {
-      "keccak256": "0xe61f190231d18c91cc44d556ae19b9d344ce877fc85568a79e3d4c0ab5f864ac",
+      "keccak256": "0xa3237bed6c0b7ab10b430bee8f89501665569df81cd0c8034686331041a7d212",
       "urls": [
-        "bzz-raw://b0919767472bfe186b5e0f8c6e7b00d2f2a99b8cd0ab15f77406de4c699a2104",
-        "dweb:/ipfs/QmXfQPVM59CFXgk58kaD26rWVGKq8HxQQFCMNXySSJbXRK"
+        "bzz-raw://ce60ec41e6f38ba877a76c6844a9fdd69f42b5f0bbeeda1de18073efdc448f48",
+        "dweb:/ipfs/QmRC5WtWsmTjoD7h39myLetWPUePbJrKAmGFRTk6nCJ2R5"
       ],
       "license": "MIT"
     },
