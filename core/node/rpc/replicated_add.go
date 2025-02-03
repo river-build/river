@@ -11,8 +11,9 @@ import (
 	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/logging"
+	. "github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
-	"github.com/river-build/river/core/node/shared"
+	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
 )
 
@@ -68,35 +69,73 @@ func (s *Service) replicatedAddEventImpl(ctx context.Context, stream *Stream, ev
 	}
 
 	streamId := stream.StreamId()
-	sender := NewQuorumPool("method", "replicatedStream.AddEvent", "streamId", streamId)
+	sender := NewQuorumPool("method", "replicatedAddEventImpl", "streamId", streamId)
 	sender.Timeout = 2500 * time.Millisecond // TODO: REPLICATION: TEST: setting so test can have more aggressive timeout
 
 	sender.GoLocal(ctx, func(ctx context.Context) error {
 		return stream.AddEvent(ctx, event)
 	})
 
-		sender.GoRemotes(ctx, remotes, func(ctx context.Context, node common.Address) error {
-			stub, err := s.nodeRegistry.GetNodeToNodeClientForAddress(node)
-			if err != nil {
-				return err
-			}
-			_, err = stub.NewEventReceived(
-				ctx,
-				connect.NewRequest[NewEventReceivedRequest](
-					&NewEventReceivedRequest{
-						StreamId: streamId[:],
-						Event:    event.Envelope,
-					},
-				),
-			)
+	sender.GoRemotes(ctx, remotes, func(ctx context.Context, node common.Address) error {
+		stub, err := s.nodeRegistry.GetNodeToNodeClientForAddress(node)
+		if err != nil {
 			return err
-		})
+		}
+		_, err = stub.NewEventReceived(
+			ctx,
+			connect.NewRequest[NewEventReceivedRequest](
+				&NewEventReceivedRequest{
+					StreamId: streamId[:],
+					Event:    event.Envelope,
+				},
+			),
+		)
+		return err
+	})
 
 	return sender.Wait()
 }
 
-func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent, cc *CreationCookie, last bool) (*Miniblock, error) {
-	header, err := MakeEnvelopeWithPayload(r.service.wallet, Make_MiniblockHeader(&MiniblockHeader{
+func (s *Service) replicatedAddMediaEvent(ctx context.Context, event *ParsedEvent, cc *CreationCookie, last bool) ([]byte, error) {
+	originalDeadline := contextDeadlineLeft(ctx)
+
+	backoff := BackoffTracker{
+		NextDelay:   100 * time.Millisecond,
+		MaxAttempts: 10,
+		Multiplier:  2,
+		Divisor:     1,
+	}
+
+	for {
+		mbHash, err := s.replicatedAddMediaEventImpl(ctx, event, cc, last)
+		if err == nil {
+			if backoff.NumAttempts > 0 {
+				logging.FromCtx(ctx).Warnw("replicatedAddMediaEvent: success after backoff", "attempts", backoff.NumAttempts, "originalDeadline", originalDeadline.String(), "deadline", contextDeadlineLeft(ctx).String())
+			}
+			return mbHash, nil
+		}
+
+		// Check if Err_MINIBLOCK_TOO_NEW code is present.
+		if AsRiverError(err).IsCodeWithBases(Err_MINIBLOCK_TOO_NEW) {
+			err = backoff.Wait(ctx, err)
+			if err != nil {
+				logging.FromCtx(ctx).Warnw("replicatedAddMediaEvent: no backoff left", "error", err, "attempts", backoff.NumAttempts, "originalDeadline", originalDeadline.String(), "deadline", contextDeadlineLeft(ctx).String())
+				return nil, err
+			}
+			logging.FromCtx(ctx).Warnw("replicatedAddMediaEvent: retrying after backoff", "attempt", backoff.NumAttempts, "deadline", contextDeadlineLeft(ctx).String(), "originalDeadline", originalDeadline.String())
+			continue
+		}
+		return nil, err
+	}
+}
+
+func (s *Service) replicatedAddMediaEventImpl(ctx context.Context, event *ParsedEvent, cc *CreationCookie, last bool) ([]byte, error) {
+	streamId, err := StreamIdFromBytes(cc.StreamId)
+	if err != nil {
+		return nil, err
+	}
+
+	header, err := MakeEnvelopeWithPayload(s.wallet, Make_MiniblockHeader(&MiniblockHeader{
 		MiniblockNum:      cc.MiniblockNum,
 		PrevMiniblockHash: cc.PrevMiniblockHash,
 		Timestamp:         NextMiniblockTimestamp(nil),
@@ -111,9 +150,9 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 		Header: header,
 	}
 
-	nodes := NewStreamNodesWithLock(cc.NodeAddresses(), r.service.wallet.Address)
+	nodes := NewStreamNodesWithLock(cc.NodeAddresses(), s.wallet.Address)
 	remotes, _ := nodes.GetRemotesAndIsLocal()
-	sender := NewQuorumPool("method", "replicatedStream.AddMediaEvent", "streamId", r.streamId)
+	sender := NewQuorumPool("method", "replicatedAddMediaEvent", "streamId", streamId)
 
 	// These are needed to register the stream onchain if everything goes well.
 	var genesisMiniblockHash common.Hash
@@ -125,7 +164,7 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 			return err
 		}
 
-		if err = r.service.storage.WriteEphemeralMiniblock(ctx, r.streamId, &storage.WriteMiniblockData{
+		if err = s.storage.WriteEphemeralMiniblock(ctx, streamId, &storage.WriteMiniblockData{
 			Number:   cc.MiniblockNum,
 			Hash:     common.BytesToHash(ephemeralMb.Header.Hash),
 			Snapshot: false,
@@ -140,7 +179,7 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 		}
 
 		// Normalize stream locally
-		genesisMiniblockHash, err = r.service.storage.NormalizeEphemeralStream(ctx, r.streamId)
+		genesisMiniblockHash, err = s.storage.NormalizeEphemeralStream(ctx, streamId)
 		if err != nil {
 			return err
 		}
@@ -150,7 +189,7 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 
 	// Save the ephemeral miniblock on remotes
 	sender.GoRemotes(ctx, remotes, func(ctx context.Context, node common.Address) error {
-		stub, err := r.service.nodeRegistry.GetNodeToNodeClientForAddress(node)
+		stub, err := s.nodeRegistry.GetNodeToNodeClientForAddress(node)
 		if err != nil {
 			return err
 		}
@@ -159,7 +198,7 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 			ctx,
 			connect.NewRequest[SaveEphemeralMiniblockRequest](
 				&SaveEphemeralMiniblockRequest{
-					StreamId:  r.streamId[:],
+					StreamId:  streamId[:],
 					Miniblock: ephemeralMb,
 				},
 			),
@@ -177,7 +216,7 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 			ctx,
 			connect.NewRequest[SealEphemeralStreamRequest](
 				&SealEphemeralStreamRequest{
-					StreamId: r.streamId[:],
+					StreamId: streamId[:],
 				},
 			),
 		); err != nil {
@@ -193,18 +232,18 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 
 	if last {
 		// Register the given stream onchain with sealed flag
-		if err = r.service.streamRegistry.AddStream(
+		if err = s.streamRegistry.AddStream(
 			ctx,
-			r.streamId,
+			streamId,
 			cc.NodeAddresses(),
 			genesisMiniblockHash,
 			common.BytesToHash(ephemeralMb.Header.Hash),
-			0,
+			cc.MiniblockNum,
 			true,
 		); err != nil {
 			return nil, err
 		}
 	}
 
-	return ephemeralMb, nil
+	return ephemeralMb.Header.Hash, nil
 }
