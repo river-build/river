@@ -2,6 +2,7 @@ package events
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/trace"
 	"slices"
 	"sync/atomic"
 	"time"
@@ -41,6 +42,7 @@ type StreamCacheParams struct {
 	Metrics                 infra.MetricsFactory
 	RemoteMiniblockProvider RemoteMiniblockProvider
 	Scrubber                Scrubber
+	Tracer                  trace.Tracer
 }
 
 type StreamCache struct {
@@ -280,6 +282,12 @@ func (s *StreamCache) tryLoadStreamRecord(
 	streamId StreamId,
 	waitForLocal bool,
 ) (*Stream, error) {
+	if s.params.Tracer != nil {
+		var span trace.Span
+		ctx, span = s.params.Tracer.Start(ctx, "tryLoadStreamRecord")
+		defer span.End()
+	}
+
 	// For GetStream the fact that record is not in cache means that there is race to get it during creation:
 	// Blockchain record is already created, but this fact is not reflected yet in local storage.
 	// This may happen if somebody observes record allocation on blockchain and tries to get stream
