@@ -176,7 +176,7 @@ func (s *Service) replicatedAddMediaEventImpl(ctx context.Context, event *Parsed
 		// Return here if there are more chunks to upload.
 		if !last {
 			// TODO: this might be moved to the storage layer?
-			r.service.ephStreams.onUpdated(r.streamId)
+			s.ephStreams.onUpdated(streamId)
 
 			return nil
 		}
@@ -248,7 +248,7 @@ func (s *Service) replicatedAddMediaEventImpl(ctx context.Context, event *Parsed
 		}
 
 		// TODO: this might be moved to the storage layer?
-		r.service.ephStreams.onSealed(r.streamId)
+		s.ephStreams.onSealed(streamId)
 	}
 
 	return ephemeralMb.Header.Hash, nil
