@@ -562,7 +562,15 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 				if _, exists := apnPayload["event"]; exists {
 					delete(apnPayload, "event")
 					p.log.Infow("Payload too large, retry notification with event stripped", "event", event.Hash)
-					subscriptionExpired, _, err = p.sendAPNNotification(channelID, sub, event, apnPayload, sub.PushVersion)
+					subscriptionExpired, statusCode, err = p.sendAPNNotification(channelID, sub, event, apnPayload, sub.PushVersion)
+
+					if err != nil && statusCode == http.StatusRequestEntityTooLarge {
+						if _, exists := apnPayload["tags"]; exists {
+							delete(apnPayload, "tags")
+							p.log.Infow("Payload too large, retry notification with tags stripped", "event", event.Hash)
+							subscriptionExpired, _, err = p.sendAPNNotification(channelID, sub, event, apnPayload, sub.PushVersion)
+						}
+					}
 				}
 			}
 
