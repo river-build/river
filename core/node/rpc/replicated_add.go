@@ -96,6 +96,9 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 
 		// Return here if there are more chunks to upload.
 		if !last {
+			// TODO: this might be moved to the storage layer?
+			r.service.ephStreams.onUpdated(r.streamId)
+
 			return nil
 		}
 
@@ -164,6 +167,9 @@ func (r *replicatedStream) AddMediaEvent(ctx context.Context, event *ParsedEvent
 		); err != nil {
 			return nil, err
 		}
+
+		// TODO: this might be moved to the storage layer?
+		r.service.ephStreams.onSealed(r.streamId)
 	}
 
 	return ephemeralMb, nil

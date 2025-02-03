@@ -52,6 +52,9 @@ func (s *Service) allocateEphemeralStream(ctx context.Context, req *AllocateEphe
 		return nil, err
 	}
 
+	// TODO: this might be moved to the storage layer?
+	s.ephStreams.onUpdated(streamId)
+
 	return &AllocateEphemeralStreamResponse{}, nil
 }
 
@@ -101,6 +104,9 @@ func (s *Service) saveEphemeralMiniblock(ctx context.Context, req *SaveEphemeral
 		return err
 	}
 
+	// TODO: this might be moved to the storage layer?
+	s.ephStreams.onUpdated(streamId)
+
 	return nil
 }
 
@@ -135,6 +141,9 @@ func (s *Service) sealEphemeralStream(
 	if _, err = s.storage.NormalizeEphemeralStream(ctx, streamId); err == nil {
 		return nil
 	}
+
+	// TODO: this might be moved to the storage layer?
+	s.ephStreams.onSealed(streamId)
 
 	return err
 }

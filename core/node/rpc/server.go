@@ -679,6 +679,11 @@ func (s *Service) initCacheAndSync(opts *ServerStartOpts) error {
 		s.otelTracer,
 	)
 
+	s.ephStreams, err = initEphemeralStreamMonitor(s.serverCtx, s.storage)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

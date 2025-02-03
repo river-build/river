@@ -167,7 +167,14 @@ func (s *Service) createReplicatedMediaStream(
 	// Create ephemeral stream within the local node
 	if isLocal {
 		sender.GoLocal(ctx, func(ctx context.Context) error {
-			return s.storage.CreateEphemeralStreamStorage(ctx, streamId, mbBytes)
+			if err := s.storage.CreateEphemeralStreamStorage(ctx, streamId, mbBytes); err != nil {
+				return err
+			}
+
+			// TODO: this might be moved to the storage layer?
+			s.ephStreams.onUpdated(streamId)
+
+			return nil
 		})
 	}
 
