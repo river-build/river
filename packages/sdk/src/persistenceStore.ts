@@ -8,7 +8,6 @@ import {
 } from './streamUtils'
 
 import { dlog, dlogError } from '@river-build/dlog'
-import { isDefined } from './check'
 
 const DEFAULT_RETRY_COUNT = 2
 const log = dlog('csb:persistence')
@@ -207,22 +206,25 @@ export class PersistenceStore extends Dexie implements IPersistenceStore {
         rangeStart: bigint,
         rangeEnd: bigint,
     ): Promise<ParsedMiniblock[]> {
-        const ids: [string, string][] = []
-        for (let i = rangeStart; i <= rangeEnd; i++) {
-            ids.push([streamId, i.toString()])
-        }
-        const records = await this.miniblocks.bulkGet(ids)
+        const records = await this.miniblocks
+            .where('[streamId+miniblockNum]')
+            .between([streamId, rangeStart.toString()], [streamId, rangeEnd.toString()])
+            .toArray()
+
+        const miniblocks: ParsedMiniblock[] = []
         // All or nothing
-        const miniblocks = records
-            .map((record) => {
-                if (!record) {
-                    return undefined
-                }
-                const cachedMiniblock = PersistedMiniblock.fromBinary(record.data)
-                return persistedMiniblockToParsedMiniblock(cachedMiniblock)
-            })
-            .filter(isDefined)
-        return miniblocks.length === ids.length ? miniblocks : []
+        for (const record of records) {
+            if (!record) {
+                return []
+            }
+            const cachedMiniblock = PersistedMiniblock.fromBinary(record.data)
+            const parsedMiniblock = persistedMiniblockToParsedMiniblock(cachedMiniblock)
+            if (!parsedMiniblock) {
+                return []
+            }
+            miniblocks.push(parsedMiniblock)
+        }
+        return miniblocks
     }
 
     private requestPersistentStorage() {
