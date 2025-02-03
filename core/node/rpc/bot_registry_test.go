@@ -53,7 +53,7 @@ func initBotRegistryService(
 	return botRegistry, url
 }
 
-// invalidAddressBytes is an array of bytes that cannot be parsed into an address, because
+// invalidAddressBytes is a slice of bytes that cannot be parsed into an address, because
 // it is too long. Valid addresses are 20 bytes.
 var invalidAddressBytes = bytes.Repeat([]byte("a"), 21)
 
