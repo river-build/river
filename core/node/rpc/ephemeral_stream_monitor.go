@@ -45,7 +45,7 @@ func initEphemeralStreamMonitor(
 func (m *ephemeralStreamMonitor) monitor(ctx context.Context) {
 	const (
 		cleanupInterval = time.Minute
-		ttl             = time.Minute * 5
+		ttl             = time.Minute * 10
 	)
 
 	ticker := time.NewTicker(cleanupInterval)
@@ -60,14 +60,12 @@ func (m *ephemeralStreamMonitor) monitor(ctx context.Context) {
 			return
 		case <-ticker.C:
 			m.ephemeralStreams.Range(func(streamId StreamId, lastUpdated time.Time) bool {
-				if time.Since(lastUpdated) <= ttl {
-					return true
-				}
-
-				if err := m.storage.DeleteEphemeralStream(ctx, streamId); err != nil {
-					logging.FromCtx(ctx).Error("failed to delete dead ephemeral stream", "err", err, "streamId", streamId)
-				} else {
-					m.ephemeralStreams.Delete(streamId)
+				if time.Since(lastUpdated) > ttl {
+					if err := m.storage.DeleteEphemeralStream(ctx, streamId); err != nil {
+						logging.FromCtx(ctx).Error("failed to delete dead ephemeral stream", "err", err, "streamId", streamId)
+					} else {
+						m.ephemeralStreams.Delete(streamId)
+					}
 				}
 
 				return true
