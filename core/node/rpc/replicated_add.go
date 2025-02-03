@@ -2,55 +2,95 @@ package rpc
 
 import (
 	"context"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/protobuf/proto"
 
+	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/events"
-	. "github.com/river-build/river/core/node/nodes"
+	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
 )
 
-type replicatedStream struct {
-	streamId    shared.StreamId
-	localStream AddableStream
-	nodes       StreamNodes
-	service     *Service
+func contextDeadlineLeft(ctx context.Context) time.Duration {
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return -1
+	}
+	return time.Until(deadline)
 }
 
-var _ AddableStream = (*replicatedStream)(nil)
+func (s *Service) replicatedAddEvent(ctx context.Context, stream *Stream, event *ParsedEvent) error {
+	originalDeadline := contextDeadlineLeft(ctx)
 
-func (r *replicatedStream) AddEvent(ctx context.Context, event *ParsedEvent) error {
-	remotes, _ := r.nodes.GetRemotesAndIsLocal()
-	if len(remotes) == 0 {
-		return r.localStream.AddEvent(ctx, event)
+	backoff := BackoffTracker{
+		NextDelay:   100 * time.Millisecond,
+		MaxAttempts: 10,
+		Multiplier:  2,
+		Divisor:     1,
 	}
 
-	sender := NewQuorumPool("method", "replicatedStream.AddEvent", "streamId", r.streamId)
+	for {
+		err := s.replicatedAddEventImpl(ctx, stream, event)
+		if err == nil {
+			if backoff.NumAttempts > 0 {
+				logging.FromCtx(ctx).Warnw("replicatedAddEvent: success after backoff", "attempts", backoff.NumAttempts, "originalDeadline", originalDeadline.String(), "deadline", contextDeadlineLeft(ctx).String())
+			}
+			return nil
+		}
+
+		// Check if Err_MINIBLOCK_TOO_NEW code is present.
+		if AsRiverError(err).IsCodeWithBases(Err_MINIBLOCK_TOO_NEW) {
+			err = backoff.Wait(ctx, err)
+			if err != nil {
+				logging.FromCtx(ctx).Warnw("replicatedAddEvent: no backoff left", "error", err, "attempts", backoff.NumAttempts, "originalDeadline", originalDeadline.String(), "deadline", contextDeadlineLeft(ctx).String())
+				return err
+			}
+			logging.FromCtx(ctx).Warnw("replicatedAddEvent: retrying after backoff", "attempt", backoff.NumAttempts, "deadline", contextDeadlineLeft(ctx).String(), "originalDeadline", originalDeadline.String())
+			continue
+		}
+		return err
+	}
+}
+
+func (s *Service) replicatedAddEventImpl(ctx context.Context, stream *Stream, event *ParsedEvent) error {
+	remotes, isLocal := stream.GetRemotesAndIsLocal()
+	if !isLocal {
+		return RiverError(Err_INTERNAL, "replicatedAddEvent: stream must be local")
+	}
+
+	if len(remotes) == 0 {
+		return stream.AddEvent(ctx, event)
+	}
+
+	streamId := stream.StreamId()
+	sender := NewQuorumPool("method", "replicatedStream.AddEvent", "streamId", streamId)
+	sender.Timeout = 2500 * time.Millisecond // TODO: REPLICATION: TEST: setting so test can have more aggressive timeout
 
 	sender.GoLocal(ctx, func(ctx context.Context) error {
-		return r.localStream.AddEvent(ctx, event)
+		return stream.AddEvent(ctx, event)
 	})
 
-	sender.GoRemotes(ctx, remotes, func(ctx context.Context, node common.Address) error {
-		stub, err := r.service.nodeRegistry.GetNodeToNodeClientForAddress(node)
-		if err != nil {
+		sender.GoRemotes(ctx, remotes, func(ctx context.Context, node common.Address) error {
+			stub, err := s.nodeRegistry.GetNodeToNodeClientForAddress(node)
+			if err != nil {
+				return err
+			}
+			_, err = stub.NewEventReceived(
+				ctx,
+				connect.NewRequest[NewEventReceivedRequest](
+					&NewEventReceivedRequest{
+						StreamId: streamId[:],
+						Event:    event.Envelope,
+					},
+				),
+			)
 			return err
-		}
-		_, err = stub.NewEventReceived(
-			ctx,
-			connect.NewRequest[NewEventReceivedRequest](
-				&NewEventReceivedRequest{
-					StreamId: r.streamId[:],
-					Event:    event.Envelope,
-				},
-			),
-		)
-		return err
-	})
+		})
 
 	return sender.Wait()
 }

@@ -127,6 +127,26 @@ func (ic *otelEthClient) BlockNumber(ctx context.Context) (uint64, error) {
 	return ic.Client.BlockNumber(ctx)
 }
 
+func (ic *otelEthClient) SuggestGasTipCap(ctx context.Context) (*big.Int, error) {
+	if ic.tracer != nil {
+		var span trace.Span
+		ctx, span = ic.tracer.Start(ctx, "eth_maxPriorityFeePerGas")
+		defer span.End()
+	}
+
+	return ic.Client.SuggestGasTipCap(ctx)
+}
+
+func (ic *otelEthClient) PendingCodeAt(ctx context.Context, account common.Address) ([]byte, error) {
+	if ic.tracer != nil {
+		var span trace.Span
+		ctx, span = ic.tracer.Start(ctx, "eth_getCode")
+		defer span.End()
+	}
+
+	return ic.Client.PendingCodeAt(ctx, account)
+}
+
 func (ic *otelEthClient) SendTransaction(ctx context.Context, tx *types.Transaction) error {
 	if ic.tracer != nil {
 		var span trace.Span
