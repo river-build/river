@@ -8,6 +8,7 @@ pushd ../../.. > /dev/null
 buf generate --template core/node/protocol/buf.gen.yaml \
   --path protocol/protocol.proto \
   --path protocol/internode.proto \
+  --path protocol/auth.proto \
   --path protocol/notifications.proto
 popd > /dev/null
 
