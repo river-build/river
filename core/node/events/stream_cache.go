@@ -2,7 +2,6 @@ package events
 
 import (
 	"context"
-	"go.opentelemetry.io/otel/trace"
 	"slices"
 	"sync/atomic"
 	"time"
@@ -11,7 +10,6 @@ import (
 	"github.com/gammazero/workerpool"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/puzpuzpuz/xsync/v3"
-
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
@@ -22,6 +20,8 @@ import (
 	"github.com/river-build/river/core/node/registries"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Scrubber interface {
@@ -285,6 +285,9 @@ func (s *StreamCache) tryLoadStreamRecord(
 	if s.params.Tracer != nil {
 		var span trace.Span
 		ctx, span = s.params.Tracer.Start(ctx, "tryLoadStreamRecord")
+		span.SetAttributes(
+			attribute.String("stream", streamId.String()),
+			attribute.Bool("waitForLocal", waitForLocal))
 		defer span.End()
 	}
 
