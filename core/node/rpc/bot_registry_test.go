@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"testing"
@@ -54,29 +55,7 @@ func initBotRegistryService(
 
 // invalidAddressBytes is an array of bytes that cannot be parsed into an address, because
 // it is too long. Valid addresses are 20 bytes.
-var invalidAddressBytes = [21]byte{
-	'a',
-	'a',
-	'a',
-	'a',
-	'a',
-	'a',
-	'a',
-	'a',
-	'a',
-	'a',
-	'a',
-	'a',
-	'a',
-	'a',
-	'a',
-	'a',
-	'a',
-	'a',
-	'a',
-	'a',
-	'a',
-}
+var invalidAddressBytes = bytes.Repeat([]byte("a"), 21)
 
 func TestBotRegistry(t *testing.T) {
 	tester := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})

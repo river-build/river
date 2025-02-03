@@ -665,7 +665,7 @@ func (s *Service) initBotRegistryStore() error {
 
 		if !s.config.Log.Simplify {
 			log.Infow(
-				"Created postgres notifications store",
+				"Created postgres bot registry store",
 				"schema",
 				s.storagePoolInfo.Schema,
 			)

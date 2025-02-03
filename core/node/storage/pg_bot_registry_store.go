@@ -44,25 +44,23 @@ type (
 	}
 )
 
-// WrappedAddress automatically serializes and deserializes addresses into and out of
-// pg.
-type WrappedAddress struct {
-	address common.Address
-}
+// PGAddress is a type alias for addresses that automatically serializes and deserializes
+// addresses into and out of pg fixed-length character sequences.
+type PGAddress common.Address
 
-func (wa WrappedAddress) TextValue() (pgtype.Text, error) {
+func (pa PGAddress) TextValue() (pgtype.Text, error) {
 	return pgtype.Text{
-		String: hex.EncodeToString(wa.address[:]),
+		String: hex.EncodeToString(pa[:]),
 		Valid:  true,
 	}, nil
 }
 
-func (wa *WrappedAddress) ScanText(v pgtype.Text) error {
+func (pa *PGAddress) ScanText(v pgtype.Text) error {
 	if !v.Valid {
-		*wa = WrappedAddress{}
+		*pa = PGAddress{}
 		return nil
 	}
-	*wa = WrappedAddress{common.HexToAddress(v.String)}
+	*pa = (PGAddress(common.HexToAddress(v.String)))
 	return nil
 }
 
@@ -134,8 +132,8 @@ func (s *PostgresBotRegistryStore) createBot(
 	if _, err := txn.Exec(
 		ctx,
 		"insert into bot_registry (bot_id, bot_owner_id, webhook) values ($1, $2, $3);",
-		WrappedAddress{bot},
-		WrappedAddress{owner},
+		PGAddress(bot),
+		PGAddress(owner),
 		webhook,
 	); err != nil {
 		if isPgError(err, pgerrcode.UniqueViolation) {
@@ -180,8 +178,8 @@ func (s *PostgresBotRegistryStore) getBotInfo(
 	*BotInfo,
 	error,
 ) {
-	var owner, bot WrappedAddress
-	bot.address = botAddr
+	var owner, bot PGAddress
+	bot = PGAddress(botAddr)
 	var botInfo BotInfo
 	if err := tx.QueryRow(ctx, "select bot_id, bot_owner_id, webhook from bot_registry where bot_id = $1", bot).
 		Scan(&bot, &owner, &botInfo.WebhookUrl); err != nil {
@@ -192,8 +190,8 @@ func (s *PostgresBotRegistryStore) getBotInfo(
 				Message("failed to find bot in registry")
 		}
 	} else {
-		botInfo.Bot = common.BytesToAddress(bot.address[:])
-		botInfo.Owner = common.BytesToAddress(owner.address[:])
+		botInfo.Bot = common.BytesToAddress(bot[:])
+		botInfo.Owner = common.BytesToAddress(owner[:])
 	}
 	return &botInfo, nil
 }
