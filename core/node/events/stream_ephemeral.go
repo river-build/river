@@ -38,7 +38,7 @@ func (s *StreamCache) onStreamCreated(
 		if err := s.normalizeEphemeralStream(
 			ctx,
 			stream,
-			int64(event.Stream.LastMiniblockNum),
+			int64(event.Stream.LastMiniblockNum), // FIXME: This is 0
 			event.Stream.Flags&uint64(registries.StreamFlagSealed) != 0,
 		); err != nil {
 			logging.FromCtx(ctx).Errorw("Failed to normalize ephemeral stream", "err", err, "streamId", event.GetStreamId())
