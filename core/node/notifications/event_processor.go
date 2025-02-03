@@ -399,6 +399,7 @@ func (p *MessageToNotificationsProcessor) apnPayloadV2(
 		"createdAtEpochMs": event.Event.GetCreatedAtEpochMs(),
 		"eventId":          eventHash,
 		"payloadVersion":   int(NotificationPushVersion_NOTIFICATION_PUSH_VERSION_2),
+		"tags":             event.Event.GetTags(),
 	}
 
 	// only add the (stream)event if there is a reasonable chance that the payload isn't too large.
