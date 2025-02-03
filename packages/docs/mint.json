@@ -113,6 +113,11 @@
             "towns-token/claiming"
           ]
         },
+    {
+      "group": "Grants",
+      "pages": [
+        "grants/grants-program"
+    },
         "FAQs"
       ]
     },
