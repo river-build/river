@@ -756,10 +756,10 @@
       "license": "MIT"
     },
     "contracts/src/river/registry/facets/stream/StreamRegistry.sol": {
-      "keccak256": "0x1cec2bdaf1b5d06005670b0d384e9adcf42e7ac245f91418f2e494bcea521911",
+      "keccak256": "0xc03eab6e7207c9f1a5e727e18046b26a6d39356d02c13a5e9c76800a6d8a4cff",
       "urls": [
-        "bzz-raw://fa60476e2d91889ea13a1469ae7573b54d7a20e252e6f6f3438a49688198bd56",
-        "dweb:/ipfs/QmYXJLsawZSmAkkgNwQEL9U2CyxvSg1oAPEBSo9YS7v8Ww"
+        "bzz-raw://38f368a9c988cdadc3835281875c6f4bbafec2c9b8327d26b180c80dcc829351",
+        "dweb:/ipfs/QmSoLZdCKbCSsoN7RZb9DwbTAswy5cWzUiCkK6KSSz6c8B"
       ],
       "license": "MIT"
     },

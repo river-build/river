@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-
 	"github.com/ethereum/go-ethereum/common"
 
 	. "github.com/river-build/river/core/node/base"
@@ -145,14 +144,7 @@ func (s *Service) addParsedEvent(
 		}
 	}
 
-	stream := &replicatedStream{
-		streamId:    streamId,
-		localStream: localStream,
-		nodes:       localStream,
-		service:     s,
-	}
-
-	err = stream.AddEvent(ctx, parsedEvent)
+	err = s.replicatedAddEvent(ctx, localStream, parsedEvent)
 	if err != nil {
 		return newParentEvents, err
 	}

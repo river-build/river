@@ -68,12 +68,7 @@ func (s *Service) localAddMediaEvent(
 
 	log.Debugw("localAddMediaEvent", "parsedEvent", parsedEvent, "creationCookie", creationCookie)
 
-	stream := &replicatedStream{
-		streamId: streamId,
-		service:  s,
-	}
-
-	mb, err := stream.AddMediaEvent(ctx, parsedEvent, creationCookie, req.Msg.GetLast())
+	mbHash, err := s.replicatedAddMediaEvent(ctx, parsedEvent, creationCookie, req.Msg.GetLast())
 	if err != nil {
 		return nil, AsRiverError(err).Func("localAddMediaEvent")
 	}
@@ -83,7 +78,7 @@ func (s *Service) localAddMediaEvent(
 			StreamId:          streamId[:],
 			Nodes:             creationCookie.Nodes,
 			MiniblockNum:      creationCookie.MiniblockNum + 1,
-			PrevMiniblockHash: mb.Header.Hash,
+			PrevMiniblockHash: mbHash,
 		},
 	}), nil
 }
