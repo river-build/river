@@ -21,6 +21,7 @@ import (
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
+	"github.com/river-build/river/core/node/authentication"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
@@ -757,7 +758,7 @@ func (s *Service) initNotificationHandlers() error {
 	ii = append(ii, s.NewMetricsInterceptor())
 	ii = append(ii, NewTimeoutInterceptor(s.config.Network.RequestTimeout))
 
-	authInceptor, err := auth.NewAuthenticationInterceptor(
+	authInceptor, err := authentication.NewAuthenticationInterceptor(
 		s.config.Notifications.Authentication.SessionToken.Key.Algorithm,
 		s.config.Notifications.Authentication.SessionToken.Key.Key,
 	)

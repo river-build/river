@@ -1,4 +1,4 @@
-package auth
+package authentication
 
 import (
 	"bytes"
@@ -18,7 +18,6 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/river-build/river/core/config"
-	"github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/logging"
@@ -111,7 +110,7 @@ func (s *AuthServiceMixin) Init(config *config.AuthenticationConfig) error {
 	}
 
 	if len(s.authConfig.SessionToken.Key.Key) != 64 {
-		return base.RiverError(Err_BAD_CONFIG, "Invalid session token key length",
+		return RiverError(Err_BAD_CONFIG, "Invalid session token key length",
 			"len", len(s.authConfig.SessionToken.Key.Key)).
 			Func("NewService")
 	}
@@ -124,6 +123,9 @@ func (s *AuthServiceMixin) Init(config *config.AuthenticationConfig) error {
 	if len(key) != 32 {
 		return RiverError(Err_BAD_CONFIG, "Invalid session token key decoded length").Func("NewService")
 	}
+
+	s.sessionTokenSigningAlgo = s.authConfig.SessionToken.Key.Algorithm
+	s.sessionTokenSigningKey = key
 
 	return nil
 }
@@ -295,6 +297,8 @@ func (i *jwtAuthenticationInterceptor) WrapUnary(next connect.UnaryFunc) connect
 		if err != nil {
 			return nil, err
 		}
+
+		logging.FromCtx(ctx).Infow("userId", "userId", userID)
 
 		return next(context.WithValue(ctx, UserIDCtxKey{}, userID), req)
 	}
