@@ -25,15 +25,15 @@ import (
 )
 
 const (
-	challengePrefix = "NS_AUTH:"
 	challengeLength = 16
 )
 
 type (
 	UserIDCtxKey            struct{}
 	authenticationChallenge struct {
-		userID  common.Address
-		expires time.Time
+		challengePrefix string
+		userID          common.Address
+		expires         time.Time
 	}
 )
 
@@ -67,7 +67,7 @@ func (c authenticationChallenge) Verify(
 		expires = big.NewInt(c.expires.Unix())
 	)
 
-	buf.WriteString(challengePrefix)
+	buf.WriteString(c.challengePrefix)
 	buf.Write(c.userID.Bytes())
 	buf.Write(expires.Bytes())
 	buf.Write(challenge[:])
@@ -96,9 +96,18 @@ type AuthServiceMixin struct {
 	sessionTokenSigningKey        any
 	sessionTokenSigningAlgo       string
 	pendingAuthenticationRequests sync.Map
+	challengePrefix               string
 }
 
-func (s *AuthServiceMixin) Init(config *config.AuthenticationConfig) error {
+func (s *AuthServiceMixin) ShortServiceName() string {
+	return strings.ToLower(s.challengePrefix[:2])
+}
+
+func (s *AuthServiceMixin) Init(challengePrefix string, config *config.AuthenticationConfig) error {
+	if len(challengePrefix) < 2 || len(challengePrefix) > 32 {
+		return RiverError(Err_INVALID_ARGUMENT, "Challenge prefix length is out of range", "prefix", challengePrefix)
+	}
+
 	s.authConfig = config
 
 	// set defaults
@@ -126,6 +135,7 @@ func (s *AuthServiceMixin) Init(config *config.AuthenticationConfig) error {
 
 	s.sessionTokenSigningAlgo = s.authConfig.SessionToken.Key.Algorithm
 	s.sessionTokenSigningKey = key
+	s.challengePrefix = challengePrefix
 
 	return nil
 }
@@ -137,8 +147,9 @@ func (s *AuthServiceMixin) StartAuthentication(
 	var (
 		msg           = req.Msg
 		authChallenge = &authenticationChallenge{
-			userID:  common.BytesToAddress(msg.GetUserId()),
-			expires: time.Now().Add(s.authConfig.ChallengeTimeout),
+			challengePrefix: s.challengePrefix,
+			userID:          common.BytesToAddress(msg.GetUserId()),
+			expires:         time.Now().Add(s.authConfig.ChallengeTimeout),
 		}
 		challenge [challengeLength]byte
 	)
@@ -195,9 +206,10 @@ func (s *AuthServiceMixin) FinishAuthentication(
 
 	// create a JWT session token that the client can use to make notification service rpc and send it to the client
 	now := time.Now()
+	shortServiceName := s.ShortServiceName()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"aud": "ns",
-		"iss": "ns",
+		"aud": shortServiceName,
+		"iss": shortServiceName,
 		"sub": userID.String(),
 		"exp": now.Add(s.authConfig.SessionToken.Lifetime).Unix(),
 	})
@@ -212,24 +224,33 @@ func (s *AuthServiceMixin) FinishAuthentication(
 }
 
 type jwtAuthenticationInterceptor struct {
+	shortServiceName           string
 	sessionTokenSigningKeyAlgo string
 	sessionTokenSigningKey     interface{}
 }
 
 func NewAuthenticationInterceptor(
+	shortServiceName string,
 	sessionTokenSigningKeyAlgo string,
 	sessionTokenSigningKey string,
 ) (connect.Interceptor, error) {
+	if len(shortServiceName) < 2 {
+		return nil, RiverError(
+			Err_INVALID_ARGUMENT,
+			"ShortServiceName must be at least 2 characters long",
+		).Func("NewAuthenticationInterceptor")
+	}
 	key, err := hex.DecodeString(sessionTokenSigningKey)
 	if err != nil {
-		return nil, RiverError(Err_BAD_CONFIG, "Invalid session token key").Func("NewService")
+		return nil, RiverError(Err_BAD_CONFIG, "Invalid session token key").Func("NewAuthenticationInterceptor")
 	}
 
 	if len(key) != 32 {
-		return nil, RiverError(Err_BAD_CONFIG, "Invalid session token key length").Func("NewService")
+		return nil, RiverError(Err_BAD_CONFIG, "Invalid session token key length").Func("NewAuthenticationInterceptor")
 	}
 
 	return &jwtAuthenticationInterceptor{
+		shortServiceName:           shortServiceName,
 		sessionTokenSigningKeyAlgo: sessionTokenSigningKeyAlgo,
 		sessionTokenSigningKey:     key,
 	}, nil
@@ -248,11 +269,11 @@ func (i *jwtAuthenticationInterceptor) authorize(sessionTokenString string) (com
 		return common.Address{}, RiverError(Err_UNAUTHENTICATED, "Invalid session token")
 	}
 
-	if claims["aud"] != "ns" {
+	if claims["aud"] != i.shortServiceName {
 		return common.Address{}, RiverError(Err_UNAUTHENTICATED, "Invalid session token audience")
 	}
 
-	if claims["iss"] != "ns" {
+	if claims["iss"] != i.shortServiceName {
 		return common.Address{}, RiverError(Err_UNAUTHENTICATED, "Invalid session token issuer")
 	}
 

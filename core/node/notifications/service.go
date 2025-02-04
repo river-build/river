@@ -24,6 +24,10 @@ import (
 	"github.com/river-build/river/core/node/shared"
 )
 
+const (
+	notificationServiceChallengePrefix = "NS_AUTH:"
+)
+
 type (
 	Service struct {
 		authentication.AuthServiceMixin
@@ -71,7 +75,10 @@ func NewService(
 		streamsTracker:      tracker,
 		metrics:             metrics,
 	}
-	if err := service.AuthServiceMixin.Init(&notificationsConfig.Authentication); err != nil {
+	if err := service.AuthServiceMixin.Init(
+		notificationServiceChallengePrefix,
+		&notificationsConfig.Authentication,
+	); err != nil {
 		return nil, err
 	}
 

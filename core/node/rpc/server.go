@@ -758,7 +758,9 @@ func (s *Service) initNotificationHandlers() error {
 	ii = append(ii, s.NewMetricsInterceptor())
 	ii = append(ii, NewTimeoutInterceptor(s.config.Network.RequestTimeout))
 
+	logging.FromCtx(s.serverCtx).Infow("NS shortname", "shortName", s.NotificationService.ShortServiceName())
 	authInceptor, err := authentication.NewAuthenticationInterceptor(
+		s.NotificationService.ShortServiceName(),
 		s.config.Notifications.Authentication.SessionToken.Key.Algorithm,
 		s.config.Notifications.Authentication.SessionToken.Key.Key,
 	)
@@ -794,15 +796,15 @@ func (s *Service) initBotRegistryHandlers() error {
 	ii = append(ii, s.NewMetricsInterceptor())
 	ii = append(ii, NewTimeoutInterceptor(s.config.Network.RequestTimeout))
 
-	// TODO: add authentication to bot registry service
-	// authInceptor, err := notifications.NewAuthenticationInterceptor(
-	// 	s.config.Notifications.Authentication.SessionToken.Key.Algorithm,
-	// 	s.config.Notifications.Authentication.SessionToken.Key.Key,
-	// )
-	// if err != nil {
-	// 	return err
-	// }
-	// ii = append(ii, authInceptor)
+	authInceptor, err := authentication.NewAuthenticationInterceptor(
+		s.BotRegistryService.ShortServiceName(),
+		s.config.BotRegistry.Authentication.SessionToken.Key.Algorithm,
+		s.config.BotRegistry.Authentication.SessionToken.Key.Key,
+	)
+	if err != nil {
+		return err
+	}
+	ii = append(ii, authInceptor)
 
 	interceptors := connect.WithInterceptors(ii...)
 
@@ -810,8 +812,15 @@ func (s *Service) initBotRegistryHandlers() error {
 		s.BotRegistryService,
 		interceptors,
 	)
+	botRegistryAuthServicePattern, botRegistryAuthServiceHandler := protocolconnect.NewAuthenticationServiceHandler(
+		s.NotificationService,
+		interceptors,
+	)
 
 	s.mux.Handle(botRegistryServicePattern, newHttpHandler(botRegistryServiceHandler, s.defaultLogger))
+	s.mux.Handle(botRegistryAuthServicePattern, newHttpHandler(botRegistryAuthServiceHandler, s.defaultLogger))
+
+	// s.registerDebugHandlers(s.config.EnableDebugEndpoints, s.config.DebugEndpoints)
 
 	return nil
 }
