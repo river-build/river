@@ -12,9 +12,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
-	"github.com/river-build/river/core/node/bot_registry"
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
+	"github.com/river-build/river/core/node/bot_registry"
 	"github.com/river-build/river/core/node/crypto"
 	. "github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/infra"
