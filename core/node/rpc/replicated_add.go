@@ -175,9 +175,6 @@ func (s *Service) replicatedAddMediaEventImpl(ctx context.Context, event *Parsed
 
 		// Return here if there are more chunks to upload.
 		if !last {
-			// TODO: this might be moved to the storage layer?
-			s.ephStreams.onUpdated(streamId)
-
 			return nil
 		}
 

@@ -172,7 +172,7 @@ func (s *Service) createReplicatedMediaStream(
 			}
 
 			// TODO: this might be moved to the storage layer?
-			s.ephStreams.onUpdated(streamId)
+			s.ephStreams.onCreated(streamId)
 
 			return nil
 		})

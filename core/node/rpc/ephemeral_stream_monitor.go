@@ -14,7 +14,7 @@ import (
 
 // ephemeralStreamMonitor is a monitor that keeps track of ephemeral streams and cleans up dead ones.
 type ephemeralStreamMonitor struct {
-	// ephemeralStreams is a map of ephemeral stream IDs to the time they were last updated.
+	// ephemeralStreams is a map of ephemeral stream IDs to the creation time.
 	ephemeralStreams *xsync.MapOf[StreamId, time.Time]
 
 	storage storage.StreamStorage
@@ -48,6 +48,16 @@ func newEphemeralStreamMonitor(
 	return m, nil
 }
 
+// onCreated is called when an ephemeral stream is created.
+func (m *ephemeralStreamMonitor) onCreated(streamId StreamId) {
+	m.ephemeralStreams.Store(streamId, time.Now())
+}
+
+// onSealed is called when an ephemeral stream get sealed.
+func (m *ephemeralStreamMonitor) onSealed(streamId StreamId) {
+	m.ephemeralStreams.Delete(streamId)
+}
+
 // monitor is the main loop of the dead ephemeral stream clean up procedure.
 func (m *ephemeralStreamMonitor) monitor(ctx context.Context) {
 	const cleanupInterval = time.Minute
@@ -62,29 +72,27 @@ func (m *ephemeralStreamMonitor) monitor(ctx context.Context) {
 			}
 			return
 		case <-ticker.C:
-			m.ephemeralStreams.Range(func(streamId StreamId, lastUpdated time.Time) bool {
-				if time.Since(lastUpdated) > m.ttl {
-					if err := m.storage.DeleteEphemeralStream(ctx, streamId); err != nil {
-						logging.FromCtx(ctx).Error("failed to delete dead ephemeral stream", "err", err, "streamId", streamId)
+			m.ephemeralStreams.Range(func(streamId StreamId, createdAt time.Time) bool {
+				if time.Since(createdAt) > m.ttl {
+					m.ephemeralStreams.Delete(streamId)
+
+					isEphemeral, err := m.storage.IsStreamEphemeral(ctx, streamId)
+					if err != nil {
+						logging.FromCtx(ctx).Error("failed to check if stream is ephemeral", "err", err, "streamId", streamId)
+						return true
 					}
 
-					m.ephemeralStreams.Delete(streamId)
+					if isEphemeral {
+						if err := m.storage.DeleteEphemeralStream(ctx, streamId); err != nil {
+							logging.FromCtx(ctx).Error("failed to delete dead ephemeral stream", "err", err, "streamId", streamId)
+						}
+					}
 				}
 
 				return true
 			})
 		}
 	}
-}
-
-// onUpdated is called when a stream is updated, e.g. new ephemeral miniblock was added.
-func (m *ephemeralStreamMonitor) onUpdated(streamId StreamId) {
-	m.ephemeralStreams.Store(streamId, time.Now())
-}
-
-// onSealed is called when a stream is sealed, i.e. the ephemeral stream was normalized.
-func (m *ephemeralStreamMonitor) onSealed(streamId StreamId) {
-	m.ephemeralStreams.Delete(streamId)
 }
 
 // loadEphemeralStreams loads all ephemeral streams from the database.
