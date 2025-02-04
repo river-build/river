@@ -20,6 +20,7 @@ contract DeployMembership is Deployer, FacetHelper {
     // Minting
     addSelector(IMembership.joinSpace.selector);
     addSelector(IMembership.joinSpaceWithReferral.selector);
+    addSelector(IMembership.joinSpaceGeneric.selector);
     addSelector(IMembership.renewMembership.selector);
 
     addSelector(IMembership.expiresAt.selector);

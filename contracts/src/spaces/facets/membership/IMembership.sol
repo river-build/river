@@ -8,6 +8,11 @@ pragma solidity ^0.8.23;
 // contracts
 
 interface IMembershipBase {
+  enum TransactionType {
+    JOIN,
+    JOIN_WITH_REFERRAL
+  }
+
   // =============================================================
   //                           Strucs
   // =============================================================
@@ -101,6 +106,16 @@ interface IMembership is IMembershipBase {
   function joinSpaceWithReferral(
     address receiver,
     ReferralTypes memory referral
+  ) external payable;
+
+  /**
+   * @notice Generic join space function
+   * @param transactionType The type of transaction
+   * @param data The transaction data
+   */
+  function joinSpaceGeneric(
+    TransactionType transactionType,
+    bytes calldata data
   ) external payable;
 
   /**

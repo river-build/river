@@ -69,6 +69,25 @@ contract MembershipFacet is
     _joinSpaceWithReferral(receiver, referral);
   }
 
+  /// @inheritdoc IMembership
+  function joinSpaceGeneric(
+    TransactionType transactionType,
+    bytes calldata data
+  ) external payable nonReentrant {
+    if (transactionType == TransactionType.JOIN) {
+      address receiver = abi.decode(data, (address));
+      _joinSpace(receiver);
+    } else if (transactionType == TransactionType.JOIN_WITH_REFERRAL) {
+      (address receiver, ReferralTypes memory referral) = abi.decode(
+        data,
+        (address, ReferralTypes)
+      );
+      _joinSpaceWithReferral(receiver, referral);
+    } else {
+      CustomRevert.revertWith(Membership__InvalidTransactionType.selector);
+    }
+  }
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           RENEWAL                          */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/

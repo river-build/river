@@ -537,6 +537,19 @@ contract MembershipJoinSpaceTest is
     );
   }
 
+  function test_joinSpaceGeneric() external givenMembershipHasPrice {
+    vm.deal(alice, MEMBERSHIP_PRICE);
+    vm.prank(alice);
+    membership.joinSpaceGeneric{value: MEMBERSHIP_PRICE}(
+      TransactionType.JOIN,
+      abi.encode(alice)
+    );
+
+    assertEq(membershipToken.balanceOf(alice), 1);
+    assertEq(alice.balance, 0);
+  }
+
+  // utils
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           LEGACY                           */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
