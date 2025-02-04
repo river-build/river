@@ -7,7 +7,9 @@ import (
 
 	"github.com/puzpuzpuz/xsync/v3"
 
+	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/logging"
+	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
 )
@@ -76,14 +78,8 @@ func (m *ephemeralStreamMonitor) monitor(ctx context.Context) {
 				if time.Since(createdAt) > m.ttl {
 					m.ephemeralStreams.Delete(streamId)
 
-					isEphemeral, err := m.storage.IsStreamEphemeral(ctx, streamId)
-					if err != nil {
-						logging.FromCtx(ctx).Error("failed to check if stream is ephemeral", "err", err, "streamId", streamId)
-						return true
-					}
-
-					if isEphemeral {
-						if err := m.storage.DeleteEphemeralStream(ctx, streamId); err != nil {
+					if err := m.storage.DeleteEphemeralStream(ctx, streamId); err != nil {
+						if !IsRiverErrorCode(err, Err_NOT_FOUND) {
 							logging.FromCtx(ctx).Error("failed to delete dead ephemeral stream", "err", err, "streamId", streamId)
 						}
 					}
