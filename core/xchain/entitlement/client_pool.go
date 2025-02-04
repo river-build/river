@@ -3,6 +3,8 @@ package entitlement
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/river-build/river/core/config"
 
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -35,6 +37,7 @@ func NewBlockchainClientPool(
 	cfg *config.Config,
 	onChainCfg crypto.OnChainConfiguration,
 	metrics infra.MetricsFactory,
+	tracer trace.Tracer,
 ) (BlockchainClientPool, error) {
 	log := logging.FromCtx(ctx)
 	clients := make(map[uint64]crypto.BlockchainClient)
@@ -69,7 +72,7 @@ func NewBlockchainClientPool(
 		}
 
 		// Add metrics collection to contract calls for this chain
-		clients[chainID] = crypto.NewInstrumentedEthClient(client, chainID, metrics, nil)
+		clients[chainID] = crypto.NewInstrumentedEthClient(client, chainID, metrics, tracer)
 	}
 
 	return &blockchainClientPoolImpl{clients: clients}, nil
