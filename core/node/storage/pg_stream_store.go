@@ -1841,10 +1841,7 @@ func (s *PostgresStreamStore) DeleteEphemeralStream(ctx context.Context, streamI
 
 func (s *PostgresStreamStore) deleteEphemeralStreamTx(ctx context.Context, tx pgx.Tx, streamId StreamId) error {
 	if _, err := s.lockEphemeralStream(ctx, tx, streamId, true); err != nil {
-		// There might be a case when there is no record in "es" table.
-		if !IsRiverErrorCode(err, Err_NOT_FOUND) {
-			return err
-		}
+		return err
 	}
 
 	_, err := tx.Exec(

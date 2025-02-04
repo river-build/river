@@ -20,8 +20,8 @@ type ephemeralStreamMonitor struct {
 	storage storage.StreamStorage
 }
 
-// initEphemeralStreamMonitor creates and starts a dead ephemeral stream monitor.
-func initEphemeralStreamMonitor(
+// newEphemeralStreamMonitor creates and starts a dead ephemeral stream monitor.
+func newEphemeralStreamMonitor(
 	ctx context.Context,
 	storage storage.StreamStorage,
 ) (*ephemeralStreamMonitor, error) {
@@ -63,9 +63,9 @@ func (m *ephemeralStreamMonitor) monitor(ctx context.Context) {
 				if time.Since(lastUpdated) > ttl {
 					if err := m.storage.DeleteEphemeralStream(ctx, streamId); err != nil {
 						logging.FromCtx(ctx).Error("failed to delete dead ephemeral stream", "err", err, "streamId", streamId)
-					} else {
-						m.ephemeralStreams.Delete(streamId)
 					}
+
+					m.ephemeralStreams.Delete(streamId)
 				}
 
 				return true
@@ -89,10 +89,6 @@ func (m *ephemeralStreamMonitor) loadEphemeralStreams(ctx context.Context) error
 	ephemeralStreams, err := m.storage.GetEphemeralStreams(ctx)
 	if err != nil {
 		return err
-	}
-
-	if m.ephemeralStreams == nil {
-		m.ephemeralStreams = xsync.NewMapOf[StreamId, time.Time]()
 	}
 
 	for _, streamId := range ephemeralStreams {
