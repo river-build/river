@@ -48,7 +48,7 @@ const (
 	MediaStreamMembershipLimitsDMConfigKey          = "media.streamMembershipLimits.88"
 	XChainBlockchainsConfigKey                      = "xchain.blockchains"
 	StreamMiniblockRegistrationFrequencyKey         = "stream.miniblockRegistrationFrequency"
-	StreamEphemeralStreamTTLKey                     = "stream.ephemeralStreamTTL"
+	StreamEphemeralStreamTTLMsKey                   = "stream.ephemeralStreamTTLMs"
 )
 
 var (
@@ -102,7 +102,7 @@ type OnChainSettings struct {
 	StreamCacheExpiration    time.Duration `mapstructure:"stream.cacheExpirationMs"`
 	StreamCachePollIntterval time.Duration `mapstructure:"stream.cacheExpirationPollIntervalMs"`
 
-	StreamEphemeralStreamTTL time.Duration `mapstructure:"stream.ephemeralStreamTTL"`
+	StreamEphemeralStreamTTL time.Duration `mapstructure:"stream.ephemeralStreamTTLMs"`
 
 	GetMiniblocksMaxPageSize uint64 `mapstructure:"stream.getMiniblocksMaxPageSize"`
 
