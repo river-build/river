@@ -134,7 +134,7 @@ func init() {
 			addr := common.HexToAddress(rawUserId)
 			// HexToAddress never fails, so convert the hex back to a raw string and see if the strings match,
 			// case-insensitively.
-			if strings.EqualFold(addr.String(), rawUserId) {
+			if !strings.EqualFold(addr.String(), rawUserId) {
 				return fmt.Errorf("invalid address for walletAddr: %v, decodes to %v", rawUserId, addr.String())
 			}
 
