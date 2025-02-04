@@ -38,7 +38,7 @@ func NewEvaluatorFromConfigWithBlockchainInfo(
 	blockChainInfo map[uint64]config.BlockchainInfo,
 	metrics infra.MetricsFactory,
 ) (*Evaluator, error) {
-	clients, err := NewBlockchainClientPool(ctx, cfg, onChainCfg)
+	clients, err := NewBlockchainClientPool(ctx, cfg, onChainCfg, metrics)
 	if err != nil {
 		return nil, err
 	}

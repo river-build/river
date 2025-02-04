@@ -9,6 +9,7 @@ import (
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
+	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/logging"
 	. "github.com/river-build/river/core/node/protocol"
 )
@@ -33,6 +34,7 @@ func NewBlockchainClientPool(
 	ctx context.Context,
 	cfg *config.Config,
 	onChainCfg crypto.OnChainConfiguration,
+	metrics infra.MetricsFactory,
 ) (BlockchainClientPool, error) {
 	log := logging.FromCtx(ctx)
 	clients := make(map[uint64]crypto.BlockchainClient)
@@ -66,7 +68,8 @@ func NewBlockchainClientPool(
 			continue
 		}
 
-		clients[chainID] = client
+		// Add metrics collection to contract calls for this chain
+		clients[chainID] = crypto.NewInstrumentedEthClient(client, chainID, metrics, nil)
 	}
 
 	return &blockchainClientPoolImpl{clients: clients}, nil
