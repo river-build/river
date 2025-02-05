@@ -158,7 +158,7 @@ func (m *ephemeralStreamMonitor) loadEphemeralStreams(ctx context.Context) error
 
 				return nil
 			})
-			return nil
+			return err
 		},
 		nil,
 	)
