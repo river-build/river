@@ -92,45 +92,52 @@ func (m *ephemeralStreamMonitor) monitor(ctx context.Context) {
 			return
 		case <-ticker.C:
 			m.streams.Range(func(streamId StreamId, createdAt time.Time) bool {
-				if time.Since(createdAt) > m.ttl {
-					m.streams.Delete(streamId)
-
-					ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-					defer cancel()
-					if err := m.storage.txRunner(
-						ctx,
-						"ephemeralStreamMonitor.monitor",
-						pgx.ReadWrite,
-						func(ctx context.Context, tx pgx.Tx) error {
-							if _, err := m.storage.lockEphemeralStream(ctx, tx, streamId, true); err != nil {
-								return err
-							}
-
-							_, err := tx.Exec(
-								ctx,
-								m.storage.sqlForStream(
-									`DELETE from {{miniblocks}} WHERE stream_id = $1;
-									 DELETE from {{minipools}} WHERE stream_id = $1;
-									 DELETE FROM es WHERE stream_id = $1`,
-									streamId,
-								),
-								streamId,
-							)
-							return err
-						},
-						nil,
-						"streamId", streamId,
-					); err != nil {
-						if !IsRiverErrorCode(err, Err_NOT_FOUND) {
-							logging.FromCtx(ctx).Error("failed to delete dead ephemeral stream", "err", err, "streamId", streamId)
-						}
-					}
-				}
-
-				return true
+				return m.handleStream(ctx, streamId, createdAt)
 			})
 		}
 	}
+}
+
+// handleStream checks if an ephemeral stream is dead and deletes it if it is.
+func (m *ephemeralStreamMonitor) handleStream(ctx context.Context, streamId StreamId, createdAt time.Time) bool {
+	if time.Since(createdAt) <= m.ttl {
+		return true
+	}
+	m.streams.Delete(streamId)
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	if err := m.storage.txRunner(
+		ctx,
+		"ephemeralStreamMonitor.handleStream",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			if _, err := m.storage.lockEphemeralStream(ctx, tx, streamId, true); err != nil {
+				return err
+			}
+
+			_, err := tx.Exec(
+				ctx,
+				m.storage.sqlForStream(
+					`DELETE from {{miniblocks}} WHERE stream_id = $1;
+									 DELETE from {{minipools}} WHERE stream_id = $1;
+									 DELETE FROM es WHERE stream_id = $1`,
+					streamId,
+				),
+				streamId,
+			)
+			return err
+		},
+		nil,
+		"streamId", streamId,
+	); err != nil {
+		if !IsRiverErrorCode(err, Err_NOT_FOUND) {
+			logging.FromCtx(ctx).Error("failed to delete dead ephemeral stream", "err", err, "streamId", streamId)
+		}
+	}
+
+	return true
 }
 
 // loadEphemeralStreams loads all ephemeral streams from the database.
