@@ -91,6 +91,9 @@ func (c authenticationChallenge) Verify(
 	return crypto.CheckDelegateSig(c.userID[:], signerPubKey, delegateSig, delegateExpiryEpochMs)
 }
 
+// AuthServiceMixin can be used by any service requiring authentication to implement authentication
+// for the endpoints of the authentication service, which allows users to attest to their ownership
+// of wallets.
 type AuthServiceMixin struct {
 	authConfig                    *config.AuthenticationConfig
 	sessionTokenSigningKey        any
@@ -230,6 +233,11 @@ type jwtAuthenticationInterceptor struct {
 	publicRoutes               []string
 }
 
+// NewAuthenticationInterceptor creates a connect Interceptor that can be used to require
+// that endpoints on a service which is using authentication.
+// The shortServiceName parameter must match the string used by the authentication service
+// to construct the JWT token embedded in the session header.
+// publicRoutes is an optional list of routes that will be ignored by the interceptor.
 func NewAuthenticationInterceptor(
 	shortServiceName string,
 	sessionTokenSigningKeyAlgo string,
