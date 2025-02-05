@@ -110,8 +110,8 @@ describe.concurrent('TestDecryptionExtensions', () => {
             // assert
             expect(new TextDecoder().decode(decrypted)).toBe(bobsPlaintext)
             expect(decrypted_V0).toBe(bobsPlaintext)
-            expect(bobDex.seenStates).toContain(DecryptionStatus.respondingToKeyRequests)
-            expect(aliceDex.seenStates).toContain(DecryptionStatus.processingNewGroupSessions)
+            expect(bobDex.seenStates).toContain(DecryptionStatus.working)
+            expect(aliceDex.seenStates).toContain(DecryptionStatus.working)
         },
     )
 
@@ -297,7 +297,7 @@ class MockDecryptionExtensions extends BaseDecryptionExtensions {
         const p = new Promise<void>((resolve) => {
             this.inProgress[streamId] = new MicroTask(
                 resolve,
-                DecryptionStatus.processingNewGroupSessions,
+                DecryptionStatus.working,
                 DecryptionStatus.idle,
             )
             // start processing the new sessions
@@ -322,7 +322,7 @@ class MockDecryptionExtensions extends BaseDecryptionExtensions {
         const p = new Promise<void>((resolve) => {
             this.inProgress[streamId] = new MicroTask(
                 resolve,
-                DecryptionStatus.respondingToKeyRequests,
+                DecryptionStatus.working,
                 DecryptionStatus.idle,
             )
             // start processing the request
@@ -399,6 +399,10 @@ class MockDecryptionExtensions extends BaseDecryptionExtensions {
 
     public isUserInboxStreamUpToDate(_upToDateStreams: Set<string>): boolean {
         return true
+    }
+
+    public getPriorityForStream(_streamId: string, _highPriorityIds: Set<string>): number {
+        return 0
     }
 
     private markStreamUpToDate(streamId: string): void {
