@@ -243,9 +243,6 @@ func (s *Service) replicatedAddMediaEventImpl(ctx context.Context, event *Parsed
 		); err != nil {
 			return nil, err
 		}
-
-		// TODO: this might be moved to the storage layer?
-		s.ephStreams.onSealed(streamId)
 	}
 
 	return ephemeralMb.Header.Hash, nil

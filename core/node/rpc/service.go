@@ -53,7 +53,6 @@ type Service struct {
 	cache       *StreamCache
 	mbProducer  TestMiniblockProducer
 	syncHandler river_sync.Handler
-	ephStreams  *ephemeralStreamMonitor
 
 	// Notifications
 	notifications notifications.UserPreferencesStore

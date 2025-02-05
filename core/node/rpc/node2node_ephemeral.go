@@ -52,9 +52,6 @@ func (s *Service) allocateEphemeralStream(ctx context.Context, req *AllocateEphe
 		return nil, err
 	}
 
-	// TODO: this might be moved to the storage layer?
-	s.ephStreams.onCreated(streamId)
-
 	return &AllocateEphemeralStreamResponse{}, nil
 }
 
@@ -135,12 +132,6 @@ func (s *Service) sealEphemeralStream(
 		return AsRiverError(err).Func("sealEphemeralStream")
 	}
 
-	if _, err = s.storage.NormalizeEphemeralStream(ctx, streamId); err == nil {
-		return nil
-	}
-
-	// TODO: this might be moved to the storage layer?
-	s.ephStreams.onSealed(streamId)
-
+	_, err = s.storage.NormalizeEphemeralStream(ctx, streamId)
 	return err
 }

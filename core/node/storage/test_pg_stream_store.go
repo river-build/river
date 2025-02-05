@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"time"
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/infra"
@@ -32,6 +33,7 @@ func NewTestStreamStore(ctx context.Context) *TestStreamStore {
 		GenShortNanoid(),
 		exitChan,
 		infra.NewMetricsFactory(nil, "", ""),
+		time.Minute*10,
 	)
 	if err != nil {
 		panic(err)

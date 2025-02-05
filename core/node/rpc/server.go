@@ -572,6 +572,7 @@ func (s *Service) initStore() error {
 			s.instanceId,
 			s.exitSignal,
 			s.metrics,
+			s.chainConfig.Get().StreamEphemeralStreamTTL,
 		)
 		if err != nil {
 			return err
@@ -724,11 +725,6 @@ func (s *Service) initCacheAndSync(opts *ServerStartOpts) error {
 		s.nodeRegistry,
 		s.otelTracer,
 	)
-
-	s.ephStreams, err = newEphemeralStreamMonitor(s.serverCtx, s.storage, s.chainConfig.Get().StreamEphemeralStreamTTL)
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
