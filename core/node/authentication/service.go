@@ -239,10 +239,12 @@ type jwtAuthenticationInterceptor struct {
 }
 
 // NewAuthenticationInterceptor creates a connect Interceptor that can be used to require
-// that endpoints on a service which is using authentication.
+// that endpoints on a service which is using authentication do indeed contain a valid
+// jwt token issued by this service in the request header.
 // The shortServiceName parameter must match the string used by the authentication service
-// to construct the JWT token embedded in the session header.
-// publicRoutes is an optional list of routes that will be ignored by the interceptor.
+// mixin to construct the JWT token embedded in the session header.
+// publicRoutes is an optional list of routes that will be ignored by the interceptor. This
+// list is only used to whitelist unary endpoints.
 func NewAuthenticationInterceptor(
 	shortServiceName string,
 	sessionTokenSigningKeyAlgo string,
