@@ -106,6 +106,11 @@ func (s *AuthServiceMixin) ShortServiceName() string {
 	return strings.ToLower(s.challengePrefix[:2])
 }
 
+// Since AuthServiceMixin is intended to be used as an embedded struct in other service definitions,
+// InitAuthentication is the method that initializes the mixin's internal state.
+// challengePrefix will be used as a service-specific prefix for the challenge message the user is expected
+// sign in order to verify their ownership of a wallet's private key. The first two characters of the prefix
+// are also used to populate service-specific values in the issued jwt token's claim map.
 func (s *AuthServiceMixin) InitAuthentication(challengePrefix string, config *config.AuthenticationConfig) error {
 	if len(challengePrefix) < 2 || len(challengePrefix) > 32 {
 		return RiverError(Err_INVALID_ARGUMENT, "Challenge prefix length is out of range", "prefix", challengePrefix)
