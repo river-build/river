@@ -337,8 +337,6 @@ func (i *jwtAuthenticationInterceptor) WrapUnary(next connect.UnaryFunc) connect
 			return nil, err
 		}
 
-		logging.FromCtx(ctx).Infow("userId", "userId", userID)
-
 		return next(context.WithValue(ctx, UserIDCtxKey{}, userID), req)
 	}
 }
