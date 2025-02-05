@@ -915,7 +915,7 @@ describe('clientTest', () => {
         alicesClient.startSync()
         await waitFor(() => {
             // @ts-ignore
-            expect(alicesClient.decryptionExtensions?.status).toEqual(DecryptionStatus.idle)
+            expect(alicesClient.decryptionExtensions?.status).toEqual(DecryptionStatus.done)
         })
         const alicesUserId = alicesClient.userId
 
@@ -979,7 +979,7 @@ describe('clientTest', () => {
         alicesClient.startSync()
         await waitFor(() => {
             // @ts-ignore
-            expect(alicesClient.decryptionExtensions?.status).toEqual(DecryptionStatus.idle)
+            expect(alicesClient.decryptionExtensions?.status).toEqual(DecryptionStatus.done)
         })
 
         await expect(
