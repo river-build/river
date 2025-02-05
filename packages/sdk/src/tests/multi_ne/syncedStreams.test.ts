@@ -5,7 +5,13 @@
 import { makeEvent, unpackStream } from '../../sign'
 import { SyncedStreams } from '../../syncedStreams'
 import { SyncState, stateConstraints } from '../../syncedStreamsLoop'
-import { makeDonePromise, makeRandomUserContext, makeTestRpcClient, waitFor } from '../testUtils'
+import {
+    lastMiniblockRef,
+    makeDonePromise,
+    makeRandomUserContext,
+    makeTestRpcClient,
+    waitFor,
+} from '../testUtils'
 import { makeUserInboxStreamId, streamIdToBytes, userIdFromAddress } from '../../id'
 import { make_UserInboxPayload_Ack, make_UserInboxPayload_Inception } from '../../types'
 import { dlog } from '@river-build/dlog'
@@ -107,7 +113,7 @@ describe('syncStreams', () => {
                 event: await makeEvent(
                     alicesContext,
                     payload,
-                    userInboxStreamResponse.streamAndCookie.miniblocks[0].hash,
+                    userInboxStreamResponse.streamAndCookie.miniblocks.at(-1)!.ref,
                 ),
             })
         }

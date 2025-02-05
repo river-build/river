@@ -147,9 +147,7 @@ export const converse = async (conversation: string[][], testName: string): Prom
 
         log(`START, numDrivers=${numDrivers}, steps=${numConversationSteps}`)
         const drivers = await Promise.all(
-            Array.from({ length: numDrivers })
-                .fill('')
-                .map(async (_, i) => await makeTestDriver(i, testName)),
+            Array.from({ length: numDrivers }, async (_, i) => makeTestDriver(i, testName)),
         )
 
         log(`starting all drivers`)
@@ -231,25 +229,19 @@ export const converse = async (conversation: string[][], testName: string): Prom
         log(`all joined`)
 
         for (const [conv_idx, conv] of conversation.entries()) {
-            log(`conversation stepping start ${conv_idx}`, conv)
+            log('conversation step START =====', conv_idx, conv)
             await Promise.all(
                 conv.map(async (msg, msg_idx) => {
-                    log(`conversation step before send conv: ${conv_idx} msg: ${msg_idx}`, msg)
                     // expect to recieve everyone elses messages (don't worry about your own, they render locally)
                     const expected = new Set(
                         [...conv.slice(0, msg_idx), ...conv.slice(msg_idx + 1)].filter(
                             (s) => s !== '',
                         ),
                     )
-                    log(`conversation step execute ${msg_idx}`, msg, [...expected])
                     await drivers[msg_idx].step(channelId, conv_idx, expected, msg)
-                    log(
-                        `${testName} conversation step after send conv: ${conv_idx} msg: ${msg_idx}`,
-                        msg,
-                    )
                 }),
             )
-            log(`conversation stepping end ${conv_idx}`, conv)
+            log('conversation step END =====', conv_idx)
         }
         log(`conversation complete, now stopping drivers`)
 

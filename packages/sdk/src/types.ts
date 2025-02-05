@@ -37,9 +37,11 @@ import {
     MemberPayload_Nft,
     BlockchainTransaction,
     MemberPayload_Mls,
+    Envelope,
+    GetLastMiniblockHashResponse,
 } from '@river-build/proto'
 import { keccak256 } from 'ethereum-cryptography/keccak'
-import { bin_toHexString } from '@river-build/dlog'
+import { bin_toHexString, check } from '@river-build/dlog'
 import { isDefined } from './check'
 import { DecryptedContent } from './encryptedContentTypes'
 import { addressFromUserId, streamIdAsBytes } from './id'
@@ -149,8 +151,28 @@ export function makeRemoteTimelineEvent(params: {
     }
 }
 
-export interface ParsedMiniblock {
+export interface MiniblockRef {
     hash: Uint8Array
+    num: bigint
+}
+
+export function miniblockRefFromHeader(header: ParsedEvent): MiniblockRef {
+    check(header.event.payload?.case === 'miniblockHeader', 'Expected miniblock header event')
+    return {
+        hash: header.hash,
+        num: header.event.payload.value.miniblockNum,
+    }
+}
+
+export function miniblockRefFromResponse(r: GetLastMiniblockHashResponse): MiniblockRef {
+    return {
+        hash: r.hash,
+        num: r.miniblockNum,
+    }
+}
+
+export interface ParsedMiniblock {
+    ref: MiniblockRef
     header: MiniblockHeader
     events: ParsedEvent[]
 }

@@ -7,6 +7,7 @@ import { Client } from '../../client'
 import { makeUniqueChannelStreamId, makeDMStreamId } from '../../id'
 import { InfoRequest } from '@river-build/proto'
 import { deriveKeyAndIV, encryptAESGCM } from '../../crypto_utils'
+import { MiniblockRef } from '../../types'
 
 describe('mediaTests', () => {
     let bobsClient: Client
@@ -23,7 +24,7 @@ describe('mediaTests', () => {
 
     async function bobCreateMediaStream(
         chunkCount: number,
-    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array }> {
+    ): Promise<{ streamId: string; prevMiniblock: MiniblockRef }> {
         const spaceId = makeUniqueSpaceStreamId()
         await expect(bobsClient.createSpace(spaceId)).resolves.not.toThrow()
 
@@ -38,17 +39,16 @@ describe('mediaTests', () => {
     async function bobSendMediaPayloads(
         streamId: string,
         chunks: number,
-        prevMiniblockHash: Uint8Array,
-    ): Promise<Uint8Array> {
-        let prevHash = prevMiniblockHash
+        prevMiniblock: MiniblockRef,
+    ): Promise<MiniblockRef> {
         for (let i = 0; i < chunks; i++) {
             const chunk = new Uint8Array(100)
             // Create novel chunk content for testing purposes
             chunk.fill(i, 0, 100)
-            const result = await bobsClient.sendMediaPayload(streamId, chunk, i, prevHash)
-            prevHash = result.prevMiniblockHash
+            const result = await bobsClient.sendMediaPayload(streamId, chunk, i, prevMiniblock)
+            prevMiniblock = result.prevMiniblock
         }
-        return prevHash
+        return prevMiniblock
     }
 
     async function bobSendEncryptedMediaPayload(
@@ -56,13 +56,11 @@ describe('mediaTests', () => {
         data: Uint8Array,
         key: Uint8Array,
         iv: Uint8Array,
-        prevMiniblockHash: Uint8Array,
-    ): Promise<Uint8Array> {
-        let prevHash = prevMiniblockHash
+        prevMiniblock: MiniblockRef,
+    ): Promise<MiniblockRef> {
         const { ciphertext } = await encryptAESGCM(data, key, iv)
-        const result = await bobsClient.sendMediaPayload(streamId, ciphertext, 0, prevHash)
-        prevHash = result.prevMiniblockHash
-        return prevHash
+        const result = await bobsClient.sendMediaPayload(streamId, ciphertext, 0, prevMiniblock)
+        return result.prevMiniblock
     }
 
     function createTestMediaChunks(chunks: number): Uint8Array {
@@ -78,15 +76,9 @@ describe('mediaTests', () => {
     async function bobCreateSpaceMediaStream(
         spaceId: string,
         chunkCount: number,
-    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array }> {
+    ): Promise<{ streamId: string; prevMiniblock: MiniblockRef }> {
         await expect(bobsClient.createSpace(spaceId)).resolves.not.toThrow()
-        const mediaInfo = await bobsClient.createMediaStream(
-            undefined,
-            spaceId,
-            undefined,
-            chunkCount,
-        )
-        return mediaInfo
+        return await bobsClient.createMediaStream(undefined, spaceId, undefined, chunkCount)
     }
 
     test('clientCanCreateMediaStream', async () => {
@@ -100,14 +92,14 @@ describe('mediaTests', () => {
 
     test('clientCanSendMediaPayload', async () => {
         const mediaStreamInfo = await bobCreateMediaStream(10)
-        await bobSendMediaPayloads(mediaStreamInfo.streamId, 10, mediaStreamInfo.prevMiniblockHash)
+        await bobSendMediaPayloads(mediaStreamInfo.streamId, 10, mediaStreamInfo.prevMiniblock)
     })
 
     test('clientCanSendSpaceMediaPayload', async () => {
         const spaceId = makeUniqueSpaceStreamId()
         const mediaStreamInfo = await bobCreateSpaceMediaStream(spaceId, 10)
         await expect(
-            bobSendMediaPayloads(mediaStreamInfo.streamId, 10, mediaStreamInfo.prevMiniblockHash),
+            bobSendMediaPayloads(mediaStreamInfo.streamId, 10, mediaStreamInfo.prevMiniblock),
         ).resolves.not.toThrow()
     })
 
@@ -122,7 +114,7 @@ describe('mediaTests', () => {
                 data,
                 key,
                 iv,
-                mediaStreamInfo.prevMiniblockHash,
+                mediaStreamInfo.prevMiniblock,
             ),
         ).resolves.not.toThrow()
     })
@@ -137,7 +129,7 @@ describe('mediaTests', () => {
             data,
             key,
             iv,
-            mediaStreamInfo.prevMiniblockHash,
+            mediaStreamInfo.prevMiniblock,
         )
         const decryptedChunks = await bobsClient.getMediaPayload(mediaStreamInfo.streamId, key, iv)
         expect(decryptedChunks).toEqual(data)
@@ -147,10 +139,10 @@ describe('mediaTests', () => {
         const result = await bobCreateMediaStream(10)
         const chunk = new Uint8Array(100)
         await expect(
-            bobsClient.sendMediaPayload(result.streamId, chunk, -1, result.prevMiniblockHash),
+            bobsClient.sendMediaPayload(result.streamId, chunk, -1, result.prevMiniblock),
         ).rejects.toThrow()
         await expect(
-            bobsClient.sendMediaPayload(result.streamId, chunk, 11, result.prevMiniblockHash),
+            bobsClient.sendMediaPayload(result.streamId, chunk, 11, result.prevMiniblock),
         ).rejects.toThrow()
     })
 
@@ -158,7 +150,7 @@ describe('mediaTests', () => {
         const result = await bobCreateMediaStream(10)
         const chunk = new Uint8Array(500000)
         await expect(
-            bobsClient.sendMediaPayload(result.streamId, chunk, 0, result.prevMiniblockHash),
+            bobsClient.sendMediaPayload(result.streamId, chunk, 0, result.prevMiniblock),
         ).resolves.not.toThrow()
     })
 
@@ -166,7 +158,7 @@ describe('mediaTests', () => {
         const result = await bobCreateMediaStream(10)
         const chunk = new Uint8Array(500001)
         await expect(
-            bobsClient.sendMediaPayload(result.streamId, chunk, 0, result.prevMiniblockHash),
+            bobsClient.sendMediaPayload(result.streamId, chunk, 0, result.prevMiniblock),
         ).rejects.toThrow()
     })
 
@@ -183,7 +175,7 @@ describe('mediaTests', () => {
         alicesClient.startSync()
 
         await expect(
-            alicesClient.sendMediaPayload(result.streamId, chunk, 5, result.prevMiniblockHash),
+            alicesClient.sendMediaPayload(result.streamId, chunk, 5, result.prevMiniblock),
         ).rejects.toThrow()
         await alicesClient.stop()
     })
@@ -198,7 +190,7 @@ describe('mediaTests', () => {
         alicesClient.startSync()
 
         await expect(
-            alicesClient.sendMediaPayload(result.streamId, chunk, 5, result.prevMiniblockHash),
+            alicesClient.sendMediaPayload(result.streamId, chunk, 5, result.prevMiniblock),
         ).rejects.toThrow()
         await alicesClient.stop()
     })
@@ -279,9 +271,9 @@ describe('mediaTests', () => {
     // This test is flaky because there is a bug in GetStreamEx where sometimes the miniblock is not
     // finalized before the client tries to fetch it. This is a known issue, see HNT-5291.
     test.skip('mediaStreamGetStreamEx', async () => {
-        const { streamId, prevMiniblockHash } = await bobCreateMediaStream(10)
+        const { streamId, prevMiniblock } = await bobCreateMediaStream(10)
         // Send a series of media chunks
-        await bobSendMediaPayloads(streamId, 10, prevMiniblockHash)
+        await bobSendMediaPayloads(streamId, 10, prevMiniblock)
         // Force server to flush minipool events into a block
         await bobsClient.rpcClient.info(
             new InfoRequest({

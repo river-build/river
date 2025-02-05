@@ -175,7 +175,7 @@ export class SyncedStream extends Stream implements ISyncedStream {
         }
 
         const miniblock: ParsedMiniblock = {
-            hash: hash,
+            ref: { hash: hash, num: miniblockHeader.miniblockNum },
             header: miniblockHeader,
             events: [...events, miniblockEvent],
         }

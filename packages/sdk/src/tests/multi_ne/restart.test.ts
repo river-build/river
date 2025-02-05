@@ -21,10 +21,12 @@ import {
     make_MemberPayload_Membership2,
     make_SpacePayload_Inception,
     make_UserPayload_Inception,
+    miniblockRefFromResponse,
 } from '../../types'
 import {
     TEST_ENCRYPTED_MESSAGE_PROPS,
     lastEventFiltered,
+    lastMiniblockRef,
     makeRandomUserContext,
     makeTestRpcClient,
     makeUniqueSpaceStreamId,
@@ -167,8 +169,8 @@ const createNewChannelAndPostHello = async (
     expect(channel).toBeDefined()
     expect(channel.stream).toBeDefined()
     expect(channel.stream?.nextSyncCookie?.streamId).toEqual(channelId)
-    let nextHash = channel.stream?.miniblocks.at(-1)?.header?.hash
-    expect(nextHash).toBeDefined()
+    let nextMiniblock = await lastMiniblockRef(channel)
+    expect(nextMiniblock).toBeDefined()
 
     // Now there must be "channel created" event in the space stream.
     const spaceResponse = await bob.getStream({ streamId: spacedStreamId })
@@ -187,7 +189,7 @@ const createNewChannelAndPostHello = async (
                 ...TEST_ENCRYPTED_MESSAGE_PROPS,
                 ciphertext: `hello ${i}`,
             }),
-            nextHash,
+            nextMiniblock,
         )
         await expect(
             bob.addEvent({
@@ -195,7 +197,9 @@ const createNewChannelAndPostHello = async (
                 event: e,
             }),
         ).resolves.not.toThrow()
-        nextHash = (await bob.getLastMiniblockHash({ streamId: channelId })).hash
+        nextMiniblock = miniblockRefFromResponse(
+            await bob.getLastMiniblockHash({ streamId: channelId }),
+        )
     }
 
     // Post just hello to the channel
@@ -205,7 +209,7 @@ const createNewChannelAndPostHello = async (
             ...TEST_ENCRYPTED_MESSAGE_PROPS,
             ciphertext: 'hello',
         }),
-        nextHash,
+        nextMiniblock,
     )
     const lastHash = (await bob.getLastMiniblockHash({ streamId: channelId })).hash
     await expect(

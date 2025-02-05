@@ -1,7 +1,12 @@
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-import { _impl_makeEvent_impl_, publicKeyToAddress, unpackStreamEnvelopes } from '../sign'
+import {
+    _impl_makeEvent_impl_,
+    publicKeyToAddress,
+    unpackEnvelope,
+    unpackStreamEnvelopes,
+} from '../sign'
 
 import {
     EncryptedData,
@@ -13,6 +18,8 @@ import {
     SyncStreamsResponse,
     SyncOp,
     EncryptedDataVersion,
+    CreateStreamResponse,
+    GetStreamResponse,
 } from '@river-build/proto'
 import { Entitlements } from '../sync-agent/entitlements/entitlements'
 import { PlainMessage } from '@bufbuild/protobuf'
@@ -32,7 +39,7 @@ import {
     makeUserStreamId,
     userIdFromAddress,
 } from '../id'
-import { ParsedEvent, DecryptedTimelineEvent } from '../types'
+import { ParsedEvent, DecryptedTimelineEvent, MiniblockRef, miniblockRefFromHeader } from '../types'
 import { getPublicKey, utils } from 'ethereum-cryptography/secp256k1'
 import { EntitlementsDelegate } from '@river-build/encryption'
 import { bin_fromHexString, check, dlog } from '@river-build/dlog'
@@ -146,9 +153,9 @@ export const makeTestRpcClient = async (opts?: RpcOptions) => {
 export const makeEvent_test = async (
     context: SignerContext,
     payload: PlainMessage<StreamEvent>['payload'],
-    prevMiniblockHash?: Uint8Array,
+    prevMiniblock?: MiniblockRef,
 ): Promise<Envelope> => {
-    return _impl_makeEvent_impl_(context, payload, prevMiniblockHash)
+    return _impl_makeEvent_impl_(context, payload, prevMiniblock)
 }
 
 export const TEST_ENCRYPTED_MESSAGE_PROPS: PlainMessage<EncryptedData> = {
@@ -1468,4 +1475,12 @@ export const findMessageByText = (
             event.content?.kind === RiverTimelineEvent.ChannelMessage &&
             event.content.body === text,
     )
+}
+
+export async function lastMiniblockRef(
+    response: CreateStreamResponse | GetStreamResponse,
+): Promise<MiniblockRef> {
+    const header = response.stream!.miniblocks.at(-1)!.header!
+    const parsedHeader = await unpackEnvelope(header)
+    return miniblockRefFromHeader(parsedHeader)
 }

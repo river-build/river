@@ -195,7 +195,7 @@ describe('clientTest', () => {
             bobsClient.makeEventWithHashAndAddToStream(
                 channelId,
                 message,
-                Uint8Array.from(Array(32).fill(0)), // just going to throw any old thing in there... the retry should pick it up
+                { hash: Uint8Array.from(Array(32).fill(0)), num: 0n }, // just going to throw any old thing in there... the retry should pick it up
             ),
         ).resolves.not.toThrow()
     })
