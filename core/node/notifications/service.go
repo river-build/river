@@ -329,8 +329,6 @@ func (s *Service) SubscribeWebPush(
 		}
 	)
 
-	logging.FromCtx(ctx).Infow("context", "ctx", ctx, "userId", ctx.Value(authentication.UserIDCtxKey{}))
-
 	userID := ctx.Value(authentication.UserIDCtxKey{}).(common.Address)
 	if userID == (common.Address{}) {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "Invalid user id")
