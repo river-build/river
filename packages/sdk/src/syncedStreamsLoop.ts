@@ -706,7 +706,7 @@ export class SyncedStreamsLoop {
                     if (streamRecord === undefined) {
                         this.log('sync got stream', streamId, 'NOT FOUND')
                     } else if (syncStream.syncReset) {
-                        this.log('initStream from sync reset', streamId, 'RESET')
+                        this.logDebug('initStream from sync reset', streamId, 'RESET')
                         const response = await unpackStream(syncStream, this.unpackEnvelopeOpts)
                         streamRecord.syncCookie = response.streamAndCookie.nextSyncCookie
                         await streamRecord.stream.initializeFromResponse(response)
