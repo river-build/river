@@ -64,7 +64,7 @@ func (s *StreamCache) normalizeEphemeralStream(
 
 	// Sealed stream has 0 in the last miniblock parameter so the given value should be fetched from the genesis
 	// TODO: Either store genesis miniblock data on chain or fetch it from replicas. Discuss.
-	if lastMiniblockNum == 0 {
+	if lastMiniblockNum == 0 && false {
 		_, _, blockdata, _, err := s.params.Registry.GetStreamWithGenesis(ctx, stream.StreamId())
 		if err != nil {
 			return err
