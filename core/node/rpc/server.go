@@ -758,7 +758,6 @@ func (s *Service) initNotificationHandlers() error {
 	ii = append(ii, s.NewMetricsInterceptor())
 	ii = append(ii, NewTimeoutInterceptor(s.config.Network.RequestTimeout))
 
-	logging.FromCtx(s.serverCtx).Infow("NS shortname", "shortName", s.NotificationService.ShortServiceName())
 	authInceptor, err := authentication.NewAuthenticationInterceptor(
 		s.NotificationService.ShortServiceName(),
 		s.config.Notifications.Authentication.SessionToken.Key.Algorithm,
