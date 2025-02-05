@@ -7,21 +7,19 @@ import (
 	"sync/atomic"
 	"time"
 
-	"go.uber.org/zap"
-
-	"github.com/river-build/river/core/node/bot_registry"
-	"github.com/river-build/river/core/node/notifications"
-
 	"connectrpc.com/otelconnect"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
+	"github.com/river-build/river/core/node/bot_registry"
 	"github.com/river-build/river/core/node/crypto"
 	. "github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/nodes"
+	"github.com/river-build/river/core/node/notifications"
 	. "github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/registries"
 	river_sync "github.com/river-build/river/core/node/rpc/sync"

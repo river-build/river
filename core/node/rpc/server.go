@@ -572,6 +572,7 @@ func (s *Service) initStore() error {
 			s.instanceId,
 			s.exitSignal,
 			s.metrics,
+			s.chainConfig.Get().StreamEphemeralStreamTTL,
 		)
 		if err != nil {
 			return err

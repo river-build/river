@@ -132,9 +132,6 @@ func (s *Service) sealEphemeralStream(
 		return AsRiverError(err).Func("sealEphemeralStream")
 	}
 
-	if _, err = s.storage.NormalizeEphemeralStream(ctx, streamId); err == nil {
-		return nil
-	}
-
+	_, err = s.storage.NormalizeEphemeralStream(ctx, streamId)
 	return err
 }
