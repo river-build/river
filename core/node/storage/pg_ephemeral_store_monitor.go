@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -21,9 +22,10 @@ type ephemeralStreamMonitor struct {
 	streams *xsync.MapOf[StreamId, time.Time]
 	// ttl is the duration of time an ephemeral stream can exist
 	// before either being sealed/normalized or deleted.
-	ttl     time.Duration
-	storage *PostgresStreamStore
-	stop    chan struct{}
+	ttl      time.Duration
+	storage  *PostgresStreamStore
+	stopOnce sync.Once
+	stop     chan struct{}
 }
 
 // newEphemeralStreamMonitor creates and starts a dead ephemeral stream monitor.
@@ -56,7 +58,9 @@ func newEphemeralStreamMonitor(
 
 // close closes the monitor.
 func (m *ephemeralStreamMonitor) close() {
-	close(m.stop)
+	m.stopOnce.Do(func() {
+		close(m.stop)
+	})
 }
 
 // onCreated is called when an ephemeral stream is created.
@@ -84,6 +88,7 @@ func (m *ephemeralStreamMonitor) monitor(ctx context.Context) {
 			if err := ctx.Err(); !errors.Is(err, context.Canceled) {
 				logging.FromCtx(ctx).Error("dead ephemeral stream monitor stopped", "err", err)
 			}
+			m.close()
 			return
 		case <-ticker.C:
 			m.streams.Range(func(streamId StreamId, createdAt time.Time) bool {
