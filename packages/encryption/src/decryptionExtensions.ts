@@ -448,7 +448,7 @@ export abstract class BaseDecryptionExtensions {
             return
         }
 
-        if (Date.now() - this.lastPrintedAt > 1000) {
+        if (Date.now() - this.lastPrintedAt > 30000) {
             this.log.info(
                 `queues: ${Object.entries(this.mainQueues)
                     .map(([key, q]) => `${key}: ${q.length}`)
