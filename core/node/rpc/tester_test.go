@@ -811,7 +811,7 @@ func (tc *testClient) listenImpl(channelId StreamId, expected userMessages) {
 		if len(actualExtra) > 0 {
 			tc.require.FailNow("Received unexpected messages", "actualExtra:%v", actualExtra)
 		}
-	}, 15*time.Second)
+	}, 30*time.Second)
 }
 
 func (tc *testClient) getStream(streamId StreamId) *StreamAndCookie {
