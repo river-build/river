@@ -767,7 +767,7 @@ describe('streamRpcClient', () => {
 
         // try to leave, first with expired context, then with good context
         const addEventWith = async (context: SignerContext) => {
-            const lastMiniblock = await miniblockRefFromResponse(
+            const lastMiniblock = miniblockRefFromResponse(
                 await jimmy.getLastMiniblockHash({ streamId: jimmysUserStreamId }),
             )
             const messageEvent = await makeEvent(
@@ -887,7 +887,7 @@ describe('streamRpcClient', () => {
         )
 
         log('Bob adds event with correct hash')
-        const lastMiniblock = await miniblockRefFromResponse(
+        const lastMiniblock = miniblockRefFromResponse(
             await bob.getLastMiniblockHash({ streamId: channelId }),
         )
         const messageEvent = await makeEvent(
@@ -985,7 +985,7 @@ describe('streamRpcClient', () => {
         log('Bob created channel')
 
         log('Bob adds event with correct signature')
-        const lastMiniblock = await miniblockRefFromResponse(
+        const lastMiniblock = miniblockRefFromResponse(
             await bob.getLastMiniblockHash({ streamId: channelId }),
         )
         const messageEvent = await makeEvent(

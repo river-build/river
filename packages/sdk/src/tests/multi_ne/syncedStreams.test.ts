@@ -5,13 +5,7 @@
 import { makeEvent, unpackStream } from '../../sign'
 import { SyncedStreams } from '../../syncedStreams'
 import { SyncState, stateConstraints } from '../../syncedStreamsLoop'
-import {
-    lastMiniblockRef,
-    makeDonePromise,
-    makeRandomUserContext,
-    makeTestRpcClient,
-    waitFor,
-} from '../testUtils'
+import { makeDonePromise, makeRandomUserContext, makeTestRpcClient, waitFor } from '../testUtils'
 import { makeUserInboxStreamId, streamIdToBytes, userIdFromAddress } from '../../id'
 import { make_UserInboxPayload_Ack, make_UserInboxPayload_Inception } from '../../types'
 import { dlog } from '@river-build/dlog'
