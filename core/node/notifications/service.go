@@ -75,7 +75,7 @@ func NewService(
 		streamsTracker:      tracker,
 		metrics:             metrics,
 	}
-	if err := service.AuthServiceMixin.Init(
+	if err := service.AuthServiceMixin.InitAuthentication(
 		notificationServiceChallengePrefix,
 		&notificationsConfig.Authentication,
 	); err != nil {

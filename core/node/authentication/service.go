@@ -106,7 +106,7 @@ func (s *AuthServiceMixin) ShortServiceName() string {
 	return strings.ToLower(s.challengePrefix[:2])
 }
 
-func (s *AuthServiceMixin) Init(challengePrefix string, config *config.AuthenticationConfig) error {
+func (s *AuthServiceMixin) InitAuthentication(challengePrefix string, config *config.AuthenticationConfig) error {
 	if len(challengePrefix) < 2 || len(challengePrefix) > 32 {
 		return RiverError(Err_INVALID_ARGUMENT, "Challenge prefix length is out of range", "prefix", challengePrefix)
 	}

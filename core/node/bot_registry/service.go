@@ -35,7 +35,7 @@ func NewService(
 		store: store,
 	}
 
-	if err := s.Init(botServiceChallengePrefix, &cfg.Authentication); err != nil {
+	if err := s.InitAuthentication(botServiceChallengePrefix, &cfg.Authentication); err != nil {
 		return nil, err
 	}
 	return s, nil
