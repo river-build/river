@@ -440,7 +440,7 @@ type BotRegistryConfig struct {
 	// nodes running in bot registry mode.
 	BotRegistryId string
 
-	// Authentication holdsconfiguration for the Client API authentication service.
+	// Authentication holds configuration for the Client API authentication service.
 	Authentication AuthenticationConfig
 }
 
