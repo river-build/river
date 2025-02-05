@@ -227,12 +227,14 @@ type jwtAuthenticationInterceptor struct {
 	shortServiceName           string
 	sessionTokenSigningKeyAlgo string
 	sessionTokenSigningKey     interface{}
+	publicRoutes               []string
 }
 
 func NewAuthenticationInterceptor(
 	shortServiceName string,
 	sessionTokenSigningKeyAlgo string,
 	sessionTokenSigningKey string,
+	publicRoutes ...string,
 ) (connect.Interceptor, error) {
 	if len(shortServiceName) < 2 {
 		return nil, RiverError(
@@ -253,6 +255,7 @@ func NewAuthenticationInterceptor(
 		shortServiceName:           shortServiceName,
 		sessionTokenSigningKeyAlgo: sessionTokenSigningKeyAlgo,
 		sessionTokenSigningKey:     key,
+		publicRoutes:               publicRoutes,
 	}, nil
 }
 
@@ -307,6 +310,13 @@ func (i *jwtAuthenticationInterceptor) WrapUnary(next connect.UnaryFunc) connect
 		// calls to the authentication service are unauthenticated
 		if strings.HasPrefix(req.Spec().Procedure, "/river.AuthenticationService/") {
 			return next(ctx, req)
+		}
+
+		// Allow public routes to pass through the interceptor
+		for _, route := range i.publicRoutes {
+			if strings.HasPrefix(req.Spec().Procedure, route) {
+				return next(ctx, req)
+			}
 		}
 
 		authHeader := req.Header().Get("Authorization")

@@ -800,6 +800,7 @@ func (s *Service) initBotRegistryHandlers() error {
 		s.BotRegistryService.ShortServiceName(),
 		s.config.BotRegistry.Authentication.SessionToken.Key.Algorithm,
 		s.config.BotRegistry.Authentication.SessionToken.Key.Key,
+		"/river.BotRegistryService/GetStatus",
 	)
 	if err != nil {
 		return err
@@ -813,7 +814,7 @@ func (s *Service) initBotRegistryHandlers() error {
 		interceptors,
 	)
 	botRegistryAuthServicePattern, botRegistryAuthServiceHandler := protocolconnect.NewAuthenticationServiceHandler(
-		s.NotificationService,
+		s.BotRegistryService,
 		interceptors,
 	)
 

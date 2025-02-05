@@ -69,8 +69,14 @@ func (s *Service) RegisterWebhook(
 	rawUserId := ctx.Value(authentication.UserIDCtxKey{})
 	if rawUserId == nil {
 		return nil, base.RiverError(
-			Err_UNAUTHENTICATED,
-			"Requests to RegisterWebhook must be authenticated by either the bot or bot owner wallets",
+			Err_PERMISSION_DENIED,
+			"Registering user is neither bot nor owner",
+			"owner",
+			owner,
+			"bot",
+			bot,
+			"rawUserId",
+			rawUserId,
 		)
 	}
 
