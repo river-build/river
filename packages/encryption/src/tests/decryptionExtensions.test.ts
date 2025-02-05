@@ -298,7 +298,7 @@ class MockDecryptionExtensions extends BaseDecryptionExtensions {
             this.inProgress[streamId] = new MicroTask(
                 resolve,
                 DecryptionStatus.working,
-                DecryptionStatus.idle,
+                DecryptionStatus.done,
             )
             // start processing the new sessions
             this.enqueueNewGroupSessions(sessions, senderId)
@@ -323,7 +323,7 @@ class MockDecryptionExtensions extends BaseDecryptionExtensions {
             this.inProgress[streamId] = new MicroTask(
                 resolve,
                 DecryptionStatus.working,
-                DecryptionStatus.idle,
+                DecryptionStatus.done,
             )
             // start processing the request
             this.enqueueKeySolicitation(streamId, fromUserId, fromUserAddress, keySolicitation)
