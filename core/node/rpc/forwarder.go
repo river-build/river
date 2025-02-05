@@ -464,7 +464,7 @@ func (s *Service) addEventImpl(
 	}
 
 	if view != nil {
-		return s.localAddEvent(ctx, req, stream, view)
+		return s.localAddEvent(ctx, req, streamId, stream, view)
 	}
 
 	if req.Header().Get(RiverNoForwardHeader) == RiverNoForwardValue {
