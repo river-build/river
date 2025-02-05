@@ -41,8 +41,9 @@ func (s *Service) replicatedAddEvent(ctx context.Context, stream *Stream, event 
 			return nil
 		}
 
-		// Check if Err_MINIBLOCK_TOO_NEW code is present.
-		if AsRiverError(err).IsCodeWithBases(Err_MINIBLOCK_TOO_NEW) {
+		// Check if Err_MINIBLOCK_TOO_NEW or Err_BAD_PREV_MINIBLOCK_HASH code is present in the error chain.
+		riverErr := AsRiverError(err)
+		if riverErr.IsCodeWithBases(Err_MINIBLOCK_TOO_NEW) || riverErr.IsCodeWithBases(Err_BAD_PREV_MINIBLOCK_HASH) {
 			err = backoff.Wait(ctx, err)
 			if err != nil {
 				logging.FromCtx(ctx).Warnw("replicatedAddEvent: no backoff left", "error", err, "attempts", backoff.NumAttempts, "originalDeadline", originalDeadline.String(), "deadline", contextDeadlineLeft(ctx).String())
