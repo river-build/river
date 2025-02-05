@@ -6,12 +6,11 @@ pragma solidity ^0.8.23;
 // libraries
 
 // contracts
-import {AppConfig} from "../registry/AppConfig.sol";
 
 interface IAppHooks {
   //  initialization
-  function beforeInitialize(address sender, AppConfig memory config) external;
-  function afterInitialize(address sender, AppConfig memory config) external;
+  function beforeInitialize(address sender) external;
+  function afterInitialize(address sender) external;
 
   // execution hooks
   function beforeExecution(address target, bytes4 selector) external;
