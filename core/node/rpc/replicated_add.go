@@ -238,7 +238,7 @@ func (s *Service) replicatedAddMediaEventImpl(ctx context.Context, event *Parsed
 			cc.NodeAddresses(),
 			genesisMiniblockHash,
 			common.BytesToHash(ephemeralMb.Header.Hash),
-			0,
+			cc.MiniblockNum,
 			true,
 		); err != nil {
 			return nil, err

@@ -5,8 +5,6 @@ import (
 	"slices"
 	"time"
 
-	"google.golang.org/protobuf/proto"
-
 	"connectrpc.com/connect"
 
 	"github.com/river-build/river/core/contracts/river"
@@ -40,10 +38,15 @@ func (s *StreamCache) onStreamCreated(
 		if err := s.normalizeEphemeralStream(
 			ctx,
 			stream,
-			int64(event.Stream.LastMiniblockNum), // FIXME: This is 0
+			int64(event.Stream.LastMiniblockNum),
 			event.Stream.Flags&uint64(registries.StreamFlagSealed) != 0,
 		); err != nil {
 			logging.FromCtx(ctx).Errorw("Failed to normalize ephemeral stream", "err", err, "streamId", event.GetStreamId())
+		} else {
+			// Cache the stream
+			stream.mu.Lock()
+			s.cache.Store(stream.streamId, stream)
+			stream.mu.Unlock()
 		}
 	}()
 }
@@ -60,28 +63,6 @@ func (s *StreamCache) normalizeEphemeralStream(
 	if !isSealed {
 		// Stream is not sealed, no need to normalize it yet.
 		return nil
-	}
-
-	// Sealed stream has 0 in the last miniblock parameter so the given value should be fetched from the genesis
-	// TODO: Either store genesis miniblock data on chain or fetch it from replicas. Discuss.
-	if lastMiniblockNum == 0 && false {
-		_, _, blockdata, _, err := s.params.Registry.GetStreamWithGenesis(ctx, stream.StreamId())
-		if err != nil {
-			return err
-		}
-
-		var mb Miniblock
-		if err = proto.Unmarshal(blockdata, &mb); err != nil {
-			return err
-		}
-
-		var mediaEvent StreamEvent
-		if err = proto.Unmarshal(mb.GetEvents()[0].Event, &mediaEvent); err != nil {
-			return err
-		}
-
-		// Total miniblocks: genesis miniblock + media chunks
-		lastMiniblockNum = int64(mediaEvent.GetMediaPayload().GetInception().GetChunkCount()) + 1
 	}
 
 	missingMbs := make([]int64, 0, lastMiniblockNum+1)
