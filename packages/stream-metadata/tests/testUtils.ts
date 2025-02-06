@@ -131,52 +131,6 @@ export async function encryptAndSendMediaPayload(
 	const { ciphertext, secretKey, iv } = await encryptAESGCM(data)
 	const chunkCount = Math.ceil(ciphertext.length / chunkSize)
 
-	const mediaStreamInfo = await client.createMediaStream(
-		undefined,
-		spaceId,
-		undefined,
-		chunkCount,
-	)
-
-	if (!mediaStreamInfo) {
-		throw new Error('Failed to create media stream')
-	}
-
-	let chunkIndex = 0
-	for (let i = 0; i < ciphertext.length; i += chunkSize) {
-		const chunk = ciphertext.slice(i, i + chunkSize)
-		const { prevMiniblockHash } = await client.sendMediaPayload(
-			mediaStreamInfo.streamId,
-			chunk,
-			chunkIndex++,
-			mediaStreamInfo.prevMiniblockHash,
-		)
-		mediaStreamInfo.prevMiniblockHash = prevMiniblockHash
-	}
-
-	const chunkedMedia = new ChunkedMedia({
-		info,
-		streamId: mediaStreamInfo.streamId,
-		encryption: {
-			case: 'aesgcm',
-			value: { secretKey, iv },
-		},
-		thumbnail: undefined,
-	})
-
-	return chunkedMedia
-}
-
-export async function encryptAndSendMediaPayloadNew(
-	client: Client,
-	spaceId: string,
-	info: MediaInfo,
-	data: Uint8Array,
-	chunkSize = 10,
-): Promise<ChunkedMedia> {
-	const { ciphertext, secretKey, iv } = await encryptAESGCM(data)
-	const chunkCount = Math.ceil(ciphertext.length / chunkSize)
-
 	const mediaStreamInfo = await client.createMediaStreamNew(
 		undefined,
 		spaceId,
