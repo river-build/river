@@ -107,6 +107,13 @@ class StreamTasks {
         this.keySolicitations.sort((a, b) => a.respondAfter - b.respondAfter)
         this.keySolicitationsNeedsSort = false
     }
+    isEmpty() {
+        return (
+            this.encryptedContent.length === 0 &&
+            this.keySolicitations.length === 0 &&
+            !this.isMissingKeys
+        )
+    }
 }
 
 class StreamQueues {
@@ -124,11 +131,7 @@ class StreamQueues {
     }
     isEmpty() {
         for (const tasks of this.streams.values()) {
-            if (
-                tasks.encryptedContent.length > 0 ||
-                tasks.keySolicitations.length > 0 ||
-                tasks.isMissingKeys
-            ) {
+            if (!tasks.isEmpty()) {
                 return false
             }
         }
@@ -176,11 +179,13 @@ export abstract class BaseDecryptionExtensions {
     private streamQueues = new StreamQueues()
     private upToDateStreams = new Set<string>()
     private highPriorityIds: Set<string> = new Set()
+    private recentStreamIds: string[] = []
     private decryptionFailures: Record<string, Record<string, EncryptedContentItem[]>> = {} // streamId: sessionId: EncryptedContentItem[]
     private inProgressTick?: Promise<void>
     private timeoutId?: NodeJS.Timeout
     private delayMs: number = 1
     private started: boolean = false
+    private numRecentStreamIds: number = 5
     private emitter: TypedEmitter<DecryptionEvents>
 
     protected _onStopFn?: () => void
@@ -274,6 +279,13 @@ export abstract class BaseDecryptionExtensions {
         kind: string, // kind of encrypted data
         encryptedData: EncryptedData,
     ): void {
+        // dms, channels, gdms ("we're in the wrong package")
+        if (streamId.startsWith('20') || streamId.startsWith('88') || streamId.startsWith('77')) {
+            this.recentStreamIds.push(streamId)
+            if (this.recentStreamIds.length > this.numRecentStreamIds) {
+                this.recentStreamIds.shift()
+            }
+        }
         this.streamQueues.getQueue(streamId).encryptedContent.push({
             streamId,
             eventId,
@@ -394,9 +406,14 @@ export abstract class BaseDecryptionExtensions {
         // enqueue a task to upload device keys
         this.mainQueues.priorityTasks.push(() => this.uploadDeviceKeys())
         // enqueue a task to download new to-device messages
-        this.mainQueues.priorityTasks.push(() => this.downloadNewMessages())
+        this.enqueueNewMessageDownload()
         // start the tick loop
         this.checkStartTicking()
+    }
+
+    // enqueue a task to download new to-device messages, should be safe to call multiple times
+    public enqueueNewMessageDownload() {
+        this.mainQueues.priorityTasks.push(() => this.downloadNewMessages())
     }
 
     public onStart(): void {
@@ -422,10 +439,15 @@ export abstract class BaseDecryptionExtensions {
 
     private setStatus(status: DecryptionStatus) {
         if (this._status !== status) {
-            this.log.info(`status changed ${status}`)
+            this.log.debug(`status changed ${status}`)
             this._status = status
             this.emitter.emit('decryptionExtStatusChanged', status)
         }
+    }
+
+    private compareStreamIds(a: string, b: string): number {
+        const priorityIds = new Set([...this.highPriorityIds, ...this.recentStreamIds])
+        return this.getPriorityForStream(a, priorityIds) - this.getPriorityForStream(b, priorityIds)
     }
 
     private lastPrintedAt = 0
@@ -453,6 +475,14 @@ export abstract class BaseDecryptionExtensions {
                 `queues: ${Object.entries(this.mainQueues)
                     .map(([key, q]) => `${key}: ${q.length}`)
                     .join(', ')} ${this.streamQueues.toString()}`,
+            )
+            this.log.info(
+                `priorityTasks: ${Array.from(this.streamQueues.streams.entries())
+                    .filter(([_, value]) => !value.isEmpty())
+                    .map(([key, _]) => key)
+                    .sort((a, b) => this.compareStreamIds(a, b))
+                    .slice(0, 4)
+                    .join(', ')}`,
             )
             this.lastPrintedAt = Date.now()
         }
@@ -515,11 +545,7 @@ export abstract class BaseDecryptionExtensions {
             return this.processKeySolicitation(ownSolicitation)
         }
         const streamIds = this.streamQueues.getStreamIds()
-        streamIds.sort(
-            (a, b) =>
-                this.getPriorityForStream(a, this.highPriorityIds) -
-                this.getPriorityForStream(b, this.highPriorityIds),
-        )
+        streamIds.sort((a, b) => this.compareStreamIds(a, b))
 
         for (const streamId of streamIds) {
             if (!this.upToDateStreams.has(streamId)) {

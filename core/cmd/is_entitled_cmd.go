@@ -61,6 +61,7 @@ func isEntitledForSpaceAndChannel(
 		&cfg,
 		chainConfig,
 		metricsFactory,
+		nil,
 	)
 	if err != nil {
 		return err
