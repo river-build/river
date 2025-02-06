@@ -38,6 +38,16 @@ func channelLabelType(streamID shared.StreamId) string {
 		return "space_channel"
 	case shared.STREAM_USER_SETTINGS_BIN:
 		return "user_settings"
+	case shared.STREAM_USER_INBOX_BIN:
+		return "user_inbox"
+	case shared.STREAM_USER_BIN:
+		return "user"
+	case shared.STREAM_USER_METADATA_KEY_BIN:
+		return "user_metadata"
+	case shared.STREAM_SPACE_BIN:
+		return "space"
+	case shared.STREAM_MEDIA_BIN:
+		return "media"
 	default:
 		return "unknown"
 	}
@@ -50,8 +60,8 @@ func (s *StreamTrackerConnectGo) Run(
 	nodeRegistry nodes.NodeRegistry,
 	workerPool *semaphore.Weighted,
 	onChainConfig crypto.OnChainConfiguration,
-	listener events.StreamEventListener,
-	userPreferences events.UserPreferencesStore,
+	listener StreamEventListener,
+	userPreferences UserPreferencesStore,
 	metrics *streamsTrackerWorkerMetrics,
 ) {
 	var (
@@ -69,7 +79,7 @@ func (s *StreamTrackerConnectGo) Run(
 			syncCtx, syncCancel = context.WithCancel(rootCtx)
 			lastReceivedPong    atomic.Int64
 			syncID              string
-			trackedStream       *events.TrackedNotificationStreamView
+			trackedStream       events.TrackedStreamView
 		)
 
 		var (
@@ -251,7 +261,7 @@ func (s *StreamTrackerConnectGo) Run(
 				}
 
 				if reset {
-					trackedStream, err = events.NewNotificationsStreamTrackerFromStreamAndCookie(
+					trackedStream, err = NewTrackedStreamForNotifications(
 						syncCtx, streamID, onChainConfig, update.GetStream(), listener, userPreferences)
 					if err != nil {
 						syncCancel()
@@ -279,7 +289,7 @@ func (s *StreamTrackerConnectGo) Run(
 				justAllocated = false
 
 				for _, block := range update.GetStream().GetMiniblocks() {
-					if err := trackedStream.ApplyBlock(block, onChainConfig.Get()); err != nil {
+					if err := trackedStream.ApplyBlock(block); err != nil {
 						log.Errorw("Unable to apply block", "stream", streamID, "err", err)
 					}
 				}
