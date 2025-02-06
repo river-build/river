@@ -71,11 +71,13 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     bytes32 messageId,
     bytes32 channelId
   ) external givenUsersAreMembers(sender, receiver) {
+    vm.assume(sender != platformRecipient);
+    vm.assume(receiver != platformRecipient);
     amount = bound(amount, 0.0003 ether, 1 ether);
 
     uint256 initialBalance = receiver.balance;
-    uint256[] memory tokens = token.tokensOfOwner(receiver);
-    uint256 tokenId = tokens[0];
+    uint256 initialPointBalance = IERC20(address(points)).balanceOf(sender);
+    uint256 tokenId = token.tokensOfOwner(receiver)[0];
 
     uint256 protocolFee = BasisPoints.calculate(amount, 50); // 0.5%
     uint256 tipAmount = amount - protocolFee;
@@ -102,15 +104,15 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
         channelId: channelId
       })
     );
-    uint256 gasUsed = vm.stopSnapshotGas();
 
-    assertLt(gasUsed, 400_000);
-    assertEq(receiver.balance - initialBalance, tipAmount);
-    assertEq(platformRecipient.balance, protocolFee);
-    assertEq(sender.balance, 0);
+    assertLt(vm.stopSnapshotGas(), 400_000);
+    assertEq(receiver.balance - initialBalance, tipAmount, "receiver balance");
+    assertEq(platformRecipient.balance, protocolFee, "protocol fee");
+    assertEq(sender.balance, 0, "sender balance");
     assertEq(
-      IERC20(address(points)).balanceOf(sender),
-      (protocolFee * 10_000) / 3
+      IERC20(address(points)).balanceOf(sender) - initialPointBalance,
+      (protocolFee * 10_000) / 3,
+      "points minted"
     );
     assertEq(
       tipping.tipsByCurrencyAndTokenId(tokenId, CurrencyTransfer.NATIVE_TOKEN),
