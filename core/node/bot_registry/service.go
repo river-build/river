@@ -66,21 +66,7 @@ func (s *Service) RegisterWebhook(
 			Tag("bot_owner_id", req.Msg.BotOwnerId)
 	}
 
-	rawUserId := ctx.Value(authentication.UserIDCtxKey{})
-	if rawUserId == nil {
-		return nil, base.RiverError(
-			Err_PERMISSION_DENIED,
-			"Registering user is neither bot nor owner",
-			"owner",
-			owner,
-			"bot",
-			bot,
-			"rawUserId",
-			rawUserId,
-		)
-	}
-
-	userId := rawUserId.(common.Address)
+	userId := authentication.UserFromAuthenticatedContext(ctx)
 	if bot != userId && owner != userId {
 		return nil, base.RiverError(
 			Err_PERMISSION_DENIED,

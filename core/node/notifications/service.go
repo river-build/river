@@ -111,7 +111,7 @@ func (s *Service) GetSettings(
 	ctx context.Context,
 	req *connect.Request[GetSettingsRequest],
 ) (*connect.Response[GetSettingsResponse], error) {
-	userID := ctx.Value(authentication.UserIDCtxKey{}).(common.Address)
+	userID := authentication.UserFromAuthenticatedContext(ctx)
 	if userID == (common.Address{}) {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "Invalid user id")
 	}
@@ -155,7 +155,7 @@ func (s *Service) SetSettings(
 	ctx context.Context,
 	req *connect.Request[SetSettingsRequest],
 ) (*connect.Response[SetSettingsResponse], error) {
-	userID := ctx.Value(authentication.UserIDCtxKey{}).(common.Address)
+	userID := authentication.UserFromAuthenticatedContext(ctx)
 	if userID == (common.Address{}) {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "Invalid user id")
 	}
@@ -183,7 +183,7 @@ func (s *Service) SetDmGdmSettings(
 		gdm = msg.GetGdmGlobal()
 	)
 
-	userID := ctx.Value(authentication.UserIDCtxKey{}).(common.Address)
+	userID := authentication.UserFromAuthenticatedContext(ctx)
 	if userID == (common.Address{}) {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "Invalid user id")
 	}
@@ -206,7 +206,7 @@ func (s *Service) SetSpaceSettings(
 		value        = msg.GetValue()
 	)
 
-	userID := ctx.Value(authentication.UserIDCtxKey{}).(common.Address)
+	userID := authentication.UserFromAuthenticatedContext(ctx)
 	if userID == (common.Address{}) {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "Invalid user id")
 	}
@@ -233,7 +233,7 @@ func (s *Service) SetDmChannelSetting(
 		value = msg.GetValue()
 	)
 
-	userID := ctx.Value(authentication.UserIDCtxKey{}).(common.Address)
+	userID := authentication.UserFromAuthenticatedContext(ctx)
 	if userID == (common.Address{}) {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "Invalid user id")
 	}
@@ -264,7 +264,7 @@ func (s *Service) SetGdmChannelSetting(
 		value = msg.GetValue()
 	)
 
-	userID := ctx.Value(authentication.UserIDCtxKey{}).(common.Address)
+	userID := authentication.UserFromAuthenticatedContext(ctx)
 	if userID == (common.Address{}) {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "Invalid user id")
 	}
@@ -295,7 +295,7 @@ func (s *Service) SetSpaceChannelSettings(
 		value = msg.GetValue()
 	)
 
-	userID := ctx.Value(authentication.UserIDCtxKey{}).(common.Address)
+	userID := authentication.UserFromAuthenticatedContext(ctx)
 	if userID == (common.Address{}) {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "Invalid user id")
 	}
@@ -329,7 +329,7 @@ func (s *Service) SubscribeWebPush(
 		}
 	)
 
-	userID := ctx.Value(authentication.UserIDCtxKey{}).(common.Address)
+	userID := authentication.UserFromAuthenticatedContext(ctx)
 	if userID == (common.Address{}) {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "Invalid user id")
 	}
@@ -362,7 +362,7 @@ func (s *Service) UnsubscribeWebPush(
 		}
 	)
 
-	userID := ctx.Value(authentication.UserIDCtxKey{}).(common.Address)
+	userID := authentication.UserFromAuthenticatedContext(ctx)
 	if userID == (common.Address{}) {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "Invalid user id")
 	}
@@ -384,7 +384,7 @@ func (s *Service) SubscribeAPN(
 ) (*connect.Response[SubscribeAPNResponse], error) {
 	var (
 		msg         = req.Msg
-		userID      = ctx.Value(authentication.UserIDCtxKey{}).(common.Address)
+		userID      = authentication.UserFromAuthenticatedContext(ctx)
 		deviceToken = msg.GetDeviceToken()
 		environment = msg.GetEnvironment()
 		pushVersion = msg.GetPushVersion()
@@ -415,7 +415,7 @@ func (s *Service) UnsubscribeAPN(
 	var (
 		msg         = req.Msg
 		deviceToken = msg.GetDeviceToken()
-		userID      = ctx.Value(authentication.UserIDCtxKey{}).(common.Address)
+		userID      = authentication.UserFromAuthenticatedContext(ctx)
 	)
 	if len(deviceToken) == 0 {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "Invalid APN device token")
