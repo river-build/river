@@ -72,7 +72,7 @@ func TestLoad(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	assert.Equal(t, streamId, *view.StreamId())
+	assert.Equal(t, streamId, view.StreamId())
 
 	ip := view.InceptionPayload()
 	ipStreamId, err := StreamIdFromBytes(ip.GetStreamId())

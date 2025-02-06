@@ -9,15 +9,15 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/sync/semaphore"
+
 	"github.com/river-build/river/core/contracts/river"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/registries"
 	"github.com/river-build/river/core/node/shared"
-	"golang.org/x/sync/semaphore"
 )
 
 // maxConcurrentNodeRequests is the maximum number of concurrent
@@ -31,8 +31,8 @@ type StreamsTracker struct {
 	// keep per remote a worker pool that limits the number of concurrent requests.
 	workerPool    map[common.Address]*semaphore.Weighted
 	onChainConfig crypto.OnChainConfiguration
-	listener      events.StreamEventListener
-	storage       events.UserPreferencesStore
+	listener      StreamEventListener
+	storage       UserPreferencesStore
 	metrics       *streamsTrackerWorkerMetrics
 	tracked       sync.Map // map[shared.StreamId] = struct{}
 }
@@ -43,8 +43,8 @@ func NewStreamsTracker(
 	onChainConfig crypto.OnChainConfiguration,
 	riverRegistry *registries.RiverRegistryContract,
 	nodeRegistries []nodes.NodeRegistry,
-	listener events.StreamEventListener,
-	storage events.UserPreferencesStore,
+	listener StreamEventListener,
+	storage UserPreferencesStore,
 	metricsFactory infra.MetricsFactory,
 ) (*StreamsTracker, error) {
 	metrics := &streamsTrackerWorkerMetrics{
