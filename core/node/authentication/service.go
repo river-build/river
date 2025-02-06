@@ -91,7 +91,10 @@ func (c authenticationChallenge) Verify(
 
 // AuthServiceMixin can be used by any service requiring authentication to implement authentication
 // for the endpoints of the authentication service, which allows users to attest to their ownership
-// of wallets.
+// of wallets. In order to implement authentication, a service must add this mixin to it's definition,
+// call InitAuthentication with appropriate config, and configure the connect service to use the
+// authentication interceptor with service metadata derived from the mixin. See notification and bot
+// registry services for examples.
 type AuthServiceMixin struct {
 	authConfig                    *config.AuthenticationConfig
 	sessionTokenSigningKey        any
@@ -108,7 +111,9 @@ func (s *AuthServiceMixin) ShortServiceName() string {
 // InitAuthentication is the method that initializes the mixin's internal state.
 // challengePrefix will be used as a service-specific prefix for the challenge message the user is expected
 // sign in order to verify their ownership of a wallet's private key. The first two characters of the prefix
-// are also used to populate service-specific values in the issued jwt token's claim map.
+// are also used to populate service-specific values in the issued jwt token's claim map, so it's best to
+// make sure they are unique compared to other services that implement authentication for the sake
+// of sane debugging.
 func (s *AuthServiceMixin) InitAuthentication(challengePrefix string, config *config.AuthenticationConfig) error {
 	if len(challengePrefix) < 2 || len(challengePrefix) > 32 {
 		return RiverError(Err_INVALID_ARGUMENT, "Challenge prefix length is out of range", "prefix", challengePrefix)
