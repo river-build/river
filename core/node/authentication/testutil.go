@@ -17,6 +17,8 @@ import (
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 )
 
+// Authenticate[T] generates the jwt token for primaryWallet by completing the authentication
+// challenge-response, and adds it to the header of the supplied request.
 func Authenticate[T any](
 	ctx context.Context,
 	challengePrefix string,
@@ -29,6 +31,8 @@ func Authenticate[T any](
 	request.Header().Set("authorization", token)
 }
 
+// GetAuthenticationToken completes the authentication challenge-response for the supplied wallet and
+// generates a jwt token that can be used across requests to authenticate this wallet.
 func GetAuthenticationToken[T any](
 	ctx context.Context,
 	challengePrefix string,
