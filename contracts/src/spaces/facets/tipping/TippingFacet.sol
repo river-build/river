@@ -13,6 +13,7 @@ import {PointsProxyLib} from "contracts/src/spaces/facets/points/PointsProxyLib.
 import {MembershipStorage} from "contracts/src/spaces/facets/membership/MembershipStorage.sol";
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
+
 // contracts
 import {ERC721ABase} from "contracts/src/diamond/facets/token/ERC721A/ERC721ABase.sol";
 import {Facet} from "@river-build/diamond/src/facets/Facet.sol";
@@ -37,6 +38,13 @@ contract TippingFacet is ITipping, ERC721ABase, Facet, ReentrancyGuard {
     if (tipRequest.currency == CurrencyTransfer.NATIVE_TOKEN) {
       uint256 protocolFee = _payProtocol(msg.sender, tipRequest.amount);
       tipAmount = tipRequest.amount - protocolFee;
+
+      uint256 points = PointsProxyLib.getPoints(
+        ITownsPointsBase.Action.Tip,
+        abi.encode(protocolFee)
+      );
+
+      PointsProxyLib.mint(msg.sender, points);
     }
 
     TippingBase.tip(
@@ -47,8 +55,6 @@ contract TippingFacet is ITipping, ERC721ABase, Facet, ReentrancyGuard {
       tipAmount
     );
 
-    PointsProxyLib.mintTipping(msg.sender, tipRequest.amount);
-
     emit Tip(
       tipRequest.tokenId,
       tipRequest.currency,
@@ -58,25 +64,6 @@ contract TippingFacet is ITipping, ERC721ABase, Facet, ReentrancyGuard {
       tipRequest.messageId,
       tipRequest.channelId
     );
-  }
-
-  function tippingPoints(
-    address user,
-    uint256 tipAmount
-  ) external view returns (uint256) {
-    uint256 lastResetDay = PointsProxyLib.getTippingLastResetDay(user);
-    uint256 dailyPoints = PointsProxyLib.getTippingDailyPoints(user);
-
-    return
-      PointsProxyLib.getPoints(
-        ITownsPointsBase.Action.Tip,
-        abi.encode(
-          tipAmount,
-          dailyPoints,
-          block.timestamp / 1 days,
-          lastResetDay
-        )
-      );
   }
 
   /// @inheritdoc ITipping
@@ -125,20 +112,17 @@ contract TippingFacet is ITipping, ERC721ABase, Facet, ReentrancyGuard {
   function _payProtocol(
     address sender,
     uint256 amount
-  ) internal returns (uint256) {
+  ) internal returns (uint256 protocolFee) {
     MembershipStorage.Layout storage ds = MembershipStorage.layout();
     IPlatformRequirements platform = IPlatformRequirements(ds.spaceFactory);
 
-    address platformRecipient = platform.getFeeRecipient();
-    uint256 protocolFee = BasisPoints.calculate(amount, 100); // 1%
+    protocolFee = BasisPoints.calculate(amount, 50); // 0.5%
 
     CurrencyTransfer.transferCurrency(
       CurrencyTransfer.NATIVE_TOKEN,
       sender,
-      platformRecipient,
+      platform.getFeeRecipient(),
       protocolFee
     );
-
-    return protocolFee;
   }
 }

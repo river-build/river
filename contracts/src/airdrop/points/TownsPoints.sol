@@ -11,7 +11,6 @@ import {ITownsPoints} from "./ITownsPoints.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {TownsPointsStorage} from "./TownsPointsStorage.sol";
 import {CheckIn} from "./CheckIn.sol";
-import {Tipping} from "./Tipping.sol";
 
 // contracts
 import {Facet} from "@river-build/diamond/src/facets/Facet.sol";
@@ -99,47 +98,10 @@ contract TownsPoints is IERC20Metadata, ITownsPoints, OwnableBase, Facet {
     }
 
     if (action == Action.Tip) {
-      // Decode tip amount, daily accumulated points, and last reset day
-      (
-        uint256 tipAmount,
-        uint256 dailyPoints,
-        uint256 currentDay,
-        uint256 lastResetDay
-      ) = abi.decode(data, (uint256, uint256, uint256, uint256));
-      return
-        Tipping.getPoints(tipAmount, dailyPoints, currentDay, lastResetDay);
+      uint256 protocolFee = abi.decode(data, (uint256));
+      // 1 pt per 0.0003 ETH
+      points = (protocolFee * 10_000) / 3;
     }
-  }
-
-  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-  /*                           TIPPING                          */
-  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
-  function getTippingLastResetDay(
-    address user
-  ) external view returns (uint256) {
-    return Tipping.layout().tippingPoints[user].lastResetDay;
-  }
-
-  function getTippingDailyPoints(address user) external view returns (uint256) {
-    return Tipping.layout().tippingPoints[user].dailyPoints;
-  }
-
-  /// @inheritdoc ITownsPoints
-  function mintTippingPoints(
-    address user,
-    uint256 tipAmount
-  ) external onlySpace {
-    Tipping.Points storage pointsData = Tipping.layout().tippingPoints[user];
-
-    uint256 pointsToAward = Tipping.getPoints(
-      tipAmount,
-      pointsData.dailyPoints,
-      block.timestamp / 1 days,
-      pointsData.lastResetDay
-    );
-
-    TownsPointsStorage.layout().inner.mint(user, pointsToAward);
-    Tipping.updatePointsAfterTip(user, pointsToAward);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/

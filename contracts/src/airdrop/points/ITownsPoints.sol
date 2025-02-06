@@ -31,9 +31,6 @@ interface ITownsPointsBase {
 
   /// @notice Error thrown when a user attempts to check in too soon after their last check-in
   error TownsPoints__CheckInPeriodNotPassed();
-
-  /// @notice Error thrown when the points are invalid
-  error TownsPoints__InvalidPoints();
 }
 
 interface ITownsPoints is ITownsPointsBase {
@@ -71,19 +68,4 @@ interface ITownsPoints is ITownsPointsBase {
   /// @param user The address of the user to query
   /// @return The timestamp of the user's last check-in, 0 if never checked in
   function getLastCheckIn(address user) external view returns (uint256);
-
-  /// @notice Mint tipping points to a user
-  /// @param user The address of the user to mint points to
-  /// @param tipAmount The amount of the tip
-  function mintTippingPoints(address user, uint256 tipAmount) external;
-
-  /// @notice Get the last reset day for tipping points
-  /// @param user The address of the user to get the last reset day for
-  /// @return The last reset day for the user
-  function getTippingLastResetDay(address user) external view returns (uint256);
-
-  /// @notice Get the daily points for tipping points
-  /// @param user The address of the user to get the daily points for
-  /// @return The daily points for the user
-  function getTippingDailyPoints(address user) external view returns (uint256);
 }

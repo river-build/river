@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IImplementationRegistry} from "contracts/src/factory/facets/registry/IImplementationRegistry.sol";
-import {ITownsPoints, ITownsPointsBase} from "contracts/src/airdrop/points/ITownsPoints.sol";
+import {ITownsPoints} from "contracts/src/airdrop/points/ITownsPoints.sol";
 
 // libraries
 
@@ -14,9 +14,7 @@ import {MembershipStorage} from "contracts/src/spaces/facets/membership/Membersh
 /// @notice Library for interacting with the TownsPoints contract
 library PointsProxyLib {
   /// @dev The implementation ID for the TownsPoints contract
-  /// @custom:note bytes32("RiverAirdrop")
-  bytes32 constant POINTS_DIAMOND =
-    0x526976657241697264726f700000000000000000000000000000000000000000;
+  bytes32 internal constant POINTS_DIAMOND = bytes32("RiverAirdrop");
 
   // =============================================================
   //                         GETTERS
@@ -29,7 +27,7 @@ library PointsProxyLib {
   }
 
   function getPoints(
-    ITownsPointsBase.Action action,
+    ITownsPoints.Action action,
     bytes memory data
   ) internal view returns (uint256) {
     return ITownsPoints(airdropDiamond()).getPoints(action, data);
@@ -37,23 +35,5 @@ library PointsProxyLib {
 
   function mint(address to, uint256 amount) internal {
     ITownsPoints(airdropDiamond()).mint(to, amount);
-  }
-
-  // =============================================================
-  //                           Tippings
-  // =============================================================
-
-  function mintTipping(address to, uint256 amount) internal {
-    ITownsPoints(airdropDiamond()).mintTippingPoints(to, amount);
-  }
-
-  function getTippingLastResetDay(
-    address user
-  ) internal view returns (uint256) {
-    return ITownsPoints(airdropDiamond()).getTippingLastResetDay(user);
-  }
-
-  function getTippingDailyPoints(address user) internal view returns (uint256) {
-    return ITownsPoints(airdropDiamond()).getTippingDailyPoints(user);
   }
 }
