@@ -142,11 +142,57 @@ export async function encryptAndSendMediaPayload(
 		throw new Error('Failed to create media stream')
 	}
 
+	let chunkIndex = 0
+	for (let i = 0; i < ciphertext.length; i += chunkSize) {
+		const chunk = ciphertext.slice(i, i + chunkSize)
+		const { prevMiniblockHash } = await client.sendMediaPayload(
+			mediaStreamInfo.streamId,
+			chunk,
+			chunkIndex++,
+			mediaStreamInfo.prevMiniblockHash,
+		)
+		mediaStreamInfo.prevMiniblockHash = prevMiniblockHash
+	}
+
+	const chunkedMedia = new ChunkedMedia({
+		info,
+		streamId: mediaStreamInfo.streamId,
+		encryption: {
+			case: 'aesgcm',
+			value: { secretKey, iv },
+		},
+		thumbnail: undefined,
+	})
+
+	return chunkedMedia
+}
+
+export async function encryptAndSendMediaPayloadNew(
+	client: Client,
+	spaceId: string,
+	info: MediaInfo,
+	data: Uint8Array,
+	chunkSize = 10,
+): Promise<ChunkedMedia> {
+	const { ciphertext, secretKey, iv } = await encryptAESGCM(data)
+	const chunkCount = Math.ceil(ciphertext.length / chunkSize)
+
+	const mediaStreamInfo = await client.createMediaStreamNew(
+		undefined,
+		spaceId,
+		undefined,
+		chunkCount,
+	)
+
+	if (!mediaStreamInfo) {
+		throw new Error('Failed to create media stream')
+	}
+
 	let cc: CreationCookie = new CreationCookie(mediaStreamInfo.creationCookie)
 	for (let i = 0, index = 0; i < ciphertext.length; i += chunkSize, index++) {
 		const chunk = ciphertext.slice(i, i + chunkSize)
 		const last = ciphertext.length - i <= chunkSize
-		const { creationCookie } = await client.sendMediaPayload(cc, last, chunk, index)
+		const { creationCookie } = await client.sendMediaPayloadNew(cc, last, chunk, index)
 
 		cc = new CreationCookie({
 			...cc,
