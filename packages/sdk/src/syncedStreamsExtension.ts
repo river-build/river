@@ -159,7 +159,9 @@ export class SyncedStreamsExtension {
         const t1 = performance.now()
         this.log('####Performance: loaded streams from persistence!!', t1 - now)
 
-        const hpStreamIds = Array.from(this.highPriorityIds)
+        const hpStreamIds = Array.from(this.highPriorityIds).filter(
+            (x) => loadedStreams[x] !== undefined,
+        )
         await Promise.all(
             hpStreamIds.map(async (streamId) => {
                 await this.loadStreamFromPersistence(streamId, loadedStreams[streamId])
@@ -180,7 +182,7 @@ export class SyncedStreamsExtension {
             this.emitClientStatus()
         })
         // freeze the remaining stream ids
-        const streamIds = Array.from(this.streamIds)
+        const streamIds = Array.from(this.streamIds).filter((x) => loadedStreams[x] !== undefined)
         // make a step task that will load the next batch of streams
         const stepTask = async () => {
             const tsn = performance.now()
