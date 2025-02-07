@@ -104,21 +104,23 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
         continue;
       }
 
-      // Check if the lastMiniblockNum is the next expected miniblock and
-      // the prevMiniblockHash is correct
-      if (
-        // stream.lastMiniblockNum + 1 != miniblock.lastMiniblockNum ||
-        // stream.lastMiniblockHash != miniblock.prevMiniBlockHash
-        stream.lastMiniblockNum >= miniblock.lastMiniblockNum
-      ) {
-        emit StreamLastMiniblockUpdateFailed(
-          miniblock.streamId,
-          miniblock.lastMiniblockHash,
-          miniblock.lastMiniblockNum,
-          RiverRegistryErrors.BAD_ARG
-        );
-        continue;
-      }
+      // TODO: REPLICATION: this check is temporary disabled again:
+      // it leads to problems on alpha and gamma for existing streams.
+      // // Check if the lastMiniblockNum is the next expected miniblock and
+      // // the prevMiniblockHash is correct
+      // if (
+      //   // stream.lastMiniblockNum + 1 != miniblock.lastMiniblockNum ||
+      //   // stream.lastMiniblockHash != miniblock.prevMiniBlockHash
+      //   stream.lastMiniblockNum >= miniblock.lastMiniblockNum
+      // ) {
+      //   emit StreamLastMiniblockUpdateFailed(
+      //     miniblock.streamId,
+      //     miniblock.lastMiniblockHash,
+      //     miniblock.lastMiniblockNum,
+      //     RiverRegistryErrors.BAD_ARG
+      //   );
+      //   continue;
+      // }
 
       // Delete genesis miniblock bytes if the stream is moving beyond genesis
       if (stream.lastMiniblockNum == 0) {
