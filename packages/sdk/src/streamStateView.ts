@@ -97,7 +97,6 @@ export class StreamStateView implements IStreamStateView {
     readonly timeline: StreamTimelineEvent[] = []
     readonly events = new Map<string, StreamTimelineEvent>()
     isInitialized = false
-    snapshot?: Snapshot
     prevMiniblockHash?: Uint8Array
     lastEventNum = 0n
     prevSnapshotMiniblockNum: bigint
@@ -229,7 +228,6 @@ export class StreamStateView implements IStreamStateView {
         encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
     ) {
         const snapshot = migrateSnapshot(inSnapshot)
-        this.snapshot = snapshot
         switch (snapshot.content.case) {
             case 'spaceContent':
                 this.spaceContent.applySnapshot(
@@ -361,9 +359,6 @@ export class StreamStateView implements IStreamStateView {
                         `Miniblock number out of order ${payload.value.miniblockNum} > ${this.miniblockInfo?.max}`,
                         Err.STREAM_BAD_EVENT,
                     )
-                    if (payload.value.snapshot) {
-                        this.snapshot = migrateSnapshot(payload.value.snapshot)
-                    }
                     this.prevMiniblockHash = event.hash
                     this.updateMiniblockInfo(payload.value, { max: payload.value.miniblockNum })
                     timelineEvent.confirmedEventNum =
