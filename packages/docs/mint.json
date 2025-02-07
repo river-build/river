@@ -116,9 +116,14 @@
     {
       "group": "Grants",
       "pages": [
+<<<<<<< Updated upstream
           "grants/grants-program"
         ]
       },
+=======
+        "grants/grants-program"]
+    },
+>>>>>>> Stashed changes
         "FAQs"
       ]
     },
