@@ -159,9 +159,9 @@ export class SyncedStreamsExtension {
         const t1 = performance.now()
         this.log('####Performance: loaded streams from persistence!!', t1 - now)
 
-        const streamIds = Array.from(this.highPriorityIds)
+        const hpStreamIds = Array.from(this.highPriorityIds)
         await Promise.all(
-            streamIds.map(async (streamId) => {
+            hpStreamIds.map(async (streamId) => {
                 await this.loadStreamFromPersistence(streamId, loadedStreams[streamId])
                 delete loadedStreams[streamId]
             }),
@@ -179,28 +179,36 @@ export class SyncedStreamsExtension {
             this.didLoadStreamsFromPersistence = true
             this.emitClientStatus()
         })
+        // freeze the remaining stream ids
+        const streamIds = Array.from(this.streamIds)
         // make a step task that will load the next batch of streams
         const stepTask = async () => {
             const tsn = performance.now()
-            if (this.streamIds.size === 0) {
+            if (streamIds.length === 0) {
                 return
             }
             // it sorts and slices the array
-            const streamIds = Array.from(this.streamIds)
+            const streamIdsForStep = streamIds
                 .sort(
                     (a, b) =>
                         priorityFromStreamId(a, this.highPriorityIds) -
                         priorityFromStreamId(b, this.highPriorityIds),
                 )
-                .slice(0, MAX_CONCURRENT_FROM_PERSISTENCE)
+                .splice(0, MAX_CONCURRENT_FROM_PERSISTENCE)
             // and then loads MAX_CONCURRENT_STREAMS streams
             await Promise.all(
-                streamIds.map(async (streamId) => {
+                streamIdsForStep.map(async (streamId) => {
                     await this.loadStreamFromPersistence(streamId, loadedStreams[streamId])
                     delete loadedStreams[streamId]
                 }),
             )
-            this.logDebug('####Performance: STEP STREAMS!!', performance.now() - tsn)
+            this.logDebug(
+                '####Performance: STEP STREAMS!! processed',
+                streamIdsForStep.length,
+                'remaining',
+                streamIds.length,
+                performance.now() - tsn,
+            )
             // do the next few
             this.tasks.unshift(stepTask)
         }
