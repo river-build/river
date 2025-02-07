@@ -31,10 +31,17 @@ import (
 // requests made to a remote node
 const maxConcurrentNodeRequests = 50
 
+// The SyncRunner implements the logic for setting up a stream sync with a remote node, and creating and
+// continuously updating a TrackedStreamView from the streaming responses from that node. The TrackedStreamView
+// is responsible for firing any callbacks needed by a service that is tracking the contents of remotely
+// hosted streams.
 type SyncRunner struct {
+	// workerPools keeps track of a set of weighted semaphors, one per node address. These are used
+	// to rate limit the number of syncs started on the same remote node at the same time.
 	workerPools sync.Map
 }
 
+// NewSyncRunner creates a SyncRunner instance.
 func NewSyncRunner() *SyncRunner {
 	return &SyncRunner{}
 }
@@ -83,7 +90,7 @@ type newTrackedStreamViewFn func(
 func (sr *SyncRunner) Run(
 	rootCtx context.Context,
 	stream *registries.GetStreamResult,
-	justAllocated bool,
+	applyHistoricalStreamContents bool,
 	nodeRegistry nodes.NodeRegistry,
 	onChainConfig crypto.OnChainConfiguration,
 	newTrackedStreamView newTrackedStreamViewFn,
@@ -298,7 +305,7 @@ func (sr *SyncRunner) Run(
 					// if the stream was just allocated process the miniblocks and events for notifications.
 					// If not ignore them because there were already notifications send for the stream and possible
 					// for these miniblocks and events.
-					if !justAllocated {
+					if !applyHistoricalStreamContents {
 						continue
 					}
 				}
@@ -310,7 +317,7 @@ func (sr *SyncRunner) Run(
 					continue
 				}
 
-				justAllocated = false
+				applyHistoricalStreamContents = false
 
 				for _, block := range update.GetStream().GetMiniblocks() {
 					if err := trackedStream.ApplyBlock(block); err != nil {
