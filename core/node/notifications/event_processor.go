@@ -487,11 +487,12 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 					"user", user,
 					"event", event.Hash,
 					"channelID", channelID,
+					"user", user,
 				)
 			} else if !subscriptionExpired {
 				p.log.Errorw("Unable to send web push notification",
-					"user",
-					user, "err", err,
+					"user", user,
+					"err", err,
 					"event", event.Hash,
 					"channelID", channelID,
 				)
