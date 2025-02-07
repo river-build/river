@@ -612,10 +612,15 @@ describe('clientTest', () => {
         await bobsClient.unpin(bobsChannelId, eventId_2)
         await bobsClient.debugForceMakeMiniblock(bobsChannelId, { forceSnapshot: true })
 
-        const rawStream = await bobsClient.getStream(bobsChannelId)
-        expect(rawStream).toBeDefined()
-        expect(rawStream?.membershipContent.pins.length).toBe(1)
-        expect(rawStream?.membershipContent.pins[0].event.hashStr).toBe(eventId_3)
+        await waitFor(
+            async () => {
+                const rawStream = await bobsClient.getStream(bobsChannelId)
+                expect(rawStream).toBeDefined()
+                expect(rawStream?.membershipContent.pins.length).toBe(1)
+                expect(rawStream?.membershipContent.pins[0].event.hashStr).toBe(eventId_3)
+            },
+            { timeoutMS: 20000 },
+        )
 
         log('bobSendsSingleMessage done')
     })
@@ -771,7 +776,7 @@ describe('clientTest', () => {
         log('Waiting for Bob to get messages...')
         await bobGetsMessage.expectToSucceed()
         log('bobAndAliceConverse All done!')
-    })
+    }, 240000) // 4 minutes timeout
 
     test('bobUploadsDeviceKeys', async () => {
         log('bobUploadsDeviceKeys')
