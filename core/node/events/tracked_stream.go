@@ -28,8 +28,8 @@ type trackedStreamViewImpl struct {
 // executed. It is used by the notification service and the bot registry service to track the state of
 // relevant streams. It is essentially a wrapper around StreamView, to apply events, and to execute callbacks.
 // OnViewLoaded is executed upon TrackedStreamView creation when the constructed view is fully reified.
-// onNewEvent is called whenever a new event is added to the view, ensuring that the onNewEVent callback is
-// never called twice.
+// onNewEvent is called whenever a new event is added to the view, ensuring that the onNewEvent callback is
+// never called twice for the same event.
 func NewTrackedStreamView(
 	ctx context.Context,
 	streamID shared.StreamId,
