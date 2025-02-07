@@ -75,7 +75,8 @@ func (ts *trackedStreamViewImpl) ApplyEvent(
 		return err
 	}
 
-	// add event calls the message listener that send notifications when needed
+	// add event calls the message listener on events that have not been added
+	// before.
 	return ts.addEvent(ctx, parsedEvent)
 }
 
