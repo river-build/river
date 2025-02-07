@@ -70,7 +70,14 @@ npx lerna version patch --yes --force-publish --no-private --tag-version-prefix 
 PR_DESCRIPTION="$(make_pr_description)"
 
 # Create PR and capture the PR number
-PR_NUMBER=$(gh pr create --base main --head "${BRANCH_NAME}" --title "${PR_TITLE}" --body "${PR_DESCRIPTION}" --json number -q .number)
+PR_URL=$(gh pr create --base main --head "${BRANCH_NAME}" --title "${PR_TITLE}" --body "${PR_DESCRIPTION}")
+if [ $? -ne 0 ]; then
+    echo "Failed to create PR"
+    exit 1
+fi
+PR_NUMBER=$(echo $PR_URL | rev | cut -d'/' -f1 | rev)
+
+echo "Created PR #${PR_NUMBER}"
 
 while true; do
     WAIT_TIME=5
