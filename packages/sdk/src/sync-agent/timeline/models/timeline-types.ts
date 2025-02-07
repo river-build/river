@@ -128,7 +128,8 @@ export enum RiverTimelineEvent {
 
 export interface MiniblockHeaderEvent {
     kind: RiverTimelineEvent.MiniblockHeader
-    message: MiniblockHeader
+    miniblockNum: bigint
+    hasSnapshot: boolean
 }
 
 export interface FulfillmentEvent {

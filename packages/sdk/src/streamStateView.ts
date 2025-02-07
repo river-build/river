@@ -320,7 +320,9 @@ export class StreamStateView implements IStreamStateView {
                     miniblockNum: undefined,
                     confirmedEventNum: undefined,
                 })
-                this.timeline.push(event)
+                if (event.remoteEvent.event.payload.case !== 'miniblockHeader') {
+                    this.timeline.push(event)
+                }
                 const newlyConfirmed = this.processAppendedEvent(
                     event,
                     cleartexts?.[event.hashStr],
@@ -344,7 +346,9 @@ export class StreamStateView implements IStreamStateView {
         stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
     ): ConfirmedTimelineEvent[] | undefined {
         check(!this.events.has(timelineEvent.hashStr))
-        this.events.set(timelineEvent.hashStr, timelineEvent)
+        if (timelineEvent.remoteEvent.event.payload.case !== 'miniblockHeader') {
+            this.events.set(timelineEvent.hashStr, timelineEvent)
+        }
 
         const event = timelineEvent.remoteEvent
         const payload = event.event.payload
@@ -436,7 +440,9 @@ export class StreamStateView implements IStreamStateView {
         stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
     ): void {
         check(!this.events.has(timelineEvent.hashStr))
-        this.events.set(timelineEvent.hashStr, timelineEvent)
+        if (timelineEvent.remoteEvent.event.payload.case !== 'miniblockHeader') {
+            this.events.set(timelineEvent.hashStr, timelineEvent)
+        }
 
         const event = timelineEvent.remoteEvent
         const payload = event.event.payload
@@ -583,13 +589,17 @@ export class StreamStateView implements IStreamStateView {
         // initialize our event hashes
         check(block0Events.length > 0)
         // prepend the snapshotted block in reverse order
-        this.timeline.push(...block0Events)
+        this.timeline.push(
+            ...block0Events.filter((e) => e.remoteEvent.event.payload.case !== 'miniblockHeader'),
+        )
         for (let i = block0Events.length - 1; i >= 0; i--) {
             const event = block0Events[i]
             this.processPrependedEvent(event, cleartexts?.[event.hashStr], emitter, undefined)
         }
         // append the new block events
-        this.timeline.push(...rest)
+        this.timeline.push(
+            ...rest.filter((e) => e.remoteEvent.event.payload.case !== 'miniblockHeader'),
+        )
         for (const event of rest) {
             this.processAppendedEvent(event, cleartexts?.[event.hashStr], emitter, undefined)
         }
@@ -673,7 +683,9 @@ export class StreamStateView implements IStreamStateView {
             })
         }
 
-        this.timeline.unshift(...prepended)
+        this.timeline.unshift(
+            ...prepended.filter((e) => e.remoteEvent.event.payload.case !== 'miniblockHeader'),
+        )
         // prepend the new block events in reverse order
         for (let i = prepended.length - 1; i >= 0; i--) {
             const event = prepended[i]
