@@ -106,7 +106,7 @@ while true; do
 done
 
 # Merge the pull request
-gh pr merge "${BRANCH_NAME}" --squash --delete-branch
+gh pr merge "${BRANCH_NAME}" --squash --delete-branch --auto
 
 exit_status=$?
 if [ $exit_status -ne 0 ]; then
