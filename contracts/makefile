@@ -265,12 +265,7 @@ verify-base :;
 	@$(MAKE) verify-any rpc=base
 	@$(MAKE) explicit-verify-any rpc=base verifier=${BLOCKSCOUT_BASE_URL} etherscan=${BLOCKSCOUT_BASE_API_KEY}
 
-# ===========================
-# 				Optimism
-# ===========================
-deploy-optimism :;
-	@$(MAKE) deploy-any-ledger rpc=optimism hd_path=${HD_PATH} sender=${SENDER_ADDRESS} verifier=${OPTIMISM_BLOCKSCOUT_URL}
-	@$(MAKE) resume-any-ledger rpc=optimism hd_path=${HD_PATH} sender=${SENDER_ADDRESS} verifier=${OPTIMISM_ETHERSCAN_URL} etherscan=${OPTIMISM_ETHERSCAN_API_KEY}
+
 
 # ===========================
 # 				Mainnet
