@@ -304,8 +304,8 @@ jobs:
 
             - name: Run River Tests (without entitlements)
               working-directory: packages/sdk
-              run: yarn run test:ci:multi:ne
-              timeout-minutes: 10
+              run: VITEST_MAX_THREADS=2 yarn run test:ci:multi:ne
+              timeout-minutes: 15
 
             - name: Run Stream Metadata Nodes
               run: |
