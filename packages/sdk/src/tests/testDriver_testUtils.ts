@@ -2,7 +2,7 @@ import { Client } from '../client'
 import { DLogger, check, dlog } from '@river-build/dlog'
 import { makeTestClient, makeUniqueSpaceStreamId } from './testUtils'
 import { makeUniqueChannelStreamId } from '../id'
-import { MembershipOp, SnapshotCaseType } from '@river-build/proto'
+import { SnapshotCaseType } from '@river-build/proto'
 import { DecryptedTimelineEvent } from '../types'
 
 class TestDriver {
@@ -175,7 +175,7 @@ export const converse = async (conversation: string[][], testName: string): Prom
                     'joined space',
                     d.num,
                     'last know miniblock',
-                    d.client.stream(spaceId)?.view.prevMiniblock,
+                    //d.client.stream(spaceId)?.view.prevMiniblock,
                 )
             }),
         )
@@ -198,7 +198,7 @@ export const converse = async (conversation: string[][], testName: string): Prom
                     'joined channel',
                     d.num,
                     'last know miniblock',
-                    d.client.stream(channelId)?.view.prevMiniblock,
+                    //d.client.stream(channelId)?.view.prevMiniblock,
                 )
             }),
         )
