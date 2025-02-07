@@ -116,8 +116,9 @@
     {
       "group": "Grants",
       "pages": [
-        "grants/grants-program"
-    },
+          "grants/grants-program"
+        ]
+      },
         "FAQs"
       ]
     },
