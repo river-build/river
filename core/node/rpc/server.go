@@ -21,6 +21,7 @@ import (
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
+	"github.com/river-build/river/core/node/authentication"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
@@ -46,6 +47,7 @@ const (
 	ServerModeInfo         = "info"
 	ServerModeArchive      = "archive"
 	ServerModeNotification = "notification"
+	ServerModeBotRegistry  = "bot_registry"
 )
 
 func (s *Service) httpServerClose() {
@@ -245,6 +247,8 @@ func (s *Service) initInstance(mode string, opts *ServerStartOpts) {
 		subsystem = "stream"
 	} else if mode == ServerModeNotification {
 		subsystem = "notification"
+	} else if mode == ServerModeBotRegistry {
+		subsystem = "bot_registry"
 	}
 
 	metricsRegistry := prometheus.NewRegistry()
@@ -386,6 +390,8 @@ func (s *Service) prepareStore() error {
 			schema = storage.DbSchemaNameForArchive(s.config.Archive.ArchiveId)
 		case ServerModeNotification:
 			schema = storage.DbSchemaNameForNotifications(s.config.RiverChain.ChainId)
+		case ServerModeBotRegistry:
+			schema = storage.DbSchemaNameForBotRegistryService(s.config.BotRegistry.BotRegistryId)
 		default:
 			return RiverError(
 				Err_BAD_CONFIG,
@@ -552,7 +558,7 @@ func (s *Service) serve() {
 
 func (s *Service) initEntitlements() error {
 	var err error
-	s.entitlementEvaluator, err = entitlement.NewEvaluatorFromConfig(s.serverCtx, s.config, s.chainConfig, s.metrics)
+	s.entitlementEvaluator, err = entitlement.NewEvaluatorFromConfig(s.serverCtx, s.config, s.chainConfig, s.metrics, s.otelTracer)
 	if err != nil {
 		return err
 	}
@@ -640,6 +646,42 @@ func (s *Service) initNotificationsStore() error {
 	}
 }
 
+func (s *Service) initBotRegistryStore() error {
+	ctx := s.serverCtx
+	log := s.defaultLogger
+
+	switch s.config.StorageType {
+	case storage.BotRegistryStorageTypePostgres:
+		pgstore, err := storage.NewPostgresBotRegistryStore(
+			ctx,
+			s.storagePoolInfo,
+			s.exitSignal,
+			s.metrics,
+		)
+		if err != nil {
+			return err
+		}
+		s.onClose(pgstore.Close)
+		s.botStore = pgstore
+
+		if !s.config.Log.Simplify {
+			log.Infow(
+				"Created postgres bot registry store",
+				"schema",
+				s.storagePoolInfo.Schema,
+			)
+		}
+		return nil
+	default:
+		return RiverError(
+			Err_BAD_CONFIG,
+			"Unknown storage type",
+			"storageType",
+			s.config.StorageType,
+		).Func("createStore")
+	}
+}
+
 func (s *Service) initCacheAndSync(opts *ServerStartOpts) error {
 	cacheParams := &events.StreamCacheParams{
 		Storage:                 s.storage,
@@ -652,6 +694,7 @@ func (s *Service) initCacheAndSync(opts *ServerStartOpts) error {
 		ChainMonitor:            s.riverChain.ChainMonitor,
 		Metrics:                 s.metrics,
 		RemoteMiniblockProvider: s,
+		Tracer:                  s.otelTracer,
 	}
 
 	s.cache = events.NewStreamCache(s.serverCtx, cacheParams)
@@ -715,7 +758,8 @@ func (s *Service) initNotificationHandlers() error {
 	ii = append(ii, s.NewMetricsInterceptor())
 	ii = append(ii, NewTimeoutInterceptor(s.config.Network.RequestTimeout))
 
-	authInceptor, err := notifications.NewAuthenticationInterceptor(
+	authInceptor, err := authentication.NewAuthenticationInterceptor(
+		s.NotificationService.ShortServiceName(),
 		s.config.Notifications.Authentication.SessionToken.Key.Algorithm,
 		s.config.Notifications.Authentication.SessionToken.Key.Key,
 	)
@@ -739,6 +783,44 @@ func (s *Service) initNotificationHandlers() error {
 	s.mux.Handle(notificationAuthServicePattern, newHttpHandler(notificationAuthServiceHandler, s.defaultLogger))
 
 	s.registerDebugHandlers(s.config.EnableDebugEndpoints, s.config.DebugEndpoints)
+
+	return nil
+}
+
+func (s *Service) initBotRegistryHandlers() error {
+	var ii []connect.Interceptor
+	if s.otelConnectIterceptor != nil {
+		ii = append(ii, s.otelConnectIterceptor)
+	}
+	ii = append(ii, s.NewMetricsInterceptor())
+	ii = append(ii, NewTimeoutInterceptor(s.config.Network.RequestTimeout))
+
+	authInceptor, err := authentication.NewAuthenticationInterceptor(
+		s.BotRegistryService.ShortServiceName(),
+		s.config.BotRegistry.Authentication.SessionToken.Key.Algorithm,
+		s.config.BotRegistry.Authentication.SessionToken.Key.Key,
+		"/river.BotRegistryService/GetStatus",
+	)
+	if err != nil {
+		return err
+	}
+	ii = append(ii, authInceptor)
+
+	interceptors := connect.WithInterceptors(ii...)
+
+	botRegistryServicePattern, botRegistryServiceHandler := protocolconnect.NewBotRegistryServiceHandler(
+		s.BotRegistryService,
+		interceptors,
+	)
+	botRegistryAuthServicePattern, botRegistryAuthServiceHandler := protocolconnect.NewAuthenticationServiceHandler(
+		s.BotRegistryService,
+		interceptors,
+	)
+
+	s.mux.Handle(botRegistryServicePattern, newHttpHandler(botRegistryServiceHandler, s.defaultLogger))
+	s.mux.Handle(botRegistryAuthServicePattern, newHttpHandler(botRegistryAuthServiceHandler, s.defaultLogger))
+
+	// s.registerDebugHandlers(s.config.EnableDebugEndpoints, s.config.DebugEndpoints)
 
 	return nil
 }

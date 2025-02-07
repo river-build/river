@@ -138,11 +138,14 @@ type Config struct {
 	// Graffiti is returned in status and info requests.
 	Graffiti string
 
-	// Should be set if node is run in archive mode.
+	// Should be set if the node is running in archive mode.
 	Archive ArchiveConfig
 
-	// Notifications must be set when run in notification mode.
+	// Notifications must be set when running in notification mode.
 	Notifications NotificationsConfig
+
+	// BotRegistry must be set when running in bot registry mode.
+	BotRegistry BotRegistryConfig
 
 	// Feature flags
 	// Used to disable functionality for some testing setups.
@@ -185,7 +188,7 @@ type Config struct {
 	// ====================
 	// EntitlementContract denotes the address of the contract that receives entitlement check
 	// requests.
-	EntitlementContract     ContractConfig `mapstructure:"entitlement_contract"`
+	EntitlementContract ContractConfig `mapstructure:"entitlement_contract"`
 	// History indicates how far back xchain must look for entitlement check requests after start
 	History time.Duration
 }
@@ -361,7 +364,7 @@ type ArchiveConfig struct {
 	// of a stream with available blocks (according to the contract) that the archiver will
 	// allow before considering a stream corrupt.
 	// Please access with GetMaxFailedConsecutiveUpdates
-	MaxFailedConsecutiveUpdates uint32  `json:",omitempty"` // If 0, default to 50.
+	MaxFailedConsecutiveUpdates uint32 `json:",omitempty"` // If 0, default to 50.
 }
 
 type APNPushNotificationsConfig struct {
@@ -427,6 +430,15 @@ type NotificationsConfig struct {
 	APN APNPushNotificationsConfig
 	// Web holds the Web Push notification settings
 	Web WebPushNotificationConfig `mapstructure:"webpush"`
+
+	// Authentication holds configuration for the Client API authentication service.
+	Authentication AuthenticationConfig
+}
+
+type BotRegistryConfig struct {
+	// BotRegistryId is the unique identifier of the bot registry service node. It must be set for
+	// nodes running in bot registry mode.
+	BotRegistryId string
 
 	// Authentication holds configuration for the Client API authentication service.
 	Authentication AuthenticationConfig
