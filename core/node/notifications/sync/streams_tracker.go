@@ -26,7 +26,6 @@ type StreamsTracker struct {
 	riverRegistry  *registries.RiverRegistryContract
 	// prevent making too many requests at the same time to a remote.
 	// keep per remote a worker pool that limits the number of concurrent requests.
-	// workerPool    map[common.Address]*semaphore.Weighted
 	onChainConfig crypto.OnChainConfiguration
 	listener      StreamEventListener
 	storage       UserPreferencesStore
