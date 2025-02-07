@@ -6,7 +6,6 @@ import type {
     ChunkedMedia_AESGCM,
     ChannelMessage_Post_Content_Image_Info,
     MediaInfo as MediaInfoStruct,
-    MiniblockHeader,
     PayloadCaseType,
     ChannelOp,
     SpacePayload_ChannelSettings,
