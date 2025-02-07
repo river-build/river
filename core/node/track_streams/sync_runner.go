@@ -1,4 +1,4 @@
-package sync
+package track_streams
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -26,7 +27,26 @@ import (
 	"github.com/river-build/river/core/node/shared"
 )
 
-type StreamTrackerConnectGo struct{}
+// maxConcurrentNodeRequests is the maximum number of concurrent
+// requests made to a remote node
+const maxConcurrentNodeRequests = 50
+
+type SyncRunner struct {
+	workerPools sync.Map
+}
+
+func NewSyncRunner() *SyncRunner {
+	return &SyncRunner{}
+}
+
+func (sr *SyncRunner) getWorkerPool(addr common.Address) *semaphore.Weighted {
+	if workerPool, ok := sr.workerPools.Load(addr); ok {
+		return workerPool.(*semaphore.Weighted)
+	}
+
+	workerPool, _ := sr.workerPools.LoadOrStore(addr, semaphore.NewWeighted(maxConcurrentNodeRequests))
+	return workerPool.(*semaphore.Weighted)
+}
 
 func channelLabelType(streamID shared.StreamId) string {
 	switch streamID.Type() {
@@ -53,16 +73,21 @@ func channelLabelType(streamID shared.StreamId) string {
 	}
 }
 
-func (s *StreamTrackerConnectGo) Run(
+type newTrackedStreamViewFn func(
+	ctx context.Context,
+	streamID shared.StreamId,
+	cfg crypto.OnChainConfiguration,
+	stream *protocol.StreamAndCookie,
+) (events.TrackedStreamView, error)
+
+func (sr *SyncRunner) Run(
 	rootCtx context.Context,
 	stream *registries.GetStreamResult,
 	justAllocated bool,
 	nodeRegistry nodes.NodeRegistry,
-	workerPool *semaphore.Weighted,
 	onChainConfig crypto.OnChainConfiguration,
-	listener StreamEventListener,
-	userPreferences UserPreferencesStore,
-	metrics *streamsTrackerWorkerMetrics,
+	newTrackedStreamView newTrackedStreamViewFn,
+	metrics *TrackStreamsSyncMetrics,
 ) {
 	var (
 		promLabels                = prometheus.Labels{"type": channelLabelType(stream.StreamId)}
@@ -103,7 +128,7 @@ func (s *StreamTrackerConnectGo) Run(
 		if client == nil {
 			syncCancel()
 			log.Errorw("unable to obtain stream service client", "err", err)
-			if s.waitMaxOrUntilCancel(rootCtx, time.Minute, 2*time.Minute) {
+			if sr.waitMaxOrUntilCancel(rootCtx, time.Minute, 2*time.Minute) {
 				return
 			}
 			continue
@@ -112,13 +137,13 @@ func (s *StreamTrackerConnectGo) Run(
 		// workers are started in parallel, prevent starting too many at the same time
 		// to ensure that remotes are not overflown with SyncStream requests.
 		metrics.SyncSessionInFlight.Inc()
-		if err := workerPool.Acquire(syncCtx, 1); err != nil {
+		if err := sr.getWorkerPool(remoteAddr).Acquire(syncCtx, 1); err != nil {
 			metrics.SyncSessionInFlight.Dec()
 			syncCancel()
 			if !errors.Is(err, context.Canceled) {
 				log.Errorw("unable to acquire worker pool task", "err", err)
 			}
-			if s.waitMaxOrUntilCancel(rootCtx, 10*time.Second, 30*time.Second) {
+			if sr.waitMaxOrUntilCancel(rootCtx, 10*time.Second, 30*time.Second) {
 				return
 			}
 			continue
@@ -143,7 +168,7 @@ func (s *StreamTrackerConnectGo) Run(
 		streamUpdates, err := client.SyncStreams(syncCtx, connect.NewRequest(&protocol.SyncStreamsRequest{
 			SyncPos: syncPos,
 		}))
-		workerPool.Release(1)
+		sr.getWorkerPool(remoteAddr).Release(1)
 		metrics.SyncSessionInFlight.Dec()
 
 		if err != nil {
@@ -152,7 +177,7 @@ func (s *StreamTrackerConnectGo) Run(
 			if !errors.Is(err, context.Canceled) {
 				log.Debugw("unable to start stream sync session", "err", err)
 			}
-			if s.waitMaxOrUntilCancel(rootCtx, time.Minute, 2*time.Minute) {
+			if sr.waitMaxOrUntilCancel(rootCtx, time.Minute, 2*time.Minute) {
 				return
 			}
 			continue
@@ -182,7 +207,7 @@ func (s *StreamTrackerConnectGo) Run(
 				if !errors.Is(err, context.Canceled) {
 					log.Errorw("Stream sync session didn't start with SyncOp_SYNC_NEW")
 				}
-				if s.waitMaxOrUntilCancel(rootCtx, 10*time.Second, 30*time.Second) {
+				if sr.waitMaxOrUntilCancel(rootCtx, 10*time.Second, 30*time.Second) {
 					return
 				}
 				continue
@@ -197,7 +222,7 @@ func (s *StreamTrackerConnectGo) Run(
 			}
 			syncCancel()
 			remotes.AdvanceStickyPeer(remoteAddr)
-			if s.waitMaxOrUntilCancel(rootCtx, time.Minute, 2*time.Minute) {
+			if sr.waitMaxOrUntilCancel(rootCtx, time.Minute, 2*time.Minute) {
 				return
 			}
 			continue
@@ -207,7 +232,7 @@ func (s *StreamTrackerConnectGo) Run(
 			syncCancel()
 			remotes.AdvanceStickyPeer(remoteAddr)
 			log.Errorw("Received empty syncID")
-			if s.waitMaxOrUntilCancel(rootCtx, time.Minute, 2*time.Minute) {
+			if sr.waitMaxOrUntilCancel(rootCtx, time.Minute, 2*time.Minute) {
 				return
 			}
 			continue
@@ -261,8 +286,7 @@ func (s *StreamTrackerConnectGo) Run(
 				}
 
 				if reset {
-					trackedStream, err = NewTrackedStreamForNotifications(
-						syncCtx, streamID, onChainConfig, update.GetStream(), listener, userPreferences)
+					trackedStream, err = newTrackedStreamView(syncCtx, streamID, onChainConfig, update.GetStream())
 					if err != nil {
 						syncCancel()
 						log.Errorw("Unable to instantiate tracked stream", "err", err)
@@ -348,7 +372,7 @@ func (s *StreamTrackerConnectGo) Run(
 		syncCancel()
 		remotes.AdvanceStickyPeer(remoteAddr)
 
-		if s.waitMaxOrUntilCancel(rootCtx, 10*time.Second, 30*time.Second) {
+		if sr.waitMaxOrUntilCancel(rootCtx, 10*time.Second, 30*time.Second) {
 			return
 		}
 	}
@@ -359,7 +383,7 @@ func (s *StreamTrackerConnectGo) Run(
 //
 //nolint:unused
 //lint:ignore U1000 temporary disabled - pings are commented out
-func (s *StreamTrackerConnectGo) liveness(
+func (sr *SyncRunner) liveness(
 	log *zap.SugaredLogger,
 	syncCtx context.Context,
 	cancelSyncSession context.CancelFunc,
@@ -369,7 +393,7 @@ func (s *StreamTrackerConnectGo) liveness(
 	syncID string,
 	client protocolconnect.StreamServiceClient,
 	lastReceivedPong *atomic.Int64,
-	metrics *streamsTrackerWorkerMetrics,
+	metrics *TrackStreamsSyncMetrics,
 ) {
 	const pongTimeout = 30 * time.Second
 
@@ -469,7 +493,7 @@ func (s *StreamTrackerConnectGo) liveness(
 
 // waitMaxOrUntilCancel waits a random duration between minWait and maxWait
 // or returns true when ctx expires before.
-func (s *StreamTrackerConnectGo) waitMaxOrUntilCancel(
+func (sr *SyncRunner) waitMaxOrUntilCancel(
 	ctx context.Context,
 	minWait time.Duration,
 	maxWait time.Duration,
