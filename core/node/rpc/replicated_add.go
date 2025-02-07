@@ -66,8 +66,8 @@ func (s *Service) replicatedAddEventImpl(ctx context.Context, stream *Stream, ev
 	}
 
 	streamId := stream.StreamId()
-	sender := NewQuorumPool("method", "replicatedStream.AddEvent", "streamId", streamId)
-	sender.Timeout = 2500 * time.Millisecond // TODO: REPLICATION: TEST: setting so test can have more aggressive timeout
+	// TODO: REPLICATION: TEST: setting so test can have more aggressive timeout
+	sender := NewQuorumPoolWithTimeoutForRemotes(2500*time.Millisecond, "method", "replicatedStream.AddEvent", "streamId", streamId)
 
 	sender.GoLocal(ctx, func(ctx context.Context) error {
 		return stream.AddEvent(ctx, event)
