@@ -303,8 +303,8 @@ func runStreamDumpCmd(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
-	from := int64(0)
-	to := min(int64(from)+blockRange, maxBlock)
+	from := max(0, maxBlock-blockRange)
+	to := maxBlock
 
 	for {
 		miniblocks, err := remoteClient.GetMiniblocks(ctx, connect.NewRequest(&protocol.GetMiniblocksRequest{
@@ -355,7 +355,7 @@ func runStreamDumpCmd(cmd *cobra.Command, args []string) error {
 		}
 
 		from = from + int64(len(miniblocks.Msg.Miniblocks))
-		to = min(from+blockRange, maxBlock)
+		to = maxBlock
 
 		if len(miniblocks.Msg.Miniblocks) == 0 || from == to {
 			break
