@@ -26,7 +26,7 @@ type TrackedStreamView interface {
 }
 
 // TrackedStreamViewImpl can function on it's own as an object, or can be used as a mixin
-// by classes that want to encapsulate the set of required callbacks.
+// by classes that want to encapsulate it with the required callback.
 // TrackedStreamView implements to functionality of applying blocks and events to a wrapped
 // stream view, and of notifying via the callback on unseen events.
 type TrackedStreamViewImpl struct {
