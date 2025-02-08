@@ -1,5 +1,5 @@
 {
-    "name": "space-factory",
+    "name": "@river-build/subgraph",
     "license": "UNLICENSED",
     "scripts": {
         "codegen": "graph codegen",

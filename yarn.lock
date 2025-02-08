@@ -6972,8 +6972,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@river-build/contracts@workspace:contracts"
   dependencies:
-    "@graphprotocol/graph-cli": 0.95.0
-    "@graphprotocol/graph-ts": 0.36.0
     "@openzeppelin/contracts": ^5.2.0
     "@openzeppelin/contracts-upgradeable": ^5.2.0
     "@prb/math": ^4.1.0
@@ -7346,6 +7344,16 @@ __metadata:
     typed-emitter: ^2.1.0
     typescript: ^5.1.6
     vitest: ^2.1.5
+  languageName: unknown
+  linkType: soft
+
+"@river-build/subgraph@workspace:packages/subgraph":
+  version: 0.0.0-use.local
+  resolution: "@river-build/subgraph@workspace:packages/subgraph"
+  dependencies:
+    "@graphprotocol/graph-cli": 0.95.0
+    "@graphprotocol/graph-ts": 0.36.0
+    matchstick-as: 0.6.0
   languageName: unknown
   linkType: soft
 
@@ -14075,16 +14083,6 @@ __metadata:
   checksum: 4cc0bf7b86c1a50b6502b04d7fee4a79eaa69e6f6c6dc1b91b56fb6827fc51c04b9c11ba87c582d94df2387d1a8d1775139a27b259c02746d754ddb1baa86f5f
   languageName: node
   linkType: hard
-
-"diamond@workspace:packages/subgraph":
-  version: 0.0.0-use.local
-  resolution: "diamond@workspace:packages/subgraph"
-  dependencies:
-    "@graphprotocol/graph-cli": 0.95.0
-    "@graphprotocol/graph-ts": 0.36.0
-    matchstick-as: 0.6.0
-  languageName: unknown
-  linkType: soft
 
 "didyoumean@npm:^1.2.2":
   version: 1.2.2
