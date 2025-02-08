@@ -363,7 +363,7 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
     onConfirmedEvent(
         event: ConfirmedTimelineEvent,
         stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
-        encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
+        _: TypedEmitter<StreamEncryptionEvents> | undefined,
     ): void {
         check(event.remoteEvent.event.payload.case === 'memberPayload')
         const payload: MemberPayload = event.remoteEvent.event.payload.value
