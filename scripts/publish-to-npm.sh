@@ -77,6 +77,9 @@ if [ $? -ne 0 ]; then
 fi
 PR_NUMBER=$(echo $PR_URL | rev | cut -d'/' -f1 | rev)
 
+# Enable auto-merge
+gh pr merge "${PR_NUMBER}" --auto --merge --squash
+
 echo "Created PR #${PR_NUMBER}"
 
 while true; do
