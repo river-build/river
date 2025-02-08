@@ -1,0 +1,74 @@
+specVersion: 1.0.0
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: Architect
+    network: base
+    source:
+      address: "0xA579E89b05F31FC65CE8017E1bAeDAA41f4b8013"
+      abi: Architect
+      startBlock: 21107063
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Architect__ProxyInitializerSet
+        - Initialized
+        - InterfaceAdded
+        - InterfaceRemoved
+        - OwnershipTransferred
+        - Paused
+        - PermissionsAddedToChannelRole
+        - PermissionsRemovedFromChannelRole
+        - PermissionsUpdatedForChannelRole
+        - PricingModuleAdded
+        - PricingModuleRemoved
+        - PricingModuleUpdated
+        - RoleCreated
+        - RoleRemoved
+        - RoleUpdated
+        - SpaceCreated
+        - Unpaused
+      abis:
+        - name: Architect
+          file: ./abis/Architect.json
+      eventHandlers:
+        - event: Architect__ProxyInitializerSet(indexed address)
+          handler: handleArchitect__ProxyInitializerSet
+        - event: Initialized(uint32)
+          handler: handleInitialized
+        - event: InterfaceAdded(indexed bytes4)
+          handler: handleInterfaceAdded
+        - event: InterfaceRemoved(indexed bytes4)
+          handler: handleInterfaceRemoved
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+        - event: Paused(address)
+          handler: handlePaused
+        - event: PermissionsAddedToChannelRole(indexed address,indexed uint256,indexed bytes32)
+          handler: handlePermissionsAddedToChannelRole
+        - event: PermissionsRemovedFromChannelRole(indexed address,indexed uint256,indexed bytes32)
+          handler: handlePermissionsRemovedFromChannelRole
+        - event: PermissionsUpdatedForChannelRole(indexed address,indexed uint256,indexed bytes32)
+          handler: handlePermissionsUpdatedForChannelRole
+        - event: PricingModuleAdded(indexed address)
+          handler: handlePricingModuleAdded
+        - event: PricingModuleRemoved(indexed address)
+          handler: handlePricingModuleRemoved
+        - event: PricingModuleUpdated(indexed address)
+          handler: handlePricingModuleUpdated
+        - event: RoleCreated(indexed address,indexed uint256)
+          handler: handleRoleCreated
+        - event: RoleRemoved(indexed address,indexed uint256)
+          handler: handleRoleRemoved
+        - event: RoleUpdated(indexed address,indexed uint256)
+          handler: handleRoleUpdated
+        - event: SpaceCreated(indexed address,indexed uint256,indexed address)
+          handler: handleSpaceCreated
+        - event: Unpaused(address)
+          handler: handleUnpaused
+      file: ./src/architect.ts

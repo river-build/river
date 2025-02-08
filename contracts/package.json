@@ -24,6 +24,7 @@
         "solady": "^0.1.2"
     },
     "devDependencies": {
+        "@graphprotocol/graph-cli": "^0.95.0",
         "@prb/test": "^0.6.4",
         "ds-test": "github:dapphub/ds-test",
         "forge-std": "github:foundry-rs/forge-std#v1.9.5",
