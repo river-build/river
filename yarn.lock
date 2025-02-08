@@ -3296,7 +3296,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@graphprotocol/graph-cli@npm:^0.95.0":
+"@graphprotocol/graph-cli@npm:0.95.0":
   version: 0.95.0
   resolution: "@graphprotocol/graph-cli@npm:0.95.0"
   dependencies:
@@ -3329,6 +3329,15 @@ __metadata:
   bin:
     graph: bin/run.js
   checksum: c9b6e6d7a18f98c38eaa7929f08d0371ffba9236eefb550070ee00c63267bac11f92ff7767e382b1824da85990f219fae5e4e9453d850e0cd4466278a38b5801
+  languageName: node
+  linkType: hard
+
+"@graphprotocol/graph-ts@npm:0.36.0":
+  version: 0.36.0
+  resolution: "@graphprotocol/graph-ts@npm:0.36.0"
+  dependencies:
+    assemblyscript: 0.19.10
+  checksum: 93eac159b47e725f8c2b1a3f2f9f65d3032873010e56c7030fe8e46101370f6b786007b212906df965a5900ebb689467dbfb0c528ae29b9c0857a3bad8ff98dd
   languageName: node
   linkType: hard
 
@@ -6963,7 +6972,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@river-build/contracts@workspace:contracts"
   dependencies:
-    "@graphprotocol/graph-cli": ^0.95.0
+    "@graphprotocol/graph-cli": 0.95.0
+    "@graphprotocol/graph-ts": 0.36.0
     "@openzeppelin/contracts": ^5.2.0
     "@openzeppelin/contracts-upgradeable": ^5.2.0
     "@prb/math": ^4.1.0
@@ -11065,6 +11075,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"assemblyscript@npm:0.19.10":
+  version: 0.19.10
+  resolution: "assemblyscript@npm:0.19.10"
+  dependencies:
+    binaryen: 101.0.0-nightly.20210723
+    long: ^4.0.0
+  bin:
+    asc: bin/asc
+    asinit: bin/asinit
+  checksum: d4087bcbae402eb0e972a78d8dfee607b2b51f4b29fcee5359f4db3052912ec12492a8714916bed8424f7f495f9357c7c6ab2482ba1d4ea4a44c55a86df5a67c
+  languageName: node
+  linkType: hard
+
 "assemblyscript@npm:0.19.23":
   version: 0.19.23
   resolution: "assemblyscript@npm:0.19.23"
@@ -11475,6 +11498,15 @@ __metadata:
   version: 2.2.0
   resolution: "binary-extensions@npm:2.2.0"
   checksum: ccd267956c58d2315f5d3ea6757cf09863c5fc703e50fbeb13a7dc849b812ef76e3cf9ca8f35a0c48498776a7478d7b4a0418e1e2b8cb9cb9731f2922aaad7f8
+  languageName: node
+  linkType: hard
+
+"binaryen@npm:101.0.0-nightly.20210723":
+  version: 101.0.0-nightly.20210723
+  resolution: "binaryen@npm:101.0.0-nightly.20210723"
+  bin:
+    wasm-opt: bin/wasm-opt
+  checksum: b1f7cc8e9fb4f1530e9454b5ea6deba17e2d863cea4efc6d0ba1b2af2325e9080c29df0ffeaf9708d455705a629a6a4fbef0ac29ed789a4e316b4c1437879f57
   languageName: node
   linkType: hard
 
@@ -14043,6 +14075,16 @@ __metadata:
   checksum: 4cc0bf7b86c1a50b6502b04d7fee4a79eaa69e6f6c6dc1b91b56fb6827fc51c04b9c11ba87c582d94df2387d1a8d1775139a27b259c02746d754ddb1baa86f5f
   languageName: node
   linkType: hard
+
+"diamond@workspace:packages/subgraph":
+  version: 0.0.0-use.local
+  resolution: "diamond@workspace:packages/subgraph"
+  dependencies:
+    "@graphprotocol/graph-cli": 0.95.0
+    "@graphprotocol/graph-ts": 0.36.0
+    matchstick-as: 0.6.0
+  languageName: unknown
+  linkType: soft
 
 "didyoumean@npm:^1.2.2":
   version: 1.2.2
@@ -21231,6 +21273,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"long@npm:^4.0.0":
+  version: 4.0.0
+  resolution: "long@npm:4.0.0"
+  checksum: 16afbe8f749c7c849db1f4de4e2e6a31ac6e617cead3bdc4f9605cb703cd20e1e9fc1a7baba674ffcca57d660a6e5b53a9e236d7b25a295d3855cca79cc06744
+  languageName: node
+  linkType: hard
+
 "long@npm:^5.0.0":
   version: 5.2.3
   resolution: "long@npm:5.2.3"
@@ -21541,6 +21590,15 @@ __metadata:
   version: 1.2.6
   resolution: "match-all@npm:1.2.6"
   checksum: 3d4f16b8fd082f2fd10e362f4a8b71c62f8a767591b3db831ca2bdcf726337e9a64e4abc30e2ef053dc2bcfb875a9ed80bd78e006ad5ef11380a7158d0cb00e1
+  languageName: node
+  linkType: hard
+
+"matchstick-as@npm:0.6.0":
+  version: 0.6.0
+  resolution: "matchstick-as@npm:0.6.0"
+  dependencies:
+    wabt: 1.0.24
+  checksum: 340025caf2fe677675d9e388f2726b9517dcd977e13c1d5d13517d3d72ebfe561ea849e5859df74e1ccf48559d5fe3a9bb7cce107187102ec9a3d0d677c596ff
   languageName: node
   linkType: hard
 
@@ -31801,6 +31859,23 @@ __metadata:
   dependencies:
     xml-name-validator: ^4.0.0
   checksum: eba070e78deb408ae8defa4d36b429f084b2b47a4741c4a9be3f27a0a3d1845e277e3072b04391a138f7e43776842627d1334e448ff13ff90ad9fb1214ee7091
+  languageName: node
+  linkType: hard
+
+"wabt@npm:1.0.24":
+  version: 1.0.24
+  resolution: "wabt@npm:1.0.24"
+  bin:
+    wasm-decompile: bin/wasm-decompile
+    wasm-interp: bin/wasm-interp
+    wasm-objdump: bin/wasm-objdump
+    wasm-opcodecnt: bin/wasm-opcodecnt
+    wasm-strip: bin/wasm-strip
+    wasm-validate: bin/wasm-validate
+    wasm2c: bin/wasm2c
+    wasm2wat: bin/wasm2wat
+    wat2wasm: bin/wat2wasm
+  checksum: 7d404acaa0605b5cde99585839b97db37998754512d89e1c63147bc62f4bfd46484595cc8f2e8d6f9741f67206ed936336a0828a3e1e6f3d348567cda6176333
   languageName: node
   linkType: hard
 

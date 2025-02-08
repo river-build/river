@@ -1,147 +1,180 @@
-type Architect__ProxyInitializerSet @entity(immutable: true) {
-  id: Bytes!
-  proxyInitializer: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+type DiamondCut @entity(immutable: true) {
+  id: ID!
+  facetCuts: [FacetCut!]! @derivedFrom(field: "diamondCut")
+  init: Bytes! # address
+  initPayload: Bytes!
+  timestamp: BigInt!
 }
 
-type Initialized @entity(immutable: true) {
-  id: Bytes!
-  version: BigInt! # uint32
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+type FacetCut @entity(immutable: true) {
+  id: ID!
+  diamondCut: DiamondCut!
+  facetAddress: Bytes! # address
+  action: Int! # uint8
+  functionSelectors: [Bytes!]!
 }
 
-type InterfaceAdded @entity(immutable: true) {
-  id: Bytes!
+type Interface @entity(immutable: true) {
+  id: ID!
   interfaceId: Bytes! # bytes4
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+  timestamp: BigInt!
 }
 
-type InterfaceRemoved @entity(immutable: true) {
-  id: Bytes!
-  interfaceId: Bytes! # bytes4
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type OwnershipTransferred @entity(immutable: true) {
-  id: Bytes!
-  previousOwner: Bytes! # address
-  newOwner: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type Paused @entity(immutable: true) {
-  id: Bytes!
-  account: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type PermissionsAddedToChannelRole @entity(immutable: true) {
-  id: Bytes!
-  updater: Bytes! # address
-  roleId: BigInt! # uint256
-  channelId: Bytes! # bytes32
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type PermissionsRemovedFromChannelRole @entity(immutable: true) {
-  id: Bytes!
-  updater: Bytes! # address
-  roleId: BigInt! # uint256
-  channelId: Bytes! # bytes32
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type PermissionsUpdatedForChannelRole @entity(immutable: true) {
-  id: Bytes!
-  updater: Bytes! # address
-  roleId: BigInt! # uint256
-  channelId: Bytes! # bytes32
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type PricingModuleAdded @entity(immutable: true) {
-  id: Bytes!
-  module: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type PricingModuleRemoved @entity(immutable: true) {
-  id: Bytes!
-  module: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type PricingModuleUpdated @entity(immutable: true) {
-  id: Bytes!
-  module: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type RoleCreated @entity(immutable: true) {
-  id: Bytes!
+type Role @entity {
+  id: ID! # roleId
   creator: Bytes! # address
   roleId: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+  space: Space!
 }
 
-type RoleRemoved @entity(immutable: true) {
-  id: Bytes!
-  remover: Bytes! # address
-  roleId: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+type Entitlement @entity {
+  id: ID! # Unique identifier (Entitlement contract address)
+  module: Bytes! # The entitlement module address
+  creator: Bytes! # Address of the entity that added this module
+  space: Space! # Link to the space
 }
 
-type RoleUpdated @entity(immutable: true) {
-  id: Bytes!
-  updater: Bytes! # address
-  roleId: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+type Channel @entity {
+  id: ID! # Unique identifier (Channel address)
+  space: Space! # Reference to the Space this channel belongs to
+  channelId: Bytes! # Channel identifier
 }
 
-type SpaceCreated @entity(immutable: true) {
-  id: Bytes!
+type Space @entity(immutable: true) {
+  id: ID! # space
   owner: Bytes! # address
   tokenId: BigInt! # uint256
   space: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+  roles: [Role!]! @derivedFrom(field: "space")
+  entitlements: [Entitlement!]! @derivedFrom(field: "space")
+  channels: [Channel!]! @derivedFrom(field: "space")
 }
 
-type Unpaused @entity(immutable: true) {
-  id: Bytes!
-  account: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+type SpaceCreated @entity(immutable: true) {
+  id: ID! # space
+  owner: Bytes! # address
+  tokenId: BigInt! # uint256
+  space: Space! # address
 }
+
+# type Initialized @entity(immutable: true) {
+#   id: Bytes!
+#   version: BigInt! # uint32
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
+
+# type InterfaceRemoved @entity(immutable: true) {
+#   id: Bytes!
+#   interfaceId: Bytes! # bytes4
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
+
+# type OwnershipTransferred @entity(immutable: true) {
+#   id: Bytes!
+#   previousOwner: Bytes! # address
+#   newOwner: Bytes! # address
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
+
+# type Paused @entity(immutable: true) {
+#   id: Bytes!
+#   account: Bytes! # address
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
+
+# type PermissionsAddedToChannelRole @entity(immutable: true) {
+#   id: Bytes!
+#   updater: Bytes! # address
+#   roleId: BigInt! # uint256
+#   channelId: Bytes! # bytes32
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
+
+# type PermissionsRemovedFromChannelRole @entity(immutable: true) {
+#   id: Bytes!
+#   updater: Bytes! # address
+#   roleId: BigInt! # uint256
+#   channelId: Bytes! # bytes32
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
+
+# type PermissionsUpdatedForChannelRole @entity(immutable: true) {
+#   id: Bytes!
+#   updater: Bytes! # address
+#   roleId: BigInt! # uint256
+#   channelId: Bytes! # bytes32
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
+
+# type PricingModuleAdded @entity(immutable: true) {
+#   id: Bytes!
+#   module: Bytes! # address
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
+
+# type PricingModuleRemoved @entity(immutable: true) {
+#   id: Bytes!
+#   module: Bytes! # address
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
+
+# type PricingModuleUpdated @entity(immutable: true) {
+#   id: Bytes!
+#   module: Bytes! # address
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
+
+# type RoleCreated @entity(immutable: true) {
+#   id: Bytes!
+#   creator: Bytes! # address
+#   roleId: BigInt! # uint256
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
+
+# type RoleRemoved @entity(immutable: true) {
+#   id: Bytes!
+#   remover: Bytes! # address
+#   roleId: BigInt! # uint256
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
+
+# type RoleUpdated @entity(immutable: true) {
+#   id: Bytes!
+#   updater: Bytes! # address
+#   roleId: BigInt! # uint256
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }
+
+# type Unpaused @entity(immutable: true) {
+#   id: Bytes!
+#   account: Bytes! # address
+#   blockNumber: BigInt!
+#   blockTimestamp: BigInt!
+#   transactionHash: Bytes!
+# }

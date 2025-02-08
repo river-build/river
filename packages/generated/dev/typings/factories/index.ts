@@ -17,6 +17,7 @@ export { IERC721AQueryable__factory } from "./IERC721AQueryable__factory";
 export { IEntitlementChecker__factory } from "./IEntitlementChecker__factory";
 export { IEntitlementDataQueryable__factory } from "./IEntitlementDataQueryable__factory";
 export { IEntitlementsManager__factory } from "./IEntitlementsManager__factory";
+export { IIntrospectionBase__factory } from "./IIntrospectionBase__factory";
 export { IMembershipMetadata__factory } from "./IMembershipMetadata__factory";
 export { IMulticall__factory } from "./IMulticall__factory";
 export { INodeOperator__factory } from "./INodeOperator__factory";
