@@ -441,9 +441,17 @@ export type UnfurledLinkAttachment = {
     info?: string
 }
 
+export type TickerAttachment = {
+    type: 'ticker'
+    id: string
+    address: string
+    chainId: string
+}
+
 export type Attachment =
     | ImageAttachment
     | ChunkedMediaAttachment
     | EmbeddedMediaAttachment
     | EmbeddedMessageAttachment
     | UnfurledLinkAttachment
+    | TickerAttachment
