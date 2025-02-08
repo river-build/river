@@ -80,20 +80,13 @@ func channelLabelType(streamID shared.StreamId) string {
 	}
 }
 
-type newTrackedStreamViewFn func(
-	ctx context.Context,
-	streamID shared.StreamId,
-	cfg crypto.OnChainConfiguration,
-	stream *protocol.StreamAndCookie,
-) (events.TrackedStreamView, error)
-
 func (sr *SyncRunner) Run(
 	rootCtx context.Context,
 	stream *registries.GetStreamResult,
 	applyHistoricalStreamContents bool,
 	nodeRegistry nodes.NodeRegistry,
 	onChainConfig crypto.OnChainConfiguration,
-	newTrackedStreamView newTrackedStreamViewFn,
+	newTrackedStreamView TrackedViewConstructorFn,
 	metrics *TrackStreamsSyncMetrics,
 ) {
 	var (

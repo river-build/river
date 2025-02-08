@@ -26,6 +26,7 @@ type (
 			blockedUser common.Address,
 		)
 	}
+
 	StreamEventListener interface {
 		OnMessageEvent(
 			ctx context.Context,
