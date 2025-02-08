@@ -2,13 +2,13 @@
     "name": "@river-build/subgraph",
     "license": "UNLICENSED",
     "scripts": {
-        "codegen": "graph codegen",
-        "build": "graph build",
-        "deploy": "graph deploy diamond --node https://api.studio.thegraph.com/deploy/",
-        "create-local": "graph create diamond --node http://localhost:8020/",
-        "remove-local": "graph remove diamond --node http://localhost:8020/",
-        "deploy-local": "graph deploy diamond --node http://localhost:8020/ --ipfs http://localhost:5001",
-        "test": "graph test"
+        "graph-codegen": "graph codegen",
+        "graph-build": "graph build",
+        "graph-deploy": "graph deploy diamond --node https://api.studio.thegraph.com/deploy/",
+        "graph-create-local": "graph create diamond --node http://localhost:8020/",
+        "graph-remove-local": "graph remove diamond --node http://localhost:8020/",
+        "graph-deploy-local": "graph deploy diamond --node http://localhost:8020/ --ipfs http://localhost:5001",
+        "graph-test": "graph test"
     },
     "dependencies": {
         "@graphprotocol/graph-cli": "0.95.0",
