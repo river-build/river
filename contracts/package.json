@@ -13,7 +13,14 @@
         "snapshot": "make snapshot",
         "sync": "make update",
         "test": "yarn test:unit",
-        "test:unit": "make test"
+        "test:unit": "make test",
+        "graph-codegen": "graph codegen",
+        "graph-build": "graph build",
+        "graph-deploy": "graph deploy --node https://api.studio.thegraph.com/deploy/ diamond",
+        "graph-create-local": "graph create --node http://localhost:8020/ diamond",
+        "graph-remove-local": "graph remove --node http://localhost:8020/ diamond",
+        "graph-deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 diamond",
+        "graph-test": "graph test"
     },
     "dependencies": {
         "@openzeppelin/contracts": "^5.2.0",
@@ -24,7 +31,8 @@
         "solady": "^0.1.2"
     },
     "devDependencies": {
-        "@graphprotocol/graph-cli": "^0.95.0",
+        "@graphprotocol/graph-cli": "0.95.0",
+        "@graphprotocol/graph-ts": "0.36.0",
         "@prb/test": "^0.6.4",
         "ds-test": "github:dapphub/ds-test",
         "forge-std": "github:foundry-rs/forge-std#v1.9.5",
