@@ -13,8 +13,6 @@ import (
 	. "github.com/towns-protocol/towns/core/node/base"
 	"github.com/towns-protocol/towns/core/node/crypto"
 	"github.com/towns-protocol/towns/core/node/logging"
-	"github.com/towns-protocol/towns/core/node/mls_service"
-	"github.com/towns-protocol/towns/core/node/mls_service/mls_tools"
 	. "github.com/towns-protocol/towns/core/node/protocol"
 	. "github.com/towns-protocol/towns/core/node/shared"
 	"github.com/towns-protocol/towns/core/node/storage"
@@ -363,13 +361,6 @@ func (r *StreamView) makeMiniblockCandidate(
 	}
 	if proposal.shouldSnapshot {
 		snapshot = proto.Clone(r.snapshot).(*Snapshot)
-		mlsSnapshotRequest := r.makeMlsSnapshotRequest()
-
-		if snapshot.Members.GetMls() == nil {
-			snapshot.Members.Mls = &MemberPayload_Snapshot_Mls{}
-		}
-		// reset the MLS commits
-		snapshot.Members.Mls.CommitsSinceLastSnapshot = make([][]byte, 0)
 
 		// update all blocks since last snapshot
 		for i := r.snapshotIndex + 1; i < len(r.blocks); i++ {
@@ -385,10 +376,11 @@ func (r *StreamView) makeMiniblockCandidate(
 						"event", e.ShortDebugStr(),
 					)
 				}
-				updateMlsSnapshotRequest(mlsSnapshotRequest, e)
 			}
 		}
 		// update with current events in minipool
+		// TODO: REPLICATION: FIX: what is going on here? snapshots should include only events included in the
+		// last miniblock, not all events in the minipool
 		for i, e := range events {
 			err := Update_Snapshot(snapshot, e, nextMiniblockNum, eventNumOffset+int64(i))
 			if err != nil {
@@ -398,24 +390,6 @@ func (r *StreamView) makeMiniblockCandidate(
 					"event", e.ShortDebugStr(),
 				)
 			}
-			updateMlsSnapshotRequest(
-				mlsSnapshotRequest,
-				e,
-			) // is it wrong that we're calling this for events in the minipool?
-		}
-
-		// only attempt to snapshot the MLS state if MLS has been initialized for this stream.
-		if mlsSnapshotRequest != nil && len(mlsSnapshotRequest.ExternalGroupSnapshot) > 0 {
-			resp, err := mls_service.SnapshotExternalGroupRequest(mlsSnapshotRequest)
-			if err != nil {
-				// what to do here...?
-				log.Errorw("Failed to update MLS snapshot",
-					"error", err,
-					"streamId", r.streamId,
-				)
-			}
-			snapshot.Members.Mls.ExternalGroupSnapshot = resp.ExternalGroupSnapshot
-			snapshot.Members.Mls.GroupInfoMessage = resp.GroupInfoMessage
 		}
 	}
 
@@ -894,50 +868,5 @@ func (r *StreamView) AllEvents() iter.Seq[*ParsedEvent] {
 				return
 			}
 		}
-	}
-}
-
-func (r *StreamView) makeMlsSnapshotRequest() *mls_tools.SnapshotExternalGroupRequest {
-	if r.snapshot.Members.GetMls() == nil {
-		return nil
-	}
-	return &mls_tools.SnapshotExternalGroupRequest{
-		ExternalGroupSnapshot: r.snapshot.Members.GetMls().ExternalGroupSnapshot,
-		GroupInfoMessage:      r.snapshot.Members.GetMls().GroupInfoMessage,
-		Commits:               make([]*mls_tools.SnapshotExternalGroupRequest_CommitInfo, 0),
-	}
-}
-
-func updateMlsSnapshotRequest(mlsSnapshotRequest *mls_tools.SnapshotExternalGroupRequest, e *ParsedEvent) {
-	if mlsSnapshotRequest == nil {
-		return
-	}
-	switch payload := e.Event.Payload.(type) {
-	case *StreamEvent_MemberPayload:
-		switch content := payload.MemberPayload.Content.(type) {
-		case *MemberPayload_Mls_:
-			switch mlsContent := content.Mls.Content.(type) {
-			case *MemberPayload_Mls_InitializeGroup_:
-				if len(mlsSnapshotRequest.ExternalGroupSnapshot) == 0 {
-					mlsSnapshotRequest.ExternalGroupSnapshot = mlsContent.InitializeGroup.ExternalGroupSnapshot
-					mlsSnapshotRequest.GroupInfoMessage = mlsContent.InitializeGroup.GroupInfoMessage
-				}
-			case *MemberPayload_Mls_ExternalJoin_:
-				// external joins consist of a commit + a group info message.
-				// new clients rely on the group info message to join the group.
-				// for this reason, we cannot blindly assume that the latest group info message
-				// is the one that should be used — we need to make sure that the commit is applied correctly first.
-				// clients will replay the state locally before attempting to join the group.
-				commitInfo := &mls_tools.SnapshotExternalGroupRequest_CommitInfo{
-					Commit:           mlsContent.ExternalJoin.Commit,
-					GroupInfoMessage: mlsContent.ExternalJoin.GroupInfoMessage,
-				}
-				mlsSnapshotRequest.Commits = append(mlsSnapshotRequest.Commits, commitInfo)
-			}
-		default:
-			break
-		}
-	default:
-		break
 	}
 }
