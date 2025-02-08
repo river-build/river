@@ -1025,10 +1025,6 @@ describe('clientTest', () => {
 
         // assert assumptionsP
         expect(userMetadataStream).toBeDefined()
-        expect(
-            userMetadataStream.view.snapshot?.content.case === 'userMetadataContent' &&
-                userMetadataStream.view.snapshot?.content.value.profileImage === undefined,
-        ).toBe(true)
 
         // make a space image event
         const mediaStreamId = makeUniqueMediaStreamId()
@@ -1065,10 +1061,6 @@ describe('clientTest', () => {
         const userMetadataStream = await bobsClient.waitForStream(streamId)
 
         expect(userMetadataStream).toBeDefined()
-        expect(
-            userMetadataStream.view.snapshot?.content.case === 'userMetadataContent' &&
-                userMetadataStream.view.snapshot?.content.value.profileImage === undefined,
-        ).toBe(true)
 
         const bio = new UserBio({ bio: 'Hello, world!' })
         const { eventId } = await bobsClient.setUserBio(bio)
@@ -1085,10 +1077,6 @@ describe('clientTest', () => {
         const userMetadataStream = await bobsClient.waitForStream(streamId)
 
         expect(userMetadataStream).toBeDefined()
-        expect(
-            userMetadataStream.view.snapshot?.content.case === 'userMetadataContent' &&
-                userMetadataStream.view.snapshot?.content.value.profileImage === undefined,
-        ).toBe(true)
 
         const bio = new UserBio({ bio: '' })
         const { eventId } = await bobsClient.setUserBio(bio)

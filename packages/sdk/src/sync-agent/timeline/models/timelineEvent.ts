@@ -262,7 +262,8 @@ function toTownsContent_MiniblockHeader(
     return {
         content: {
             kind: RiverTimelineEvent.MiniblockHeader,
-            message: value,
+            miniblockNum: value.miniblockNum,
+            hasSnapshot: value.snapshot !== undefined,
         } satisfies MiniblockHeaderEvent,
     }
 }
@@ -359,12 +360,6 @@ function toTownsContent_MemberPayload(
                     userId: message.creatorUserId,
                     unpinnedEventId: bin_toHexString(value.content.value.eventId),
                 } satisfies UnpinEvent,
-            }
-        case 'mls':
-            return {
-                content: {
-                    kind: RiverTimelineEvent.Mls,
-                },
             }
         case 'encryptionAlgorithm':
             return {
@@ -935,11 +930,9 @@ export function getFallbackContent(
     }
     switch (content.kind) {
         case RiverTimelineEvent.MiniblockHeader:
-            return `Miniblock miniblockNum:${content.message.miniblockNum}, hasSnapshot:${(content
-                .message.snapshot
-                ? true
-                : false
-            ).toString()}`
+            return `Miniblock miniblockNum:${
+                content.miniblockNum
+            }, hasSnapshot:${content.hasSnapshot.toString()}`
         case RiverTimelineEvent.Reaction:
             return `${senderDisplayName} reacted with ${content.reaction} to ${content.targetEventId}`
         case RiverTimelineEvent.Inception:
@@ -993,8 +986,6 @@ export function getFallbackContent(
             return `pinnedEventId: ${content.pinnedEventId} by: ${content.userId}`
         case RiverTimelineEvent.Unpin:
             return `unpinnedEventId: ${content.unpinnedEventId} by: ${content.userId}`
-        case RiverTimelineEvent.Mls:
-            return `mlsEvent`
         case RiverTimelineEvent.UserBlockchainTransaction:
             return getFallbackContent_BlockchainTransaction(content.transaction)
         case RiverTimelineEvent.MemberBlockchainTransaction:
@@ -1129,6 +1120,16 @@ export function transformAttachments(attachments?: Attachment[]): ChannelMessage
                                           url: attachment.image.url,
                                       }
                                     : undefined,
+                            },
+                        },
+                    })
+                case 'ticker':
+                    return new ChannelMessage_Post_Attachment({
+                        content: {
+                            case: 'ticker',
+                            value: {
+                                chainId: attachment.chainId,
+                                address: attachment.address,
                             },
                         },
                     })

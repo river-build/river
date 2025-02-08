@@ -36,7 +36,6 @@ import {
     MemberPayload,
     MemberPayload_Nft,
     BlockchainTransaction,
-    MemberPayload_Mls,
 } from '@river-build/proto'
 import { keccak256 } from 'ethereum-cryptography/keccak'
 import { bin_toHexString } from '@river-build/dlog'
@@ -50,6 +49,17 @@ export interface LocalEvent {
     localId: string
     channelMessage: ChannelMessage
     status: LocalEventStatus
+}
+
+// paired down from StreamEvent, required for signature validation
+export interface EventSignatureBundle {
+    hash: Uint8Array
+    signature: Uint8Array | undefined
+    event: {
+        creatorAddress: Uint8Array
+        delegateSig: Uint8Array
+        delegateExpiryEpochMs: bigint
+    }
 }
 
 export interface ParsedEvent {
@@ -352,20 +362,6 @@ export const make_MemberPayload_Unpin = (
             content: {
                 case: 'unpin',
                 value: { eventId },
-            },
-        },
-    }
-}
-
-export const make_MemberPayload_Mls = (
-    value: PlainMessage<MemberPayload_Mls>,
-): PlainMessage<StreamEvent>['payload'] => {
-    return {
-        case: 'memberPayload',
-        value: {
-            content: {
-                case: 'mls',
-                value,
             },
         },
     }
