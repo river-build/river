@@ -1127,6 +1127,16 @@ export function transformAttachments(attachments?: Attachment[]): ChannelMessage
                             },
                         },
                     })
+                case 'ticker':
+                    return new ChannelMessage_Post_Attachment({
+                        content: {
+                            case: 'ticker',
+                            value: {
+                                chainId: attachment.chainId,
+                                address: attachment.address,
+                            },
+                        },
+                    })
                 default:
                     logNever(attachment)
                     return undefined
