@@ -74,7 +74,6 @@ export type TimelineEvent_OneOf =
     | KeySolicitationEvent
     | MiniblockHeaderEvent
     | MemberBlockchainTransactionEvent
-    | MlsEvent
     | PinEvent
     | ReactionEvent
     | RedactedEvent
@@ -105,7 +104,6 @@ export enum RiverTimelineEvent {
     KeySolicitation = 'm.key_solicitation',
     MemberBlockchainTransaction = 'm.member_blockchain_transaction',
     MiniblockHeader = 'm.miniblockheader',
-    Mls = 'm.mls',
     Pin = 'm.pin',
     Reaction = 'm.reaction',
     RedactedEvent = 'm.redacted_event',
@@ -219,10 +217,6 @@ export interface UnpinEvent {
     kind: RiverTimelineEvent.Unpin
     userId: string
     unpinnedEventId: string
-}
-
-export interface MlsEvent {
-    kind: RiverTimelineEvent.Mls
 }
 
 export interface StreamEncryptionAlgorithmEvent {
