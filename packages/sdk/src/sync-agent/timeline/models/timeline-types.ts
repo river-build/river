@@ -6,7 +6,6 @@ import type {
     ChunkedMedia_AESGCM,
     ChannelMessage_Post_Content_Image_Info,
     MediaInfo as MediaInfoStruct,
-    MiniblockHeader,
     PayloadCaseType,
     ChannelOp,
     SpacePayload_ChannelSettings,
@@ -75,7 +74,6 @@ export type TimelineEvent_OneOf =
     | KeySolicitationEvent
     | MiniblockHeaderEvent
     | MemberBlockchainTransactionEvent
-    | MlsEvent
     | PinEvent
     | ReactionEvent
     | RedactedEvent
@@ -106,7 +104,6 @@ export enum RiverTimelineEvent {
     KeySolicitation = 'm.key_solicitation',
     MemberBlockchainTransaction = 'm.member_blockchain_transaction',
     MiniblockHeader = 'm.miniblockheader',
-    Mls = 'm.mls',
     Pin = 'm.pin',
     Reaction = 'm.reaction',
     RedactedEvent = 'm.redacted_event',
@@ -128,7 +125,8 @@ export enum RiverTimelineEvent {
 
 export interface MiniblockHeaderEvent {
     kind: RiverTimelineEvent.MiniblockHeader
-    message: MiniblockHeader
+    miniblockNum: bigint
+    hasSnapshot: boolean
 }
 
 export interface FulfillmentEvent {
@@ -219,10 +217,6 @@ export interface UnpinEvent {
     kind: RiverTimelineEvent.Unpin
     userId: string
     unpinnedEventId: string
-}
-
-export interface MlsEvent {
-    kind: RiverTimelineEvent.Mls
 }
 
 export interface StreamEncryptionAlgorithmEvent {

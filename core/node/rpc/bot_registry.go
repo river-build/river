@@ -9,10 +9,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/river-build/river/core/config"
-	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/bot_registry"
-	"github.com/river-build/river/core/node/logging"
+	"github.com/towns-protocol/towns/core/config"
+	. "github.com/towns-protocol/towns/core/node/base"
+	"github.com/towns-protocol/towns/core/node/bot_registry"
+	"github.com/towns-protocol/towns/core/node/logging"
 )
 
 func (s *Service) startBotRegistryMode(opts *ServerStartOpts) error {
@@ -36,9 +36,9 @@ func (s *Service) startBotRegistryMode(opts *ServerStartOpts) error {
 		return AsRiverError(err).Message("Failed to init store").LogError(s.defaultLogger)
 	}
 
-	s.BotRegistryService, err = bot_registry.NewService(s.serverCtx, s.botStore)
+	s.BotRegistryService, err = bot_registry.NewService(s.config.BotRegistry, s.botStore)
 	if err != nil {
-		return AsRiverError(err).Message("Failed to instantiate notification service").LogError(s.defaultLogger)
+		return AsRiverError(err).Message("Failed to instantiate bot registry service").LogError(s.defaultLogger)
 	}
 
 	s.SetStatus("OK")

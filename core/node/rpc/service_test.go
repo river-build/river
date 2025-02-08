@@ -19,19 +19,18 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	eth_crypto "github.com/ethereum/go-ethereum/crypto"
+	. "github.com/towns-protocol/towns/core/node/base"
+	"github.com/towns-protocol/towns/core/node/crypto"
+	"github.com/towns-protocol/towns/core/node/events"
+	"github.com/towns-protocol/towns/core/node/logging"
+	"github.com/towns-protocol/towns/core/node/protocol"
+	"github.com/towns-protocol/towns/core/node/protocol/protocolconnect"
+	river_sync "github.com/towns-protocol/towns/core/node/rpc/sync"
+	. "github.com/towns-protocol/towns/core/node/shared"
+	"github.com/towns-protocol/towns/core/node/testutils"
+	"github.com/towns-protocol/towns/core/node/testutils/testfmt"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
-
-	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/events"
-	"github.com/river-build/river/core/node/logging"
-	"github.com/river-build/river/core/node/protocol"
-	"github.com/river-build/river/core/node/protocol/protocolconnect"
-	river_sync "github.com/river-build/river/core/node/rpc/sync"
-	. "github.com/river-build/river/core/node/shared"
-	"github.com/river-build/river/core/node/testutils"
-	"github.com/river-build/river/core/node/testutils/testfmt"
 )
 
 func TestMain(m *testing.M) {
@@ -1656,7 +1655,7 @@ func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
 	testfmt.Logf(t, "subscribe on node %s", node1.address)
 	syncPos := append(users, channels...)
 	syncOp, err := river_sync.NewStreamsSyncOperation(
-		ctx, syncID, node1.address, node1.service.cache, node1.service.nodeRegistry)
+		ctx, syncID, node1.address, node1.service.cache, node1.service.nodeRegistry, nil)
 	req.NoError(err, "NewStreamsSyncOperation")
 
 	syncOpResult := make(chan error)
