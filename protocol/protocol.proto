@@ -240,10 +240,10 @@ message MemberPayload {
         Nft nft = 7;
         Pin pin = 8;
         Unpin unpin = 9;
-        reserved 10;
         MemberBlockchainTransaction member_blockchain_transaction = 11;
         EncryptionAlgorithm encryption_algorithm = 12;
     }
+    reserved 10;
 }
 
 /**
