@@ -78,7 +78,7 @@ fi
 PR_NUMBER=$(echo $PR_URL | rev | cut -d'/' -f1 | rev)
 
 # Enable auto-merge
-gh pr merge "${PR_NUMBER}" --auto --merge --squash
+gh pr merge "${PR_NUMBER}" --auto --squash
 
 echo "Created PR #${PR_NUMBER}"
 
@@ -130,7 +130,7 @@ while gh pr view "$PR_NUMBER" --json state -q ".state" | grep -q "OPEN"; do
     fi
 
     echo "Waiting for PR #${PR_NUMBER} to be merged..."
-    sleep 10
+    sleep 30
 done
 echo "PR #${PR_NUMBER} has been merged"
 
