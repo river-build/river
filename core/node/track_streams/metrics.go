@@ -3,7 +3,7 @@ package track_streams
 import (
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/river-build/river/core/node/infra"
+	"github.com/towns-protocol/towns/core/node/infra"
 )
 
 type TrackStreamsSyncMetrics struct {
