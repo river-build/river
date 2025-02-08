@@ -44,22 +44,6 @@ type notificationsTrackedStreamView struct {
 	userPreferences UserPreferencesStore
 }
 
-func (n *notificationsTrackedStreamView) onViewLoaded(view *StreamView) error {
-	// Load the list of users that someone has blocked from their personal user settings stream into the user
-	// preference cache which is queried when determining if a notification must be sent.
-	streamId := view.StreamId()
-	if streamId.Type() == shared.STREAM_USER_SETTINGS_BIN {
-		user := common.BytesToAddress(streamId[1:21])
-		if blockedUsers, err := view.BlockedUsers(); err == nil {
-			blockedUsers.Each(func(address common.Address) bool {
-				n.userPreferences.BlockUser(user, address)
-				return false
-			})
-		}
-	}
-	return nil
-}
-
 func (n *notificationsTrackedStreamView) onNewEvent(ctx context.Context, view *StreamView, event *ParsedEvent) error {
 	// in case the event was a block/unblock event update the users blocked list.
 	streamID := view.StreamId()
@@ -106,20 +90,34 @@ func NewTrackedStreamForNotifications(
 	listener StreamEventListener,
 	userPreferences UserPreferencesStore,
 ) (TrackedStreamView, error) {
-	view := &notificationsTrackedStreamView{
+	trackedView := &notificationsTrackedStreamView{
 		listener:        listener,
 		userPreferences: userPreferences,
 	}
 
-	if err := view.TrackedStreamViewImpl.Init(
+	internalView, err := trackedView.TrackedStreamViewImpl.Init(
 		ctx,
 		streamID,
 		cfg,
 		stream,
-		view.onViewLoaded,
-		view.onNewEvent,
-	); err != nil {
+		trackedView.onNewEvent,
+	)
+	if err != nil {
 		return nil, err
 	}
-	return view, nil
+
+	// Load the list of users that someone has blocked from their personal user settings stream into the user
+	// preference cache which is queried when determining if a notification must be sent.
+	streamId := internalView.StreamId()
+	if streamId.Type() == shared.STREAM_USER_SETTINGS_BIN {
+		user := common.BytesToAddress(streamId[1:21])
+		if blockedUsers, err := internalView.BlockedUsers(); err == nil {
+			blockedUsers.Each(func(address common.Address) bool {
+				trackedView.userPreferences.BlockUser(user, address)
+				return false
+			})
+		}
+	}
+
+	return trackedView, nil
 }

@@ -48,12 +48,11 @@ func (ts *TrackedStreamViewImpl) Init(
 	streamID shared.StreamId,
 	cfg crypto.OnChainConfiguration,
 	stream *StreamAndCookie,
-	onViewLoaded func(view *StreamView) error,
 	onNewEvent func(ctx context.Context, view *StreamView, event *ParsedEvent) error,
-) error {
+) (*StreamView, error) {
 	view, err := MakeRemoteStreamView(ctx, stream)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ts.streamID = streamID
@@ -61,11 +60,7 @@ func (ts *TrackedStreamViewImpl) Init(
 	ts.view = view
 	ts.cfg = cfg
 
-	if err := onViewLoaded(view); err != nil {
-		return err
-	}
-
-	return nil
+	return view, nil
 }
 
 func (ts *TrackedStreamViewImpl) ApplyBlock(
