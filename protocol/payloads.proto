@@ -106,7 +106,7 @@ message ChannelMessage {
             }
 
             message Ticker {
-                bytes address = 1;
+                string address = 1;
                 string chain_id = 2;
             }
         }

@@ -450,7 +450,7 @@ export type UnfurledLinkAttachment = {
 export type TickerAttachment = {
     type: 'ticker'
     id: string
-    address: Uint8Array
+    address: string
     chainId: string
 }
 
