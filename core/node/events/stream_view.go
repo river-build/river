@@ -664,10 +664,16 @@ func (r *StreamView) ValidateNextEvent(
 	parsedEvent *ParsedEvent,
 	currentTime time.Time,
 ) error {
+	if len(r.blocks) == 0 {
+		return RiverError(Err_INTERNAL, "no miniblocks loaded").Func("ValidateNextEvent")
+	}
+
 	foundBlockAt := -1
 	var foundBlock *MiniblockInfo
 	var err error
 	lastBlock := r.LastBlock()
+
+	// NOTE: insanely TS SDK tries to parse out hash of last block from "expected" field in the error message
 
 	// Num is -1 if it was not set in the protocol event.
 	// If not set, search for the block by hash for backcompat.
@@ -676,16 +682,26 @@ func (r *StreamView) ValidateNextEvent(
 			return RiverError(
 				Err_MINIBLOCK_TOO_NEW,
 				"prevMiniblockNum is greater than the last miniblock number in the stream",
-				"lastBlock", lastBlock.Ref,
+				"expected", lastBlock.Ref.Hash,
+				"expNum", lastBlock.Ref.Num,
 				"requestedBlock", parsedEvent.MiniblockRef,
 				"streamId", r.streamId,
 				"event", parsedEvent.Hash,
 			).Func("ValidateNextEvent")
 		}
-		foundBlockAt, err = r.indexOfMiniblockWithNum(parsedEvent.MiniblockRef.Num)
-		if err != nil {
-			return err
+		if parsedEvent.MiniblockRef.Num < r.blocks[0].Ref.Num {
+			return RiverErrorWithBase(
+				Err_BAD_PREV_MINIBLOCK_HASH,
+				"prevMiniblockHash references block that is too old to be loaded",
+				err,
+				"expected", lastBlock.Ref.Hash,
+				"expNum", lastBlock.Ref.Num,
+				"requestedBlock", parsedEvent.MiniblockRef,
+				"streamId", r.streamId,
+				"event", parsedEvent.Hash,
+			).Func("ValidateNextEvent")
 		}
+		foundBlockAt = int(parsedEvent.MiniblockRef.Num - r.blocks[0].Ref.Num)
 		foundBlock = r.blocks[foundBlockAt]
 		if foundBlock.headerEvent.Hash != parsedEvent.MiniblockRef.Hash {
 			return RiverError(
@@ -714,7 +730,8 @@ func (r *StreamView) ValidateNextEvent(
 				Err_BAD_PREV_MINIBLOCK_HASH,
 				"prevMiniblockHash not found in recent blocks",
 				"requestedBlock", parsedEvent.MiniblockRef,
-				"lastBlock", lastBlock.Ref,
+				"expected", lastBlock.Ref.Hash,
+				"expNum", lastBlock.Ref.Num,
 				"streamId", r.streamId,
 				"event", parsedEvent.Hash,
 			).Func("ValidateNextEvent")
@@ -733,7 +750,8 @@ func (r *StreamView) ValidateNextEvent(
 			Err_BAD_PREV_MINIBLOCK_HASH,
 			"referenced block is not recent",
 			"requestedBlock", parsedEvent.MiniblockRef,
-			"lastBlock", lastBlock.Ref,
+			"expected", lastBlock.Ref.Hash,
+			"expNum", lastBlock.Ref.Num,
 			"streamId", r.streamId,
 			"event", parsedEvent.Hash,
 		).Func("ValidateNextEvent")
