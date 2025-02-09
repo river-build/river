@@ -670,7 +670,6 @@ func (r *StreamView) ValidateNextEvent(
 
 	foundBlockAt := -1
 	var foundBlock *MiniblockInfo
-	var err error
 	lastBlock := r.LastBlock()
 
 	// NOTE: insanely TS SDK tries to parse out hash of last block from "expected" field in the error message
@@ -690,10 +689,9 @@ func (r *StreamView) ValidateNextEvent(
 			).Func("ValidateNextEvent")
 		}
 		if parsedEvent.MiniblockRef.Num < r.blocks[0].Ref.Num {
-			return RiverErrorWithBase(
+			return RiverError(
 				Err_BAD_PREV_MINIBLOCK_HASH,
 				"prevMiniblockHash references block that is too old to be loaded",
-				err,
 				"expected", lastBlock.Ref.Hash,
 				"expNum", lastBlock.Ref.Num,
 				"requestedBlock", parsedEvent.MiniblockRef,
@@ -783,7 +781,7 @@ func (r *StreamView) ValidateNextEvent(
 			).Func("ValidateNextEvent")
 		}
 	}
-	// success
+
 	return nil
 }
 
