@@ -151,10 +151,11 @@ func (j *mbJob) processRemoteProposals(ctx context.Context) ([]*mbProposal, *Str
 
 				if !view.minipool.events.Has(parsed.Hash) {
 					newView, err := j.stream.AddEvent2(ctx, parsed)
-					if err != nil {
+					if err == nil {
+						view = newView
+					} else {
 						logging.FromCtx(ctx).Errorw("mbJob.processRemoteProposals: error adding event", "err", err)
 					}
-					view = newView
 				}
 			}
 		}
