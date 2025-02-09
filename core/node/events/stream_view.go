@@ -666,62 +666,66 @@ func (r *StreamView) ValidateNextEvent(
 	parsedEvent *ParsedEvent,
 	currentTime time.Time,
 ) error {
-	// the preceding miniblock hash should reference a recent block
-	// the event should not already exist in any block after the preceding miniblock
-	// the event should not exist in the minipool
 	foundBlockAt := -1
 	var foundBlock *MiniblockInfo
-	// loop over blocks backwards to find block with preceding miniblock hash
-	for i := len(r.blocks) - 1; i >= 0; i-- {
-		block := r.blocks[i]
-		if block.headerEvent.Hash == parsedEvent.MiniblockRef.Hash {
-			foundBlockAt = i
-			foundBlock = block
-			break
-		}
-	}
+	var err error
+	lastBlock := r.LastBlock()
 
-	if foundBlock == nil {
-		if parsedEvent.MiniblockRef.Num > r.LastBlock().Ref.Num {
+	// Num is -1 if it was not set in the protocol event.
+	// If not set, search for the block by hash for backcompat.
+	if parsedEvent.MiniblockRef.Num >= 0 {
+		if parsedEvent.MiniblockRef.Num > lastBlock.Ref.Num {
 			return RiverError(
 				Err_MINIBLOCK_TOO_NEW,
 				"prevMiniblockNum is greater than the last miniblock number in the stream",
-				"lastBlockNum",
-				r.LastBlock().Ref.Num,
-				"eventPrevMiniblockNum",
-				parsedEvent.MiniblockRef.Num,
-				"streamId",
-				r.streamId,
-			)
-		} else {
+				"lastBlock", lastBlock.Ref,
+				"requestedBlock", parsedEvent.MiniblockRef,
+				"streamId", r.streamId,
+				"event", parsedEvent.Hash,
+			).Func("ValidateNextEvent")
+		}
+		foundBlockAt, err = r.indexOfMiniblockWithNum(parsedEvent.MiniblockRef.Num)
+		if err != nil {
+			return err
+		}
+		foundBlock = r.blocks[foundBlockAt]
+		if foundBlock.headerEvent.Hash != parsedEvent.MiniblockRef.Hash {
+			return RiverError(
+				Err_DATA_LOSS,
+				"prevMiniblockHash does not match the block number",
+				"requestedBlock", parsedEvent.MiniblockRef,
+				"actualBlock", foundBlock.Ref,
+				"streamId", r.streamId,
+				"event", parsedEvent.Hash,
+			).Func("ValidateNextEvent")
+		}
+	} else {
+		// miniblock number is not provided by client, for backcompat
+		// loop over blocks backwards to find block with preceding miniblock hash
+		for i := len(r.blocks) - 1; i >= 0; i-- {
+			block := r.blocks[i]
+			if block.headerEvent.Hash == parsedEvent.MiniblockRef.Hash {
+				foundBlockAt = i
+				foundBlock = block
+				break
+			}
+		}
+
+		if foundBlock == nil {
 			return RiverError(
 				Err_BAD_PREV_MINIBLOCK_HASH,
 				"prevMiniblockHash not found in recent blocks",
-				"event",
-				parsedEvent.ShortDebugStr(),
-				"expected",
-				FormatFullHash(r.LastBlock().headerEvent.Hash),
-			)
+				"requestedBlock", parsedEvent.MiniblockRef,
+				"lastBlock", lastBlock.Ref,
+				"streamId", r.streamId,
+				"event", parsedEvent.Hash,
+			).Func("ValidateNextEvent")
 		}
 	}
 
-	// for backcompat, do not check that the number of miniblock matches if it's set to 0
-	if parsedEvent.MiniblockRef.Num != 0 {
-		if foundBlock.Ref.Num != parsedEvent.MiniblockRef.Num {
-			return RiverError(
-				Err_BAD_PREV_MINIBLOCK_HASH,
-				"prevMiniblockNum does not match the miniblock number in the block",
-				"blockNum",
-				foundBlock.Ref.Num,
-				"eventPrevMiniblockNum",
-				parsedEvent.MiniblockRef.Num,
-				"streamId",
-				r.streamId,
-				"blockHash",
-				foundBlock.headerEvent.Hash,
-			)
-		}
-	}
+	// the preceding miniblock hash should reference a recent block
+	// the event should not already exist in any block after the preceding miniblock
+	// the event should not exist in the minipool
 
 	// make sure we're recent
 	// if the user isn't adding the latest block, allow it if the block after was recently created
@@ -729,12 +733,12 @@ func (r *StreamView) ValidateNextEvent(
 	if !currentTime.IsZero() && foundBlockAt < len(r.blocks)-1 && !r.isRecentBlock(cfg, r.blocks[foundBlockAt+1], currentTime) {
 		return RiverError(
 			Err_BAD_PREV_MINIBLOCK_HASH,
-			"prevMiniblockHash did not reference a recent block",
-			"event",
-			parsedEvent.ShortDebugStr(),
-			"expected",
-			FormatFullHash(r.LastBlock().headerEvent.Hash),
-		)
+			"referenced block is not recent",
+			"requestedBlock", parsedEvent.MiniblockRef,
+			"lastBlock", lastBlock.Ref,
+			"streamId", r.streamId,
+			"event", parsedEvent.Hash,
+		).Func("ValidateNextEvent")
 	}
 	// loop forwards from foundBlockAt and check for duplicate event
 	for i := foundBlockAt + 1; i < len(r.blocks); i++ {
@@ -744,8 +748,9 @@ func (r *StreamView) ValidateNextEvent(
 				return RiverError(
 					Err_DUPLICATE_EVENT,
 					"event already exists in block",
-					"event",
-					parsedEvent.ShortDebugStr(),
+					"event", parsedEvent.Hash,
+					"foundInBlock", block.Ref,
+					"streamId", r.streamId,
 				).Func("ValidateNextEvent")
 			}
 		}
@@ -756,10 +761,9 @@ func (r *StreamView) ValidateNextEvent(
 			return RiverError(
 				Err_DUPLICATE_EVENT,
 				"event already exists in minipool",
-				"event",
-				parsedEvent.ShortDebugStr(),
-				"expected",
-				FormatHashShort(r.LastBlock().headerEvent.Hash),
+				"event", parsedEvent.Hash,
+				"streamId", r.streamId,
+				"lastBlock", lastBlock.Ref,
 			).Func("ValidateNextEvent")
 		}
 	}
