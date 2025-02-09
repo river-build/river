@@ -353,7 +353,6 @@ func (r *StreamView) makeMiniblockCandidate(
 		events = append(events, e)
 	}
 
-	var snapshot *Snapshot
 	last := r.LastBlock()
 	eventNumOffset := last.Header().EventNumOffset + int64(len(last.Events())) + 1 // +1 for header
 	nextMiniblockNum := last.Header().MiniblockNum + 1
@@ -361,10 +360,12 @@ func (r *StreamView) makeMiniblockCandidate(
 	if last.Header().Snapshot != nil {
 		miniblockNumOfPrevSnapshot = last.Header().MiniblockNum
 	}
+
+	var snapshot *Snapshot
 	if proposal.shouldSnapshot {
 		snapshot = proto.Clone(r.snapshot).(*Snapshot)
 
-		// update all blocks since last snapshot
+		// Apply all events in blocks since last snapshot
 		for i := r.snapshotIndex + 1; i < len(r.blocks); i++ {
 			block := r.blocks[i]
 			miniblockNum := block.Header().MiniblockNum
@@ -380,9 +381,8 @@ func (r *StreamView) makeMiniblockCandidate(
 				}
 			}
 		}
-		// update with current events in minipool
-		// TODO: REPLICATION: FIX: what is going on here? snapshots should include only events included in the
-		// last miniblock, not all events in the minipool
+
+		// Apply all events in the proposed miniblock
 		for i, e := range events {
 			err := Update_Snapshot(snapshot, e, nextMiniblockNum, eventNumOffset+int64(i))
 			if err != nil {
