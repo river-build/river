@@ -343,8 +343,10 @@ func (r *StreamView) makeMiniblockCandidate(
 			return nil, RiverError(
 				Err_MINIPOOL_MISSING_EVENTS,
 				"proposal event not found in minipool",
-				"hash",
-				h,
+				"hash", h,
+				"streamId", r.streamId,
+				"generation", r.minipool.generation,
+				"minipoolLen", r.minipool.events.Len(),
 			)
 		}
 		hashes = append(hashes, e.Hash[:])
