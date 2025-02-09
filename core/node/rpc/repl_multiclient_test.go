@@ -128,6 +128,12 @@ func TestReplMcConversation(t *testing.T) {
 		if testing.Short() {
 			t.Skip("skipping 10x1000 in short mode")
 		}
+		testReplMcConversation(t, 10, 1000, 20, 1000)
+	})
+	t.Run("30x1000", func(t *testing.T) {
+		if testing.Short() {
+			t.Skip("skipping 30x1000 in short mode")
+		}
 		testReplMcConversation(t, 30, 1000, 50, 1000)
 	})
 }
