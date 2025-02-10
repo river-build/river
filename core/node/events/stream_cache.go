@@ -128,7 +128,7 @@ func (s *StreamCache) Start(ctx context.Context) error {
 		si.nodesLocked.Reset(stream.Nodes, s.params.Wallet.Address)
 		s.cache.Store(stream.StreamId, si)
 		if s.params.Config.StreamReconciliation.InitialWorkerPoolSize > 0 {
-			s.submitSyncStreamTask(
+			s.submitSyncStreamTaskToPool(
 				ctx,
 				initialSyncWorkerPool,
 				stream.StreamId,

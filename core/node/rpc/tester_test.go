@@ -1058,7 +1058,12 @@ func (tcs testClients) compareNowImpl(t require.TestingT, streamId StreamId) []*
 	for range tcs {
 		streams = append(streams, <-streamC)
 	}
-	testfmt.Println(tcs[0].t, "compareNowImpl: Got all streams")
+	if testfmt.Enabled() {
+		testfmt.Println(tcs[0].t, "compareNowImpl: Got all streams")
+		for i, stream := range streams {
+			testfmt.Println(tcs[0].t, "    ", i, "MBs:", len(stream.Miniblocks), "Gen:", stream.NextSyncCookie.MinipoolGen, "Events:", len(stream.Events))
+		}
+	}
 	first := streams[0]
 	var success bool
 	for i, stream := range streams[1:] {
