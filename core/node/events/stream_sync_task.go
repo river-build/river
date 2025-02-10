@@ -10,7 +10,6 @@ import (
 	"github.com/towns-protocol/towns/core/node/logging"
 	. "github.com/towns-protocol/towns/core/node/protocol"
 	"github.com/towns-protocol/towns/core/node/registries"
-	. "github.com/towns-protocol/towns/core/node/shared"
 )
 
 func (s *StreamCache) submitSyncStreamTask(
