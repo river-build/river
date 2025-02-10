@@ -225,10 +225,10 @@ verify-base-sepolia :;
 # ===========================
 
 deploy-sepolia :;
-	@$(MAKE) deploy-any rpc=sepolia private_key=${TESTNET_PRIVATE_KEY}
+	@$(MAKE) deploy-any-ledger rpc=sepolia hd_path=${HD_PATH} sender=${SENDER_ADDRESS} verifier=${BLOCKSCOUT_SEPOLIA_URL} etherscan=${BLOCKSCOUT_SEPOLIA_API_KEY}
 
 interact-sepolia :;
-	@$(MAKE) interact-any rpc=sepolia private_key=${TESTNET_PRIVATE_KEY}
+	@$(MAKE) interact-any-ledger rpc=sepolia hd_path=${HD_PATH} sender=${SENDER_ADDRESS}
 
 fork-sepolia :;
 	@$(MAKE) fork-any rpc=sepolia private_key=${TESTNET_PRIVATE_KEY}
