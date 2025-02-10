@@ -7,10 +7,11 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
+
 	. "github.com/towns-protocol/towns/core/node/base"
 	"github.com/towns-protocol/towns/core/node/logging"
 	. "github.com/towns-protocol/towns/core/node/protocol"
-	"github.com/towns-protocol/towns/core/node/shared"
+	"github.com/towns-protocol/towns/core/node/registries"
 )
 
 // mbJos tracks single miniblock production attempt for a single stream.
@@ -181,10 +182,12 @@ func (j *mbJob) processRemoteProposals(ctx context.Context) ([]*mbProposal, *Str
 				Err_CANNOT_CALL_CONTRACT, "mbJob.processRemoteProposals: cannot get contract stream")
 		}
 
-		if err := j.cache.syncStreamFromPeers(ctx, j.stream.streamId, &shared.MiniblockRef{
-			Hash: contractStream.LastMiniblockHash,
-			Num:  int64(contractStream.LastMiniblockNum),
-		}); err != nil {
+		if err := j.cache.syncStreamFromPeers(
+			ctx,
+			j.stream,
+			int64(contractStream.LastMiniblockNum),
+			contractStream.Flags&uint64(registries.StreamFlagSealed) != 0,
+		); err != nil {
 			return nil, nil, err
 		}
 
