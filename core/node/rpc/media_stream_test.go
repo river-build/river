@@ -7,6 +7,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/require"
 
 	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/protocol"
@@ -58,29 +59,29 @@ func TestCreateMediaStream(t *testing.T) {
 	t.Run("AddEvent failed for ephemeral streams", func(t *testing.T) {
 		mp := events.Make_MediaPayload_Chunk([]byte("chunk 0"), 0)
 		envelope, err := events.MakeEnvelopeWithPayload(alice.wallet, mp, mb)
-		tt.require.NoError(err)
+		require.NoError(t, err)
 
 		aeResp, err := alice.client.AddEvent(alice.ctx, connect.NewRequest(&protocol.AddEventRequest{
 			StreamId: mediaStreamId[:],
 			Event:    envelope,
 		}))
-		tt.require.Nil(aeResp)
-		tt.require.Error(err)
-		tt.require.Equal(connect.CodeNotFound, connect.CodeOf(err))
+		require.Nil(t, aeResp)
+		require.Error(t, err)
+		require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
 	})
 
 	t.Run("AddMediaEvent failed to add event with out of range chunk index", func(t *testing.T) {
 		mp := events.Make_MediaPayload_Chunk([]byte("chunk"), chunks+1)
 		envelope, err := events.MakeEnvelopeWithPayload(alice.wallet, mp, mb)
-		tt.require.NoError(err)
+		require.NoError(t, err)
 
 		aeResp, err := alice.client.AddMediaEvent(alice.ctx, connect.NewRequest(&protocol.AddMediaEventRequest{
 			Event:          envelope,
 			CreationCookie: creationCookie,
 		}))
-		tt.require.Nil(aeResp)
-		tt.require.Error(err)
-		tt.require.Equal(connect.CodeInvalidArgument, connect.CodeOf(err))
+		require.Nil(t, aeResp)
+		require.Error(t, err)
+		require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 	})
 
 	t.Run("AddMediaEvent passed for ephemeral media streams", func(t *testing.T) {
@@ -117,28 +118,28 @@ func TestCreateMediaStream(t *testing.T) {
 					FromInclusive: 0,
 					ToExclusive:   chunks * 2, // adding a threshold to make sure there are no unexpected events
 				}))
-				tt.require.NoError(err)
-				tt.require.NotNil(resp)
-				tt.require.Len(resp.Msg.GetMiniblocks(), chunks+1) // The first miniblock is the stream creation one
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				require.Len(t, resp.Msg.GetMiniblocks(), chunks+1) // The first miniblock is the stream creation one
 
 				mbs := resp.Msg.GetMiniblocks()
 
 				// The first miniblock is the stream creation one
-				tt.require.Len(mbs[0].GetEvents(), 1)
+				require.Len(t, mbs[0].GetEvents(), 1)
 				pe, err := events.ParseEvent(mbs[0].GetEvents()[0])
-				tt.require.NoError(err)
+				require.NoError(t, err)
 				mp, ok := pe.Event.GetPayload().(*protocol.StreamEvent_MediaPayload)
-				tt.require.True(ok)
-				tt.require.Equal(int32(chunks), mp.MediaPayload.GetInception().GetChunkCount())
+				require.True(t, ok)
+				require.Equal(t, int32(chunks), mp.MediaPayload.GetInception().GetChunkCount())
 
 				// The rest of the miniblocks are the media chunks
 				for i, mb := range mbs[1:] {
-					tt.require.Len(mb.GetEvents(), 1)
+					require.Len(t, mb.GetEvents(), 1)
 					pe, err = events.ParseEvent(mb.GetEvents()[0])
-					tt.require.NoError(err)
+					require.NoError(t, err)
 					mp, ok = pe.Event.GetPayload().(*protocol.StreamEvent_MediaPayload)
-					tt.require.True(ok)
-					tt.require.Equal(mediaChunks[i], mp.MediaPayload.GetChunk().Data)
+					require.True(t, ok)
+					require.Equal(t, mediaChunks[i], mp.MediaPayload.GetChunk().Data)
 				}
 			})
 		}
