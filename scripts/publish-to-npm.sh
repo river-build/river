@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -x
-
 function parse_git_branch() {
     git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/'
 }
@@ -138,4 +136,9 @@ echo "PR #${PR_NUMBER} has been merged"
 git pull --rebase
 
 # Publish the nightly version to npm
-npx lerna publish from-package --yes --no-private --force-publish --tag-version-prefix "${VERSION_PREFIX}"
+echo "Starting Lerna publish..."
+npx lerna publish from-package --yes --no-private --force-publish --tag-version-prefix "${VERSION_PREFIX}" || {
+    echo "Lerna publish failed with exit code $?"
+    exit 1
+}
+echo "Lerna publish completed successfully"
