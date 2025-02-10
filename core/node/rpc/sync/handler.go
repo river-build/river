@@ -6,15 +6,14 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
+	. "github.com/towns-protocol/towns/core/node/base"
+	. "github.com/towns-protocol/towns/core/node/events"
+	"github.com/towns-protocol/towns/core/node/nodes"
+	. "github.com/towns-protocol/towns/core/node/protocol"
+	"github.com/towns-protocol/towns/core/node/shared"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
-
-	. "github.com/river-build/river/core/node/base"
-	. "github.com/river-build/river/core/node/events"
-	"github.com/river-build/river/core/node/nodes"
-	. "github.com/river-build/river/core/node/protocol"
-	"github.com/river-build/river/core/node/shared"
 )
 
 type (
@@ -102,7 +101,7 @@ func (h *handlerImpl) SyncStreams(
 	req *connect.Request[SyncStreamsRequest],
 	res *connect.ServerStream[SyncStreamsResponse],
 ) error {
-	op, err := NewStreamsSyncOperation(ctx, syncId, h.nodeAddr, h.streamCache, h.nodeRegistry)
+	op, err := NewStreamsSyncOperation(ctx, syncId, h.nodeAddr, h.streamCache, h.nodeRegistry, h.otelTracer)
 	if err != nil {
 		return err
 	}

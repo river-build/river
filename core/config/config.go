@@ -9,8 +9,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	. "github.com/river-build/river/core/node/base"
-	. "github.com/river-build/river/core/node/protocol"
+	. "github.com/towns-protocol/towns/core/node/base"
+	. "github.com/towns-protocol/towns/core/node/protocol"
 )
 
 func GetDefaultConfig() *Config {
@@ -78,7 +78,6 @@ func GetDefaultConfig() *Config {
 			SingleCallTimeout:      30 * time.Second, // geth internal timeout is 30 seconds
 			ProgressReportInterval: 10 * time.Second,
 		},
-		EnableMls: false,
 	}
 }
 
@@ -153,9 +152,6 @@ type Config struct {
 	// Disable base chain contract usage.
 	DisableBaseChain bool
 
-	// Enable MemberPayload_Mls.
-	EnableMls bool
-
 	// Chains provides a map of chain IDs to their provider URLs as
 	// a comma-serparated list of chainID:URL pairs.
 	// It is parsed into ChainsString variable.
@@ -188,7 +184,7 @@ type Config struct {
 	// ====================
 	// EntitlementContract denotes the address of the contract that receives entitlement check
 	// requests.
-	EntitlementContract     ContractConfig `mapstructure:"entitlement_contract"`
+	EntitlementContract ContractConfig `mapstructure:"entitlement_contract"`
 	// History indicates how far back xchain must look for entitlement check requests after start
 	History time.Duration
 }
@@ -439,6 +435,9 @@ type BotRegistryConfig struct {
 	// BotRegistryId is the unique identifier of the bot registry service node. It must be set for
 	// nodes running in bot registry mode.
 	BotRegistryId string
+
+	// Authentication holds configuration for the Client API authentication service.
+	Authentication AuthenticationConfig
 }
 
 type LogConfig struct {
