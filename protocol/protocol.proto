@@ -89,7 +89,7 @@ message StreamEvent {
     Tags tags = 7;
 
     /** prev_miniblock_num contains miniblock number for prev_miniblock_hash. */
-    int64 prev_miniblock_num = 8;
+    optional int64 prev_miniblock_num = 8;
 
     /** Variable-type payload. 
       * Payloads should obey the following rules:

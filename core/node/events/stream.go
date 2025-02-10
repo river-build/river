@@ -386,6 +386,7 @@ func (s *Stream) promoteCandidateLocked(ctx context.Context, mb *MiniblockRef) e
 }
 
 // schedulePromotionLocked should be called with a lock held.
+// TODO: REPLICATION: FIX: there should be periodic check to trigger reconciliation if scheduled promotion is not acted upon.
 func (s *Stream) schedulePromotionLocked(mb *MiniblockRef) error {
 	if len(s.local.pendingCandidates) == 0 {
 		if mb.Num != s.view().LastBlock().Ref.Num+1 {
@@ -653,10 +654,17 @@ func (s *Stream) GetMiniblocks(
 // AddEvent adds an event to the stream.
 // AddEvent is thread-safe.
 func (s *Stream) AddEvent(ctx context.Context, event *ParsedEvent) error {
+	_, err := s.AddEvent2(ctx, event)
+	return err
+}
+
+// AddEvent2 adds an event to the stream and returns the new stream view.
+// AddEvent2 is thread-safe.
+func (s *Stream) AddEvent2(ctx context.Context, event *ParsedEvent) (*StreamView, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.loadInternal(ctx); err != nil {
-		return err
+		return nil, err
 	}
 
 	return s.addEventLocked(ctx, event)
@@ -683,25 +691,25 @@ func (s *Stream) notifySubscribersLocked(
 
 // addEventLocked is not thread-safe.
 // Callers must have a lock held.
-func (s *Stream) addEventLocked(ctx context.Context, event *ParsedEvent) error {
+func (s *Stream) addEventLocked(ctx context.Context, event *ParsedEvent) (*StreamView, error) {
 	envelopeBytes, err := event.GetEnvelopeBytes()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	oldSV := s.view()
 	err = oldSV.ValidateNextEvent(ctx, s.params.ChainConfig.Get(), event, time.Time{})
 	if err != nil {
 		if IsRiverErrorCode(err, Err_DUPLICATE_EVENT) {
-			return nil
+			return oldSV, nil
 		}
-		return AsRiverError(err).Func("copyAndAddEvent")
+		return nil, AsRiverError(err).Func("copyAndAddEvent")
 	}
 
 	// Check if event can be added before writing to storage.
 	newSV, err := oldSV.copyAndAddEvent(event)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = s.params.Storage.WriteEvent(
@@ -727,7 +735,7 @@ func (s *Stream) addEventLocked(ctx context.Context, event *ParsedEvent) error {
 			eventsStr = sb.String()
 		}
 
-		return AsRiverError(err, Err_DB_OPERATION_FAILURE).
+		return nil, AsRiverError(err, Err_DB_OPERATION_FAILURE).
 			Tag("inMemoryBlocks", len(s.view().blocks)).
 			Tag("inMemoryEvents", eventsStr)
 	}
@@ -737,7 +745,7 @@ func (s *Stream) addEventLocked(ctx context.Context, event *ParsedEvent) error {
 
 	s.notifySubscribersLocked([]*Envelope{event.Envelope}, newSyncCookie)
 
-	return nil
+	return newSV, nil
 }
 
 // Sub subscribes the reciever to the stream, sending all content between the cookie and the
