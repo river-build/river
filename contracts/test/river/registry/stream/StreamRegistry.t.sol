@@ -61,6 +61,44 @@ contract StreamRegistryTest is
     assertContains(stream.nodes, nodes[0].node);
   }
 
+  function test_fuzz_allocateStreamNoGenesisBlock(
+    address nodeOperator,
+    TestNode[100] memory nodes,
+    TestStream memory testStream
+  )
+    external
+    givenNodeOperatorIsApproved(nodeOperator)
+    givenNodesAreRegistered(nodeOperator, nodes)
+  {
+    address[] memory nodeAddresses = new address[](nodes.length);
+    uint256 nodesLength = nodes.length;
+    for (uint256 i; i < nodesLength; ++i) {
+      nodeAddresses[i] = nodes[i].node;
+    }
+
+    vm.prank(nodes[0].node);
+    vm.expectEmit(address(streamRegistry));
+    emit StreamAllocated(
+      testStream.streamId,
+      nodeAddresses,
+      testStream.genesisMiniblockHash
+    );
+    streamRegistry.allocateStream(
+      testStream.streamId,
+      nodeAddresses,
+      testStream.genesisMiniblockHash
+    );
+
+    assertEq(streamRegistry.getStreamCount(), 1);
+    assertEq(streamRegistry.getStreamCountOnNode(nodes[0].node), 1);
+    assertTrue(streamRegistry.isStream(testStream.streamId));
+
+    Stream memory stream = streamRegistry.getStream(testStream.streamId);
+    assertEq(stream.lastMiniblockHash, testStream.genesisMiniblockHash);
+    assertEq(stream.nodes.length, nodesLength);
+    assertContains(stream.nodes, nodes[0].node);
+  }
+
   function test_revertWhen_allocateStream_streamIdAlreadyExists(
     address nodeOperator,
     TestNode memory node,

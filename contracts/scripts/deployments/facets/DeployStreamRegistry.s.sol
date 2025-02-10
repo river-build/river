@@ -15,9 +15,13 @@ import {StreamRegistry} from "contracts/src/river/registry/facets/stream/StreamR
 
 contract DeployStreamRegistry is FacetHelper, Deployer {
   constructor() {
-    addSelector(StreamRegistry.allocateStream.selector);
+    addSelector(
+      bytes4(keccak256("allocateStream(bytes32,address[],bytes32,bytes)")) // delete after nodes stopped writing genesis block
+    );
+    addSelector(bytes4(keccak256("allocateStream(bytes32,address[],bytes32)")));
     addSelector(StreamRegistry.getStream.selector);
-    addSelector(StreamRegistry.getStreamWithGenesis.selector);
+    addSelector(StreamRegistry.getStreamWithGenesis.selector); // delete after nodes stopped writing genesis block
+    addSelector(StreamRegistry.getStreamWithGenesisHash.selector);
     addSelector(StreamRegistry.setStreamLastMiniblockBatch.selector);
     addSelector(StreamRegistry.placeStreamOnNode.selector); // future
     addSelector(StreamRegistry.removeStreamFromNode.selector);
