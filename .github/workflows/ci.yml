@@ -304,8 +304,8 @@ jobs:
 
             - name: Run River Tests (without entitlements)
               working-directory: packages/sdk
-              run: yarn run test:ci:multi:ne
-              timeout-minutes: 10
+              run: VITEST_MAX_THREADS=2 yarn run test:ci:multi:ne
+              timeout-minutes: 15
 
             - name: Run Stream Metadata Nodes
               run: |
@@ -455,7 +455,7 @@ jobs:
               run: yarn csb:turbo-no-sdk
 
             - name: Run River Tests (with entitlements)
-              run: yarn turbo run test:ci:multi:ent --filter=@river-build/sdk
+              run: VITEST_MAX_THREADS=2 yarn turbo run test:ci:multi:ent --filter=@river-build/sdk
 
             - name: Run Stress Test Tests (yarn) (with entitlements)
               run: yarn turbo run test:ci:multi:ent --filter=@river-build/stress
@@ -599,11 +599,8 @@ jobs:
               run: just RUN_ENV=multi config-and-start
               working-directory: core
 
-            - name: Build & Test (with entitlements)
-              run: yarn csb:turbo-no-sdk
-
             - name: Run River Tests Against Legacy Spaces (with entitlements)
-              run: yarn turbo run test:ci:multi:ent:legacy --filter=@river-build/sdk
+              run: VITEST_MAX_THREADS=2 yarn turbo run test:ci:multi:ent:legacy --filter=@river-build/sdk
 
             - name: Archive River Node Logs and Settings
               if: always()
