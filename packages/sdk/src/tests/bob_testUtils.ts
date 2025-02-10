@@ -3,6 +3,7 @@ import { MembershipOp, SyncStreamsResponse, Envelope, SyncOp } from '@river-buil
 import { DLogger } from '@river-build/dlog'
 import {
     lastEventFiltered,
+    lastMiniblockRef,
     makeEvent_test,
     makeTestRpcClient,
     makeUniqueSpaceStreamId,
@@ -137,7 +138,7 @@ export const bobTalksToHimself = async (
                 ...TEST_ENCRYPTED_MESSAGE_PROPS,
                 ciphertext: 'presync',
             }),
-            channel.stream?.miniblocks.at(-1)?.header?.hash,
+            await lastMiniblockRef(channel),
         )
         await bob.addEvent({
             streamId: channelId,
@@ -199,7 +200,7 @@ export const bobTalksToHimself = async (
             ...TEST_ENCRYPTED_MESSAGE_PROPS,
             ciphertext: 'hello',
         }),
-        hashResponse.hash,
+        { hash: hashResponse.hash, num: hashResponse.miniblockNum },
     )
     await bob.addEvent({
         streamId: channelId,
@@ -225,7 +226,7 @@ export const bobTalksToHimself = async (
             ...TEST_ENCRYPTED_MESSAGE_PROPS,
             ciphertext: 'hello',
         }),
-        Uint8Array.from([1, 2, 3]),
+        { hash: Uint8Array.from([1, 2, 3]), num: -1n },
     )
     await expect(
         bob.addEvent({

@@ -20,7 +20,13 @@ import {
 import { assertBytes } from 'ethereum-cryptography/utils'
 import { recoverPublicKey, signSync, verify } from 'ethereum-cryptography/secp256k1'
 import { genIdBlob, streamIdAsBytes, streamIdAsString, userIdFromAddress } from './id'
-import { ParsedEvent, ParsedMiniblock, ParsedStreamAndCookie, ParsedStreamResponse } from './types'
+import {
+    MiniblockRef,
+    ParsedEvent,
+    ParsedMiniblock,
+    ParsedStreamAndCookie,
+    ParsedStreamResponse,
+} from './types'
 import { SignerContext, checkDelegateSig } from './signerContext'
 import { keccak256 } from 'ethereum-cryptography/keccak'
 import { createHash } from 'crypto'
@@ -41,13 +47,23 @@ export interface UnpackEnvelopeOpts {
 export const _impl_makeEvent_impl_ = async (
     context: SignerContext,
     payload: PlainMessage<StreamEvent>['payload'],
-    prevMiniblockHash?: Uint8Array,
+    prevMiniblock?: MiniblockRef,
     tags?: PlainMessage<Tags>,
 ): Promise<Envelope> => {
+    let prevMiniblockHash: Uint8Array | undefined
+    let prevMiniblockNum: bigint = 0n
+    if (isDefined(prevMiniblock)) {
+        prevMiniblockHash = prevMiniblock.hash
+        if (prevMiniblock.num >= 0n) {
+            prevMiniblockNum = prevMiniblock.num
+        }
+    }
+
     const streamEvent = new StreamEvent({
         creatorAddress: context.creatorAddress,
         salt: genIdBlob(),
         prevMiniblockHash,
+        prevMiniblockNum,
         payload,
         createdAtEpochMs: BigInt(Date.now()),
         tags,
@@ -64,10 +80,11 @@ export const _impl_makeEvent_impl_ = async (
     return new Envelope({ hash, signature, event })
 }
 
+// TODO: REPLICATION: modify to require both hash and miniblock number instead of prevMiniblockHash
 export const makeEvent = async (
     context: SignerContext,
     payload: PlainMessage<StreamEvent>['payload'],
-    prevMiniblockHash?: Uint8Array,
+    prevMiniblock?: MiniblockRef,
     tags?: PlainMessage<Tags>,
 ): Promise<Envelope> => {
     // const pl: Payload = payload instanceof Payload ? payload : new Payload(payload)
@@ -78,25 +95,25 @@ export const makeEvent = async (
     check(isDefined(pl.value.content), "Payload content can't be empty", Err.BAD_PAYLOAD)
     check(isDefined(pl.value.content.case), "Payload content case can't be empty", Err.BAD_PAYLOAD)
 
-    if (prevMiniblockHash) {
+    if (isDefined(prevMiniblock)) {
         check(
-            prevMiniblockHash.length === 32,
-            `prevMiniblockHash should be 32 bytes, got ${prevMiniblockHash.length}`,
+            prevMiniblock.hash.length === 32,
+            `prevMiniblockHash should be 32 bytes, got ${prevMiniblock.hash.length}`,
             Err.BAD_HASH_FORMAT,
         )
     }
 
-    return _impl_makeEvent_impl_(context, pl, prevMiniblockHash, tags)
+    return _impl_makeEvent_impl_(context, pl, prevMiniblock, tags)
 }
 
 export const makeEvents = async (
     context: SignerContext,
     payloads: PlainMessage<StreamEvent>['payload'][],
-    prevMiniblockHash?: Uint8Array,
+    prevMiniblock?: MiniblockRef,
 ): Promise<Envelope[]> => {
     const events: Envelope[] = []
     for (const payload of payloads) {
-        const event = await makeEvent(context, payload, prevMiniblockHash)
+        const event = await makeEvent(context, payload, prevMiniblock)
         events.push(event)
     }
     return events
@@ -169,7 +186,7 @@ export const unpackStreamAndCookie = async (
 // returns all events + the header event and pointer to header content
 export const unpackMiniblock = async (
     miniblock: Miniblock,
-    opts: UnpackEnvelopeOpts | undefined,
+    opts?: UnpackEnvelopeOpts,
 ): Promise<ParsedMiniblock> => {
     check(isDefined(miniblock.header), 'Miniblock header is not set')
     const header = await unpackEnvelope(miniblock.header, opts)
@@ -179,7 +196,7 @@ export const unpackMiniblock = async (
     )
     const events = await unpackEnvelopes(miniblock.events, opts)
     return {
-        hash: miniblock.header.hash,
+        ref: { hash: miniblock.header.hash, num: header.event.payload.value.miniblockNum },
         header: header.event.payload.value,
         events: [...events, header],
     }
@@ -187,7 +204,7 @@ export const unpackMiniblock = async (
 
 export const unpackEnvelope = async (
     envelope: Envelope,
-    opts: UnpackEnvelopeOpts | undefined,
+    opts?: UnpackEnvelopeOpts,
 ): Promise<ParsedEvent> => {
     check(hasElements(envelope.event), 'Event base is not set', Err.BAD_EVENT)
     check(hasElements(envelope.hash), 'Event hash is not set', Err.BAD_EVENT)

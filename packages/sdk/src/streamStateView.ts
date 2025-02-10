@@ -14,6 +14,7 @@ import {
     EventSignatureBundle,
     LocalEventStatus,
     LocalTimelineEvent,
+    MiniblockRef,
     ParsedEvent,
     ParsedMiniblock,
     RemoteTimelineEvent,
@@ -67,7 +68,7 @@ export interface IStreamStateView {
     readonly timeline: StreamTimelineEvent[]
     readonly events: Map<string, StreamTimelineEvent>
     isInitialized: boolean
-    prevMiniblockHash?: Uint8Array
+    prevMiniblock?: MiniblockRef
     lastEventNum: bigint
     prevSnapshotMiniblockNum: bigint
     miniblockInfo?: { max: bigint; min: bigint; terminusReached: boolean }
@@ -101,7 +102,7 @@ export class StreamStateView implements IStreamStateView {
     readonly events = new Map<string, StreamTimelineEvent>()
     readonly signatures = new Map<string, EventSignatureBundle>()
     isInitialized = false
-    prevMiniblockHash?: Uint8Array
+    prevMiniblock?: MiniblockRef
     lastEventNum = 0n
     prevSnapshotMiniblockNum: bigint
     miniblockInfo?: { max: bigint; min: bigint; terminusReached: boolean }
@@ -388,7 +389,7 @@ export class StreamStateView implements IStreamStateView {
                     if (this.saveSnapshots && payload.value.snapshot) {
                         this._snapshot = payload.value.snapshot
                     }
-                    this.prevMiniblockHash = event.hash
+                    this.prevMiniblock = { hash: event.hash, num: payload.value.miniblockNum }
                     this.updateMiniblockInfo(payload.value, { max: payload.value.miniblockNum })
                     timelineEvent.confirmedEventNum =
                         payload.value.eventNumOffset + BigInt(payload.value.eventHashes.length)
@@ -596,7 +597,7 @@ export class StreamStateView implements IStreamStateView {
         check(miniblocks.length > 0, `Stream has no miniblocks ${this.streamId}`, Err.STREAM_EMPTY)
         // parse the blocks
         // initialize from snapshot data, this gets all memberships and channel data, etc
-        this.applySnapshot(bin_toHexString(miniblocks[0].hash), snapshot, cleartexts, emitter)
+        this.applySnapshot(bin_toHexString(miniblocks[0].ref.hash), snapshot, cleartexts, emitter)
         // initialize from miniblocks, the first minblock is the snapshot block, it's events are accounted for
         const block0Events = miniblocks[0].events.map((parsedEvent, i) => {
             const eventNum = miniblocks[0].header.eventNumOffset + BigInt(i)
@@ -640,7 +641,7 @@ export class StreamStateView implements IStreamStateView {
         const lastBlock = miniblocks[miniblocks.length - 1]
         this.lastEventNum = lastBlock.header.eventNumOffset + BigInt(lastBlock.events.length)
         // and the prev miniblock has (if there were more than 1 miniblocks, this should already be set)
-        this.prevMiniblockHash = lastBlock.hash
+        this.prevMiniblock = lastBlock.ref
         // append the minipool events
         this.appendStreamAndCookie(nextSyncCookie, minipoolEvents, cleartexts, emitter, undefined)
         this.prevSnapshotMiniblockNum = prevSnapshotMiniblockNum

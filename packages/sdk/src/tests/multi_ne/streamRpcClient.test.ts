@@ -14,6 +14,7 @@ import {
     iterableWrapper,
     TEST_ENCRYPTED_MESSAGE_PROPS,
     waitForSyncStreams,
+    lastMiniblockRef,
 } from '../testUtils'
 import {
     addressFromUserId,
@@ -31,6 +32,7 @@ import {
     make_UserPayload_Inception,
     make_UserPayload_UserMembership,
     make_UserPayload_UserMembershipAction,
+    miniblockRefFromResponse,
     ParsedEvent,
 } from '../../types'
 import { bobTalksToHimself } from '../bob_testUtils'
@@ -250,7 +252,7 @@ describe('streamRpcClient using v2 sync', () => {
                 streamId: channelId,
                 streamParentId: spaceId,
             }),
-            bobsUserStream.stream?.miniblocks.at(-1)?.header?.hash,
+            await lastMiniblockRef(bobsUserStream),
         )
         await bob.addEvent({
             streamId: bobsUserStreamId,
@@ -269,7 +271,7 @@ describe('streamRpcClient using v2 sync', () => {
                 ...TEST_ENCRYPTED_MESSAGE_PROPS,
                 ciphertext: 'hello',
             }),
-            alicesChannel.stream?.miniblocks.at(-1)?.header?.hash,
+            await lastMiniblockRef(alicesChannel),
         )
         await alice.addEvent({
             streamId: channelId,
@@ -406,7 +408,7 @@ describe('streamRpcClient', () => {
                 ...TEST_ENCRYPTED_MESSAGE_PROPS,
                 ciphertext: 'hello',
             }),
-            userStream.stream?.miniblocks.at(-1)?.header?.hash,
+            await lastMiniblockRef(userStream),
         )
         const promise = bob.addEvent({
             streamId: bobsUserStreamId,
@@ -519,7 +521,7 @@ describe('streamRpcClient', () => {
                 ...TEST_ENCRYPTED_MESSAGE_PROPS,
                 ciphertext: 'hello',
             }),
-            createChannelResponse.stream?.miniblocks.at(-1)?.header?.hash,
+            await lastMiniblockRef(createChannelResponse),
         )
         await bob.addEvent({
             streamId: channelId,
@@ -537,7 +539,7 @@ describe('streamRpcClient', () => {
                         ...TEST_ENCRYPTED_MESSAGE_PROPS,
                         ciphertext: 'hello',
                     }),
-                    createChannelResponse.stream?.miniblocks.at(-1)?.header?.hash,
+                    await lastMiniblockRef(createChannelResponse),
                 ),
             }),
         ).rejects.toThrow(
@@ -579,7 +581,7 @@ describe('streamRpcClient', () => {
                 streamId: channelId,
                 streamParentId: spaceId,
             }),
-            bobsStream.stream?.miniblocks.at(-1)?.header?.hash,
+            await lastMiniblockRef(bobsStream),
         )
         await bob.addEvent({
             streamId: bobsUserStreamId,
@@ -634,7 +636,7 @@ describe('streamRpcClient', () => {
                 streamId: channelId,
                 streamParentId: spaceId,
             }),
-            alicesStream.stream?.miniblocks.at(-1)?.header?.hash,
+            await lastMiniblockRef(alicesStream),
         )
         await alice.addEvent({
             streamId: alicesUserStreamId,
@@ -679,7 +681,7 @@ describe('streamRpcClient', () => {
                 ...TEST_ENCRYPTED_MESSAGE_PROPS,
                 ciphertext: 'Hello, Alice!',
             }),
-            channel.stream?.miniblocks.at(-1)?.header?.hash,
+            await lastMiniblockRef(channel),
         )
         await bob.addEvent({
             streamId: channelId,
@@ -765,16 +767,16 @@ describe('streamRpcClient', () => {
 
         // try to leave, first with expired context, then with good context
         const addEventWith = async (context: SignerContext) => {
-            const lastMiniblockHash = (
-                await jimmy.getLastMiniblockHash({ streamId: jimmysUserStreamId })
-            ).hash
+            const lastMiniblock = miniblockRefFromResponse(
+                await jimmy.getLastMiniblockHash({ streamId: jimmysUserStreamId }),
+            )
             const messageEvent = await makeEvent(
                 context,
                 make_UserPayload_UserMembership({
                     streamId: spacedStreamId,
                     op: MembershipOp.SO_LEAVE,
                 }),
-                lastMiniblockHash,
+                lastMiniblock,
             )
             return jimmy.addEvent({
                 streamId: jimmysUserStreamId,
@@ -870,7 +872,7 @@ describe('streamRpcClient', () => {
                 op: MembershipOp.SO_JOIN,
                 initiatorId: bobsUserId,
             }),
-            Uint8Array.from(Array(32).fill('1')),
+            { hash: Uint8Array.from(Array(32).fill('1')), num: 1n },
         )
         // TODO: fix up error codes Err.BAD_PREV_EVENTS
         await expect(
@@ -885,14 +887,16 @@ describe('streamRpcClient', () => {
         )
 
         log('Bob adds event with correct hash')
-        const lastMiniblockHash = (await bob.getLastMiniblockHash({ streamId: channelId })).hash
+        const lastMiniblock = miniblockRefFromResponse(
+            await bob.getLastMiniblockHash({ streamId: channelId }),
+        )
         const messageEvent = await makeEvent(
             bobsContext,
             make_ChannelPayload_Message({
                 ...TEST_ENCRYPTED_MESSAGE_PROPS,
                 ciphertext: 'Hello, World!',
             }),
-            lastMiniblockHash,
+            lastMiniblock,
         )
         await expect(
             bob.addEvent({
@@ -981,14 +985,16 @@ describe('streamRpcClient', () => {
         log('Bob created channel')
 
         log('Bob adds event with correct signature')
-        const lastMiniblockHash = (await bob.getLastMiniblockHash({ streamId: channelId })).hash
+        const lastMiniblock = miniblockRefFromResponse(
+            await bob.getLastMiniblockHash({ streamId: channelId }),
+        )
         const messageEvent = await makeEvent(
             bobsContext,
             make_ChannelPayload_Message({
                 ...TEST_ENCRYPTED_MESSAGE_PROPS,
                 ciphertext: 'Hello, World!',
             }),
-            lastMiniblockHash,
+            lastMiniblock,
         )
         channelEvents.push(messageEvent)
         await expect(
@@ -1017,7 +1023,7 @@ describe('streamRpcClient', () => {
                 ...TEST_ENCRYPTED_MESSAGE_PROPS,
                 ciphertext: 'Nah, not really',
             }),
-            lastMiniblockHash,
+            lastMiniblock,
         )
         badEvent.signature = messageEvent.signature
         await expect(
@@ -1034,14 +1040,14 @@ describe('streamRpcClient', () => {
                 ...TEST_ENCRYPTED_MESSAGE_PROPS,
                 ciphertext: 'Nah, not really',
             }),
-            Uint8Array.from(Array(32).fill('1')),
+            { hash: Uint8Array.from(Array(32).fill('1')), num: 1n },
         )
         await expect(
             bob.addEvent({
                 streamId: channelId,
                 event: expiredEvent,
             }),
-        ).rejects.toThrow('24:BAD_PREV_MINIBLOCK_HASH')
+        ).rejects.toThrow('63:MINIBLOCK_TOO_NEW')
     })
 })
 

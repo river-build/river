@@ -84,7 +84,7 @@ export function persistedMiniblockToParsedMiniblock(
         return undefined
     }
     return {
-        hash: miniblock.hash,
+        ref: { hash: miniblock.hash, num: miniblock.header.miniblockNum },
         header: miniblock.header,
         events: miniblock.events.map(persistedEventToParsedEvent).filter(isDefined),
     }
@@ -95,7 +95,7 @@ export function parsedMiniblockToPersistedMiniblock(
     direction: 'forward' | 'backward',
 ) {
     return new PersistedMiniblock({
-        hash: miniblock.hash,
+        hash: miniblock.ref.hash,
         header: miniblock.header,
         events: miniblock.events
             .filter((event) => isPersistedEvent(event, direction))

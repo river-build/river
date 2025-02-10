@@ -18,6 +18,7 @@ import {
     make_MemberPayload_Membership2,
     make_SpacePayload_Inception,
     make_UserPayload_Inception,
+    miniblockRefFromHeader,
 } from '../../types'
 import {
     TEST_ENCRYPTED_MESSAGE_PROPS,
@@ -25,6 +26,7 @@ import {
     makeTestRpcClient,
     makeUniqueSpaceStreamId,
     iterableWrapper,
+    lastMiniblockRef,
 } from '../testUtils'
 import { SignerContext } from '../../signerContext'
 
@@ -134,7 +136,7 @@ describe('syncWithBlocks', () => {
                 ...TEST_ENCRYPTED_MESSAGE_PROPS,
                 ciphertext: text,
             }),
-            channel.stream?.miniblocks.at(-1)?.header?.hash,
+            await lastMiniblockRef(channel),
         )
         nextHash = messageEvent.hash
         const resp = await bob.addEvent({
@@ -204,7 +206,7 @@ describe('syncWithBlocks', () => {
                             ...TEST_ENCRYPTED_MESSAGE_PROPS,
                             ciphertext: text,
                         }),
-                        p.hash,
+                        miniblockRefFromHeader(p),
                     )
                     nextHash = messageEvent.hash
                     const response = await bob.addEvent({

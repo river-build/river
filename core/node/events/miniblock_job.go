@@ -10,7 +10,6 @@ import (
 	. "github.com/towns-protocol/towns/core/node/base"
 	"github.com/towns-protocol/towns/core/node/logging"
 	. "github.com/towns-protocol/towns/core/node/protocol"
-	"github.com/towns-protocol/towns/core/node/shared"
 )
 
 // mbJos tracks single miniblock production attempt for a single stream.
@@ -167,32 +166,21 @@ func (j *mbJob) processRemoteProposals(ctx context.Context) ([]*mbProposal, *Str
 	}
 
 	// Check if we have enough remote proposals and return them.
-	if len(proposals) >= RemoteQuorumNum(len(j.remoteNodes), true) {
+	if len(converted) >= RemoteQuorumNum(len(j.remoteNodes), true) {
 		return converted, view, nil
 	}
 
 	// if one of the nodes returned MINIBLOCK_TOO_OLD it indicates that this node has fallen behind, sync to catch up.
-	if slices.ContainsFunc(errs, func(err error) bool {
-		return IsRiverErrorCode(err, Err_MINIBLOCK_TOO_OLD)
-	}) {
-		contractStream, err := j.cache.params.Registry.StreamRegistry.GetStream(nil, j.stream.streamId)
-		if err != nil {
-			return nil, nil, RiverError(
-				Err_CANNOT_CALL_CONTRACT, "mbJob.processRemoteProposals: cannot get contract stream")
-		}
-
-		if err := j.cache.syncStreamFromPeers(ctx, j.stream.streamId, &shared.MiniblockRef{
-			Hash: contractStream.LastMiniblockHash,
-			Num:  int64(contractStream.LastMiniblockNum),
-		}); err != nil {
-			return nil, nil, err
-		}
-
-		return nil, nil, RiverError(Err_MINIBLOCK_TOO_OLD, "mbJob.processRemoteProposals: node out of sync")
+	if slices.ContainsFunc(errs, func(err error) bool { return IsRiverErrorCode(err, Err_MINIBLOCK_TOO_OLD) }) {
+		j.cache.submitSyncStreamTask(ctx, j.stream.streamId)
 	}
 
 	if len(errs) > 0 {
-		return nil, nil, errs[0]
+		return nil, nil, RiverErrorWithBases(Err_QUORUM_FAILED, "mbJob.processRemoteProposals: quorum failed", errs,
+			"streamId", j.stream.streamId,
+			"currentLastMb", view.LastBlock().Ref,
+			"attemptedMbNum", request.NewMiniblockNum,
+		)
 	}
 
 	return nil, nil, RiverError(Err_INTERNAL, "mbJob.processRemoteProposals: no proposals and no errors")

@@ -138,6 +138,7 @@ import {
     make_UserPayload_BlockchainTransaction,
     ContractReceipt,
     make_MemberPayload_EncryptionAlgorithm,
+    MiniblockRef,
 } from './types'
 
 import debug from 'debug'
@@ -816,7 +817,7 @@ export class Client
         userId: string | undefined,
         chunkCount: number,
         streamSettings?: PlainMessage<StreamSettings>,
-    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array }> {
+    ): Promise<{ streamId: string; prevMiniblock: MiniblockRef }> {
         assert(this.userStreamId !== undefined, 'userStreamId must be set')
         if (!channelId && !spaceId && !userId) {
             throw Error('channelId, spaceId or userId must be set')
@@ -870,9 +871,9 @@ export class Client
             undefined,
         )
 
-        check(isDefined(streamView.prevMiniblockHash), 'prevMiniblockHash must be defined')
+        check(isDefined(streamView.prevMiniblock), 'prevMiniblock must be defined')
 
-        return { streamId: streamId, prevMiniblockHash: streamView.prevMiniblockHash }
+        return { streamId: streamId, prevMiniblock: streamView.prevMiniblock }
     }
 
     async updateChannel(
@@ -1745,13 +1746,13 @@ export class Client
         streamId: string,
         data: Uint8Array,
         chunkIndex: number,
-        prevMiniblockHash: Uint8Array,
-    ): Promise<{ prevMiniblockHash: Uint8Array; eventId: string }> {
+        prevMiniblock: MiniblockRef,
+    ): Promise<{ prevMiniblock: MiniblockRef; eventId: string }> {
         const payload = make_MediaPayload_Chunk({
             data: data,
             chunkIndex: chunkIndex,
         })
-        return this.makeEventWithHashAndAddToStream(streamId, payload, prevMiniblockHash)
+        return this.makeEventWithHashAndAddToStream(streamId, payload, prevMiniblock)
     }
 
     async getMediaPayload(
@@ -2241,11 +2242,10 @@ export class Client
             streamView = await this.getStream(streamId)
         }
         check(isDefined(streamView), `stream not found: ${streamId}`)
-        check(isDefined(streamView.miniblockInfo), `stream not initialized: ${streamId}`)
-        check(isDefined(streamView.prevMiniblockHash), `prevMiniblockHash not found: ${streamId}`)
+        check(isDefined(streamView.prevMiniblock), `prevMiniblockHash not found: ${streamId}`)
         return {
-            miniblockNum: streamView.miniblockInfo.max,
-            miniblockHash: streamView.prevMiniblockHash,
+            miniblockNum: streamView.prevMiniblock.num,
+            miniblockHash: streamView.prevMiniblock.hash,
         }
     }
 
@@ -2340,15 +2340,12 @@ export class Client
         const stream = this.streams.get(streamId)
         assert(stream !== undefined, 'unknown stream ' + streamIdAsString(streamId))
 
-        const prevHash = stream.view.prevMiniblockHash
-        assert(
-            isDefined(prevHash),
-            'no prev miniblock hash for stream ' + streamIdAsString(streamId),
-        )
+        const prevMb = stream.view.prevMiniblock
+        assert(isDefined(prevMb), 'no prev miniblock hash for stream ' + streamIdAsString(streamId))
         const { eventId, error } = await this.makeEventWithHashAndAddToStream(
             streamId,
             payload,
-            prevHash,
+            prevMb,
             options.optional,
             options.localId,
             options.cleartext,
@@ -2360,16 +2357,16 @@ export class Client
     async makeEventWithHashAndAddToStream(
         streamId: string | Uint8Array,
         payload: PlainMessage<StreamEvent>['payload'],
-        prevMiniblockHash: Uint8Array,
+        prevMiniblock: MiniblockRef,
         optional?: boolean,
         localId?: string,
         cleartext?: Uint8Array,
         tags?: PlainMessage<Tags>,
         retryCount?: number,
-    ): Promise<{ prevMiniblockHash: Uint8Array; eventId: string; error?: AddEventResponse_Error }> {
+    ): Promise<{ prevMiniblock: MiniblockRef; eventId: string; error?: AddEventResponse_Error }> {
         const streamIdStr = streamIdAsString(streamId)
         check(isDefined(streamIdStr) && streamIdStr !== '', 'streamId must be defined')
-        const event = await makeEvent(this.signerContext, payload, prevMiniblockHash, tags)
+        const event = await makeEvent(this.signerContext, payload, prevMiniblock, tags) // TODO: REPLICATION: update to mb ref
         const eventId = bin_toHexString(event.hash)
         if (localId) {
             // when we have a localId, we need to update the local event with the eventId
@@ -2393,8 +2390,9 @@ export class Client
                 const stream = this.streams.get(streamId)
                 stream?.updateLocalEvent(localId, eventId, 'sent')
             }
-            return { prevMiniblockHash, eventId, error }
+            return { prevMiniblock, eventId, error }
         } catch (err) {
+            // TODO: REPLICATION: this retry is very sketchy, also error codes could be TOO_OLD, TOO_NEW as well
             // custom retry logic for addEvent
             // if we send up a stale prevMiniblockHash, the server will return a BAD_PREV_MINIBLOCK_HASH
             // error and include the expected hash in the error message
@@ -2405,14 +2403,14 @@ export class Client
                 this.logInfo('RETRYING event after BAD_PREV_MINIBLOCK_HASH response', {
                     syncStats: this.streams.stats(),
                     retryCount,
-                    prevMiniblockHash,
+                    prevMiniblock,
                     expectedHash,
                 })
                 check(isDefined(expectedHash), 'expected hash not found in error')
                 return await this.makeEventWithHashAndAddToStream(
                     streamId,
                     payload,
-                    bin_fromHexString(expectedHash),
+                    { hash: bin_fromHexString(expectedHash), num: -1n },
                     optional,
                     isDefined(localId) ? eventId : undefined,
                     cleartext,
@@ -2429,9 +2427,9 @@ export class Client
         }
     }
 
-    async getStreamLastMiniblockHash(streamId: string | Uint8Array): Promise<Uint8Array> {
+    async getStreamLastMiniblockRef(streamId: string | Uint8Array): Promise<MiniblockRef> {
         const r = await this.rpcClient.getLastMiniblockHash({ streamId: streamIdAsBytes(streamId) })
-        return r.hash
+        return { hash: r.hash, num: r.miniblockNum }
     }
 
     private async initCrypto(opts?: EncryptionDeviceInitOpts): Promise<void> {
@@ -2610,7 +2608,7 @@ export class Client
                     return
                 }
                 const toStreamId: string = makeUserInboxStreamId(userId)
-                const miniblockHash = await this.getStreamLastMiniblockHash(toStreamId)
+                const miniblockRef = await this.getStreamLastMiniblockRef(toStreamId)
                 this.logCall("encryptAndShareGroupSessions: sent to user's devices", {
                     toStreamId,
                     deviceKeys: deviceKeys.map((d) => d.deviceKey).join(','),
@@ -2624,7 +2622,7 @@ export class Client
                         ciphertexts: ciphertext,
                         algorithm: algorithm,
                     }),
-                    miniblockHash,
+                    miniblockRef,
                 )
             } catch (error) {
                 this.logError('encryptAndShareGroupSessions: ERROR', error)

@@ -35,9 +35,12 @@ describe('sign', () => {
             address: publicKeyToAddress(pub),
         }
     })
-    const hash = bin_fromHexString(
-        '0x8dc27dbd6fc775e3a05c509c6eb1c63c4ab5bc6e7010bf9a9a80a42ae1ea56b0',
-    )
+    const miniblockRef = {
+        hash: bin_fromHexString(
+            '0x8dc27dbd6fc775e3a05c509c6eb1c63c4ab5bc6e7010bf9a9a80a42ae1ea56b0',
+        ),
+        num: 1n,
+    }
     const badHashes = [
         bin_fromHexString('0x8dc27dbd6fc775e3a05c509c6eb1c63c4ab5bc6e7010bf9a9a80a42ae1ea56b000'),
         bin_fromHexString('0x8dc27dbd6fc775e3a05c509c6eb1c63c4ab5bc6e7010bf9a9a80a42ae1ea56'),
@@ -230,11 +233,11 @@ describe('sign', () => {
                     },
                 },
             }
-            const event = await makeEvent(context, payload, hash)
+            const event = await makeEvent(context, payload, miniblockRef)
             expect(await unpackEnvelope(event, undefined)).toBeDefined()
 
             // Event with same payload from different wallet doesn't match
-            const event2 = await makeEvent(context2, payload, hash)
+            const event2 = await makeEvent(context2, payload, miniblockRef)
             expect(await unpackEnvelope(event2, undefined)).toBeDefined()
             expect(event2).not.toEqual(event)
 
@@ -257,7 +260,7 @@ describe('sign', () => {
             }).rejects.toThrow()
 
             // Event with same payload from the same wallet doesn't match
-            const event3 = await makeEvent(context, payload, hash)
+            const event3 = await makeEvent(context, payload, miniblockRef)
             expect(await unpackEnvelope(event3, undefined)).toBeDefined()
             expect(event3.hash).not.toEqual(event.hash)
             expect(event3).not.toEqual(event)
@@ -287,10 +290,10 @@ describe('sign', () => {
                     },
                 },
             }
-            expect(await makeEvent(context, payload, hash)).toBeDefined()
+            expect(await makeEvent(context, payload, miniblockRef)).toBeDefined()
 
             for (const h of badHashes) {
-                await expect(makeEvent(context, payload, h)).rejects.toThrow()
+                await expect(makeEvent(context, payload, { hash: h, num: 1n })).rejects.toThrow()
             }
         },
     )

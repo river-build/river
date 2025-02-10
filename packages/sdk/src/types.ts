@@ -1,44 +1,45 @@
 import { PlainMessage } from '@bufbuild/protobuf'
 import {
-    StreamEvent,
-    ChannelMessage,
+    BlockchainTransaction,
     ChannelMessage_Post_Content_Text,
-    UserMetadataPayload_Inception,
-    UserPayload_Inception,
-    SpacePayload_Inception,
-    ChannelPayload_Inception,
-    UserSettingsPayload_Inception,
-    SpacePayload_ChannelUpdate,
-    SpacePayload_UpdateChannelAutojoin,
-    SpacePayload_UpdateChannelHideUserJoinLeaveEvents,
-    EncryptedData,
-    UserPayload_UserMembership,
-    UserSettingsPayload_UserBlock,
-    UserSettingsPayload_FullyReadMarkers,
-    MiniblockHeader,
     ChannelMessage_Post_Mention,
     ChannelMessage_Post,
-    MediaPayload_Inception,
-    MediaPayload_Chunk,
+    ChannelMessage,
+    ChannelPayload_Inception,
     DmChannelPayload_Inception,
+    EncryptedData,
     GdmChannelPayload_Inception,
-    UserInboxPayload_Ack,
-    UserInboxPayload_Inception,
-    UserMetadataPayload_EncryptionDevice,
-    UserInboxPayload_GroupEncryptionSessions,
-    SyncCookie,
-    Snapshot,
-    UserPayload_UserMembershipAction,
-    MemberPayload_Membership,
-    MembershipOp,
+    GetLastMiniblockHashResponse,
+    MediaPayload_Chunk,
+    MediaPayload_Inception,
     MemberPayload_KeyFulfillment,
     MemberPayload_KeySolicitation,
-    MemberPayload,
+    MemberPayload_Membership,
     MemberPayload_Nft,
-    BlockchainTransaction,
+    MemberPayload,
+    MembershipOp,
+    MiniblockHeader,
+    Snapshot,
+    SpacePayload_ChannelUpdate,
+    SpacePayload_Inception,
+    SpacePayload_UpdateChannelAutojoin,
+    SpacePayload_UpdateChannelHideUserJoinLeaveEvents,
+    StreamEvent,
+    SyncCookie,
+    UserInboxPayload_Ack,
+    UserInboxPayload_GroupEncryptionSessions,
+    UserInboxPayload_Inception,
+    UserMetadataPayload_EncryptionDevice,
+    UserMetadataPayload_Inception,
+    UserPayload_Inception,
+    UserPayload_UserMembership,
+    UserPayload_UserMembershipAction,
+    UserSettingsPayload_FullyReadMarkers,
+    UserSettingsPayload_Inception,
+    UserSettingsPayload_UserBlock,
 } from '@river-build/proto'
 import { keccak256 } from 'ethereum-cryptography/keccak'
-import { bin_toHexString } from '@river-build/dlog'
+import { bin_toHexString, check } from '@river-build/dlog'
 import { isDefined } from './check'
 import { DecryptedContent } from './encryptedContentTypes'
 import { addressFromUserId, streamIdAsBytes } from './id'
@@ -159,8 +160,28 @@ export function makeRemoteTimelineEvent(params: {
     }
 }
 
-export interface ParsedMiniblock {
+export interface MiniblockRef {
     hash: Uint8Array
+    num: bigint
+}
+
+export function miniblockRefFromHeader(header: ParsedEvent): MiniblockRef {
+    check(header.event.payload?.case === 'miniblockHeader', 'Expected miniblock header event')
+    return {
+        hash: header.hash,
+        num: header.event.payload.value.miniblockNum,
+    }
+}
+
+export function miniblockRefFromResponse(r: GetLastMiniblockHashResponse): MiniblockRef {
+    return {
+        hash: r.hash,
+        num: r.miniblockNum,
+    }
+}
+
+export interface ParsedMiniblock {
+    ref: MiniblockRef
     header: MiniblockHeader
     events: ParsedEvent[]
 }

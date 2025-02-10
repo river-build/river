@@ -110,7 +110,7 @@ describe('syncStreams', () => {
                 event: await makeEvent(
                     alicesContext,
                     payload,
-                    userInboxStreamResponse.streamAndCookie.miniblocks[0].hash,
+                    userInboxStreamResponse.streamAndCookie.miniblocks.at(-1)!.ref,
                 ),
             })
         }
