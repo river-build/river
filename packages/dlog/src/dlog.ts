@@ -240,3 +240,25 @@ export const dlogger = (ns: string): { log: DLogger; info: DLogger; error: DLogg
         error: dlogError(ns + ':error'),
     }
 }
+
+export interface ELogger {
+    info: DLogger
+    log: DLogger
+    error: DLogger
+    extend: (namespace: string) => ELogger
+}
+
+/**
+ * Create a complex logger that can be extended with sub-namespaces
+ * @params ns Namespace for the logger.
+ * @returns New logger with log/info/error namespace `ns` and extend method which returns a new logger with namespace `ns:subNamespace`.
+ */
+export const elogger = (ns: string): ELogger => {
+    const logger = dlogger(ns)
+    return {
+        info: logger.info,
+        log: logger.log,
+        error: logger.error,
+        extend: (subNamespace: string) => elogger(`${ns}:${subNamespace}`),
+    }
+}
