@@ -19,6 +19,7 @@ export type { IERC721AQueryable } from "./IERC721AQueryable";
 export type { IEntitlementChecker } from "./IEntitlementChecker";
 export type { IEntitlementDataQueryable } from "./IEntitlementDataQueryable";
 export type { IEntitlementsManager } from "./IEntitlementsManager";
+export type { IIntrospectionBase } from "./IIntrospectionBase";
 export type { IMembershipMetadata } from "./IMembershipMetadata";
 export type { IMulticall } from "./IMulticall";
 export type { INodeOperator } from "./INodeOperator";
@@ -58,6 +59,7 @@ export { IEntitlementsManager__factory } from "./factories/IEntitlementsManager_
 export { IERC5267__factory } from "./factories/IERC5267__factory";
 export { IERC721A__factory } from "./factories/IERC721A__factory";
 export { IERC721AQueryable__factory } from "./factories/IERC721AQueryable__factory";
+export { IIntrospectionBase__factory } from "./factories/IIntrospectionBase__factory";
 export { IMembershipMetadata__factory } from "./factories/IMembershipMetadata__factory";
 export type { ILegacyArchitect } from "./IMockLegacyArchitect.sol/ILegacyArchitect";
 export { ILegacyArchitect__factory } from "./factories/IMockLegacyArchitect.sol/ILegacyArchitect__factory";
