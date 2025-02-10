@@ -38,10 +38,7 @@ contract DeployTownsMainnet is Deployer, ITownsBase {
     InflationConfig memory config = inflationConfig(manager);
 
     vm.broadcast(deployer);
-    return
-      address(
-        new Towns({vault: vault, manager: manager, config: config})
-      );
+    return address(new Towns({vault: vault, manager: manager, config: config}));
   }
 
   function _getVault() internal view returns (address) {
