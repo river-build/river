@@ -68,6 +68,7 @@ export interface ISyncedStream {
         nextSyncCookie: SyncCookie,
         cleartexts: Record<string, Uint8Array | string> | undefined,
     ): Promise<void>
+    resetUpToDate(): void
 }
 
 interface NonceStats {
@@ -245,7 +246,6 @@ export class SyncedStreamsLoop {
         const pendingIndex = this.pendingSyncCookies.indexOf(streamId)
         if (pendingIndex !== -1) {
             this.pendingSyncCookies.splice(pendingIndex, 1)
-            this.inFlightSyncCookies.delete(streamId)
             streamRecord.stream.stop()
             this.streams.delete(streamId)
             this.log('removed stream from pending sync', streamId)
@@ -274,6 +274,7 @@ export class SyncedStreamsLoop {
                 { streamId, syncState: this.syncState },
             )
         }
+        this.inFlightSyncCookies.delete(streamId)
     }
 
     public setHighPriorityStreams(streamIds: string[]) {
@@ -554,6 +555,11 @@ export class SyncedStreamsLoop {
             if (this.syncState !== SyncState.Retrying) {
                 this.setSyncState(SyncState.Retrying)
                 this.syncId = undefined
+                this.streams.forEach((streamRecord) => {
+                    streamRecord.stream.resetUpToDate()
+                })
+                this.inFlightSyncCookies.clear()
+                this.pendingSyncCookies = []
                 this.clientEmitter.emit('streamSyncActive', false)
             }
 
