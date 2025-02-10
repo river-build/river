@@ -176,7 +176,11 @@ func (j *mbJob) processRemoteProposals(ctx context.Context) ([]*mbProposal, *Str
 	}
 
 	if len(errs) > 0 {
-		return nil, nil, errs[0]
+		return nil, nil, RiverErrorWithBases(Err_QUORUM_FAILED, "mbJob.processRemoteProposals: quorum failed", errs,
+			"streamId", j.stream.streamId,
+			"currentLastMb", view.LastBlock().Ref,
+			"attemptedMbNum", request.NewMiniblockNum,
+		)
 	}
 
 	return nil, nil, RiverError(Err_INTERNAL, "mbJob.processRemoteProposals: no proposals and no errors")
