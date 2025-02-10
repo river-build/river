@@ -42,12 +42,12 @@ func (s *StreamCache) onStreamCreated(
 			event.Stream.Flags&uint64(registries.StreamFlagSealed) != 0,
 		); err != nil {
 			logging.FromCtx(ctx).Errorw("Failed to normalize ephemeral stream", "err", err, "streamId", event.GetStreamId())
-		} else {
-			// Cache the stream
-			stream.mu.Lock()
-			s.cache.Store(stream.streamId, stream)
-			stream.mu.Unlock()
 		}
+
+		// Cache the stream
+		stream.mu.Lock()
+		s.cache.Store(stream.streamId, stream)
+		stream.mu.Unlock()
 	}()
 }
 
