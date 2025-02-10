@@ -17,30 +17,30 @@ import {Towns} from "contracts/src/tokens/towns/base/Towns.sol";
 import {MockTowns} from "contracts/test/mocks/MockTowns.sol";
 
 contract DeployTownsBase is Deployer {
-  address public l1Token;
+  address public l1Token = 0x000000Fa00b200406de700041CFc6b19BbFB4d13;
   bytes32 public implSalt;
   bytes32 public proxySalt;
+
+  address constant DAO = 0x63217D4c321CC02Ed306cB3843309184D347667B;
 
   function versionName() public pure override returns (string memory) {
     return "towns";
   }
 
   function __deploy(address deployer) public override returns (address) {
-    l1Token = _getToken();
-
     (implSalt, proxySalt) = _getSalts();
     address proxy = _proxyAddress(
       _implAddress(implSalt),
       proxySalt,
       l1Token,
-      deployer
+      DAO
     );
 
     vm.startBroadcast(deployer);
     if (isAnvil()) {
-      new MockTownsDeployer(l1Token, deployer, implSalt, proxySalt);
+      new MockTownsDeployer(l1Token, DAO, implSalt, proxySalt);
     } else {
-      new TownsDeployer(l1Token, deployer, implSalt, proxySalt);
+      new TownsDeployer(l1Token, DAO, implSalt, proxySalt);
     }
     vm.stopBroadcast();
 
@@ -93,7 +93,7 @@ contract DeployTownsBase is Deployer {
       proxy = 0x4e59b44847b379578588920ca78fbf26c0b4956c83c2f2967966f90700000000;
     } else {
       impl = 0x4e59b44847b379578588920ca78fbf26c0b4956c8ea716a80f934b1756000020;
-      proxy = 0x4e59b44847b379578588920ca78fbf26c0b4956c88261569475dfec4cfa80080;
+      proxy = 0x4e59b44847b379578588920ca78fbf26c0b4956c1594db1b919831030e120040;
     }
   }
 
@@ -103,10 +103,10 @@ contract DeployTownsBase is Deployer {
       return 0x000000Fa00b200406de700041CFc6b19BbFB4d13;
     } else if (block.chainid == 84532) {
       // if deploying to base-sepolia use sepolia token
-      return 0xfc85ff424F1b55fB3f9e920A47EC7255488C3bA3;
+      return 0x000000Fa00b200406de700041CFc6b19BbFB4d13;
     } else if (isAnvil()) {
       // if deploying locally use base-sepolia token
-      return 0xfc85ff424F1b55fB3f9e920A47EC7255488C3bA3;
+      return 0x000000Fa00b200406de700041CFc6b19BbFB4d13;
     } else {
       revert("Invalid chain");
     }
