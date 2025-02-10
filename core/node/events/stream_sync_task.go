@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gammazero/workerpool"
 
@@ -13,6 +14,13 @@ import (
 )
 
 func (s *StreamCache) submitSyncStreamTask(
+	ctx context.Context,
+	streamId StreamId,
+) {
+	s.submitSyncStreamTaskToPool(ctx, s.onlineSyncWorkerPool, streamId, nil)
+}
+
+func (s *StreamCache) submitSyncStreamTaskToPool(
 	ctx context.Context,
 	pool *workerpool.WorkerPool,
 	streamId StreamId,
@@ -35,6 +43,19 @@ func (s *StreamCache) syncStreamFromPeers(
 	streamId StreamId,
 	lastMbInContract *MiniblockRef,
 ) error {
+	if lastMbInContract == nil {
+		contractStream, err := s.params.Registry.StreamRegistry.GetStream(&bind.CallOpts{
+			Context: ctx,
+		}, streamId)
+		if err != nil {
+			return err
+		}
+		lastMbInContract = &MiniblockRef{
+			Hash: contractStream.LastMiniblockHash,
+			Num:  int64(contractStream.LastMiniblockNum),
+		}
+	}
+
 	stream, err := s.getStreamImpl(ctx, streamId, false)
 	if err != nil {
 		return err
