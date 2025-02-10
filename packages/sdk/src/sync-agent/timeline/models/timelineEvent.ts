@@ -361,12 +361,6 @@ function toTownsContent_MemberPayload(
                     unpinnedEventId: bin_toHexString(value.content.value.eventId),
                 } satisfies UnpinEvent,
             }
-        case 'mls':
-            return {
-                content: {
-                    kind: RiverTimelineEvent.Mls,
-                },
-            }
         case 'encryptionAlgorithm':
             return {
                 content: {
@@ -992,8 +986,6 @@ export function getFallbackContent(
             return `pinnedEventId: ${content.pinnedEventId} by: ${content.userId}`
         case RiverTimelineEvent.Unpin:
             return `unpinnedEventId: ${content.unpinnedEventId} by: ${content.userId}`
-        case RiverTimelineEvent.Mls:
-            return `mlsEvent`
         case RiverTimelineEvent.UserBlockchainTransaction:
             return getFallbackContent_BlockchainTransaction(content.transaction)
         case RiverTimelineEvent.MemberBlockchainTransaction:
@@ -1128,6 +1120,16 @@ export function transformAttachments(attachments?: Attachment[]): ChannelMessage
                                           url: attachment.image.url,
                                       }
                                     : undefined,
+                            },
+                        },
+                    })
+                case 'ticker':
+                    return new ChannelMessage_Post_Attachment({
+                        content: {
+                            case: 'ticker',
+                            value: {
+                                chainId: attachment.chainId,
+                                address: attachment.address,
                             },
                         },
                     })

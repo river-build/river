@@ -19,27 +19,27 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
-	"github.com/river-build/river/core/config"
-	"github.com/river-build/river/core/node/auth"
-	"github.com/river-build/river/core/node/authentication"
-	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/events"
-	"github.com/river-build/river/core/node/http_client"
-	"github.com/river-build/river/core/node/infra"
-	"github.com/river-build/river/core/node/logging"
-	"github.com/river-build/river/core/node/nodes"
-	"github.com/river-build/river/core/node/notifications"
-	. "github.com/river-build/river/core/node/protocol"
-	"github.com/river-build/river/core/node/protocol/protocolconnect"
-	"github.com/river-build/river/core/node/registries"
-	"github.com/river-build/river/core/node/rpc/sync"
-	"github.com/river-build/river/core/node/scrub"
-	"github.com/river-build/river/core/node/storage"
-	"github.com/river-build/river/core/node/utils"
-	"github.com/river-build/river/core/river_node/version"
-	"github.com/river-build/river/core/xchain/entitlement"
-	"github.com/river-build/river/core/xchain/util"
+	"github.com/towns-protocol/towns/core/config"
+	"github.com/towns-protocol/towns/core/node/auth"
+	"github.com/towns-protocol/towns/core/node/authentication"
+	. "github.com/towns-protocol/towns/core/node/base"
+	"github.com/towns-protocol/towns/core/node/crypto"
+	"github.com/towns-protocol/towns/core/node/events"
+	"github.com/towns-protocol/towns/core/node/http_client"
+	"github.com/towns-protocol/towns/core/node/infra"
+	"github.com/towns-protocol/towns/core/node/logging"
+	"github.com/towns-protocol/towns/core/node/nodes"
+	"github.com/towns-protocol/towns/core/node/notifications"
+	. "github.com/towns-protocol/towns/core/node/protocol"
+	"github.com/towns-protocol/towns/core/node/protocol/protocolconnect"
+	"github.com/towns-protocol/towns/core/node/registries"
+	"github.com/towns-protocol/towns/core/node/rpc/sync"
+	"github.com/towns-protocol/towns/core/node/scrub"
+	"github.com/towns-protocol/towns/core/node/storage"
+	"github.com/towns-protocol/towns/core/node/utils"
+	"github.com/towns-protocol/towns/core/river_node/version"
+	"github.com/towns-protocol/towns/core/xchain/entitlement"
+	"github.com/towns-protocol/towns/core/xchain/util"
 )
 
 const (
@@ -365,16 +365,12 @@ func (s *Service) initRiverChain() error {
 		return err
 	}
 
-	s.streamRegistry, err = nodes.NewStreamRegistry(
-		ctx,
+	s.streamRegistry = nodes.NewStreamRegistry(
 		s.riverChain,
 		s.nodeRegistry,
 		s.registryContract,
 		s.chainConfig,
 	)
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -577,6 +573,7 @@ func (s *Service) initStore() error {
 			s.instanceId,
 			s.exitSignal,
 			s.metrics,
+			s.chainConfig.Get().StreamEphemeralStreamTTL,
 		)
 		if err != nil {
 			return err
@@ -694,10 +691,11 @@ func (s *Service) initCacheAndSync(opts *ServerStartOpts) error {
 		ChainMonitor:            s.riverChain.ChainMonitor,
 		Metrics:                 s.metrics,
 		RemoteMiniblockProvider: s,
+		NodeRegistry:            s.nodeRegistry,
 		Tracer:                  s.otelTracer,
 	}
 
-	s.cache = events.NewStreamCache(s.serverCtx, cacheParams)
+	s.cache = events.NewStreamCache(cacheParams)
 
 	// There is circular dependency between cache and scrubber, so scurbber
 	// needs to be patched into cache params after cache is created.
