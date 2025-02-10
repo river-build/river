@@ -25,7 +25,7 @@ export class Observable<T> {
 
     subscribe(
         subscriber: (newValue: T) => void,
-        opts: { fireImediately?: boolean; once?: boolean; condition?: (value: T) => boolean } = {},
+        opts: { fireImmediately?: boolean; once?: boolean; condition?: (value: T) => boolean } = {},
     ): () => void {
         const sub = {
             id: this._nextId++,
@@ -34,7 +34,7 @@ export class Observable<T> {
             condition: opts?.condition ?? (() => true),
         } satisfies Subscription<T>
         this.subscribers.push(sub)
-        if (opts.fireImediately) {
+        if (opts.fireImmediately) {
             this._notify(sub, this.value)
         }
         return () => this.unsubscribe(subscriber)
@@ -55,7 +55,7 @@ export class Observable<T> {
                     clearTimeout(timeoutHandle)
                     resolve(value)
                 },
-                { fireImediately: true, condition: condition, once: true },
+                { fireImmediately: true, condition: condition, once: true },
             )
         })
     }
