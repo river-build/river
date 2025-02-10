@@ -106,6 +106,7 @@ while true; do
                 exit $exit_status
             fi
         else
+            echo "Harmony CI is failing. Restart CI."
             exit $exit_status
         fi
     else 
