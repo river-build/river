@@ -507,8 +507,11 @@ export class SyncedStreamsLoop {
                 } catch (err) {
                     this.logError('modifySync error', err)
                     if (this.syncId === syncId && this.syncState === SyncState.Syncing) {
-                        streamsToAdd.forEach((x) => this.inFlightSyncCookies.delete(x))
-                        this.pendingSyncCookies.push(...streamsToAdd)
+                        streamsToAdd.forEach((x) => {
+                            if (this.inFlightSyncCookies.delete(x)) {
+                                this.pendingSyncCookies.push(x)
+                            }
+                        })
                         this.checkStartTicking()
                     }
                 }
