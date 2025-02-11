@@ -25,21 +25,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/river-build/river/core/config"
-	"github.com/river-build/river/core/contracts/river"
-	"github.com/river-build/river/core/node/base/test"
-	"github.com/river-build/river/core/node/crypto"
-	. "github.com/river-build/river/core/node/events"
-	"github.com/river-build/river/core/node/events/dumpevents"
-	"github.com/river-build/river/core/node/logging"
-	. "github.com/river-build/river/core/node/protocol"
-	"github.com/river-build/river/core/node/protocol/protocolconnect"
-	. "github.com/river-build/river/core/node/shared"
-	"github.com/river-build/river/core/node/storage"
-	"github.com/river-build/river/core/node/testutils"
-	"github.com/river-build/river/core/node/testutils/dbtestutils"
-	"github.com/river-build/river/core/node/testutils/testcert"
-	"github.com/river-build/river/core/node/testutils/testfmt"
+	"github.com/towns-protocol/towns/core/config"
+	"github.com/towns-protocol/towns/core/contracts/river"
+	"github.com/towns-protocol/towns/core/node/base/test"
+	"github.com/towns-protocol/towns/core/node/crypto"
+	. "github.com/towns-protocol/towns/core/node/events"
+	"github.com/towns-protocol/towns/core/node/events/dumpevents"
+	"github.com/towns-protocol/towns/core/node/logging"
+	. "github.com/towns-protocol/towns/core/node/protocol"
+	"github.com/towns-protocol/towns/core/node/protocol/protocolconnect"
+	. "github.com/towns-protocol/towns/core/node/shared"
+	"github.com/towns-protocol/towns/core/node/storage"
+	"github.com/towns-protocol/towns/core/node/testutils"
+	"github.com/towns-protocol/towns/core/node/testutils/dbtestutils"
+	"github.com/towns-protocol/towns/core/node/testutils/testcert"
+	"github.com/towns-protocol/towns/core/node/testutils/testfmt"
 )
 
 type testNodeRecord struct {
@@ -55,11 +55,16 @@ func (n *testNodeRecord) Close(ctx context.Context, dbUrl string) {
 		n.service = nil
 	}
 	if n.address != (common.Address{}) {
-		_ = dbtestutils.DeleteTestSchema(
-			ctx,
+		// lint:ignore context.Background() is fine here
+		err := dbtestutils.DeleteTestSchema(
+			context.Background(),
 			dbUrl,
 			storage.DbSchemaNameFromAddress(n.address.String()),
 		)
+		// Force test writers to properly clean up schemas if this fails for some reason.
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -894,6 +899,19 @@ func (tc *testClient) getMiniblocks(streamId StreamId, fromInclusive, toExclusiv
 	return mbs
 }
 
+func (tc *testClient) getMiniblocksByIds(streamId StreamId, ids []int64, onEachMb func(*Miniblock)) {
+	resp, err := tc.node2nodeClient.GetMiniblocksByIds(tc.ctx, connect.NewRequest(&GetMiniblocksByIdsRequest{
+		StreamId:     streamId[:],
+		MiniblockIds: ids,
+	}))
+	tc.require.NoError(err)
+	for resp.Receive() {
+		onEachMb(resp.Msg().GetMiniblock())
+	}
+	tc.require.NoError(resp.Err())
+	tc.require.NoError(resp.Close())
+}
+
 func (tc *testClient) addHistoryToView(
 	view *StreamView,
 ) *StreamView {
@@ -1053,7 +1071,12 @@ func (tcs testClients) compareNowImpl(t require.TestingT, streamId StreamId) []*
 	for range tcs {
 		streams = append(streams, <-streamC)
 	}
-	testfmt.Println(tcs[0].t, "compareNowImpl: Got all streams")
+	if testfmt.Enabled() {
+		testfmt.Println(tcs[0].t, "compareNowImpl: Got all streams")
+		for i, stream := range streams {
+			testfmt.Println(tcs[0].t, "    ", i, "MBs:", len(stream.Miniblocks), "Gen:", stream.NextSyncCookie.MinipoolGen, "Events:", len(stream.Events))
+		}
+	}
 	first := streams[0]
 	var success bool
 	for i, stream := range streams[1:] {

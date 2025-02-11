@@ -10,18 +10,18 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/river-build/river/core/config"
-	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/base/test"
-	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/infra"
-	"github.com/river-build/river/core/node/logging"
-	. "github.com/river-build/river/core/node/nodes"
-	. "github.com/river-build/river/core/node/protocol"
-	"github.com/river-build/river/core/node/registries"
-	. "github.com/river-build/river/core/node/shared"
-	"github.com/river-build/river/core/node/storage"
-	"github.com/river-build/river/core/node/testutils"
+	"github.com/towns-protocol/towns/core/config"
+	. "github.com/towns-protocol/towns/core/node/base"
+	"github.com/towns-protocol/towns/core/node/base/test"
+	"github.com/towns-protocol/towns/core/node/crypto"
+	"github.com/towns-protocol/towns/core/node/infra"
+	"github.com/towns-protocol/towns/core/node/logging"
+	. "github.com/towns-protocol/towns/core/node/nodes"
+	. "github.com/towns-protocol/towns/core/node/protocol"
+	"github.com/towns-protocol/towns/core/node/registries"
+	. "github.com/towns-protocol/towns/core/node/shared"
+	"github.com/towns-protocol/towns/core/node/storage"
+	"github.com/towns-protocol/towns/core/node/testutils"
 )
 
 type cacheTestContext struct {
@@ -121,10 +121,15 @@ func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTe
 
 		blockNumber := btc.BlockNum(ctx)
 
-		nr, err := LoadNodeRegistry(ctx, registry, bc.Wallet.Address, blockNumber, bc.ChainMonitor, nil, nil)
-		ctc.require.NoError(err)
-
-		sr, err := NewStreamRegistry(ctx, bc, nr, registry, btc.OnChainConfig)
+		nr, err := LoadNodeRegistry(
+			ctx,
+			registry,
+			bc.Wallet.Address,
+			blockNumber,
+			bc.ChainMonitor,
+			nil,
+			nil,
+		)
 		ctc.require.NoError(err)
 
 		params := &StreamCacheParams{
@@ -139,11 +144,12 @@ func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTe
 			Metrics:                 infra.NewMetricsFactory(nil, "", ""),
 			RemoteMiniblockProvider: ctc,
 			Scrubber:                &noopScrubber{},
+			NodeRegistry:            nr,
 		}
 
 		inst := &cacheTestInstance{
 			params:         params,
-			streamRegistry: sr,
+			streamRegistry: NewStreamRegistry(bc, nr, registry, btc.OnChainConfig),
 		}
 		ctc.instances = append(ctc.instances, inst)
 		ctc.instancesByAddr[bc.Wallet.Address] = inst
@@ -153,7 +159,7 @@ func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTe
 }
 
 func (ctc *cacheTestContext) initCache(n int, opts *MiniblockProducerOpts) *StreamCache {
-	streamCache := NewStreamCache(ctc.ctx, ctc.instances[n].params)
+	streamCache := NewStreamCache(ctc.instances[n].params)
 	err := streamCache.Start(ctc.ctx)
 	ctc.require.NoError(err)
 	ctc.instances[n].cache = streamCache

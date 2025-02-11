@@ -2,16 +2,18 @@ package client
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 
-	. "github.com/river-build/river/core/node/base"
-	. "github.com/river-build/river/core/node/events"
-	"github.com/river-build/river/core/node/logging"
-	"github.com/river-build/river/core/node/nodes"
-	. "github.com/river-build/river/core/node/protocol"
-	. "github.com/river-build/river/core/node/shared"
+	. "github.com/towns-protocol/towns/core/node/base"
+	. "github.com/towns-protocol/towns/core/node/events"
+	"github.com/towns-protocol/towns/core/node/logging"
+	"github.com/towns-protocol/towns/core/node/nodes"
+	. "github.com/towns-protocol/towns/core/node/protocol"
+	. "github.com/towns-protocol/towns/core/node/shared"
 )
 
 type (
@@ -52,6 +54,8 @@ type (
 		syncers map[common.Address]StreamsSyncer
 		// streamID2Syncer maps from a stream to its syncer
 		streamID2Syncer map[StreamId]StreamsSyncer
+		// otelTracer is used to trace individual sync Send operations, tracing is disabled if nil
+		otelTracer trace.Tracer
 	}
 
 	// SyncCookieSet maps from a stream id to a sync cookie
@@ -87,6 +91,7 @@ func NewSyncers(
 	nodeRegistry nodes.NodeRegistry,
 	localNodeAddress common.Address,
 	cookies StreamCookieSetGroupedByNodeAddress,
+	otelTracer trace.Tracer,
 ) (*SyncerSet, <-chan *SyncStreamsResponse, error) {
 	var (
 		log             = logging.FromCtx(ctx)
@@ -103,6 +108,7 @@ func NewSyncers(
 			syncers:               syncers,
 			streamID2Syncer:       streamID2Syncer,
 			messages:              messages,
+			otelTracer:            otelTracer,
 		}
 
 		// report these streams as down
@@ -125,7 +131,8 @@ func NewSyncers(
 	for nodeAddress, cookieSet := range cookies {
 		if nodeAddress == localNodeAddress { // stream managed by this node
 			syncer, err := newLocalSyncer(
-				ctx, syncID, globalSyncOpCtxCancel, localNodeAddress, streamCache, cookieSet.AsSlice(), messages)
+				ctx, syncID, globalSyncOpCtxCancel, localNodeAddress,
+				streamCache, cookieSet.AsSlice(), messages, ss.otelTracer)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -140,7 +147,8 @@ func NewSyncers(
 			}
 
 			syncer, err := newRemoteSyncer(
-				ctx, globalSyncOpCtxCancel, syncID, nodeAddress, client, cookieSet.AsSlice(), ss.rmStream, messages)
+				ctx, globalSyncOpCtxCancel, syncID, nodeAddress, client, cookieSet.AsSlice(),
+				ss.rmStream, messages, ss.otelTracer)
 			if err != nil {
 				log.Warnw("Unable to connect to remote stream when starting stream sync",
 					"err", err, "remoteNode", nodeAddress)
@@ -186,6 +194,12 @@ func (ss *SyncerSet) AddStream(
 	streamID StreamId,
 	cookie *SyncCookie,
 ) error {
+	if ss.otelTracer != nil {
+		_, span := ss.otelTracer.Start(ctx, "AddStream",
+			trace.WithAttributes(attribute.String("stream", streamID.String())))
+		defer span.End()
+	}
+
 	ss.muSyncers.Lock()
 	defer ss.muSyncers.Unlock()
 
@@ -212,20 +226,43 @@ func (ss *SyncerSet) AddStream(
 		err    error
 	)
 	if nodeAddress == ss.localNodeAddress {
+		var span trace.Span
+		if ss.otelTracer != nil {
+			_, span = ss.otelTracer.Start(ctx, "NewLocalSyncer",
+				trace.WithAttributes(attribute.String("stream", streamID.String())))
+		}
 		if syncer, err = newLocalSyncer(
 			ss.ctx, ss.syncID, ss.globalSyncOpCtxCancel, ss.localNodeAddress,
-			ss.streamCache, []*SyncCookie{cookie}, ss.messages); err != nil {
+			ss.streamCache, []*SyncCookie{cookie}, ss.messages, ss.otelTracer); err != nil {
+			if span != nil {
+				span.End()
+			}
 			return err
+		}
+		if span != nil {
+			span.End()
 		}
 	} else {
 		client, err := ss.nodeRegistry.GetStreamServiceClientForAddress(nodeAddress)
 		if err != nil {
 			return err
 		}
+		var span trace.Span
+		if ss.otelTracer != nil {
+			_, span = ss.otelTracer.Start(ctx, "NewRemoteSyncer",
+				trace.WithAttributes(attribute.String("stream", streamID.String()),
+					attribute.String("remote", nodeAddress.String())))
+		}
 		if syncer, err = newRemoteSyncer(
 			ss.ctx, ss.globalSyncOpCtxCancel, ss.syncID, nodeAddress, client,
-			[]*SyncCookie{cookie}, ss.rmStream, ss.messages); err != nil {
+			[]*SyncCookie{cookie}, ss.rmStream, ss.messages, ss.otelTracer); err != nil {
+			if span != nil {
+				span.End()
+			}
 			return err
+		}
+		if span != nil {
+			span.End()
 		}
 	}
 
