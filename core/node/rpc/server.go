@@ -36,6 +36,7 @@ import (
 	"github.com/river-build/river/core/node/rpc/sync"
 	"github.com/river-build/river/core/node/scrub"
 	"github.com/river-build/river/core/node/storage"
+	"github.com/river-build/river/core/node/track_streams"
 	"github.com/river-build/river/core/node/utils"
 	"github.com/river-build/river/core/river_node/version"
 	"github.com/river-build/river/core/xchain/entitlement"
@@ -558,7 +559,13 @@ func (s *Service) serve() {
 
 func (s *Service) initEntitlements() error {
 	var err error
-	s.entitlementEvaluator, err = entitlement.NewEvaluatorFromConfig(s.serverCtx, s.config, s.chainConfig, s.metrics, s.otelTracer)
+	s.entitlementEvaluator, err = entitlement.NewEvaluatorFromConfig(
+		s.serverCtx,
+		s.config,
+		s.chainConfig,
+		s.metrics,
+		s.otelTracer,
+	)
 	if err != nil {
 		return err
 	}
@@ -699,8 +706,8 @@ func (s *Service) initCacheAndSync(opts *ServerStartOpts) error {
 
 	s.cache = events.NewStreamCache(s.serverCtx, cacheParams)
 
-	// There is circular dependency between cache and scrubber, so scurbber
-	// needs to be patched into cache params after cache is created.
+	// There is circular dependency between the cache and the scrubber, so the scrubber
+	// needs to be patched into cache params after the cache is created.
 	if opts != nil && opts.ScrubberMaker != nil {
 		cacheParams.Scrubber = opts.ScrubberMaker(s.serverCtx, s)
 	} else {
@@ -826,10 +833,11 @@ func (s *Service) initBotRegistryHandlers() error {
 }
 
 type ServerStartOpts struct {
-	RiverChain      *crypto.Blockchain
-	Listener        net.Listener
-	HttpClientMaker HttpClientMakerFunc
-	ScrubberMaker   func(context.Context, *Service) events.Scrubber
+	RiverChain          *crypto.Blockchain
+	Listener            net.Listener
+	HttpClientMaker     HttpClientMakerFunc
+	ScrubberMaker       func(context.Context, *Service) events.Scrubber
+	StreamEventListener track_streams.StreamEventListener
 }
 
 // StartServer starts the server with the given configuration.

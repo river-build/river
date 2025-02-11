@@ -14,9 +14,10 @@ import (
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/logging"
+	"github.com/river-build/river/core/node/track_streams"
 
 	"github.com/river-build/river/core/node/nodes"
-	notificationssync "github.com/river-build/river/core/node/notifications/sync"
+	"github.com/river-build/river/core/node/notifications/sync"
 	"github.com/river-build/river/core/node/notifications/types"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/registries"
@@ -35,8 +36,8 @@ type (
 		userPreferences     UserPreferencesStore
 		riverRegistry       *registries.RiverRegistryContract
 		nodes               []nodes.NodeRegistry
-		listener            notificationssync.StreamEventListener
-		streamsTracker      *notificationssync.StreamsTracker
+		listener            track_streams.StreamEventListener
+		streamsTracker      track_streams.StreamsTracker
 		metrics             infra.MetricsFactory
 	}
 )
@@ -49,9 +50,9 @@ func NewService(
 	riverRegistry *registries.RiverRegistryContract,
 	nodes []nodes.NodeRegistry,
 	metrics infra.MetricsFactory,
-	listener notificationssync.StreamEventListener,
+	listener track_streams.StreamEventListener,
 ) (*Service, error) {
-	tracker, err := notificationssync.NewStreamsTracker(
+	tracker, err := sync.NewNotificationsStreamsTracker(
 		ctx,
 		onChainConfig,
 		riverRegistry,

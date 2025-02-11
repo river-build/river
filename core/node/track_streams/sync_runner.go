@@ -37,7 +37,7 @@ const maxConcurrentNodeRequests = 50
 // hosted streams.
 type SyncRunner struct {
 	// workerPools keeps track of a set of weighted semaphors, one per node address. These are used
-	// to rate limit the number of syncs started on the same remote node at the same time.
+	// to rate limit concurrent requests to the each remote node from this service.
 	workerPools sync.Map
 }
 

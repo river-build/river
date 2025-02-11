@@ -9,10 +9,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/bot_registry"
 	"github.com/river-build/river/core/node/logging"
+	"github.com/river-build/river/core/node/nodes"
 )
 
 func (s *Service) startBotRegistryMode(opts *ServerStartOpts) error {
@@ -36,8 +39,39 @@ func (s *Service) startBotRegistryMode(opts *ServerStartOpts) error {
 		return AsRiverError(err).Message("Failed to init store").LogError(s.defaultLogger)
 	}
 
-	s.BotRegistryService, err = bot_registry.NewService(s.config.BotRegistry, s.botStore)
+	httpClient, err := s.httpClientMaker(s.serverCtx, s.config)
 	if err != nil {
+		return err
+	}
+
+	var registries []nodes.NodeRegistry
+	for range 10 {
+		registry, err := nodes.LoadNodeRegistry(
+			s.serverCtx,
+			s.registryContract,
+			common.Address{},
+			s.riverChain.InitialBlockNum,
+			s.riverChain.ChainMonitor,
+			httpClient,
+			s.otelConnectIterceptor,
+		)
+		if err != nil {
+			return err
+		}
+
+		registries = append(registries, registry)
+	}
+
+	if s.BotRegistryService, err = bot_registry.NewService(
+		s.serverCtx,
+		s.config.BotRegistry,
+		s.chainConfig,
+		s.botStore,
+		s.registryContract,
+		registries,
+		s.metrics,
+		opts.StreamEventListener,
+	); err != nil {
 		return AsRiverError(err).Message("Failed to instantiate bot registry service").LogError(s.defaultLogger)
 	}
 
@@ -65,6 +99,10 @@ func (s *Service) startBotRegistryMode(opts *ServerStartOpts) error {
 	s.defaultLogger.Infow("Server started", "port", port, "https", !s.config.DisableHttps, "url", url)
 
 	return nil
+}
+
+type BotRegistryStartOpts struct {
+	ServerStartOpts
 }
 
 func StartServerInBotRegistryMode(

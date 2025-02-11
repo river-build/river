@@ -10,8 +10,14 @@ import (
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/authentication"
 	"github.com/river-build/river/core/node/base"
+	"github.com/river-build/river/core/node/bot_registry/sync"
+	"github.com/river-build/river/core/node/crypto"
+	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
+	"github.com/river-build/river/core/node/registries"
 	"github.com/river-build/river/core/node/storage"
+	"github.com/river-build/river/core/node/track_streams"
 )
 
 const (
@@ -21,18 +27,39 @@ const (
 type (
 	Service struct {
 		authentication.AuthServiceMixin
-		cfg   config.BotRegistryConfig
-		store storage.BotRegistryStore
+		cfg            config.BotRegistryConfig
+		store          storage.BotRegistryStore
+		streamsTracker *sync.StreamsTracker
 	}
 )
 
 func NewService(
+	ctx context.Context,
 	cfg config.BotRegistryConfig,
+	onChainConfig crypto.OnChainConfiguration,
 	store storage.BotRegistryStore,
+	riverRegistry *registries.RiverRegistryContract,
+	nodes []nodes.NodeRegistry,
+	metrics infra.MetricsFactory,
+	listener track_streams.StreamEventListener,
 ) (*Service, error) {
+	tracker, err := sync.NewStreamsTracker(
+		ctx,
+		cfg,
+		onChainConfig,
+		riverRegistry,
+		nodes,
+		metrics,
+		listener,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	s := &Service{
-		cfg:   cfg,
-		store: store,
+		cfg:            cfg,
+		store:          store,
+		streamsTracker: tracker,
 	}
 
 	if err := s.InitAuthentication(botServiceChallengePrefix, &cfg.Authentication); err != nil {
@@ -42,7 +69,7 @@ func NewService(
 }
 
 func (s *Service) Start(ctx context.Context) {
-	// TODO
+	// s.streamsTracker.Run
 }
 
 func (s *Service) RegisterWebhook(
