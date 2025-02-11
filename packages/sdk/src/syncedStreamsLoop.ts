@@ -485,6 +485,7 @@ export class SyncedStreamsLoop {
                 this.inFlightSyncCookies.size <= this.MIN_IN_FLIGHT_COOKIES &&
                 this.pendingSyncCookies.length > 0
             ) {
+                const syncId = this.syncId
                 this.pendingSyncCookies.sort((a, b) => {
                     const aPriority = priorityFromStreamId(a, this.highPriorityIds)
                     const bPriority = priorityFromStreamId(b, this.highPriorityIds)
@@ -492,7 +493,7 @@ export class SyncedStreamsLoop {
                 })
                 const streamsToAdd = this.pendingSyncCookies.splice(0, this.MAX_IN_FLIGHT_COOKIES)
                 this.logSync('tick: modifySync', {
-                    syncId: this.syncId,
+                    syncId,
                     addStreams: streamsToAdd,
                     inFlight: this.inFlightSyncCookies.size,
                 })
@@ -500,11 +501,19 @@ export class SyncedStreamsLoop {
                 const syncPos = streamsToAdd.map((x) => this.streams.get(x)?.syncCookie)
                 try {
                     await this.rpcClient.modifySync({
-                        syncId: this.syncId,
+                        syncId,
                         addStreams: syncPos.filter(isDefined),
                     })
                 } catch (err) {
                     this.logError('modifySync error', err)
+                    if (this.syncId === syncId && this.syncState === SyncState.Syncing) {
+                        streamsToAdd.forEach((x) => {
+                            if (this.inFlightSyncCookies.delete(x)) {
+                                this.pendingSyncCookies.push(x)
+                            }
+                        })
+                        this.checkStartTicking()
+                    }
                 }
             }
         }
