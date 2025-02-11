@@ -5,6 +5,9 @@
     "private": false,
     "packageManager": "yarn@3.8.0",
     "main": "dist/index.js",
+    "publishConfig": {
+        "access": "public"
+    },
     "dependencies": {
         "@river-build/generated": "workspace:^",
         "@river-build/web3": "workspace:^",
