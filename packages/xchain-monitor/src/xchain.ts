@@ -1,5 +1,5 @@
 import EntitlementCheckerAbi from '@river-build/generated/dev/abis/IEntitlementChecker.abi'
-import EntitlementGatedAbi from '@river-build/generated/dev/abis/IEntitlementGated.abi'
+import EntitlementGatedAbi from '@river-build/generated/dev/abis/EntitlementGated.abi'
 import { Address, Hex, decodeFunctionData } from 'viem'
 import { config } from './environment'
 import { getLogger } from './logger'
@@ -21,8 +21,10 @@ type PostResultSummary = { [roleId: number]: RoleResultSummary }
 type RoleResultSummary = { [nodeAddress: string]: boolean }
 
 export interface XChainRequest {
-    callerAddress: Address
-    contractAddress: Address
+    version: 'v1' | 'v2'
+    walletAddress: Address
+    spaceAddress: Address
+    resolverAddress: Address
     transactionId: Hex
     blockNumber: bigint
     requestedNodes: { [roleId: number]: Address[] }
@@ -267,8 +269,10 @@ export async function scanBlockchainForXchainEvents(
             request.txHashes[roleId] = log.transactionHash
         } else {
             request = {
-                callerAddress: log.args.callerAddress,
-                contractAddress: log.args.contractAddress,
+                version: 'v1',
+                walletAddress: log.args.callerAddress,
+                spaceAddress: log.args.contractAddress,
+                resolverAddress: log.args.contractAddress,
                 transactionId: transactionId,
                 requestedNodes: { [roleId]: selectedNodes },
                 txHashes: { [roleId]: log.transactionHash },
@@ -290,6 +294,115 @@ export async function scanBlockchainForXchainEvents(
         // expectedNodes for that roleId
         // - Validate that results for each role id are consistent (all PASS or all FAIL), emit warning
         // if not.
+    }
+
+    const v2RequestLogs = await publicClient.getContractEvents({
+        address: config.web3Config.base.addresses.baseRegistry,
+        abi: EntitlementCheckerAbi,
+        eventName: 'EntitlementCheckRequestedV2',
+        fromBlock: initialBlockNum.valueOf(),
+        toBlock: initialBlockNum.valueOf() + BigInt(blocksToScan),
+        strict: true,
+    })
+
+    for (const log of v2RequestLogs) {
+        // Dump cache when it reaches the size limit
+        // TODO: replace this with a real, fixed-size cache
+        if (Object.keys(blockCache).length > maxCacheSize) {
+            blockCache = {}
+        }
+
+        // We can cast as a number here because these start from 0 and it's unlikely that a
+        // space will have very big role ids.
+        const roleId = Number(log.args.roleId)
+        const transactionId = log.args.transactionId
+        const selectedNodes = [...log.args.selectedNodes]
+        const blockNumber = log.blockNumber
+        var result: boolean | undefined
+
+        const responseLogs = await publicClient.getContractEvents({
+            address: log.args.resolverAddress,
+            abi: EntitlementGatedAbi,
+            eventName: 'EntitlementCheckResultPosted',
+            fromBlock: log.blockNumber,
+            toBlock: log.blockNumber + BigInt(config.transactionValidBlocks),
+            args: {
+                transactionId,
+            },
+            strict: true,
+        })
+
+        if (responseLogs.length > 1) {
+            logger.error(
+                'Multiple results posted for the same v2 entitlement request',
+                'transactionId',
+                transactionId,
+                'resolverContract',
+                log.args.resolverAddress,
+                'spaceAddress',
+                log.args.spaceAddress,
+            )
+        }
+        if (responseLogs.length >= 1) {
+            // Just take the first response if more than one exists - this should not happen
+            // and will cause an error log
+            const response = responseLogs[0]
+            if (response.args.result === NodeVoteStatus.Passed) {
+                result = true
+            } else if (response.args.result === NodeVoteStatus.Failed) {
+                result = false
+            } else {
+                logger.error(
+                    'Entitlement Check Response for v2 request has malformatted node vote',
+                    'transactionHash',
+                    response.transactionHash,
+                    'requestTransactionId',
+                    transactionId,
+                    'requestBlockNumber',
+                    blockNumber,
+                    'responseBlockNumber',
+                    response.blockNumber,
+                )
+            }
+        }
+
+        var request: XChainRequest
+
+        // If we've seen this request issued before, validate that we have not yet seen this
+        // role id and add the expected nodes for it.
+        if (transactionId in requests) {
+            request = requests[transactionId]
+            if (roleId in request.requestedNodes) {
+                logger.error(
+                    {
+                        roleId,
+                        transactionId,
+                    },
+                    'request for the same roleId already emitted',
+                )
+            }
+            request.requestedNodes[roleId] = selectedNodes
+            request.txHashes[roleId] = log.transactionHash
+        } else {
+            request = {
+                version: 'v2',
+                walletAddress: log.args.walletAddress,
+                spaceAddress: log.args.spaceAddress,
+                resolverAddress: log.args.resolverAddress,
+                transactionId: transactionId,
+                requestedNodes: { [roleId]: selectedNodes },
+                txHashes: { [roleId]: log.transactionHash },
+                blockNumber,
+                responses: await scanForPostResults(
+                    publicClient,
+                    config.web3Config.base.addresses.baseRegistry,
+                    transactionId,
+                    blockNumber,
+                ),
+                checkResult: result,
+            }
+            requests[transactionId] = request
+        }
     }
 
     return Object.values(requests)
