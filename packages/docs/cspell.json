@@ -50,7 +50,9 @@
         "infof",
         "warnf",
         "debugf",
-        "errorf"
+        "errorf",
+        "POAP",
+        "POAPs"
     ],
     "allowCompoundWords": true,
     "ignoreRegExpList": [
