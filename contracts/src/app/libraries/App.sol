@@ -28,9 +28,9 @@ library App {
     address appAddress,
     address owner,
     string memory uri,
-    string[] memory permissions,
     string memory name,
-    string memory symbol
+    string memory symbol,
+    string[] memory permissions
   ) internal {
     Validator.checkAddress(appAddress);
     Validator.checkAddress(owner);

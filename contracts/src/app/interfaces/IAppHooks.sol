@@ -4,15 +4,18 @@ pragma solidity ^0.8.23;
 // interfaces
 
 // libraries
+import {Permissions} from "contracts/src/app/libraries/HookManager.sol";
 
 // contracts
 
 interface IAppHooks {
-  //  initialization
-  function beforeInitialize(address sender) external;
-  function afterInitialize(address sender) external;
+  function getHookPermissions() external view returns (Permissions memory);
 
-  // execution hooks
-  function beforeExecution(address target, bytes4 selector) external;
-  function afterExecution(address target, bytes4 selector) external;
+  //  initialization
+  function beforeInitialize(address sender) external returns (bytes4);
+  function afterInitialize(address sender) external returns (bytes4);
+
+  // registration hooks
+  function beforeRegister(address sender) external returns (bytes4);
+  function afterRegister(address sender) external returns (bytes4);
 }

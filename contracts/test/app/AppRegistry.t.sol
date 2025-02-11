@@ -16,6 +16,8 @@ import {AppRegistry} from "contracts/src/app/facets/AppRegistry.sol";
 import {AppInstaller} from "contracts/src/app/facets/AppInstaller.sol";
 
 import {DeployAppStore} from "contracts/scripts/deployments/diamonds/DeployAppStore.s.sol";
+import {MockHook} from "contracts/test/mocks/MockHook.sol";
+
 contract AppRegistryTest is TestUtils, IAppRegistryBase {
   DeployAppStore deployAppStore = new DeployAppStore();
 
@@ -36,6 +38,8 @@ contract AppRegistryTest is TestUtils, IAppRegistryBase {
 
     string[] memory permissions = new string[](1);
     permissions[0] = Permissions.Read;
+
+    MockHook mockHook = new MockHook();
 
     vm.prank(owner);
     uint256 appId = appRegistry.register(
