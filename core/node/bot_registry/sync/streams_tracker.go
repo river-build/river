@@ -5,22 +5,20 @@ import (
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/crypto"
+	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/nodes"
+	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/registries"
+	"github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/track_streams"
 )
 
-type StreamsTracker struct {
-	config         config.BotRegistryConfig
-	nodeRegistries []nodes.NodeRegistry
-	riverRegistry  *registries.RiverRegistryContract
-	onChainConfig  crypto.OnChainConfiguration
-	metrics        *track_streams.TrackStreamsSyncMetrics
-	listener       track_streams.StreamEventListener
+type BotRegistryStreamsTracker struct {
+	track_streams.StreamsTrackerImpl
 }
 
-func NewStreamsTracker(
+func NewBotRegistryStreamsTracker(
 	ctx context.Context,
 	config config.BotRegistryConfig,
 	onChainConfig crypto.OnChainConfiguration,
@@ -28,14 +26,45 @@ func NewStreamsTracker(
 	nodes []nodes.NodeRegistry,
 	metricsFactory infra.MetricsFactory,
 	listener track_streams.StreamEventListener,
-) (*StreamsTracker, error) {
-	metrics := track_streams.NewTrackStreamsSyncMetrics(metricsFactory)
-	return &StreamsTracker{
-		config:         config,
-		nodeRegistries: nodes,
-		riverRegistry:  riverRegistry,
-		onChainConfig:  onChainConfig,
-		metrics:        metrics,
-		listener:       listener,
-	}, nil
+) (track_streams.StreamsTracker, error) {
+	tracker := &BotRegistryStreamsTracker{}
+	if err := tracker.StreamsTrackerImpl.Init(
+		ctx,
+		onChainConfig,
+		riverRegistry,
+		nodes,
+		listener,
+		tracker,
+		metricsFactory,
+	); err != nil {
+		return nil, err
+	}
+
+	return tracker, nil
+}
+
+func (tracker *BotRegistryStreamsTracker) TrackStream(streamId shared.StreamId) bool {
+	streamType := streamId.Type()
+
+	return streamType == shared.STREAM_DM_CHANNEL_BIN ||
+		streamType == shared.STREAM_GDM_CHANNEL_BIN ||
+		streamType == shared.STREAM_CHANNEL_BIN ||
+		streamType == shared.STREAM_USER_INBOX_BIN // for tracking key fulfillments for bot key solicitations
+}
+
+func (tracker *BotRegistryStreamsTracker) NewTrackedStream(
+	ctx context.Context,
+	streamID shared.StreamId,
+	cfg crypto.OnChainConfiguration,
+	stream *protocol.StreamAndCookie,
+) (events.TrackedStreamView, error) {
+	// TODO: pass in storage to the tracked stream constructor and implement logic for updating storage
+	// and caches within the tracked stream.
+	return NewTrackedStreamForBotRegistryService(
+		ctx,
+		streamID,
+		cfg,
+		stream,
+		tracker.StreamsTrackerImpl.Listener(),
+	)
 }

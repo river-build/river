@@ -89,7 +89,7 @@ func (tracker *StreamsTrackerImpl) Init(
 	tracker.filter = filter
 	tracker.syncRunner = NewSyncRunner()
 
-	// subscribe to stream events in river registry
+	// Subscribe to stream events in river registry
 	if err := tracker.riverRegistry.OnStreamEvent(
 		ctx,
 		tracker.riverRegistry.Blockchain.InitialBlockNum,

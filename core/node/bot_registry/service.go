@@ -2,6 +2,7 @@ package bot_registry
 
 import (
 	"context"
+	"time"
 
 	"connectrpc.com/connect"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/river-build/river/core/node/bot_registry/sync"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/logging"
 	"github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/registries"
@@ -29,7 +31,7 @@ type (
 		authentication.AuthServiceMixin
 		cfg            config.BotRegistryConfig
 		store          storage.BotRegistryStore
-		streamsTracker *sync.StreamsTracker
+		streamsTracker track_streams.StreamsTracker
 	}
 )
 
@@ -43,7 +45,7 @@ func NewService(
 	metrics infra.MetricsFactory,
 	listener track_streams.StreamEventListener,
 ) (*Service, error) {
-	tracker, err := sync.NewStreamsTracker(
+	tracker, err := sync.NewBotRegistryStreamsTracker(
 		ctx,
 		cfg,
 		onChainConfig,
@@ -69,7 +71,24 @@ func NewService(
 }
 
 func (s *Service) Start(ctx context.Context) {
-	// s.streamsTracker.Run
+	log := logging.FromCtx(ctx)
+
+	go func() {
+		for {
+			log.Infow("Start notification streams tracker")
+
+			if err := s.streamsTracker.Run(ctx); err != nil {
+				log.Errorw("tracking streams failed", "err", err)
+			}
+
+			select {
+			case <-time.After(10 * time.Second):
+				continue
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 }
 
 func (s *Service) RegisterWebhook(
