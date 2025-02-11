@@ -18,6 +18,7 @@ import {IERC173} from "@river-build/diamond/src/facets/ownable/IERC173.sol";
 
 // libraries
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
+import {Validator__InvalidAddress} from "contracts/src/utils/Validator.sol";
 
 // contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
@@ -290,6 +291,24 @@ contract IntegrationCreateSpace is
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                       CreateSpaceV2                        */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+  function test_createSpaceV2_with_invalid_pricing_module() public {
+    vm.prank(founder);
+    vm.expectRevert(Validator__InvalidAddress.selector);
+    createSpaceFacet.createSpaceV2(
+      _createSpaceWithPrepayInfo("test"),
+      SpaceOptions({to: founder})
+    );
+  }
+
+  function test_createSpaceV2_with_invalid_to() public {
+    CreateSpace memory spaceInfo = _createSpaceWithPrepayInfo("test");
+    spaceInfo.membership.settings.pricingModule = tieredPricingModule;
+    spaceInfo.membership.requirements.everyone = true;
+
+    vm.prank(founder);
+    vm.expectRevert(Validator__InvalidAddress.selector);
+    createSpaceFacet.createSpaceV2(spaceInfo, SpaceOptions({to: address(0)}));
+  }
 
   function test_fuzz_createSpaceV2(
     string memory spaceId,

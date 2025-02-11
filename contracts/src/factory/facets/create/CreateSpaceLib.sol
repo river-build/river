@@ -44,6 +44,9 @@ library CreateSpaceLib {
     IArchitectBase.CreateSpace memory space,
     IArchitectBase.SpaceOptions memory spaceOptions
   ) internal returns (address spaceAddress) {
+    Validator.checkAddress(space.membership.settings.pricingModule);
+    Validator.checkAddress(spaceOptions.to);
+
     IArchitectBase.SpaceInfo memory spaceInfo = IArchitectBase.SpaceInfo({
       name: space.metadata.name,
       uri: space.metadata.uri,
