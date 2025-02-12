@@ -1,0 +1,30 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
+
+import {ReviewStorage} from "./ReviewStorage.sol";
+
+interface IReviewBase {
+  enum Action {
+    Add,
+    Update,
+    Delete
+  }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           EVENTS                           */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  event ReviewAdded(address indexed user, ReviewStorage.Meta review);
+
+  event ReviewUpdated(address indexed user, ReviewStorage.Meta review);
+
+  event ReviewDeleted(address indexed user);
+}
+
+interface IReview is IReviewBase {
+  function setReview(Action action, bytes calldata data) external;
+
+  function getReview(
+    address user
+  ) external view returns (ReviewStorage.Meta memory);
+}
