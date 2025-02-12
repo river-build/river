@@ -3,11 +3,12 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/linkdata/deadlock"
+	"github.com/spf13/cobra"
 	"github.com/towns-protocol/towns/core/config"
 	"github.com/towns-protocol/towns/core/config/builder"
-
-	"github.com/spf13/cobra"
 )
 
 var configFiles []string
@@ -91,6 +92,11 @@ func initConfigAndLog() {
 }
 
 func init() {
+	deadlock.Opts.WriteLocked(func() {
+		deadlock.Opts.DeadlockTimeout = time.Minute
+		deadlock.Opts.MaxMapSize = 1024 * 256
+	})
+
 	cobra.OnInitialize(initConfigAndLog)
 
 	rootCmd.PersistentFlags().
