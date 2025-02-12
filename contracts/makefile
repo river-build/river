@@ -188,13 +188,13 @@ interact-river-anvil :;
 # 			River Testnet
 # ===========================
 deploy-river-testnet :;
-	@$(MAKE) deploy-any rpc=river_devnet private_key=${TESTNET_PRIVATE_KEY} verifier=${RIVERSCAN_DEVNET_URL}
+	@$(MAKE) deploy-any rpc=river_devnet private_key=${ALPHA_PRIVATE_KEY} verifier=${RIVERSCAN_DEVNET_URL}
 
 interact-river-testnet :;
-	@$(MAKE) interact-any rpc=river_devnet private_key=${TESTNET_PRIVATE_KEY}
+	@$(MAKE) interact-any rpc=river_devnet private_key=${ALPHA_PRIVATE_KEY}
 
 fork-river-testnet :;
-	@$(MAKE) fork-any rpc=river_devnet private_key=${TESTNET_PRIVATE_KEY}
+	@$(MAKE) fork-any rpc=river_devnet private_key=${ALPHA_PRIVATE_KEY}
 
 verify-river-testnet :;
 	@$(MAKE) verify-any rpc=river_devnet
