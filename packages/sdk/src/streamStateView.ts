@@ -11,6 +11,7 @@ import {
 import TypedEmitter from 'typed-emitter'
 import {
     ConfirmedTimelineEvent,
+    EventSignatureBundle,
     LocalEventStatus,
     LocalTimelineEvent,
     ParsedEvent,
@@ -66,12 +67,12 @@ export interface IStreamStateView {
     readonly timeline: StreamTimelineEvent[]
     readonly events: Map<string, StreamTimelineEvent>
     isInitialized: boolean
-    snapshot?: Snapshot
     prevMiniblockHash?: Uint8Array
     lastEventNum: bigint
     prevSnapshotMiniblockNum: bigint
     miniblockInfo?: { max: bigint; min: bigint; terminusReached: boolean }
     syncCookie?: SyncCookie
+    saveSnapshots?: boolean
     membershipContent: StreamStateView_Members
     get spaceContent(): StreamStateView_Space
     get channelContent(): StreamStateView_Channel
@@ -82,6 +83,8 @@ export interface IStreamStateView {
     get userMetadataContent(): StreamStateView_UserMetadata
     get userInboxContent(): StreamStateView_UserInbox
     get mediaContent(): StreamStateView_Media
+    snapshot(): Snapshot | undefined
+    getSignature(eventId: string): EventSignatureBundle | undefined
     getMembers(): StreamStateView_Members
     getMemberMetadata(): StreamStateView_MemberMetadata
     getChannelMetadata(): StreamStateView_ChannelMetadata | undefined
@@ -96,14 +99,19 @@ export class StreamStateView implements IStreamStateView {
     readonly contentKind: SnapshotCaseType
     readonly timeline: StreamTimelineEvent[] = []
     readonly events = new Map<string, StreamTimelineEvent>()
+    readonly signatures = new Map<string, EventSignatureBundle>()
     isInitialized = false
-    snapshot?: Snapshot
     prevMiniblockHash?: Uint8Array
     lastEventNum = 0n
     prevSnapshotMiniblockNum: bigint
     miniblockInfo?: { max: bigint; min: bigint; terminusReached: boolean }
     syncCookie?: SyncCookie
-
+    saveSnapshots?: boolean
+    private _snapshot?: Snapshot
+    snapshot(): Snapshot | undefined {
+        check(this.saveSnapshots === true, 'snapshots are not enabled')
+        return this._snapshot
+    }
     // membership content
     membershipContent: StreamStateView_Members
 
@@ -229,7 +237,6 @@ export class StreamStateView implements IStreamStateView {
         encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
     ) {
         const snapshot = migrateSnapshot(inSnapshot)
-        this.snapshot = snapshot
         switch (snapshot.content.case) {
             case 'spaceContent':
                 this.spaceContent.applySnapshot(
@@ -322,7 +329,9 @@ export class StreamStateView implements IStreamStateView {
                     miniblockNum: undefined,
                     confirmedEventNum: undefined,
                 })
-                this.timeline.push(event)
+                if (event.remoteEvent.event.payload.case !== 'miniblockHeader') {
+                    this.timeline.push(event)
+                }
                 const newlyConfirmed = this.processAppendedEvent(
                     event,
                     cleartexts?.[event.hashStr],
@@ -345,8 +354,23 @@ export class StreamStateView implements IStreamStateView {
         encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
         stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
     ): ConfirmedTimelineEvent[] | undefined {
-        check(!this.events.has(timelineEvent.hashStr))
-        this.events.set(timelineEvent.hashStr, timelineEvent)
+        check(
+            !this.events.has(timelineEvent.hashStr) && !this.signatures.has(timelineEvent.hashStr),
+        )
+        if (timelineEvent.remoteEvent.event.payload.case === 'miniblockHeader') {
+            // just save the signature, saving the whole event is overkill
+            this.signatures.set(timelineEvent.hashStr, {
+                hash: timelineEvent.remoteEvent.hash,
+                signature: timelineEvent.remoteEvent.signature,
+                event: {
+                    creatorAddress: timelineEvent.remoteEvent.event.creatorAddress,
+                    delegateSig: timelineEvent.remoteEvent.event.delegateSig,
+                    delegateExpiryEpochMs: timelineEvent.remoteEvent.event.delegateExpiryEpochMs,
+                },
+            })
+        } else {
+            this.events.set(timelineEvent.hashStr, timelineEvent)
+        }
 
         const event = timelineEvent.remoteEvent
         const payload = event.event.payload
@@ -361,8 +385,8 @@ export class StreamStateView implements IStreamStateView {
                         `Miniblock number out of order ${payload.value.miniblockNum} > ${this.miniblockInfo?.max}`,
                         Err.STREAM_BAD_EVENT,
                     )
-                    if (payload.value.snapshot) {
-                        this.snapshot = migrateSnapshot(payload.value.snapshot)
+                    if (this.saveSnapshots && payload.value.snapshot) {
+                        this._snapshot = payload.value.snapshot
                     }
                     this.prevMiniblockHash = event.hash
                     this.updateMiniblockInfo(payload.value, { max: payload.value.miniblockNum })
@@ -440,8 +464,22 @@ export class StreamStateView implements IStreamStateView {
         encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
         stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
     ): void {
-        check(!this.events.has(timelineEvent.hashStr))
-        this.events.set(timelineEvent.hashStr, timelineEvent)
+        check(
+            !this.events.has(timelineEvent.hashStr) && !this.signatures.has(timelineEvent.hashStr),
+        )
+        if (timelineEvent.remoteEvent.event.payload.case === 'miniblockHeader') {
+            this.signatures.set(timelineEvent.hashStr, {
+                hash: timelineEvent.remoteEvent.hash,
+                signature: timelineEvent.remoteEvent.signature,
+                event: {
+                    creatorAddress: timelineEvent.remoteEvent.event.creatorAddress,
+                    delegateSig: timelineEvent.remoteEvent.event.delegateSig,
+                    delegateExpiryEpochMs: timelineEvent.remoteEvent.event.delegateExpiryEpochMs,
+                },
+            })
+        } else {
+            this.events.set(timelineEvent.hashStr, timelineEvent)
+        }
 
         const event = timelineEvent.remoteEvent
         const payload = event.event.payload
@@ -588,13 +626,17 @@ export class StreamStateView implements IStreamStateView {
         // initialize our event hashes
         check(block0Events.length > 0)
         // prepend the snapshotted block in reverse order
-        this.timeline.push(...block0Events)
+        this.timeline.push(
+            ...block0Events.filter((e) => e.remoteEvent.event.payload.case !== 'miniblockHeader'),
+        )
         for (let i = block0Events.length - 1; i >= 0; i--) {
             const event = block0Events[i]
             this.processPrependedEvent(event, cleartexts?.[event.hashStr], emitter, undefined)
         }
         // append the new block events
-        this.timeline.push(...rest)
+        this.timeline.push(
+            ...rest.filter((e) => e.remoteEvent.event.payload.case !== 'miniblockHeader'),
+        )
         for (const event of rest) {
             this.processAppendedEvent(event, cleartexts?.[event.hashStr], emitter, undefined)
         }
@@ -678,7 +720,9 @@ export class StreamStateView implements IStreamStateView {
             })
         }
 
-        this.timeline.unshift(...prepended)
+        this.timeline.unshift(
+            ...prepended.filter((e) => e.remoteEvent.event.payload.case !== 'miniblockHeader'),
+        )
         // prepend the new block events in reverse order
         for (let i = prepended.length - 1; i >= 0; i--) {
             const event = prepended[i]
@@ -743,6 +787,18 @@ export class StreamStateView implements IStreamStateView {
             previousId,
             timelineEvent,
         )
+    }
+
+    getSignature(eventId: string): EventSignatureBundle | undefined {
+        const event = this.events.get(eventId)
+        if (event) {
+            return event.remoteEvent
+        }
+        const signature = this.signatures.get(eventId)
+        if (signature) {
+            return signature
+        }
+        return undefined
     }
 
     getMembers(): StreamStateView_Members {

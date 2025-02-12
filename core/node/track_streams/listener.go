@@ -5,9 +5,9 @@ import (
 
 	mapset "github.com/deckarep/golang-set/v2"
 
-	. "github.com/river-build/river/core/node/events"
+	. "github.com/towns-protocol/towns/core/node/events"
 
-	"github.com/river-build/river/core/node/shared"
+	"github.com/towns-protocol/towns/core/node/shared"
 )
 
 type StreamEventListener interface {

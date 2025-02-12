@@ -17,14 +17,14 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/semaphore"
 
-	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/events"
-	"github.com/river-build/river/core/node/logging"
-	"github.com/river-build/river/core/node/nodes"
-	"github.com/river-build/river/core/node/protocol"
-	"github.com/river-build/river/core/node/protocol/protocolconnect"
-	"github.com/river-build/river/core/node/registries"
-	"github.com/river-build/river/core/node/shared"
+	"github.com/towns-protocol/towns/core/node/crypto"
+	"github.com/towns-protocol/towns/core/node/events"
+	"github.com/towns-protocol/towns/core/node/logging"
+	"github.com/towns-protocol/towns/core/node/nodes"
+	"github.com/towns-protocol/towns/core/node/protocol"
+	"github.com/towns-protocol/towns/core/node/protocol/protocolconnect"
+	"github.com/towns-protocol/towns/core/node/registries"
+	"github.com/towns-protocol/towns/core/node/shared"
 )
 
 // maxConcurrentNodeRequests is the maximum number of concurrent
@@ -80,7 +80,7 @@ func channelLabelType(streamID shared.StreamId) string {
 	}
 }
 
-type newTrackedStreamViewFn func(
+type TrackedViewConstructorFn func(
 	ctx context.Context,
 	streamID shared.StreamId,
 	cfg crypto.OnChainConfiguration,
@@ -93,7 +93,7 @@ func (sr *SyncRunner) Run(
 	applyHistoricalStreamContents bool,
 	nodeRegistry nodes.NodeRegistry,
 	onChainConfig crypto.OnChainConfiguration,
-	newTrackedStreamView newTrackedStreamViewFn,
+	newTrackedStreamView TrackedViewConstructorFn,
 	metrics *TrackStreamsSyncMetrics,
 ) {
 	var (
@@ -317,11 +317,19 @@ func (sr *SyncRunner) Run(
 					continue
 				}
 
-				applyHistoricalStreamContents = false
-
 				for _, block := range update.GetStream().GetMiniblocks() {
-					if err := trackedStream.ApplyBlock(block); err != nil {
-						log.Errorw("Unable to apply block", "stream", streamID, "err", err)
+					if !reset {
+						if err := trackedStream.ApplyBlock(block); err != nil {
+							log.Debugw("Unable to apply block", "stream", streamID, "err", err)
+						}
+					}
+					if applyHistoricalStreamContents {
+						// send notifications for all events in all blocks
+						for _, event := range block.GetEvents() {
+							if parsedEvent, err := events.ParseEvent(event); err == nil {
+								_ = trackedStream.SendEventNotification(syncCtx, parsedEvent)
+							}
+						}
 					}
 				}
 
@@ -330,6 +338,8 @@ func (sr *SyncRunner) Run(
 						log.Errorw("Unable to apply event", "stream", streamID, "err", err)
 					}
 				}
+
+				applyHistoricalStreamContents = false
 
 			case protocol.SyncOp_SYNC_DOWN:
 				log.Debugw("Stream reported as down")

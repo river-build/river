@@ -3,20 +3,33 @@ package events
 import (
 	"context"
 
-	"github.com/river-build/river/core/node/crypto"
-	. "github.com/river-build/river/core/node/protocol"
-	"github.com/river-build/river/core/node/shared"
+	"github.com/towns-protocol/towns/core/node/crypto"
+	. "github.com/towns-protocol/towns/core/node/protocol"
+	"github.com/towns-protocol/towns/core/node/shared"
 )
 
 // TrackedStreamView presents an interface that can be used to apply the returned
 // data structures of a stream synced from another node in order to render an up-to-date
 // view of the stream locally.
 type TrackedStreamView interface {
+	// ApplyBlock applies the block to the internal view, updating the stream with the latest
+	// membership if it is a channel.
 	ApplyBlock(miniblock *Miniblock) error
+
+	// ApplyEvent applies the event to the internal view and notifies if the event unseen
 	ApplyEvent(ctx context.Context, event *Envelope) error
+
+	// SendEventNotification notifies via the internal callback, but does not apply the event
+	// to the internal view state. This method can be used to invoke the callback on events
+	// that were added to this streamView via ApplyBlock
+	SendEventNotification(ctx context.Context, event *ParsedEvent) error
 }
 
-type trackedStreamViewImpl struct {
+// TrackedStreamViewImpl can function on it's own as an object, or can be used as a mixin
+// by classes that want to encapsulate it with the required callback.
+// TrackedStreamView implements to functionality of applying blocks and events to a wrapped
+// stream view, and of notifying via the callback on unseen events.
+type TrackedStreamViewImpl struct {
 	streamID   shared.StreamId
 	view       *StreamView
 	cfg        crypto.OnChainConfiguration
@@ -27,35 +40,29 @@ type trackedStreamViewImpl struct {
 // that stream in order to internally render an up-to-date view of the stream, upon which callbacks are
 // executed. It is used by the notification service and the bot registry service to track the state of
 // relevant streams. It is essentially a wrapper around StreamView, to apply events, and to execute callbacks.
-// OnViewLoaded is executed upon TrackedStreamView creation when the constructed view is fully reified.
 // onNewEvent is called whenever a new event is added to the view, ensuring that the onNewEvent callback is
 // never called twice for the same event.
-func NewTrackedStreamView(
+func (ts *TrackedStreamViewImpl) Init(
 	ctx context.Context,
 	streamID shared.StreamId,
 	cfg crypto.OnChainConfiguration,
 	stream *StreamAndCookie,
-	onViewLoaded func(view *StreamView) error,
 	onNewEvent func(ctx context.Context, view *StreamView, event *ParsedEvent) error,
-) (TrackedStreamView, error) {
+) (*StreamView, error) {
 	view, err := MakeRemoteStreamView(ctx, stream)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := onViewLoaded(view); err != nil {
-		return nil, err
-	}
+	ts.streamID = streamID
+	ts.onNewEvent = onNewEvent
+	ts.view = view
+	ts.cfg = cfg
 
-	return &trackedStreamViewImpl{
-		streamID:   streamID,
-		cfg:        cfg,
-		view:       view,
-		onNewEvent: onNewEvent,
-	}, nil
+	return view, nil
 }
 
-func (ts *trackedStreamViewImpl) ApplyBlock(
+func (ts *TrackedStreamViewImpl) ApplyBlock(
 	miniblock *Miniblock,
 ) error {
 	mb, err := NewMiniblockInfoFromProto(miniblock, NewParsedMiniblockInfoOpts())
@@ -66,7 +73,7 @@ func (ts *trackedStreamViewImpl) ApplyBlock(
 	return ts.applyBlock(mb, ts.cfg.Get())
 }
 
-func (ts *trackedStreamViewImpl) ApplyEvent(
+func (ts *TrackedStreamViewImpl) ApplyEvent(
 	ctx context.Context,
 	event *Envelope,
 ) error {
@@ -80,7 +87,7 @@ func (ts *trackedStreamViewImpl) ApplyEvent(
 	return ts.addEvent(ctx, parsedEvent)
 }
 
-func (ts *trackedStreamViewImpl) applyBlock(
+func (ts *TrackedStreamViewImpl) applyBlock(
 	miniblock *MiniblockInfo,
 	cfg *crypto.OnChainSettings,
 ) error {
@@ -99,7 +106,7 @@ func (ts *trackedStreamViewImpl) applyBlock(
 	return nil
 }
 
-func (ts *trackedStreamViewImpl) addEvent(ctx context.Context, event *ParsedEvent) error {
+func (ts *TrackedStreamViewImpl) addEvent(ctx context.Context, event *ParsedEvent) error {
 	if ts.view.minipool.events.Has(event.Hash) || event.Event.GetMiniblockHeader() != nil {
 		return nil
 	}
@@ -109,6 +116,14 @@ func (ts *trackedStreamViewImpl) addEvent(ctx context.Context, event *ParsedEven
 		return err
 	}
 	ts.view = view
+
+	return ts.SendEventNotification(ctx, event)
+}
+
+func (ts *TrackedStreamViewImpl) SendEventNotification(ctx context.Context, event *ParsedEvent) error {
+	if ts.view == nil {
+		return nil
+	}
 
 	return ts.onNewEvent(ctx, ts.view, event)
 }

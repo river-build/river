@@ -3,12 +3,37 @@ package sync
 import (
 	"context"
 
-	"github.com/river-build/river/core/node/crypto"
-	. "github.com/river-build/river/core/node/events"
-	. "github.com/river-build/river/core/node/protocol"
-	"github.com/river-build/river/core/node/shared"
-	"github.com/river-build/river/core/node/track_streams"
+	"github.com/towns-protocol/towns/core/node/crypto"
+	. "github.com/towns-protocol/towns/core/node/events"
+	. "github.com/towns-protocol/towns/core/node/protocol"
+	"github.com/towns-protocol/towns/core/node/shared"
+	"github.com/towns-protocol/towns/core/node/track_streams"
 )
+
+type botRegistryTrackedStreamView struct {
+	TrackedStreamViewImpl
+	listener track_streams.StreamEventListener
+}
+
+func (b *botRegistryTrackedStreamView) onNewEvent(ctx context.Context, view *StreamView, event *ParsedEvent) error {
+	streamId := view.StreamId()
+	if streamId.Type() == shared.STREAM_USER_INBOX_BIN {
+		// TODO: update bot key fulfillments, possibly triggering a flurry of webhook calls
+		// that were queued up waiting for a particular fulfillment for a particular channel
+		return nil
+	}
+
+	// TODO: this list of "members" should be the list of bot members in the channel. We
+	// expect the StreamEventListener to make webhook calls for bots that meet "notification"
+	// criteria for this channel message.
+	members, err := view.GetChannelMembers()
+	if err != nil {
+		return err
+	}
+
+	b.listener.OnMessageEvent(ctx, *streamId, view.StreamParentId(), members, event)
+	return nil
+}
 
 // NewTrackedStreamForBotRegistry constructs a TrackedStreamView instance from the given
 // stream, and executes callbacks to ensure that all bots' cached key fulfillments are up to date,
@@ -21,33 +46,16 @@ func NewTrackedStreamForBotRegistryService(
 	stream *StreamAndCookie,
 	listener track_streams.StreamEventListener,
 ) (TrackedStreamView, error) {
-	onViewLoaded := func(view *StreamView) error {
-		// streamId := view.StreamId()
-		// if streamId.Type() == shared.STREAM_USER_INBOX_BIN {
-		// 	// TODO: Load bot key fulfillments from user inbox stream into an in-memory cache
-		// 	// backed by db to support restarts
-		// }
-		return nil
+	trackedView := &botRegistryTrackedStreamView{
+		listener: listener,
+	}
+	_, err := trackedView.TrackedStreamViewImpl.Init(ctx, streamID, cfg, stream, trackedView.onNewEvent)
+	if err != nil {
+		return nil, err
 	}
 
-	onNewEvent := func(ctx context.Context, view *StreamView, event *ParsedEvent) error {
-		if streamID.Type() == shared.STREAM_USER_INBOX_BIN {
-			// TODO: update bot key fulfillments, possibly triggering a flurry of webhook calls
-			// that were queued up waiting for a particular fulfillment for a particular channel
-			return nil
-		}
+	// TODO: capture returned view above and update cache / storage with all new key fulfillments,
+	// iff this is a bot user inbox stream.
 
-		// TODO: this list of "members" should be the list of bot members in the channel. We
-		// expect the StreamEventListener to make webhook calls for bots that meet "notification"
-		// criteria for this channel message.
-		members, err := view.GetChannelMembers()
-		if err != nil {
-			return err
-		}
-
-		listener.OnMessageEvent(ctx, streamID, view.StreamParentId(), members, event)
-		return nil
-	}
-
-	return NewTrackedStreamView(ctx, streamID, cfg, stream, onViewLoaded, onNewEvent)
+	return trackedView, nil
 }

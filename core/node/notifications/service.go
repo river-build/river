@@ -8,20 +8,20 @@ import (
 	"github.com/SherClockHolmes/webpush-go"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/river-build/river/core/config"
-	"github.com/river-build/river/core/node/authentication"
-	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/infra"
-	"github.com/river-build/river/core/node/logging"
-	"github.com/river-build/river/core/node/track_streams"
+	"github.com/towns-protocol/towns/core/config"
+	"github.com/towns-protocol/towns/core/node/authentication"
+	. "github.com/towns-protocol/towns/core/node/base"
+	"github.com/towns-protocol/towns/core/node/crypto"
+	"github.com/towns-protocol/towns/core/node/infra"
+	"github.com/towns-protocol/towns/core/node/logging"
+	"github.com/towns-protocol/towns/core/node/track_streams"
 
-	"github.com/river-build/river/core/node/nodes"
-	"github.com/river-build/river/core/node/notifications/sync"
-	"github.com/river-build/river/core/node/notifications/types"
-	. "github.com/river-build/river/core/node/protocol"
-	"github.com/river-build/river/core/node/registries"
-	"github.com/river-build/river/core/node/shared"
+	"github.com/towns-protocol/towns/core/node/nodes"
+	notificationssync "github.com/towns-protocol/towns/core/node/notifications/sync"
+	"github.com/towns-protocol/towns/core/node/notifications/types"
+	. "github.com/towns-protocol/towns/core/node/protocol"
+	"github.com/towns-protocol/towns/core/node/registries"
+	"github.com/towns-protocol/towns/core/node/shared"
 )
 
 const (
@@ -52,7 +52,7 @@ func NewService(
 	metrics infra.MetricsFactory,
 	listener track_streams.StreamEventListener,
 ) (*Service, error) {
-	tracker, err := sync.NewNotificationsStreamsTracker(
+	tracker, err := notificationssync.NewNotificationsStreamsTracker(
 		ctx,
 		onChainConfig,
 		riverRegistry,

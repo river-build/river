@@ -3,14 +3,14 @@ package sync
 import (
 	"context"
 
-	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/events"
-	"github.com/river-build/river/core/node/infra"
-	"github.com/river-build/river/core/node/nodes"
-	"github.com/river-build/river/core/node/protocol"
-	"github.com/river-build/river/core/node/registries"
-	"github.com/river-build/river/core/node/shared"
-	"github.com/river-build/river/core/node/track_streams"
+	"github.com/towns-protocol/towns/core/node/crypto"
+	"github.com/towns-protocol/towns/core/node/events"
+	"github.com/towns-protocol/towns/core/node/infra"
+	"github.com/towns-protocol/towns/core/node/nodes"
+	"github.com/towns-protocol/towns/core/node/protocol"
+	"github.com/towns-protocol/towns/core/node/registries"
+	"github.com/towns-protocol/towns/core/node/shared"
+	"github.com/towns-protocol/towns/core/node/track_streams"
 )
 
 // NotificationsStreamTracker implements the StreamsTracker interface for the notifications service. It encapsulates
