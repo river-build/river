@@ -15,6 +15,8 @@ import (
 )
 
 type BotRegistryStreamsTracker struct {
+	// TODO: eventually this struct will contain references to whatever types of cache / storage access
+	// the TrackedStreamView for the bot registry service needs.
 	track_streams.StreamsTrackerImpl
 }
 

@@ -20,10 +20,11 @@ import (
 	"github.com/towns-protocol/towns/core/node/shared"
 )
 
+// The StreamFilter is used by the StreamTrackerImpl, which is a cross-application, shared implementation
+// of stream tracking used by both the notification service and the bot registry service. Each application
+// must provide the logic for determining which streams to track, and for constructing application-specific
+// tracked stream views.
 type StreamFilter interface {
-	// These methods are exposed to allow embedders to override them. The implementation
-	// below casts itself as the StreamsTracker interface before calling these methods,
-	// so overrides will be enforced in structs that embed it.
 	TrackStream(streamID shared.StreamId) bool
 
 	NewTrackedStream(
@@ -40,8 +41,8 @@ type StreamsTracker interface {
 
 // The StreamsTrackerImpl implements watching the river registry, detecting new streams, and syncing them.
 // It defers to the filter to determine whether a stream should be tracked and to create new tracked stream
-// views, which are application-specific. The filter struct embeds this implementation and provides these
-// methods for encapsulation.
+// views, which are application-specific. The filter implementation struct embeds this tracker implementation
+// and provides these methods for encapsulation.
 type StreamsTrackerImpl struct {
 	filter         StreamFilter
 	nodeRegistries []nodes.NodeRegistry
@@ -106,7 +107,7 @@ func (tracker *StreamsTrackerImpl) Run(ctx context.Context) error {
 		ctx,
 		tracker.riverRegistry.Blockchain.InitialBlockNum,
 		func(stream *registries.GetStreamResult) bool {
-			// print progress report every 50k streams that are added to track
+			// Print progress report every 50k streams that are added to track
 			if streamsLoaded > 0 && streamsLoaded%50_000 == 0 && streamsLoadedProgress != streamsLoaded {
 				log.Infow("Progress stream loading", "tracked", streamsLoaded, "total", totalStreams)
 				streamsLoadedProgress = streamsLoaded
@@ -118,8 +119,8 @@ func (tracker *StreamsTrackerImpl) Run(ctx context.Context) error {
 				return true
 			}
 
-			// there are some streams managed by a node that isn't registered anymore.
-			// filter these out because we can't sync these streams.
+			// There are some streams managed by a node that isn't registered anymore.
+			// Filter these out because we can't sync these streams.
 			stream.Nodes = slices.DeleteFunc(stream.Nodes, func(address common.Address) bool {
 				return !slices.Contains(validNodes, address)
 			})

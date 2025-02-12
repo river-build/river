@@ -100,10 +100,6 @@ func (s *Service) startBotRegistryMode(opts *ServerStartOpts) error {
 	return nil
 }
 
-type BotRegistryStartOpts struct {
-	ServerStartOpts
-}
-
 func StartServerInBotRegistryMode(
 	ctx context.Context,
 	cfg *config.Config,

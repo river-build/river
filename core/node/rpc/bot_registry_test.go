@@ -62,7 +62,7 @@ type MockStreamEventListener struct {
 func (m *MockStreamEventListener) OnMessageEvent(
 	ctx context.Context,
 	streamId StreamId,
-	parentStreamId *StreamId, // only
+	parentStreamId *StreamId, // nil for dms and gdms
 	bots mapset.Set[string],
 	event *events.ParsedEvent,
 ) {

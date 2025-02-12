@@ -15,7 +15,7 @@ type StreamEventListener interface {
 		ctx context.Context,
 		streamID shared.StreamId,
 		parentStreamID *shared.StreamId, // only
-		bots mapset.Set[string],
+		members mapset.Set[string],
 		event *ParsedEvent,
 	)
 }
