@@ -75,7 +75,7 @@ func (s *Service) Start(ctx context.Context) {
 
 	go func() {
 		for {
-			log.Infow("Start notification streams tracker")
+			log.Infow("Start bot registry streams tracker")
 
 			if err := s.streamsTracker.Run(ctx); err != nil {
 				log.Errorw("tracking streams failed", "err", err)
