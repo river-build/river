@@ -241,7 +241,7 @@ func (s *Stream) importMiniblocksLocked(
 	var newEvents []*Envelope
 	allNewEvents := []*Envelope{}
 	for _, miniblock := range miniblocks {
-		currentView, newEvents, err = currentView.copyAndApplyBlock(miniblock, s.params.ChainConfig.Get())
+		currentView, newEvents, err = currentView.CopyAndApplyBlock(miniblock, s.params.ChainConfig.Get())
 		if err != nil {
 			return err
 		}
@@ -289,7 +289,7 @@ func (s *Stream) applyMiniblockImplLocked(
 
 	// Lets see if this miniblock can be applied.
 	prevSV := s.view()
-	newSV, newEvents, err := prevSV.copyAndApplyBlock(miniblock, s.params.ChainConfig.Get())
+	newSV, newEvents, err := prevSV.CopyAndApplyBlock(miniblock, s.params.ChainConfig.Get())
 	if err != nil {
 		return err
 	}

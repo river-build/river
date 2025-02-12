@@ -283,12 +283,12 @@ func (r *StreamView) ProposeNextMiniblock(
 	}, nil
 }
 
-func (r *StreamView) proposeNextMiniblock(
+func (r *StreamView) LocalProposeNextMiniblock(
 	ctx context.Context,
 	cfg *crypto.OnChainSettings,
 	forceSnapshot bool,
-) *mbProposal {
-	return &mbProposal{
+) *MbProposal {
+	return &MbProposal{
 		newMiniblockNum:   r.minipool.generation,
 		prevMiniblockHash: r.LastBlock().headerEvent.Hash,
 		shouldSnapshot:    forceSnapshot || r.shouldSnapshot(cfg),
@@ -296,19 +296,19 @@ func (r *StreamView) proposeNextMiniblock(
 	}
 }
 
-type mbProposal struct {
+type MbProposal struct {
 	newMiniblockNum   int64
 	prevMiniblockHash common.Hash
 	shouldSnapshot    bool
 	eventHashes       []common.Hash
 }
 
-func mbProposalFromProto(p *MiniblockProposal) *mbProposal {
+func mbProposalFromProto(p *MiniblockProposal) *MbProposal {
 	hashes := make([]common.Hash, len(p.Hashes))
 	for i, h := range p.Hashes {
 		hashes[i].SetBytes(h)
 	}
-	return &mbProposal{
+	return &MbProposal{
 		newMiniblockNum:   p.NewMiniblockNum,
 		prevMiniblockHash: common.Hash(p.PrevMiniblockHash),
 		shouldSnapshot:    p.ShouldSnapshot,
@@ -316,10 +316,10 @@ func mbProposalFromProto(p *MiniblockProposal) *mbProposal {
 	}
 }
 
-func (r *StreamView) makeMiniblockCandidate(
+func (r *StreamView) MakeMiniblockCandidate(
 	ctx context.Context,
 	params *StreamCacheParams,
-	proposal *mbProposal,
+	proposal *MbProposal,
 ) (*MiniblockInfo, error) {
 	if r.minipool.generation != proposal.newMiniblockNum ||
 		proposal.prevMiniblockHash != r.LastBlock().headerEvent.Hash {
@@ -411,9 +411,9 @@ func (r *StreamView) makeMiniblockCandidate(
 	return NewMiniblockInfoFromHeaderAndParsed(params.Wallet, header, events)
 }
 
-// copyAndApplyBlock copies the current view and applies the given miniblock to it.
+// CopyAndApplyBlock copies the current view and applies the given miniblock to it.
 // Returns the new view and the events that were in the applied miniblock, but not in the minipool.
-func (r *StreamView) copyAndApplyBlock(
+func (r *StreamView) CopyAndApplyBlock(
 	miniblock *MiniblockInfo,
 	cfg *crypto.OnChainSettings,
 ) (*StreamView, []*Envelope, error) {

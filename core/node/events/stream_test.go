@@ -352,7 +352,7 @@ func TestCandidatePromotionCandidateIsDelayed(t *testing.T) {
 		require.NotNil(candidate2)
 		require.Equal(int64(i*3+2), candidate2.headerEvent.Event.GetMiniblockHeader().MiniblockNum)
 
-		view2, _, err := view1.copyAndApplyBlock(candidate2, chainConfig)
+		view2, _, err := view1.CopyAndApplyBlock(candidate2, chainConfig)
 		require.NoError(err)
 		require.EqualValues(candidate2.Ref, view2.LastBlock().Ref)
 
@@ -364,7 +364,7 @@ func TestCandidatePromotionCandidateIsDelayed(t *testing.T) {
 		require.NotNil(candidate3)
 		require.Equal(int64(i*3+3), candidate3.headerEvent.Event.GetMiniblockHeader().MiniblockNum)
 
-		view3, _, err := view2.copyAndApplyBlock(candidate3, chainConfig)
+		view3, _, err := view2.CopyAndApplyBlock(candidate3, chainConfig)
 		require.NoError(err)
 		require.EqualValues(candidate3.Ref, view3.LastBlock().Ref)
 

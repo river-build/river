@@ -161,7 +161,7 @@ func TestLoad(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Len(t, resp.MissingEvents, view.minipool.events.Len())
-	mbCandidate, err := view.makeMiniblockCandidate(ctx, params, mbProposalFromProto(resp.Proposal))
+	mbCandidate, err := view.MakeMiniblockCandidate(ctx, params, mbProposalFromProto(resp.Proposal))
 	require.NoError(t, err)
 	assert.Nil(t, mbCandidate.headerEvent.Event.GetMiniblockHeader().Snapshot)
 
@@ -192,7 +192,7 @@ func TestLoad(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Len(t, resp.MissingEvents, 0)
-	mbCandidate, err = view.makeMiniblockCandidate(ctx, params, mbProposalFromProto(resp.Proposal))
+	mbCandidate, err = view.MakeMiniblockCandidate(ctx, params, mbProposalFromProto(resp.Proposal))
 	require.NoError(t, err)
 	miniblockHeader = mbCandidate.headerEvent.Event.GetMiniblockHeader()
 	assert.NotNil(t, miniblockHeader.Snapshot)
@@ -227,14 +227,14 @@ func TestLoad(t *testing.T) {
 	miniblock, err := NewMiniblockInfoFromParsed(miniblockHeaderEvent, mbCandidate.Events())
 	assert.NoError(t, err)
 	// with 5 generations (5 blocks kept in memory)
-	newSV1, newEvents, err := view.copyAndApplyBlock(miniblock, cfg)
+	newSV1, newEvents, err := view.CopyAndApplyBlock(miniblock, cfg)
 	assert.NoError(t, err)
 	assert.Equal(t, len(newSV1.blocks), 2) // we should have both blocks in memory
 	assert.Empty(t, newEvents)
 
 	// with 0 generations (0 in memory block history)
 	cfg.RecencyConstraintsGen = 0
-	newSV2, newEvents, err := view.copyAndApplyBlock(miniblock, cfg)
+	newSV2, newEvents, err := view.CopyAndApplyBlock(miniblock, cfg)
 	assert.NoError(t, err)
 	assert.Equal(t, len(newSV2.blocks), 1) // we should only have the latest block in memory
 	assert.Empty(t, newEvents)

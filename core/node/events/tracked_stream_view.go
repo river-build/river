@@ -97,7 +97,7 @@ func (ts *TrackedStreamViewImpl) applyBlock(
 		}
 	}
 
-	view, _, err := ts.view.copyAndApplyBlock(miniblock, cfg)
+	view, _, err := ts.view.CopyAndApplyBlock(miniblock, cfg)
 	if err != nil {
 		return err
 	}

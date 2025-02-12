@@ -54,7 +54,7 @@ func (j *mbJob) produceCandidate(ctx context.Context) error {
 }
 
 func (j *mbJob) makeCandidate(ctx context.Context) error {
-	var prop *mbProposal
+	var prop *MbProposal
 	var view *StreamView
 	var err error
 	if j.replicated {
@@ -69,7 +69,7 @@ func (j *mbJob) makeCandidate(ctx context.Context) error {
 		return nil
 	}
 
-	j.candidate, err = view.makeMiniblockCandidate(ctx, j.cache.Params(), prop)
+	j.candidate, err = view.MakeMiniblockCandidate(ctx, j.cache.Params(), prop)
 	if err != nil {
 		return err
 	}
@@ -77,13 +77,13 @@ func (j *mbJob) makeCandidate(ctx context.Context) error {
 	return nil
 }
 
-func (j *mbJob) makeReplicatedProposal(ctx context.Context) (*mbProposal, *StreamView, error) {
+func (j *mbJob) makeReplicatedProposal(ctx context.Context) (*MbProposal, *StreamView, error) {
 	proposals, view, err := j.processRemoteProposals(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	localProposal := view.proposeNextMiniblock(ctx, j.cache.Params().ChainConfig.Get(), j.forceSnapshot)
+	localProposal := view.LocalProposeNextMiniblock(ctx, j.cache.Params().ChainConfig.Get(), j.forceSnapshot)
 
 	proposals = append(proposals, localProposal)
 
@@ -95,13 +95,13 @@ func (j *mbJob) makeReplicatedProposal(ctx context.Context) (*mbProposal, *Strea
 	return combined, view, nil
 }
 
-func (j *mbJob) makeLocalProposal(ctx context.Context) (*mbProposal, *StreamView, error) {
+func (j *mbJob) makeLocalProposal(ctx context.Context) (*MbProposal, *StreamView, error) {
 	view, err := j.stream.GetView(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	prop := view.proposeNextMiniblock(ctx, j.cache.Params().ChainConfig.Get(), j.forceSnapshot)
+	prop := view.LocalProposeNextMiniblock(ctx, j.cache.Params().ChainConfig.Get(), j.forceSnapshot)
 
 	// Is there anything to do?
 	if len(prop.eventHashes) == 0 && !prop.shouldSnapshot {
@@ -111,7 +111,7 @@ func (j *mbJob) makeLocalProposal(ctx context.Context) (*mbProposal, *StreamView
 	return prop, view, nil
 }
 
-func (j *mbJob) processRemoteProposals(ctx context.Context) ([]*mbProposal, *StreamView, error) {
+func (j *mbJob) processRemoteProposals(ctx context.Context) ([]*MbProposal, *StreamView, error) {
 	view, err := j.stream.GetView(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -137,7 +137,7 @@ func (j *mbJob) processRemoteProposals(ctx context.Context) ([]*mbProposal, *Str
 	}
 
 	added := make(map[common.Hash]bool)
-	converted := make([]*mbProposal, len(proposals))
+	converted := make([]*MbProposal, len(proposals))
 	for i, p := range proposals {
 		converted[i] = mbProposalFromProto(p.Proposal)
 
@@ -201,7 +201,7 @@ func (j *mbJob) processRemoteProposals(ctx context.Context) ([]*mbProposal, *Str
 	return nil, nil, RiverError(Err_INTERNAL, "mbJob.processRemoteProposals: no proposals and no errors")
 }
 
-func (j *mbJob) combineProposals(proposals []*mbProposal) (*mbProposal, error) {
+func (j *mbJob) combineProposals(proposals []*MbProposal) (*MbProposal, error) {
 	// Sanity check: all proposals must have the same miniblock number and prev hash.
 	for _, p := range proposals {
 		if p.newMiniblockNum != proposals[0].newMiniblockNum || p.prevMiniblockHash != proposals[0].prevMiniblockHash {
@@ -244,7 +244,7 @@ func (j *mbJob) combineProposals(proposals []*mbProposal) (*mbProposal, error) {
 		return nil, nil
 	}
 
-	return &mbProposal{
+	return &MbProposal{
 		newMiniblockNum:   proposals[0].newMiniblockNum,
 		prevMiniblockHash: proposals[0].prevMiniblockHash,
 		shouldSnapshot:    shouldSnapshot,

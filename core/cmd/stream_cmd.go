@@ -528,6 +528,41 @@ func runStreamGetCmd(cmd *cobra.Command, args []string) error {
 		fmt.Println()
 	}
 
+	view, err := events.MakeRemoteStreamView(ctx, stream)
+	if err != nil {
+		return err
+	}
+
+	cfg, err := crypto.NewOnChainConfig(ctx, blockchain.Client, cmdConfig.RegistryContract.Address, blockchain.InitialBlockNum, blockchain.ChainMonitor)
+	if err != nil {
+		return err
+	}
+
+	proposal := view.LocalProposeNextMiniblock(ctx, cfg.Get(), true)
+
+	wallet, err := crypto.NewWallet(ctx)
+	if err != nil {
+		return err
+	}
+
+	candidate, err := view.MakeMiniblockCandidate(
+		ctx,
+		&events.StreamCacheParams{
+			Wallet: wallet,
+		},
+		proposal,
+	)
+	if err != nil {
+		return err
+	}
+
+	newView, _, err := view.CopyAndApplyBlock(candidate, cfg.Get())
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("New viev last block: ", newView.LastBlock().Ref, " Events: ", len(newView.MinipoolEvents()), " Events in last block: ", len(newView.LastBlock().Events()))
+
 	return nil
 }
 
