@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"sync"
 	"testing"
 	"time"
 
@@ -56,6 +57,7 @@ type messageEventRecord struct {
 }
 
 type MockStreamEventListener struct {
+	mu                  sync.Mutex
 	messageEventRecords []messageEventRecord
 }
 
@@ -66,6 +68,8 @@ func (m *MockStreamEventListener) OnMessageEvent(
 	bots mapset.Set[string],
 	event *events.ParsedEvent,
 ) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.messageEventRecords = append(m.messageEventRecords, messageEventRecord{
 		streamId,
 		parentStreamId,
@@ -147,13 +151,15 @@ func TestBotRegistry_ForwardsChannelEvents(t *testing.T) {
 	copy(channelId[1:21], spaceId[1:21])
 	_, err = rand.Read(channelId[21:])
 	require.NoError(err)
+
 	channel, _, err := createChannel(tester.ctx, wallet, client, spaceId, channelId, nil)
 	require.NoError(err)
 	require.NotNil(channel)
 
+	testMessageText := "abc"
 	event, err := events.MakeEnvelopeWithPayloadAndTags(
 		wallet,
-		events.Make_ChannelPayload_Message("abc"),
+		events.Make_ChannelPayload_Message(testMessageText),
 		&MiniblockRef{
 			Num:  channel.GetMinipoolGen() - 1,
 			Hash: common.Hash(channel.GetPrevMiniblockHash()),
@@ -167,7 +173,6 @@ func TestBotRegistry_ForwardsChannelEvents(t *testing.T) {
 		Event:    event,
 		Optional: false,
 	}))
-
 	tester.require.NoError(err)
 
 	tester.require.EventuallyWithT(func(c *assert.CollectT) {
@@ -184,7 +189,7 @@ func TestBotRegistry_ForwardsChannelEvents(t *testing.T) {
 			)
 
 			channelPayload := record.event.GetChannelMessage()
-			if channelPayload != nil && channelPayload.Message.Ciphertext == "abc" {
+			if channelPayload != nil && channelPayload.Message.Ciphertext == testMessageText {
 				found = true
 			}
 		}
