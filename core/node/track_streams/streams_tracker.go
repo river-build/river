@@ -39,8 +39,8 @@ type StreamsTracker interface {
 }
 
 // The StreamsTrackerImpl implements watching the river registry, detecting new streams, and syncing them.
-// It defers to the filterto determine whether a stream should be tracked and to create new tracked stream
-// views, which are application-specific. The filter struct may embed this implementation and provide these
+// It defers to the filter to determine whether a stream should be tracked and to create new tracked stream
+// views, which are application-specific. The filter struct embeds this implementation and provides these
 // methods for encapsulation.
 type StreamsTrackerImpl struct {
 	filter         StreamFilter
@@ -53,25 +53,7 @@ type StreamsTrackerImpl struct {
 	syncRunner     *SyncRunner
 }
 
-// NewStreamsTracker creates a stream tracker instance.
-func NewStreamsTracker(
-	ctx context.Context,
-	onChainConfig crypto.OnChainConfiguration,
-	riverRegistry *registries.RiverRegistryContract,
-	nodeRegistries []nodes.NodeRegistry,
-	listener StreamEventListener,
-	filter StreamFilter,
-	metricsFactory infra.MetricsFactory,
-) (*StreamsTrackerImpl, error) {
-	tracker := &StreamsTrackerImpl{}
-	if err := tracker.Init(ctx, onChainConfig, riverRegistry, nodeRegistries, listener, filter, metricsFactory); err != nil {
-		return nil, err
-	}
-
-	return tracker, nil
-}
-
-// Init can be used by a struct embedded the StreamsTrackerImpl to initialize it.
+// Init can be used by a struct embedding the StreamsTrackerImpl to initialize it.
 func (tracker *StreamsTrackerImpl) Init(
 	ctx context.Context,
 	onChainConfig crypto.OnChainConfiguration,
