@@ -26,10 +26,10 @@ RUN go build \
 
 RUN go build \
     -trimpath \
-    -o /bin/river_node \
+    -o /bin/river_node_race \
     -race \
     -ldflags="-X github.com/towns-protocol/towns/core/river_node/version.version=$VER_VERSION -X github.com/towns-protocol/towns/core/river_node/version.branch=$VER_BRANCH -X github.com/towns-protocol/towns/core/river_node/version.commit=$VER_COMMIT" \
-    ./river_node_race
+    ./river_node
 
 # Final stage
 FROM alpine:latest
