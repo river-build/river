@@ -10,6 +10,8 @@ import (
 	"github.com/towns-protocol/towns/core/node/shared"
 )
 
+// The StreamEventListener listens to new events emitted by the stream tracker for streams
+// of interest. OnMessageEvent will be called from multiple go routines and must be thread-safe.
 type StreamEventListener interface {
 	OnMessageEvent(
 		ctx context.Context,
