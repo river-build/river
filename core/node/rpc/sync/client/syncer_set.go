@@ -177,7 +177,6 @@ func (ss *SyncerSet) Run() {
 	ss.muSyncers.Unlock()
 
 	ss.syncerTasks.Wait() // background syncers finished -> safe to close messages channel
-	close(ss.messages)    // close will cause the sync operation to send the SYNC_CLOSE message to the client
 }
 
 func (ss *SyncerSet) AddInitialStreams() {
