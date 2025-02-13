@@ -16,6 +16,8 @@ library ReviewStorage {
   struct Layout {
     mapping(address user => Meta) reviewByUser;
     EnumerableSetLib.AddressSet usersReviewed;
+    uint16 minCommentLength;
+    uint16 maxCommentLength;
   }
 
   function layout() internal pure returns (Layout storage l) {
