@@ -33,7 +33,8 @@ FILTER_LIST = {
     'internal/poll.runtime_pollWait___x/net/http2.(*serverConn).readFrames',
     'internal/poll.runtime_pollWait___x/net/http2.(*ClientConn).readLoop',
     'internal/poll.runtime_pollWait___net/http.(*http2ClientConn).readLoop',
-    'go-ethereum/core.(*txSenderCacher).cache___go-ethereum/core.(*txSenderCacher).cache'
+    'go-ethereum/core.(*txSenderCacher).cache___go-ethereum/core.(*txSenderCacher).cache',
+    'core/node/rpc/sync/client.(*remoteSyncer).connectionAlive'
 }
 
 def parse_html_stacks(content: str) -> str:
