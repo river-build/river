@@ -78,6 +78,13 @@ func (m *MockStreamEventListener) OnMessageEvent(
 	})
 }
 
+func (m *MockStreamEventListener) MessageEventRecords() []messageEventRecord {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return m.messageEventRecords
+}
+
 var _ track_streams.StreamEventListener = (*MockStreamEventListener)(nil)
 
 func initBotRegistryService(
@@ -176,9 +183,10 @@ func TestBotRegistry_ForwardsChannelEvents(t *testing.T) {
 	tester.require.NoError(err)
 
 	tester.require.EventuallyWithT(func(c *assert.CollectT) {
-		assert.GreaterOrEqual(c, len(listener.messageEventRecords), 1, "No messages were forwarded")
+		records := listener.MessageEventRecords()
+		assert.GreaterOrEqual(c, len(records), 1, "No messages were forwarded")
 		found := false
-		for _, record := range listener.messageEventRecords {
+		for _, record := range records {
 			assert.Equal(c, channelId, record.streamId, "Forwarded message from wrong stream")
 			assert.Equal(
 				c,
@@ -193,7 +201,7 @@ func TestBotRegistry_ForwardsChannelEvents(t *testing.T) {
 				found = true
 			}
 		}
-		assert.True(c, found, "Message not found %v", listener.messageEventRecords)
+		assert.True(c, found, "Message not found %v", records)
 	}, 10*time.Second, 100*time.Millisecond, "Bot registry service did not forward channel event")
 }
 
