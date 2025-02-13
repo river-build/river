@@ -10,13 +10,14 @@ import {AppRegistryStore} from "contracts/src/app/storage/AppRegistryStore.sol";
 import {App} from "contracts/src/app/libraries/App.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
-
+import {StringSet} from "contracts/src/utils/StringSet.sol";
 // contracts
 
 // structs
 
 contract AppRegistry is IAppRegistry {
   using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
+  using StringSet for StringSet.Set;
   using App for App.Config;
 
   function register(
@@ -58,7 +59,10 @@ contract AppRegistry is IAppRegistry {
     return tokenId;
   }
 
-  function appInfo(uint256 appId) external view returns (App.Config memory) {
-    return AppRegistryStore.layout().registrations[appId];
+  function appInfo(
+    uint256 appId
+  ) external view returns (address appAddress, string[] memory permissions) {
+    App.Config storage config = AppRegistryStore.layout().registrations[appId];
+    return (config.appAddress, config.permissions.values());
   }
 }

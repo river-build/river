@@ -10,6 +10,7 @@ import {App} from "contracts/src/app/libraries/App.sol";
 import {Account} from "contracts/src/app/libraries/Account.sol";
 import {AppRegistryStore} from "contracts/src/app/storage/AppRegistryStore.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
+import {StringSet} from "contracts/src/utils/StringSet.sol";
 
 // contracts
 import {ERC6909} from "solady/tokens/ERC6909.sol";
@@ -18,6 +19,7 @@ contract AppInstaller is ERC6909, IAppInstaller {
   using CustomRevert for bytes4;
   using App for App.Config;
   using Account for Account.Installation;
+  using StringSet for StringSet.Set;
 
   function name(uint256 id) public view override returns (string memory) {
     return AppRegistryStore.layout().registrations[id].name;
@@ -31,8 +33,9 @@ contract AppInstaller is ERC6909, IAppInstaller {
     return AppRegistryStore.layout().registrations[id].uri;
   }
 
-  function install(uint256 appId) external {
+  function install(uint256 appId, bytes32 channelId) external {
     App.Config storage config = AppRegistryStore.layout().registrations[appId];
+
     if (!config.exists())
       IAppRegistryBase.AppNotRegistered.selector.revertWith();
 
@@ -40,11 +43,11 @@ contract AppInstaller is ERC6909, IAppInstaller {
       .layout()
       .installations[msg.sender];
 
-    if (installation.installed(appId))
+    if (installation.installed(appId, channelId))
       AppAlreadyInstalled.selector.revertWith();
 
-    installation.install(appId);
-    _mint(msg.sender, appId, 1);
+    installation.install(appId, channelId, config.permissions.values());
+    if (balanceOf(msg.sender, appId) == 0) _mint(msg.sender, appId, 1);
 
     emit AppInstalled(msg.sender, appId, config.appAddress);
   }
@@ -60,11 +63,12 @@ contract AppInstaller is ERC6909, IAppInstaller {
 
   function isInstalled(
     address account,
-    uint256 appId
+    uint256 appId,
+    bytes32 channelId
   ) external view returns (bool) {
     Account.Installation storage installation = AppRegistryStore
       .layout()
       .installations[account];
-    return installation.installed(appId);
+    return installation.installed(appId, channelId);
   }
 }

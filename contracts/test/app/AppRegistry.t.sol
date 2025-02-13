@@ -39,7 +39,7 @@ contract AppRegistryTest is TestUtils, IAppRegistryBase {
     string[] memory permissions = new string[](1);
     permissions[0] = Permissions.Read;
 
-    MockHook mockHook = new MockHook();
+    // MockHook mockHook = new MockHook();
 
     vm.prank(owner);
     uint256 appId = appRegistry.register(
@@ -55,7 +55,7 @@ contract AppRegistryTest is TestUtils, IAppRegistryBase {
     );
 
     vm.prank(user);
-    appInstaller.install(appId);
+    appInstaller.install(appId, bytes32(0));
 
     uint256[] memory installedApps = appInstaller.installedApps(user);
     assertContains(installedApps, appId);

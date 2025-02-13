@@ -17,9 +17,15 @@ interface IAppInstallerBase {
 }
 
 interface IAppInstaller is IAppInstallerBase {
-  function install(uint256 appId) external;
+  function install(uint256 appId, bytes32 channelId) external;
 
   function installedApps(
     address account
   ) external view returns (uint256[] memory);
+
+  function isInstalled(
+    address account,
+    uint256 appId,
+    bytes32 channelId
+  ) external view returns (bool);
 }

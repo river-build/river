@@ -6,11 +6,13 @@ import {IAppRegistryBase} from "contracts/src/app/interfaces/IAppRegistry.sol";
 // libraries
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {Validator} from "contracts/src/utils/Validator.sol";
+import {StringSet} from "contracts/src/utils/StringSet.sol";
 
 // contracts
 
 library App {
   using CustomRevert for bytes4;
+  using StringSet for StringSet.Set;
 
   struct Config {
     uint256 tokenId;
@@ -19,7 +21,7 @@ library App {
     string uri;
     string name;
     string symbol;
-    string[] permissions;
+    StringSet.Set permissions;
   }
 
   function initialize(
@@ -45,9 +47,12 @@ library App {
     self.appAddress = appAddress;
     self.owner = owner;
     self.uri = uri;
-    self.permissions = permissions;
     self.name = name;
     self.symbol = symbol;
+
+    for (uint256 i; i < permissions.length; ++i) {
+      self.permissions.add(permissions[i]);
+    }
   }
 
   function exists(Config storage self) internal view returns (bool) {
@@ -57,6 +62,6 @@ library App {
   function getPermissions(
     Config storage self
   ) internal view returns (string[] memory) {
-    return self.permissions;
+    return self.permissions.values();
   }
 }
