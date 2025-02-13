@@ -27,4 +27,9 @@ interface IReview is IReviewBase {
   function getReview(
     address user
   ) external view returns (ReviewStorage.Meta memory);
+
+  function getAllReviews()
+    external
+    view
+    returns (address[] memory users, ReviewStorage.Meta[] memory reviews);
 }
