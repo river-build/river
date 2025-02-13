@@ -13,11 +13,19 @@ interface IAppInstallerBase {
     address indexed appAddress
   );
 
+  event AppUninstalled(
+    address indexed account,
+    uint256 indexed appId,
+    address indexed appAddress
+  );
+
   error AppAlreadyInstalled();
 }
 
 interface IAppInstaller is IAppInstallerBase {
   function install(uint256 appId, bytes32 channelId) external;
+
+  function uninstall(uint256 appId, bytes32 channelId) external;
 
   function installedApps(
     address account
@@ -27,5 +35,11 @@ interface IAppInstaller is IAppInstallerBase {
     address account,
     uint256 appId,
     bytes32 channelId
+  ) external view returns (bool);
+
+  function isEntitled(
+    bytes32 channelId,
+    address appAddress,
+    bytes32 permission
   ) external view returns (bool);
 }

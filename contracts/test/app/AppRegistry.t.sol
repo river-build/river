@@ -34,14 +34,15 @@ contract AppRegistryTest is TestUtils, IAppRegistryBase {
 
   function test_register() external {
     address owner = _randomAddress();
+    address space = _randomAddress();
     address user = _randomAddress();
 
-    string[] memory permissions = new string[](1);
-    permissions[0] = Permissions.Read;
+    bytes32[] memory permissions = new bytes32[](1);
+    permissions[0] = bytes32(abi.encodePacked(Permissions.JoinSpace));
 
     // MockHook mockHook = new MockHook();
 
-    vm.prank(owner);
+    vm.prank(space);
     uint256 appId = appRegistry.register(
       Registration({
         appAddress: _randomAddress(),

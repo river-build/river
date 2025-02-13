@@ -10,14 +10,13 @@ import {AppRegistryStore} from "contracts/src/app/storage/AppRegistryStore.sol";
 import {App} from "contracts/src/app/libraries/App.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
-import {StringSet} from "contracts/src/utils/StringSet.sol";
 // contracts
 
 // structs
 
 contract AppRegistry is IAppRegistry {
+  using EnumerableSetLib for EnumerableSetLib.Uint256Set;
   using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
-  using StringSet for StringSet.Set;
   using App for App.Config;
 
   function register(
@@ -29,12 +28,16 @@ contract AppRegistry is IAppRegistry {
         address(registration.hooks)
       );
 
-    HookManager.beforeInitialize(registration.hooks);
-
     AppRegistryStore.Layout storage ds = AppRegistryStore.layout();
 
-    uint256 tokenId = ds.nextAppId++;
+    if (ds.appIdByAddress[registration.appAddress] != 0)
+      CustomRevert.revertWith(AppAlreadyRegistered.selector);
 
+    HookManager.beforeInitialize(registration.hooks);
+
+    uint256 tokenId = ++ds.nextAppId; // start at 1
+
+    ds.appIdByAddress[registration.appAddress] = tokenId;
     App.Config storage config = ds.registrations[tokenId];
 
     config.initialize(
@@ -61,7 +64,7 @@ contract AppRegistry is IAppRegistry {
 
   function appInfo(
     uint256 appId
-  ) external view returns (address appAddress, string[] memory permissions) {
+  ) external view returns (address appAddress, bytes32[] memory permissions) {
     App.Config storage config = AppRegistryStore.layout().registrations[appId];
     return (config.appAddress, config.permissions.values());
   }

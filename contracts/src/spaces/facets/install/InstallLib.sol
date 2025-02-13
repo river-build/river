@@ -5,7 +5,6 @@ pragma solidity ^0.8.23;
 import {IAppInstaller} from "contracts/src/app/interfaces/IAppInstaller.sol";
 
 // libraries
-import {LibCall} from "solady/utils/LibCall.sol";
 import {Implementations} from "contracts/src/spaces/facets/Implementations.sol";
 
 // contracts
@@ -13,10 +12,22 @@ import {Implementations} from "contracts/src/spaces/facets/Implementations.sol";
 library InstallLib {
   function installApp(uint256 appId, bytes32 channelId) internal {
     address appRegistry = Implementations.appRegistry();
-    LibCall.callContract(
-      appRegistry,
-      0,
-      abi.encodeWithSelector(IAppInstaller.install.selector, appId, channelId)
-    );
+    IAppInstaller(appRegistry).install(appId, channelId);
+  }
+
+  function uninstallApp(uint256 appId, bytes32 channelId) internal {
+    address appRegistry = Implementations.appRegistry();
+    IAppInstaller(appRegistry).uninstall(appId, channelId);
+  }
+
+  function isEntitled(
+    bytes32 channelId,
+    address appAddress,
+    bytes32 permission
+  ) internal view returns (bool) {
+    address appRegistry = Implementations.appRegistry();
+
+    return
+      IAppInstaller(appRegistry).isEntitled(channelId, appAddress, permission);
   }
 }

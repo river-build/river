@@ -19,4 +19,13 @@ contract InstallFacet is Entitled {
     );
     InstallLib.installApp(appId, channelId);
   }
+
+  function uninstallApp(uint256 appId, bytes32 channelId) external {
+    _isEntitled(
+      channelId,
+      msg.sender,
+      bytes32(abi.encodePacked(Permissions.UninstallApp))
+    );
+    InstallLib.uninstallApp(appId, channelId);
+  }
 }

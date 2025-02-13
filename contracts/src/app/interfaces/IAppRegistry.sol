@@ -14,7 +14,7 @@ interface IAppRegistryBase {
     string uri;
     string name;
     string symbol;
-    string[] permissions;
+    bytes32[] permissions;
     IAppHooks hooks;
   }
 

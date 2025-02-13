@@ -16,6 +16,7 @@ library AppRegistryStore {
 
   struct Layout {
     uint256 nextAppId;
+    mapping(address appAddress => uint256 appId) appIdByAddress;
     mapping(uint256 appId => App.Config registration) registrations;
     mapping(address account => Account.Installation installation) installations;
   }

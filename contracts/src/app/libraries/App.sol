@@ -6,14 +6,13 @@ import {IAppRegistryBase} from "contracts/src/app/interfaces/IAppRegistry.sol";
 // libraries
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {Validator} from "contracts/src/utils/Validator.sol";
-import {StringSet} from "contracts/src/utils/StringSet.sol";
+import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 
 // contracts
 
 library App {
   using CustomRevert for bytes4;
-  using StringSet for StringSet.Set;
-
+  using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
   struct Config {
     uint256 tokenId;
     address appAddress;
@@ -21,7 +20,7 @@ library App {
     string uri;
     string name;
     string symbol;
-    StringSet.Set permissions;
+    EnumerableSetLib.Bytes32Set permissions;
   }
 
   function initialize(
@@ -32,7 +31,7 @@ library App {
     string memory uri,
     string memory name,
     string memory symbol,
-    string[] memory permissions
+    bytes32[] memory permissions
   ) internal {
     Validator.checkAddress(appAddress);
     Validator.checkAddress(owner);
@@ -61,7 +60,7 @@ library App {
 
   function getPermissions(
     Config storage self
-  ) internal view returns (string[] memory) {
+  ) internal view returns (bytes32[] memory) {
     return self.permissions.values();
   }
 }

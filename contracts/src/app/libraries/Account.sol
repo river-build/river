@@ -18,7 +18,7 @@ library Account {
     bool disabled;
     uint256 updatedAt;
     EnumerableSetLib.Bytes32Set channels;
-    StringSet.Set permissions;
+    EnumerableSetLib.Bytes32Set permissions;
   }
 
   struct Installation {
@@ -41,7 +41,7 @@ library Account {
     Installation storage self,
     uint256 appId,
     bytes32 channelId,
-    string[] memory permissions
+    bytes32[] memory permissions
   ) internal {
     self.installation[appId].updatedAt = block.timestamp;
     if (channelId != bytes32(0))
@@ -52,14 +52,38 @@ library Account {
     }
   }
 
-  function uninstall(Installation storage self, uint256 appId) internal {
-    delete self.installation[appId];
-    self.installedApps.remove(appId);
+  function uninstall(
+    Installation storage self,
+    uint256 appId,
+    bytes32 channelId
+  ) internal returns (bool) {
+    if (channelId != bytes32(0))
+      self.installation[appId].channels.remove(channelId);
+
+    if (self.installation[appId].channels.length() == 0) {
+      delete self.installation[appId];
+      self.installedApps.remove(appId);
+    }
+
+    return self.installation[appId].channels.length() == 0;
   }
 
   function apps(
     Installation storage self
   ) internal view returns (uint256[] memory) {
     return self.installedApps.values();
+  }
+
+  function isEntitled(
+    Installation storage self,
+    uint256 appId,
+    bytes32 channelId,
+    bytes32 permission
+  ) internal view returns (bool) {
+    return
+      self.installedApps.contains(appId) &&
+      (channelId == bytes32(0) ||
+        self.installation[appId].channels.contains(channelId)) &&
+      self.installation[appId].permissions.contains(permission);
   }
 }
