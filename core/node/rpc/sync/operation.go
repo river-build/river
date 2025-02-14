@@ -100,21 +100,39 @@ func (syncOp *StreamSyncOperation) Run(
 	log.Info("Stream sync operation start")
 	defer log.Infow("Stream sync operation stopped", "send", messagesSendToClient)
 
-	cookies, err := client.ValidateAndGroupSyncCookies(req.Msg.GetSyncPos())
-	if err != nil {
-		return err
-	}
-
 	syncers, messages, err := client.NewSyncers(
 		syncOp.ctx, syncOp.cancel, syncOp.SyncID, syncOp.streamCache,
-		syncOp.nodeRegistry, syncOp.thisNodeAddress, cookies, syncOp.otelTracer)
+		syncOp.nodeRegistry, syncOp.thisNodeAddress, nil, syncOp.otelTracer)
 	if err != nil {
 		return err
 	}
 
-	syncers.AddInitialStreams()
-
 	go syncers.Run()
+
+	go func() {
+		for _, cookie := range req.Msg.GetSyncPos() {
+			if err = syncOp.process(&subCommand{
+				Ctx: syncOp.ctx,
+				AddStreamReq: &connect.Request[AddStreamToSyncRequest]{
+					Msg: &AddStreamToSyncRequest{
+						SyncId:  syncOp.SyncID,
+						SyncPos: cookie,
+					},
+				},
+				reply: make(chan error, 1),
+			}); err != nil {
+				select {
+				case messages <- &SyncStreamsResponse{
+					SyncOp:   SyncOp_SYNC_DOWN,
+					StreamId: cookie.GetStreamId(),
+				}:
+					continue
+				case <-syncOp.ctx.Done():
+					return
+				}
+			}
+		}
+	}()
 
 	for {
 		select {
