@@ -25,9 +25,10 @@ type (
 	}
 
 	BotInfo struct {
-		Bot        common.Address
-		Owner      common.Address
-		WebhookUrl string
+		Bot             common.Address
+		Owner           common.Address
+		EncryptedSecret [32]byte
+		WebhookUrl      string
 	}
 
 	BotRegistryStore interface {
@@ -92,7 +93,7 @@ func (pa *PGSecret) ScanText(v pgtype.Text) error {
 		return err
 	}
 	if len(bytes) != 32 {
-		return fmt.Errorf("Expected hex-encoded db string to decode into 32 bytes")
+		return fmt.Errorf("expected hex-encoded db string to decode into 32 bytes")
 	}
 	*pa = (PGSecret(bytes))
 	return nil
@@ -253,10 +254,11 @@ func (s *PostgresBotRegistryStore) getBotInfo(
 	error,
 ) {
 	var owner, bot PGAddress
+	var encryptedSecret PGSecret
 	bot = PGAddress(botAddr)
 	var botInfo BotInfo
-	if err := tx.QueryRow(ctx, "select bot_id, bot_owner_id, COALESCE(webhook, '') from bot_registry where bot_id = $1", bot).
-		Scan(&bot, &owner, &botInfo.WebhookUrl); err != nil {
+	if err := tx.QueryRow(ctx, "select bot_id, bot_owner_id, encrypted_shared_secret, COALESCE(webhook, '') from bot_registry where bot_id = $1", bot).
+		Scan(&bot, &owner, &encryptedSecret, &botInfo.WebhookUrl); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, RiverError(protocol.Err_NOT_FOUND, "bot does not exist")
 		} else {
@@ -266,6 +268,7 @@ func (s *PostgresBotRegistryStore) getBotInfo(
 	} else {
 		botInfo.Bot = common.BytesToAddress(bot[:])
 		botInfo.Owner = common.BytesToAddress(owner[:])
+		botInfo.EncryptedSecret = encryptedSecret
 	}
 	return &botInfo, nil
 }

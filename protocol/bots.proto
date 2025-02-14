@@ -26,8 +26,9 @@ message RegisterRequest {
 }
 
 message RegisterResponse {
-    // the shared secret used to generate the hmac the bot registry will send to the bot service
-    string hmac_shared_secret = 1;
+    // The shared secret used to sign the jwt the bot registry will use to authenticate to the
+    // bot service. This secret should be exactly 32 bytes.
+    bytes hs256_shared_secret = 1;
 }
 
 message RegisterWebhookRequest {

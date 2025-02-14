@@ -111,6 +111,7 @@ func TestBotRegistryStorage_RegisterWebhook(t *testing.T) {
 	require.NoError(err)
 	require.Equal(bot, info.Bot)
 	require.Equal(owner, info.Owner)
+	require.Equal([32]byte(secretBytes), info.EncryptedSecret)
 	require.Equal("", info.WebhookUrl)
 
 	webhook := "https://webhook.com/callme"
@@ -122,6 +123,7 @@ func TestBotRegistryStorage_RegisterWebhook(t *testing.T) {
 	require.NoError(err)
 	require.Equal(bot, info.Bot)
 	require.Equal(owner, info.Owner)
+	require.Equal([32]byte(secretBytes), info.EncryptedSecret)
 	require.Equal(webhook, info.WebhookUrl)
 
 	err = store.RegisterWebhook(params.ctx, bot, webhook2)
@@ -131,6 +133,7 @@ func TestBotRegistryStorage_RegisterWebhook(t *testing.T) {
 	require.NoError(err)
 	require.Equal(bot, info.Bot)
 	require.Equal(owner, info.Owner)
+	require.Equal([32]byte(secretBytes), info.EncryptedSecret)
 	require.Equal(webhook2, info.WebhookUrl)
 
 	err = store.RegisterWebhook(params.ctx, unregisteredBot, webhook)

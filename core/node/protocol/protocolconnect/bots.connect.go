@@ -56,6 +56,7 @@ var (
 type BotRegistryServiceClient interface {
 	Register(context.Context, *connect.Request[protocol.RegisterRequest]) (*connect.Response[protocol.RegisterResponse], error)
 	RegisterWebhook(context.Context, *connect.Request[protocol.RegisterWebhookRequest]) (*connect.Response[protocol.RegisterWebhookResponse], error)
+	// rpc GetRegisteredBotInfo(GetRegisteredBotInfoRequest) returns (GetRegisteredBotInfoResponse);
 	// rpc RotateSecret(RotateSecretRequest) returns (RotateSecretResponse);
 	GetStatus(context.Context, *connect.Request[protocol.GetStatusRequest]) (*connect.Response[protocol.GetStatusResponse], error)
 }
@@ -117,6 +118,7 @@ func (c *botRegistryServiceClient) GetStatus(ctx context.Context, req *connect.R
 type BotRegistryServiceHandler interface {
 	Register(context.Context, *connect.Request[protocol.RegisterRequest]) (*connect.Response[protocol.RegisterResponse], error)
 	RegisterWebhook(context.Context, *connect.Request[protocol.RegisterWebhookRequest]) (*connect.Response[protocol.RegisterWebhookResponse], error)
+	// rpc GetRegisteredBotInfo(GetRegisteredBotInfoRequest) returns (GetRegisteredBotInfoResponse);
 	// rpc RotateSecret(RotateSecretRequest) returns (RotateSecretResponse);
 	GetStatus(context.Context, *connect.Request[protocol.GetStatusRequest]) (*connect.Response[protocol.GetStatusResponse], error)
 }

@@ -94,13 +94,16 @@ func initBotRegistryService(
 	bc := tester.btc.NewWalletAndBlockchain(tester.ctx)
 	listener, _ := makeTestListener(tester.t)
 
-	var key [32]byte
-	_, err := rand.Read(key[:])
-	tester.require.NoError(err)
-
 	config := tester.getConfig()
 	config.BotRegistry.BotRegistryId = base.GenShortNanoid()
 
+	var key [32]byte
+	_, err := rand.Read(key[:])
+	tester.require.NoError(err)
+	config.BotRegistry.SharedSecretDataEncryptionKey = hex.EncodeToString(key[:])
+
+	_, err = rand.Read(key[:])
+	tester.require.NoError(err)
 	config.BotRegistry.Authentication.SessionToken.Key.Algorithm = "HS256"
 	config.BotRegistry.Authentication.SessionToken.Key.Key = hex.EncodeToString(key[:])
 
@@ -453,6 +456,7 @@ func TestBotRegistry_Register(t *testing.T) {
 
 			if tc.expectedErr == "" {
 				tester.require.NotNil(resp)
+				tester.require.Len(resp.Msg.GetHs256SharedSecret(), 32)
 				tester.require.NoError(err)
 			} else {
 				tester.require.Nil(resp)

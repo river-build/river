@@ -2,6 +2,7 @@ package bot_registry
 
 import (
 	"context"
+	"encoding/hex"
 	"time"
 
 	"connectrpc.com/connect"
@@ -30,9 +31,10 @@ const (
 type (
 	Service struct {
 		authentication.AuthServiceMixin
-		cfg            config.BotRegistryConfig
-		store          storage.BotRegistryStore
-		streamsTracker track_streams.StreamsTracker
+		cfg                           config.BotRegistryConfig
+		store                         storage.BotRegistryStore
+		streamsTracker                track_streams.StreamsTracker
+		sharedSecretDataEncryptionKey [32]byte `json:"-" yaml:"-"` // Just in case, protect this from being logged
 	}
 )
 
@@ -61,10 +63,17 @@ func NewService(
 		return nil, err
 	}
 
+	sharedSecretDataEncryptionKey, err := hex.DecodeString(cfg.SharedSecretDataEncryptionKey)
+	if err != nil || len(sharedSecretDataEncryptionKey) != 32 {
+		return nil, base.AsRiverError(err, Err_INVALID_ARGUMENT).
+			Message("BotRegistryConfig SharedSecretDataEncryptionKey must be a 32-byte key encoded as hex")
+	}
+
 	s := &Service{
-		cfg:            cfg,
-		store:          store,
-		streamsTracker: tracker,
+		cfg:                           cfg,
+		store:                         store,
+		streamsTracker:                tracker,
+		sharedSecretDataEncryptionKey: [32]byte(sharedSecretDataEncryptionKey),
 	}
 
 	if err := s.InitAuthentication(botServiceChallengePrefix, &cfg.Authentication); err != nil {
@@ -127,16 +136,24 @@ func (s *Service) Register(
 		)
 	}
 
-	// Store the bot record in pg
-	// TODO: generate shared secret and encrypt with encryption key in config
-	if err := s.store.CreateBot(ctx, owner, bot, [32]byte{}); err != nil {
+	// Generate a secret, encrypt it, and store the bot record in pg.
+	botSecret, err := genHS256SharedSecret()
+	if err != nil {
+		return nil, base.AsRiverError(err, Err_INTERNAL).Message("error generating shared secret for bot")
+	}
+
+	encrypted, err := encryptSharedSecret(botSecret, s.sharedSecretDataEncryptionKey)
+	if err != nil {
+		return nil, base.AsRiverError(err, Err_INTERNAL).Message("error encrypting shared secret for bot")
+	}
+
+	if err := s.store.CreateBot(ctx, owner, bot, encrypted); err != nil {
 		return nil, base.AsRiverError(err, Err_INTERNAL).Func("Register")
 	}
 
 	return &connect.Response[RegisterResponse]{
 		Msg: &RegisterResponse{
-			// TODO: populate with unencrypted secret
-			HmacSharedSecret: "",
+			Hs256SharedSecret: botSecret[:],
 		},
 	}, nil
 }
