@@ -36,32 +36,35 @@ contract AppRegistryTest is TestUtils, IAppRegistryBase {
     address owner = _randomAddress();
     address space = _randomAddress();
     address user = _randomAddress();
+    address appAddress = _randomAddress();
+    string memory name = "BeaverBot";
+    string memory symbol = "BEAVER";
+    string memory uri = "https://beaverbot.com";
 
     bytes32[] memory permissions = new bytes32[](1);
     permissions[0] = bytes32(abi.encodePacked(Permissions.JoinSpace));
 
     // MockHook mockHook = new MockHook();
 
+    Registration memory registration = Registration({
+      appAddress: appAddress,
+      owner: owner,
+      uri: uri,
+      permissions: permissions,
+      hooks: IAppHooks(address(0)),
+      name: name,
+      symbol: symbol
+    });
+
     vm.prank(space);
-    uint256 appId = appRegistry.register(
-      Registration({
-        appAddress: _randomAddress(),
-        owner: owner,
-        uri: "https://app.com",
-        permissions: permissions,
-        hooks: IAppHooks(address(0)),
-        name: "App",
-        symbol: "APP"
-      })
-    );
+    vm.expectEmit(address(appInstaller));
+    emit AppRegistered(owner, appAddress, 1, registration);
+    uint256 appId = appRegistry.register(registration);
 
     vm.prank(user);
     appInstaller.install(appId, bytes32(0));
 
     uint256[] memory installedApps = appInstaller.installedApps(user);
     assertContains(installedApps, appId);
-
-    assertEq(appInstaller.name(appId), "App");
-    assertEq(appInstaller.symbol(appId), "APP");
   }
 }

@@ -3,6 +3,8 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IAppRegistryBase} from "contracts/src/app/interfaces/IAppRegistry.sol";
+import {IAppHooks} from "contracts/src/app/interfaces/IAppHooks.sol";
+
 // libraries
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {Validator} from "contracts/src/utils/Validator.sol";
@@ -21,6 +23,7 @@ library App {
     string name;
     string symbol;
     EnumerableSetLib.Bytes32Set permissions;
+    IAppHooks hooks;
   }
 
   function initialize(
@@ -31,7 +34,8 @@ library App {
     string memory uri,
     string memory name,
     string memory symbol,
-    bytes32[] memory permissions
+    bytes32[] memory permissions,
+    IAppHooks hooks
   ) internal {
     Validator.checkAddress(appAddress);
     Validator.checkAddress(owner);
@@ -48,6 +52,7 @@ library App {
     self.uri = uri;
     self.name = name;
     self.symbol = symbol;
+    self.hooks = hooks;
 
     for (uint256 i; i < permissions.length; ++i) {
       self.permissions.add(permissions[i]);

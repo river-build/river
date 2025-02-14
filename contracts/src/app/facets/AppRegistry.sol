@@ -47,7 +47,8 @@ contract AppRegistry is IAppRegistry {
       registration.uri,
       registration.name,
       registration.symbol,
-      registration.permissions
+      registration.permissions,
+      registration.hooks
     );
 
     emit AppRegistered(
