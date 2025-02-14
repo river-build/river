@@ -94,7 +94,7 @@ func (syncOp *StreamSyncOperation) Run(
 	res StreamsResponseSubscriber,
 ) error {
 	log := logging.FromCtx(syncOp.ctx).With("syncId", syncOp.SyncID)
-
+	
 	messagesSendToClient := 0
 
 	log.Info("Stream sync operation start")
@@ -111,7 +111,7 @@ func (syncOp *StreamSyncOperation) Run(
 
 	go func() {
 		for _, cookie := range req.Msg.GetSyncPos() {
-			if err = syncOp.process(&subCommand{
+			cmd := &subCommand{
 				Ctx: syncOp.ctx,
 				AddStreamReq: &connect.Request[AddStreamToSyncRequest]{
 					Msg: &AddStreamToSyncRequest{
@@ -120,7 +120,8 @@ func (syncOp *StreamSyncOperation) Run(
 					},
 				},
 				reply: make(chan error, 1),
-			}); err != nil {
+			}
+			if err := syncOp.process(cmd); err != nil {
 				select {
 				case messages <- &SyncStreamsResponse{
 					SyncOp:   SyncOp_SYNC_DOWN,
@@ -146,7 +147,7 @@ func (syncOp *StreamSyncOperation) Run(
 			}
 
 			msg.SyncId = syncOp.SyncID
-			if err = res.Send(msg); err != nil {
+			if err := res.Send(msg); err != nil {
 				log.Errorw("Unable to send sync stream update to client", "err", err)
 				return err
 			}
@@ -181,7 +182,7 @@ func (syncOp *StreamSyncOperation) Run(
 				}
 				cmd.Reply(syncers.RemoveStream(cmd.Ctx, streamID))
 			} else if cmd.PingReq != nil {
-				err = res.Send(&SyncStreamsResponse{
+				err := res.Send(&SyncStreamsResponse{
 					SyncId:    syncOp.SyncID,
 					SyncOp:    SyncOp_SYNC_PONG,
 					PongNonce: cmd.PingReq.Msg.GetNonce(),
