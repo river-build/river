@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"crypto/rand"
+	"encoding/hex"
 	"strings"
 	"sync"
 	"testing"
@@ -17,6 +18,11 @@ import (
 	"github.com/towns-protocol/towns/core/node/infra"
 	"github.com/towns-protocol/towns/core/node/protocol"
 	"github.com/towns-protocol/towns/core/node/testutils/dbtestutils"
+)
+
+var (
+	testSecretHexString  = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+	testSecretHexString2 = "202122232425262728292a2b2c2d2e2f101112131415161718191a1b1c1d1e1f"
 )
 
 type testBotRegistryStoreParams struct {
@@ -78,6 +84,59 @@ func setupBotRegistryStorageTest(t *testing.T) *testBotRegistryStoreParams {
 	return params
 }
 
+func TestBotRegistryStorage_RegisterWebhook(t *testing.T) {
+	params := setupBotRegistryStorageTest(t)
+	t.Cleanup(params.closer)
+
+	require := require.New(t)
+	store := params.pgBotRegistryStore
+
+	var owner, bot, unregisteredBot common.Address
+	_, err := rand.Read(owner[:])
+	require.NoError(err)
+	_, err = rand.Read(bot[:])
+	require.NoError(err)
+
+	_, err = rand.Read(unregisteredBot[:])
+	require.NoError(err)
+
+	secretBytes, err := hex.DecodeString(testSecretHexString)
+	require.NoError(err)
+	secret := [32]byte(secretBytes)
+
+	err = store.CreateBot(params.ctx, owner, bot, secret)
+	require.NoError(err)
+
+	info, err := store.GetBotInfo(params.ctx, bot)
+	require.NoError(err)
+	require.Equal(bot, info.Bot)
+	require.Equal(owner, info.Owner)
+	require.Equal("", info.WebhookUrl)
+
+	webhook := "https://webhook.com/callme"
+	webhook2 := "http://api.org/textme"
+	err = store.RegisterWebhook(params.ctx, bot, webhook)
+	require.NoError(err)
+
+	info, err = store.GetBotInfo(params.ctx, bot)
+	require.NoError(err)
+	require.Equal(bot, info.Bot)
+	require.Equal(owner, info.Owner)
+	require.Equal(webhook, info.WebhookUrl)
+
+	err = store.RegisterWebhook(params.ctx, bot, webhook2)
+	require.NoError(err)
+
+	info, err = store.GetBotInfo(params.ctx, bot)
+	require.NoError(err)
+	require.Equal(bot, info.Bot)
+	require.Equal(owner, info.Owner)
+	require.Equal(webhook2, info.WebhookUrl)
+
+	err = store.RegisterWebhook(params.ctx, unregisteredBot, webhook)
+	require.ErrorContains(err, "bot was not found in registry")
+}
+
 func TestBotRegistryStorage(t *testing.T) {
 	params := setupBotRegistryStorageTest(t)
 	t.Cleanup(params.closer)
@@ -98,34 +157,39 @@ func TestBotRegistryStorage(t *testing.T) {
 	_, err = rand.Read(bot3[:])
 	require.NoError(err)
 
-	hook := "http://www.abc.com/hook"
-	hook2 := "http://www.abc.com/hook2"
+	secretBytes, err := hex.DecodeString(testSecretHexString)
+	require.NoError(err)
+	secret := [32]byte(secretBytes)
 
-	err = store.CreateBot(params.ctx, owner, bot, hook)
+	secretBytes2, err := hex.DecodeString(testSecretHexString2)
+	require.NoError(err)
+	secret2 := [32]byte(secretBytes2)
+
+	err = store.CreateBot(params.ctx, owner, bot, secret)
 	require.NoError(err)
 
-	err = store.CreateBot(params.ctx, owner2, bot, hook)
+	err = store.CreateBot(params.ctx, owner2, bot, secret)
 	require.ErrorContains(err, "Bot already exists")
 	require.True(base.IsRiverErrorCode(err, protocol.Err_ALREADY_EXISTS))
 
 	// Fine to have multiple bots per owner
-	err = store.CreateBot(params.ctx, owner, bot2, hook2)
+	err = store.CreateBot(params.ctx, owner, bot2, secret2)
 	require.NoError(err)
 
 	info, err := store.GetBotInfo(params.ctx, bot)
 	require.NoError(err)
 	require.Equal(bot, info.Bot)
 	require.Equal(owner, info.Owner)
-	require.Equal(hook, info.WebhookUrl)
+	require.Equal("", info.WebhookUrl)
 
 	info, err = store.GetBotInfo(params.ctx, bot2)
 	require.NoError(err)
-	require.Equal(info.Bot, bot2)
-	require.Equal(info.Owner, owner)
-	require.Equal(info.WebhookUrl, hook2)
+	require.Equal(bot2, info.Bot)
+	require.Equal(owner, info.Owner)
+	require.Equal("", info.WebhookUrl)
 
 	info, err = store.GetBotInfo(params.ctx, bot3)
 	require.Nil(info)
-	require.ErrorContains(err, "Bot does not exist")
+	require.ErrorContains(err, "bot does not exist")
 	require.True(base.IsRiverErrorCode(err, protocol.Err_NOT_FOUND))
 }

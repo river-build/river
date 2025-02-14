@@ -438,6 +438,11 @@ type BotRegistryConfig struct {
 
 	// Authentication holds configuration for the Client API authentication service.
 	Authentication AuthenticationConfig
+
+	// SharedSecretDataEncryptionKey stores the 256-bit key used to encrypt shared secrets in database
+	// storage via AES256. This key is stored as a string in hex format, with an expected length of 64
+	// characters, plus an optional '0x' prefix.
+	SharedSecretDataEncryptionKey string `json:"-" yaml:"-"` // Omit sensitive field from logging
 }
 
 type LogConfig struct {

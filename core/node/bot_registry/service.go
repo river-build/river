@@ -17,6 +17,7 @@ import (
 	"github.com/towns-protocol/towns/core/node/logging"
 	"github.com/towns-protocol/towns/core/node/nodes"
 	. "github.com/towns-protocol/towns/core/node/protocol"
+	"github.com/towns-protocol/towns/core/node/protocol/protocolconnect"
 	"github.com/towns-protocol/towns/core/node/registries"
 	"github.com/towns-protocol/towns/core/node/storage"
 	"github.com/towns-protocol/towns/core/node/track_streams"
@@ -34,6 +35,8 @@ type (
 		streamsTracker track_streams.StreamsTracker
 	}
 )
+
+var _ protocolconnect.BotRegistryServiceHandler = (*Service)(nil)
 
 func NewService(
 	ctx context.Context,
@@ -91,6 +94,53 @@ func (s *Service) Start(ctx context.Context) {
 	}()
 }
 
+func (s *Service) Register(
+	ctx context.Context,
+	req *connect.Request[RegisterRequest],
+) (
+	*connect.Response[RegisterResponse],
+	error,
+) {
+	var bot, owner common.Address
+	var err error
+	if bot, err = base.BytesToAddress(req.Msg.BotId); err != nil {
+		return nil, base.WrapRiverError(Err_INVALID_ARGUMENT, err).
+			Message("invalid bot id").
+			Tag("bot_id", req.Msg.BotId)
+	}
+
+	if owner, err = base.BytesToAddress(req.Msg.BotOwnerId); err != nil {
+		return nil, base.WrapRiverError(Err_INVALID_ARGUMENT, err).
+			Message("invalid owner id").
+			Tag("owner_id", req.Msg.BotOwnerId)
+	}
+
+	userId := authentication.UserFromAuthenticatedContext(ctx)
+	if owner != userId {
+		return nil, base.RiverError(
+			Err_PERMISSION_DENIED,
+			"authenticated user must be bot owner",
+			"owner",
+			owner,
+			"userId",
+			userId,
+		)
+	}
+
+	// Store the bot record in pg
+	// TODO: generate shared secret and encrypt with encryption key in config
+	if err := s.store.CreateBot(ctx, owner, bot, [32]byte{}); err != nil {
+		return nil, base.AsRiverError(err, Err_INTERNAL).Func("Register")
+	}
+
+	return &connect.Response[RegisterResponse]{
+		Msg: &RegisterResponse{
+			// TODO: populate with unencrypted secret
+			HmacSharedSecret: "",
+		},
+	}, nil
+}
+
 func (s *Service) RegisterWebhook(
 	ctx context.Context,
 	req *connect.Request[RegisterWebhookRequest],
@@ -99,26 +149,26 @@ func (s *Service) RegisterWebhook(
 	error,
 ) {
 	// Validate input
-	var bot, owner common.Address
+	var bot common.Address
+	var botInfo *storage.BotInfo
 	var err error
 	if bot, err = base.BytesToAddress(req.Msg.BotId); err != nil {
 		return nil, base.WrapRiverError(Err_INVALID_ARGUMENT, err).
-			Message("Invalid bot id").
+			Message("invalid bot id").
 			Tag("bot_id", req.Msg.BotId)
 	}
-	if owner, err = base.BytesToAddress(req.Msg.BotOwnerId); err != nil {
-		return nil, base.WrapRiverError(Err_INVALID_ARGUMENT, err).
-			Message("Invalid bot owner id").
-			Tag("bot_owner_id", req.Msg.BotOwnerId)
+	if botInfo, err = s.store.GetBotInfo(ctx, bot); err != nil {
+		return nil, base.WrapRiverError(Err_INTERNAL, err).Message("could not determine bot owner").
+			Tag("bot_id", bot)
 	}
 
 	userId := authentication.UserFromAuthenticatedContext(ctx)
-	if bot != userId && owner != userId {
+	if bot != userId && botInfo.Owner != userId {
 		return nil, base.RiverError(
 			Err_PERMISSION_DENIED,
-			"Registering user is neither bot nor owner",
+			"authenticated user must be either bot or owner",
 			"owner",
-			owner,
+			botInfo.Owner,
 			"bot",
 			bot,
 			"userId",
@@ -130,11 +180,10 @@ func (s *Service) RegisterWebhook(
 	webhook := req.Msg.WebhookUrl
 
 	// Store the bot record in pg
-	if err := s.store.CreateBot(ctx, owner, bot, webhook); err != nil {
+	if err := s.store.RegisterWebhook(ctx, bot, webhook); err != nil {
 		return nil, base.AsRiverError(err, Err_INTERNAL).Func("RegisterWebhook")
 	}
 
-	// TODO
 	return &connect.Response[RegisterWebhookResponse]{}, nil
 }
 
@@ -148,13 +197,12 @@ func (s *Service) GetStatus(
 	bot, err := base.BytesToAddress(req.Msg.BotId)
 	if err != nil {
 		return nil, base.WrapRiverError(Err_INVALID_ARGUMENT, err).
-			Message("Invalid bot id").
+			Message("invalid bot id").
 			Tag("bot_id", req.Msg.BotId).
 			Func("GetStatus")
 	}
 
 	// TODO: implement 2 second caching here
-
 	if _, err = s.store.GetBotInfo(ctx, bot); err != nil {
 		// Bot does not exist
 		if base.IsRiverErrorCode(err, Err_NOT_FOUND) {
@@ -166,7 +214,7 @@ func (s *Service) GetStatus(
 		} else {
 			// Error fetching bot
 			return nil, base.WrapRiverError(Err_INTERNAL, err).
-				Message("Unable to fetch info for bot").
+				Message("unable to fetch info for bot").
 				Tag("bot_id", bot).
 				Func("GetStatus")
 		}
@@ -174,7 +222,6 @@ func (s *Service) GetStatus(
 
 	// TODO: issue request to bot service, confirm 200 response, and
 	// validate returned version info. Return in the response.
-
 	return &connect.Response[GetStatusResponse]{
 		Msg: &GetStatusResponse{
 			IsRegistered: true,
