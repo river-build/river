@@ -138,10 +138,13 @@ class StreamQueues {
         return true
     }
     toString() {
-        const counts = Array.from(this.streams.entries()).reduce((acc, [_, tasks]) => {
-            acc['encryptedContent'] = (acc['encryptedContent'] ?? 0) + tasks.encryptedContent.length
-            acc['missingKeys'] = (acc['missingKeys'] ?? 0) + (tasks.isMissingKeys ? 1 : 0)
-            acc['keySolicitations'] = (acc['keySolicitations'] ?? 0) + tasks.keySolicitations.length
+        const counts = Array.from(this.streams.entries()).reduce((acc, [_, stream]) => {
+            acc['encryptedContent'] =
+                (acc['encryptedContent'] ?? 0) + stream.encryptedContent.length
+            acc['streamsMissingKeys'] =
+                (acc['streamsMissingKeys'] ?? 0) + (stream.isMissingKeys ? 1 : 0)
+            acc['keySolicitations'] =
+                (acc['keySolicitations'] ?? 0) + stream.keySolicitations.length
             return acc
         }, {} as Record<string, number>)
 
@@ -238,7 +241,6 @@ export abstract class BaseDecryptionExtensions {
     public abstract downloadNewMessages(): Promise<void>
     public abstract getKeySolicitations(streamId: string): KeySolicitationContent[]
     public abstract hasStream(streamId: string): boolean
-    public abstract hasUnprocessedSession(item: EncryptedContentItem): boolean
     public abstract isUserEntitledToKeyExchange(
         streamId: string,
         userId: string,
@@ -707,6 +709,14 @@ export abstract class BaseDecryptionExtensions {
                     item.encryptedData.sessionId && item.encryptedData.sessionId.length > 0
                         ? item.encryptedData.sessionId
                         : bin_toHexString(item.encryptedData.sessionIdBytes)
+                if (sessionId.length === 0) {
+                    this.log.error('session id length is 0 for failed decryption', {
+                        err,
+                        streamId: item.streamId,
+                        eventId: item.eventId,
+                    })
+                    return
+                }
                 if (!this.decryptionFailures[streamId]) {
                     this.decryptionFailures[streamId] = { [sessionId]: [item] }
                 } else if (!this.decryptionFailures[streamId][sessionId]) {
@@ -714,7 +724,6 @@ export abstract class BaseDecryptionExtensions {
                 } else if (!this.decryptionFailures[streamId][sessionId].includes(item)) {
                     this.decryptionFailures[streamId][sessionId].push(item)
                 }
-
                 const streamQueue = this.streamQueues.getQueue(streamId)
                 streamQueue.isMissingKeys = true
             } else {

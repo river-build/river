@@ -27,11 +27,14 @@ export async function makeStressClient(
 ) {
     const bot = new Bot(inWallet, config)
     const storageKey = `stressclient_${bot.userId}_${config.environmentId}`
+    const logId = `client${clientIndex}:${shortenHexString(bot.userId)}`
     const logger = getLogger('stress:makeStressClient', {
         clientIndex,
         userId: bot.userId,
         storageKey,
+        logId,
     })
+    logger.info('makeStressClient')
     let device: ExportedDevice | undefined
     const rawDevice = await globalPersistedStore?.get(storageKey).catch(() => undefined)
 
@@ -68,6 +71,7 @@ export async function makeStressClient(
         }
     }
     const botPrivateKey = bot.rootWallet.privateKey
+    logger.info('makeStressClient: making agent')
     const agent = await bot.makeSyncAgent({
         disablePersistenceStore: true,
         unpackEnvelopeOpts: {
@@ -78,15 +82,18 @@ export async function makeStressClient(
             fromExportedDevice: device,
             pickleKey: sha256(botPrivateKey),
         },
+        logId,
     })
+    logger.info('makeStressClient: agent created')
     await agent.start()
 
+    logger.info('makeStressClient: agent started')
     const streamsClient = agent.riverConnection.client
     if (!streamsClient) {
         throw new Error('streamsClient not initialized')
     }
 
-    return new StressClient(
+    const client = new StressClient(
         config,
         clientIndex,
         bot.userId,
@@ -97,7 +104,10 @@ export async function makeStressClient(
         streamsClient,
         globalPersistedStore,
         storageKey,
+        logId,
     )
+    logger.info('makeStressClient: client created')
+    return client
 }
 
 export class StressClient {
@@ -114,6 +124,7 @@ export class StressClient {
         public streamsClient: StreamsClient,
         public globalPersistedStore: IStorage | undefined,
         public storageKey: string,
+        public logId: string,
     ) {
         this.logger = getLogger('stress:stressClient', {
             clientIndex,
@@ -121,10 +132,6 @@ export class StressClient {
             logId: this.logId,
             rpcUrl: this.streamsClient.rpcClient.url,
         })
-    }
-
-    get logId(): string {
-        return `client${this.clientIndex}:${shortenHexString(this.userId)}`
     }
 
     async fundWallet() {
