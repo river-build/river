@@ -338,6 +338,8 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
                         )
                         break
                     }
+                    case 'trade':
+                        break
                     default:
                         logNever(transactionContent)
                 }

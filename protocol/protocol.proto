@@ -627,11 +627,24 @@ message BlockchainTransaction {
         Event event = 1; // event emitted by the tipping facet
         bytes toUserAddress = 2; // user that received funds
     }
+
+    message Trade {
+        message Event {
+            bytes from_token_address = 1;
+            bytes to_token_address = 2;
+            uint64 from_amount = 3;
+            uint64 to_amount = 4;
+            bytes message_id = 5;
+            bytes channel_id = 6;
+        }
+    }
+
     // required fields
     BlockchainTransactionReceipt receipt = 1;
     // optional metadata to be verified by the node
     oneof content {
         Tip tip = 101;
+        Trade trade = 102;
     }
 }
 
