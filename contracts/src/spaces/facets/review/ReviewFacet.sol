@@ -39,9 +39,9 @@ contract ReviewFacet is IReview, Entitled, Facet {
     ReviewStorage.Layout storage self = ReviewStorage.layout();
 
     if (action == Action.Add) {
-      ReviewStorage.Meta memory newReview = abi.decode(
+      ReviewStorage.Content memory newReview = abi.decode(
         data,
-        (ReviewStorage.Meta)
+        (ReviewStorage.Content)
       );
       _validateReview(newReview);
       self.reviewByUser[msg.sender] = newReview;
@@ -49,9 +49,9 @@ contract ReviewFacet is IReview, Entitled, Facet {
 
       emit ReviewAdded(msg.sender, newReview);
     } else if (action == Action.Update) {
-      ReviewStorage.Meta memory newReview = abi.decode(
+      ReviewStorage.Content memory newReview = abi.decode(
         data,
-        (ReviewStorage.Meta)
+        (ReviewStorage.Content)
       );
       _validateReview(newReview);
       self.reviewByUser[msg.sender] = newReview;
@@ -67,7 +67,7 @@ contract ReviewFacet is IReview, Entitled, Facet {
 
   function getReview(
     address user
-  ) external view returns (ReviewStorage.Meta memory review) {
+  ) external view returns (ReviewStorage.Content memory review) {
     assembly ("memory-safe") {
       mstore(0x40, review)
     }
@@ -77,17 +77,17 @@ contract ReviewFacet is IReview, Entitled, Facet {
   function getAllReviews()
     external
     view
-    returns (address[] memory users, ReviewStorage.Meta[] memory reviews)
+    returns (address[] memory users, ReviewStorage.Content[] memory reviews)
   {
     ReviewStorage.Layout storage self = ReviewStorage.layout();
     users = self.usersReviewed.values();
-    reviews = new ReviewStorage.Meta[](users.length);
+    reviews = new ReviewStorage.Content[](users.length);
     for (uint256 i; i < users.length; ++i) {
       reviews[i] = self.reviewByUser[users[i]];
     }
   }
 
-  function _validateReview(ReviewStorage.Meta memory review) internal view {
+  function _validateReview(ReviewStorage.Content memory review) internal view {
     ReviewStorage.Layout storage self = ReviewStorage.layout();
 
     uint256 length = bytes(review.comment).length;

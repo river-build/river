@@ -15,7 +15,7 @@ contract ReviewFacetTest is MembershipBaseSetup, IReviewBase {
 
   ReviewFacet internal reviewFacet;
 
-  ReviewStorage.Meta internal sampleReview;
+  ReviewStorage.Content internal sampleReview;
 
   function setUp() public override {
     super.setUp();
@@ -23,7 +23,7 @@ contract ReviewFacetTest is MembershipBaseSetup, IReviewBase {
     reviewFacet = ReviewFacet(userSpace);
 
     // Example initialization of a sample review
-    sampleReview = ReviewStorage.Meta({
+    sampleReview = ReviewStorage.Content({
       comment: "Great experience!",
       rating: 5
     });
@@ -45,7 +45,7 @@ contract ReviewFacetTest is MembershipBaseSetup, IReviewBase {
     public
     givenAliceHasMintedMembership
   {
-    ReviewStorage.Meta memory invalidReview = ReviewStorage.Meta({
+    ReviewStorage.Content memory invalidReview = ReviewStorage.Content({
       comment: "Bad",
       rating: 5
     });
@@ -59,7 +59,7 @@ contract ReviewFacetTest is MembershipBaseSetup, IReviewBase {
     public
     givenAliceHasMintedMembership
   {
-    ReviewStorage.Meta memory invalidReview = ReviewStorage.Meta({
+    ReviewStorage.Content memory invalidReview = ReviewStorage.Content({
       comment: "This exceeds the maximum allowed rating.",
       rating: 6 // Invalid rating
     });
@@ -75,7 +75,7 @@ contract ReviewFacetTest is MembershipBaseSetup, IReviewBase {
   )
     public
     givenAliceHasMintedMembership
-    returns (ReviewStorage.Meta memory newReview)
+    returns (ReviewStorage.Content memory newReview)
   {
     rating = uint8(bound(rating, 0, 5));
     if (bytes(comment).length < DEFAULT_MIN_COMMENT_LENGTH) {
@@ -87,12 +87,12 @@ contract ReviewFacetTest is MembershipBaseSetup, IReviewBase {
       comment = comment.slice(0, DEFAULT_MAX_COMMENT_LENGTH);
     }
 
-    newReview = ReviewStorage.Meta({comment: comment, rating: rating});
+    newReview = ReviewStorage.Content({comment: comment, rating: rating});
 
     vm.prank(alice);
     reviewFacet.setReview(Action.Add, abi.encode(newReview));
 
-    ReviewStorage.Meta memory review = reviewFacet.getReview(alice);
+    ReviewStorage.Content memory review = reviewFacet.getReview(alice);
     assertEq(review.comment, newReview.comment, "Comment mismatch");
     assertEq(review.rating, newReview.rating, "Rating mismatch");
   }
@@ -105,7 +105,7 @@ contract ReviewFacetTest is MembershipBaseSetup, IReviewBase {
     vm.prank(alice);
     reviewFacet.setReview(Action.Add, abi.encode(sampleReview));
 
-    ReviewStorage.Meta memory updatedReview = ReviewStorage.Meta({
+    ReviewStorage.Content memory updatedReview = ReviewStorage.Content({
       comment: "Updated comment",
       rating: 4
     });
@@ -113,7 +113,7 @@ contract ReviewFacetTest is MembershipBaseSetup, IReviewBase {
     vm.prank(alice);
     reviewFacet.setReview(Action.Update, abi.encode(updatedReview));
 
-    ReviewStorage.Meta memory review = reviewFacet.getReview(alice);
+    ReviewStorage.Content memory review = reviewFacet.getReview(alice);
     assertEq(review.comment, updatedReview.comment, "Updated comment mismatch");
     assertEq(review.rating, updatedReview.rating, "Updated rating mismatch");
   }
@@ -129,7 +129,7 @@ contract ReviewFacetTest is MembershipBaseSetup, IReviewBase {
     vm.prank(alice);
     reviewFacet.setReview(Action.Delete, "");
 
-    ReviewStorage.Meta memory review = reviewFacet.getReview(alice);
+    ReviewStorage.Content memory review = reviewFacet.getReview(alice);
     assertEq(review.comment, "", "Review not deleted correctly");
     assertEq(review.rating, 0, "Rating not reset correctly");
   }
@@ -142,7 +142,7 @@ contract ReviewFacetTest is MembershipBaseSetup, IReviewBase {
     vm.prank(alice);
     reviewFacet.setReview(Action.Add, abi.encode(sampleReview));
 
-    ReviewStorage.Meta memory review = reviewFacet.getReview(alice);
+    ReviewStorage.Content memory review = reviewFacet.getReview(alice);
     assertEq(review.comment, sampleReview.comment, "Comment mismatch");
     assertEq(review.rating, sampleReview.rating, "Rating mismatch");
   }
@@ -154,7 +154,7 @@ contract ReviewFacetTest is MembershipBaseSetup, IReviewBase {
     vm.prank(charlie);
     membership.joinSpace(charlie);
 
-    ReviewStorage.Meta memory review = ReviewStorage.Meta({
+    ReviewStorage.Content memory review = ReviewStorage.Content({
       comment: "Good Service.",
       rating: 4
     });
@@ -162,8 +162,10 @@ contract ReviewFacetTest is MembershipBaseSetup, IReviewBase {
     vm.prank(charlie);
     reviewFacet.setReview(Action.Add, abi.encode(review));
 
-    (address[] memory users, ReviewStorage.Meta[] memory reviews) = reviewFacet
-      .getAllReviews();
+    (
+      address[] memory users,
+      ReviewStorage.Content[] memory reviews
+    ) = reviewFacet.getAllReviews();
     assertEq(users.length, 2, "User count incorrect");
     assertEq(reviews.length, 2, "Review count incorrect");
     assertEq(

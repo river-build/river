@@ -21,9 +21,9 @@ interface IReviewBase {
   /*                           EVENTS                           */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-  event ReviewAdded(address indexed user, ReviewStorage.Meta review);
+  event ReviewAdded(address indexed user, ReviewStorage.Content review);
 
-  event ReviewUpdated(address indexed user, ReviewStorage.Meta review);
+  event ReviewUpdated(address indexed user, ReviewStorage.Content review);
 
   event ReviewDeleted(address indexed user);
 }
@@ -33,10 +33,10 @@ interface IReview is IReviewBase {
 
   function getReview(
     address user
-  ) external view returns (ReviewStorage.Meta memory);
+  ) external view returns (ReviewStorage.Content memory);
 
   function getAllReviews()
     external
     view
-    returns (address[] memory users, ReviewStorage.Meta[] memory reviews);
+    returns (address[] memory users, ReviewStorage.Content[] memory reviews);
 }

@@ -8,13 +8,13 @@ library ReviewStorage {
   bytes32 internal constant STORAGE_SLOT =
     0x575a00558d547e4e5b6480e3f9afffa169c969028d92350b23fc834c93401100;
 
-  struct Meta {
+  struct Content {
     string comment;
     uint8 rating;
   }
 
   struct Layout {
-    mapping(address user => Meta) reviewByUser;
+    mapping(address user => Content) reviewByUser;
     EnumerableSetLib.AddressSet usersReviewed;
     uint16 minCommentLength;
     uint16 maxCommentLength;

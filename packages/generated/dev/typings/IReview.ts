@@ -28,12 +28,12 @@ import type {
 } from "./common";
 
 export declare namespace ReviewStorage {
-  export type MetaStruct = {
+  export type ContentStruct = {
     comment: PromiseOrValue<string>;
     rating: PromiseOrValue<BigNumberish>;
   };
 
-  export type MetaStructOutput = [string, number] & {
+  export type ContentStructOutput = [string, number] & {
     comment: string;
     rating: number;
   };
@@ -83,10 +83,10 @@ export interface IReviewInterface extends utils.Interface {
 
 export interface ReviewAddedEventObject {
   user: string;
-  review: ReviewStorage.MetaStructOutput;
+  review: ReviewStorage.ContentStructOutput;
 }
 export type ReviewAddedEvent = TypedEvent<
-  [string, ReviewStorage.MetaStructOutput],
+  [string, ReviewStorage.ContentStructOutput],
   ReviewAddedEventObject
 >;
 
@@ -101,10 +101,10 @@ export type ReviewDeletedEventFilter = TypedEventFilter<ReviewDeletedEvent>;
 
 export interface ReviewUpdatedEventObject {
   user: string;
-  review: ReviewStorage.MetaStructOutput;
+  review: ReviewStorage.ContentStructOutput;
 }
 export type ReviewUpdatedEvent = TypedEvent<
-  [string, ReviewStorage.MetaStructOutput],
+  [string, ReviewStorage.ContentStructOutput],
   ReviewUpdatedEventObject
 >;
 
@@ -140,16 +140,16 @@ export interface IReview extends BaseContract {
     getAllReviews(
       overrides?: CallOverrides
     ): Promise<
-      [string[], ReviewStorage.MetaStructOutput[]] & {
+      [string[], ReviewStorage.ContentStructOutput[]] & {
         users: string[];
-        reviews: ReviewStorage.MetaStructOutput[];
+        reviews: ReviewStorage.ContentStructOutput[];
       }
     >;
 
     getReview(
       user: PromiseOrValue<string>,
       overrides?: CallOverrides
-    ): Promise<[ReviewStorage.MetaStructOutput]>;
+    ): Promise<[ReviewStorage.ContentStructOutput]>;
 
     setReview(
       action: PromiseOrValue<BigNumberish>,
@@ -161,16 +161,16 @@ export interface IReview extends BaseContract {
   getAllReviews(
     overrides?: CallOverrides
   ): Promise<
-    [string[], ReviewStorage.MetaStructOutput[]] & {
+    [string[], ReviewStorage.ContentStructOutput[]] & {
       users: string[];
-      reviews: ReviewStorage.MetaStructOutput[];
+      reviews: ReviewStorage.ContentStructOutput[];
     }
   >;
 
   getReview(
     user: PromiseOrValue<string>,
     overrides?: CallOverrides
-  ): Promise<ReviewStorage.MetaStructOutput>;
+  ): Promise<ReviewStorage.ContentStructOutput>;
 
   setReview(
     action: PromiseOrValue<BigNumberish>,
@@ -182,16 +182,16 @@ export interface IReview extends BaseContract {
     getAllReviews(
       overrides?: CallOverrides
     ): Promise<
-      [string[], ReviewStorage.MetaStructOutput[]] & {
+      [string[], ReviewStorage.ContentStructOutput[]] & {
         users: string[];
-        reviews: ReviewStorage.MetaStructOutput[];
+        reviews: ReviewStorage.ContentStructOutput[];
       }
     >;
 
     getReview(
       user: PromiseOrValue<string>,
       overrides?: CallOverrides
-    ): Promise<ReviewStorage.MetaStructOutput>;
+    ): Promise<ReviewStorage.ContentStructOutput>;
 
     setReview(
       action: PromiseOrValue<BigNumberish>,

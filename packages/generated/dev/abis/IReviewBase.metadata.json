@@ -24,7 +24,7 @@
             "indexed": true
           },
           {
-            "internalType": "struct ReviewStorage.Meta",
+            "internalType": "struct ReviewStorage.Content",
             "name": "review",
             "type": "tuple",
             "components": [
@@ -68,7 +68,7 @@
             "indexed": true
           },
           {
-            "internalType": "struct ReviewStorage.Meta",
+            "internalType": "struct ReviewStorage.Content",
             "name": "review",
             "type": "tuple",
             "components": [
@@ -130,18 +130,18 @@
   },
   "sources": {
     "contracts/src/spaces/facets/review/IReview.sol": {
-      "keccak256": "0x3740e90b16e033246dab8363d11003f55a6b46ceec39510eb7ceee452cb59dae",
+      "keccak256": "0xc9c69cc58f75d6846cb06f5ebf239b6e9a41320bb8c166c6ec5e386fe7eadc9d",
       "urls": [
-        "bzz-raw://991ddf8f2b72d267033903ed2234cd06fbcdcd205d03df7741243d67a2ce15ca",
-        "dweb:/ipfs/Qma2jYr7TTunosnSQsPhH84rqjSa7g4exKo2dsiED2EHrs"
+        "bzz-raw://e1a48b8949cddb3d940de1fba319821a58381b2911f2f58741fbe9bf777ebf4f",
+        "dweb:/ipfs/QmWRKnVkt74RRN125PYdv4aYtYTXChvMZwrb9MCSsGfhkr"
       ],
       "license": "MIT"
     },
     "contracts/src/spaces/facets/review/ReviewStorage.sol": {
-      "keccak256": "0x10163dd6b4aea19651950ac1a5318f2197608fdc347afe02a9610b5461af4c66",
+      "keccak256": "0x98d1fac30e8dc8ad3c791bec718b6bdee06b2f5fa7bf5b76a65300c038394fd8",
       "urls": [
-        "bzz-raw://299a067b4237da4e6fb1fa774bddf287e2742cd537187c2c11e2e0c556356522",
-        "dweb:/ipfs/QmRmkP4KzfbcAHXywfefkbujadvYeaHNUF1ULRsuYWEh89"
+        "bzz-raw://b87788f7e47a9bd8a4eab3a03d908cf120618996361e9bc7bc4be41f1be949ab",
+        "dweb:/ipfs/QmdQzQoJnGMMbjLy7FPmcst3ETiundvFXZ67k1QaTmY26R"
       ],
       "license": "MIT"
     },

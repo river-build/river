@@ -13,7 +13,7 @@ export default [
         "name": "review",
         "type": "tuple",
         "indexed": false,
-        "internalType": "struct ReviewStorage.Meta",
+        "internalType": "struct ReviewStorage.Content",
         "components": [
           {
             "name": "comment",
@@ -57,7 +57,7 @@ export default [
         "name": "review",
         "type": "tuple",
         "indexed": false,
-        "internalType": "struct ReviewStorage.Meta",
+        "internalType": "struct ReviewStorage.Content",
         "components": [
           {
             "name": "comment",
