@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/linkdata/deadlock"
 	. "github.com/towns-protocol/towns/core/node/base"
