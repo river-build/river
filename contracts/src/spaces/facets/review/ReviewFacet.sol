@@ -24,8 +24,8 @@ contract ReviewFacet is IReview, Entitled, Facet {
     uint16 minCommentLength,
     uint16 maxCommentLength
   ) external onlyInitializing {
-    ReviewStorage.Layout storage self = ReviewStorage.layout();
-    (self.minCommentLength, self.maxCommentLength) = (
+    ReviewStorage.Layout storage rs = ReviewStorage.layout();
+    (rs.minCommentLength, rs.maxCommentLength) = (
       minCommentLength,
       maxCommentLength
     );
@@ -36,7 +36,7 @@ contract ReviewFacet is IReview, Entitled, Facet {
   function setReview(Action action, bytes calldata data) external {
     _validateMembership(msg.sender);
 
-    ReviewStorage.Layout storage self = ReviewStorage.layout();
+    ReviewStorage.Layout storage rs = ReviewStorage.layout();
 
     if (action == Action.Add) {
       ReviewStorage.Content memory newReview = abi.decode(
@@ -44,8 +44,8 @@ contract ReviewFacet is IReview, Entitled, Facet {
         (ReviewStorage.Content)
       );
       _validateReview(newReview);
-      self.reviewByUser[msg.sender] = newReview;
-      self.usersReviewed.add(msg.sender);
+      rs.reviewByUser[msg.sender] = newReview;
+      rs.usersReviewed.add(msg.sender);
 
       emit ReviewAdded(msg.sender, newReview);
     } else if (action == Action.Update) {
@@ -54,12 +54,12 @@ contract ReviewFacet is IReview, Entitled, Facet {
         (ReviewStorage.Content)
       );
       _validateReview(newReview);
-      self.reviewByUser[msg.sender] = newReview;
+      rs.reviewByUser[msg.sender] = newReview;
 
       emit ReviewUpdated(msg.sender, newReview);
     } else if (action == Action.Delete) {
-      delete self.reviewByUser[msg.sender];
-      self.usersReviewed.remove(msg.sender);
+      delete rs.reviewByUser[msg.sender];
+      rs.usersReviewed.remove(msg.sender);
 
       emit ReviewDeleted(msg.sender);
     }
@@ -79,21 +79,21 @@ contract ReviewFacet is IReview, Entitled, Facet {
     view
     returns (address[] memory users, ReviewStorage.Content[] memory reviews)
   {
-    ReviewStorage.Layout storage self = ReviewStorage.layout();
-    users = self.usersReviewed.values();
+    ReviewStorage.Layout storage rs = ReviewStorage.layout();
+    users = rs.usersReviewed.values();
     reviews = new ReviewStorage.Content[](users.length);
     for (uint256 i; i < users.length; ++i) {
-      reviews[i] = self.reviewByUser[users[i]];
+      reviews[i] = rs.reviewByUser[users[i]];
     }
   }
 
   function _validateReview(ReviewStorage.Content memory review) internal view {
-    ReviewStorage.Layout storage self = ReviewStorage.layout();
+    ReviewStorage.Layout storage rs = ReviewStorage.layout();
 
     uint256 length = bytes(review.comment).length;
     (uint16 minCommentLength, uint16 maxCommentLength) = (
-      self.minCommentLength,
-      self.maxCommentLength
+      rs.minCommentLength,
+      rs.maxCommentLength
     );
     unchecked {
       // type(uint16).max if unset
