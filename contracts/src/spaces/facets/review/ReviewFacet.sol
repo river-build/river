@@ -17,6 +17,9 @@ import {Entitled} from "contracts/src/spaces/facets/Entitled.sol";
 contract ReviewFacet is IReview, Entitled, Facet {
   using EnumerableSetLib for EnumerableSetLib.AddressSet;
 
+  uint16 internal constant DEFAULT_MIN_COMMENT_LENGTH = 10;
+  uint16 internal constant DEFAULT_MAX_COMMENT_LENGTH = type(uint16).max;
+
   function __Review_init(
     uint16 minCommentLength,
     uint16 maxCommentLength
@@ -42,6 +45,7 @@ contract ReviewFacet is IReview, Entitled, Facet {
       );
       _validateReview(newReview);
       self.reviewByUser[msg.sender] = newReview;
+      self.usersReviewed.add(msg.sender);
 
       emit ReviewAdded(msg.sender, newReview);
     } else if (action == Action.Update) {
@@ -55,6 +59,7 @@ contract ReviewFacet is IReview, Entitled, Facet {
       emit ReviewUpdated(msg.sender, newReview);
     } else if (action == Action.Delete) {
       delete self.reviewByUser[msg.sender];
+      self.usersReviewed.remove(msg.sender);
 
       emit ReviewDeleted(msg.sender);
     }
@@ -86,10 +91,18 @@ contract ReviewFacet is IReview, Entitled, Facet {
     ReviewStorage.Layout storage self = ReviewStorage.layout();
 
     uint256 length = bytes(review.comment).length;
+    (uint16 minCommentLength, uint16 maxCommentLength) = (
+      self.minCommentLength,
+      self.maxCommentLength
+    );
+    unchecked {
+      // type(uint16).max if unset
+      maxCommentLength = maxCommentLength - 1;
+    }
     if (
-      length < FixedPointMathLib.max(10, self.minCommentLength) ||
-      length >=
-      (self.maxCommentLength == 0 ? type(uint16).max : self.maxCommentLength)
+      length <
+      FixedPointMathLib.max(DEFAULT_MIN_COMMENT_LENGTH, minCommentLength) ||
+      length > maxCommentLength
     ) {
       CustomRevert.revertWith(ReviewFacet__InvalidCommentLength.selector);
     }
