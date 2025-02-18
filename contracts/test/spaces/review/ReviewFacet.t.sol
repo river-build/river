@@ -35,6 +35,8 @@ contract ReviewFacetTest is MembershipBaseSetup, IReviewBase {
 
   function test_fuzz_addReview_revertIf_notMember(address user) public {
     vm.assume(user != address(0));
+    vm.assume(user != founder);
+    vm.assume(membershipToken.balanceOf(user) == 0);
 
     vm.expectRevert(Entitlement__NotMember.selector);
     vm.prank(user);
