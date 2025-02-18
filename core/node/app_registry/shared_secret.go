@@ -1,4 +1,4 @@
-package bot_registry
+package app_registry
 
 import (
 	"crypto/aes"
@@ -7,7 +7,7 @@ import (
 )
 
 // genHS256SharedSecret generates a cryptographically secure random 32-byte key for use
-// between the bot registry service and the bot developer as a method of authenticating
+// between the app registry service and the app developer as a method of authenticating
 // that webhook calls came from the registry service.
 func genHS256SharedSecret() ([32]byte, error) {
 	var key [32]byte

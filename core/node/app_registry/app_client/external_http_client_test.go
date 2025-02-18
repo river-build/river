@@ -1,4 +1,4 @@
-package bot_client
+package app_client
 
 import (
 	"context"

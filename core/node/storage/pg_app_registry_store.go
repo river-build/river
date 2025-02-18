@@ -18,37 +18,37 @@ import (
 )
 
 type (
-	PostgresBotRegistryStore struct {
+	PostgresAppRegistryStore struct {
 		PostgresEventStore
 
 		exitSignal chan error
 	}
 
-	BotInfo struct {
-		Bot             common.Address
+	AppInfo struct {
+		App             common.Address
 		Owner           common.Address
 		EncryptedSecret [32]byte
 		WebhookUrl      string
 	}
 
-	BotRegistryStore interface {
-		CreateBot(
+	AppRegistryStore interface {
+		CreateApp(
 			ctx context.Context,
 			owner common.Address,
-			bot common.Address,
+			app common.Address,
 			sharedSecret [32]byte,
 		) error
 
 		RegisterWebhook(
 			ctx context.Context,
-			bot common.Address,
+			app common.Address,
 			webhook string,
 		) error
 
-		GetBotInfo(
+		GetAppInfo(
 			ctx context.Context,
-			bot common.Address,
-		) (*BotInfo, error)
+			app common.Address,
+		) (*AppInfo, error)
 	}
 )
 
@@ -99,23 +99,23 @@ func (pa *PGSecret) ScanText(v pgtype.Text) error {
 	return nil
 }
 
-var _ BotRegistryStore = (*PostgresBotRegistryStore)(nil)
+var _ AppRegistryStore = (*PostgresAppRegistryStore)(nil)
 
-//go:embed bot_registry_migrations/*.sql
-var botRegistryDir embed.FS
+//go:embed app_registry_migrations/*.sql
+var AppRegistryDir embed.FS
 
-func DbSchemaNameForBotRegistryService(botServiceId string) string {
-	return fmt.Sprintf("bot_%s", hex.EncodeToString([]byte(botServiceId)))
+func DbSchemaNameForAppRegistryService(appServiceId string) string {
+	return fmt.Sprintf("app_%s", hex.EncodeToString([]byte(appServiceId)))
 }
 
-// NewPostgresBotRegistryStore instantiates a new PostgreSQL persistent storage for the bot registry service.
-func NewPostgresBotRegistryStore(
+// NewPostgresAppRegistryStore instantiates a new PostgreSQL persistent storage for the app registry service.
+func NewPostgresAppRegistryStore(
 	ctx context.Context,
 	poolInfo *PgxPoolInfo,
 	exitSignal chan error,
 	metrics infra.MetricsFactory,
-) (*PostgresBotRegistryStore, error) {
-	store := &PostgresBotRegistryStore{
+) (*PostgresAppRegistryStore, error) {
+	store := &PostgresAppRegistryStore{
 		exitSignal: exitSignal,
 	}
 
@@ -124,64 +124,64 @@ func NewPostgresBotRegistryStore(
 		poolInfo,
 		metrics,
 		nil,
-		&botRegistryDir,
-		"bot_registry_migrations",
+		&AppRegistryDir,
+		"app_registry_migrations",
 	); err != nil {
-		return nil, AsRiverError(err).Func("NewPostgresBotRegistryStore")
+		return nil, AsRiverError(err).Func("NewPostgresAppRegistryStore")
 	}
 
 	if err := store.initStorage(ctx); err != nil {
-		return nil, AsRiverError(err).Func("NewPostgresBotRegistryStore")
+		return nil, AsRiverError(err).Func("NewPostgresAppRegistryStore")
 	}
 
 	return store, nil
 }
 
-func (s *PostgresBotRegistryStore) CreateBot(
+func (s *PostgresAppRegistryStore) CreateApp(
 	ctx context.Context,
 	owner common.Address,
-	bot common.Address,
+	app common.Address,
 	encryptedSharedSecret [32]byte,
 ) error {
 	return s.txRunner(
 		ctx,
-		"CreateBot",
+		"CreateApp",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
-			return s.createBot(ctx, owner, bot, encryptedSharedSecret, tx)
+			return s.createApp(ctx, owner, app, encryptedSharedSecret, tx)
 		},
 		nil,
-		"botAddress", bot,
+		"appAddress", app,
 		"ownerAddress", owner,
 	)
 }
 
-func (s *PostgresBotRegistryStore) createBot(
+func (s *PostgresAppRegistryStore) createApp(
 	ctx context.Context,
 	owner common.Address,
-	bot common.Address,
+	app common.Address,
 	encryptedSharedSecret [32]byte,
 	txn pgx.Tx,
 ) error {
 	if _, err := txn.Exec(
 		ctx,
-		"insert into bot_registry (bot_id, bot_owner_id, encrypted_shared_secret) values ($1, $2, $3);",
-		PGAddress(bot),
+		"insert into app_registry (app_id, app_owner_id, encrypted_shared_secret) values ($1, $2, $3);",
+		PGAddress(app),
 		PGAddress(owner),
 		PGSecret(encryptedSharedSecret),
 	); err != nil {
 		if isPgError(err, pgerrcode.UniqueViolation) {
-			return WrapRiverError(protocol.Err_ALREADY_EXISTS, err).Message("Bot already exists")
+			return WrapRiverError(protocol.Err_ALREADY_EXISTS, err).Message("App already exists")
 		} else {
-			return WrapRiverError(protocol.Err_DB_OPERATION_FAILURE, err).Message("Unable to create bot record")
+			return WrapRiverError(protocol.Err_DB_OPERATION_FAILURE, err).Message("Unable to create app record")
 		}
 	}
 	return nil
 }
 
-func (s *PostgresBotRegistryStore) RegisterWebhook(
+func (s *PostgresAppRegistryStore) RegisterWebhook(
 	ctx context.Context,
-	bot common.Address,
+	app common.Address,
 	webhook string,
 ) error {
 	return s.txRunner(
@@ -189,92 +189,91 @@ func (s *PostgresBotRegistryStore) RegisterWebhook(
 		"RegisterWebhook",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
-			return s.registerWebhook(ctx, bot, webhook, tx)
+			return s.registerWebhook(ctx, app, webhook, tx)
 		},
 		nil,
-		"botAddress", bot,
+		"appAddress", app,
 		"webhook", webhook,
 	)
 }
 
-func (s *PostgresBotRegistryStore) registerWebhook(
+func (s *PostgresAppRegistryStore) registerWebhook(
 	ctx context.Context,
-	bot common.Address,
+	app common.Address,
 	webhook string,
 	txn pgx.Tx,
 ) error {
 	tag, err := txn.Exec(
 		ctx,
-		`UPDATE bot_registry SET webhook = $2 WHERE bot_id = $1`,
-		PGAddress(bot),
+		`UPDATE app_registry SET webhook = $2 WHERE app_id = $1`,
+		PGAddress(app),
 		webhook,
 	)
 	if err != nil {
-		return AsRiverError(err, protocol.Err_DB_OPERATION_FAILURE).Message("error updating bot webhook")
+		return AsRiverError(err, protocol.Err_DB_OPERATION_FAILURE).Message("error updating app webhook")
 	}
 
 	if tag.RowsAffected() < 1 {
-		return RiverError(protocol.Err_NOT_FOUND, "bot was not found in registry")
+		return RiverError(protocol.Err_NOT_FOUND, "app was not found in registry")
 	}
 
 	return nil
 }
 
-func (s *PostgresBotRegistryStore) GetBotInfo(
+func (s *PostgresAppRegistryStore) GetAppInfo(
 	ctx context.Context,
-	bot common.Address,
+	app common.Address,
 ) (
-	botInfo *BotInfo,
+	appInfo *AppInfo,
 	err error,
 ) {
 	err = s.txRunner(
 		ctx,
-		"GetBotInfo",
+		"GetAppInfo",
 		pgx.ReadOnly,
 		func(ctx context.Context, tx pgx.Tx) error {
 			var err error
-			botInfo, err = s.getBotInfo(ctx, tx, bot)
+			appInfo, err = s.getAppInfo(ctx, tx, app)
 			return err
 		},
 		nil,
-		"botAddress", bot,
+		"appAddress", app,
 	)
 	if err != nil {
 		return nil, err
 	}
-	return botInfo, nil
+	return appInfo, nil
 }
 
-func (s *PostgresBotRegistryStore) getBotInfo(
+func (s *PostgresAppRegistryStore) getAppInfo(
 	ctx context.Context,
 	tx pgx.Tx,
-	botAddr common.Address,
+	appAddr common.Address,
 ) (
-	*BotInfo,
+	*AppInfo,
 	error,
 ) {
-	var owner, bot PGAddress
+	var owner, app PGAddress
 	var encryptedSecret PGSecret
-	bot = PGAddress(botAddr)
-	var botInfo BotInfo
-	if err := tx.QueryRow(ctx, "select bot_id, bot_owner_id, encrypted_shared_secret, COALESCE(webhook, '') from bot_registry where bot_id = $1", bot).
-		Scan(&bot, &owner, &encryptedSecret, &botInfo.WebhookUrl); err != nil {
+	app = PGAddress(appAddr)
+	var appInfo AppInfo
+	if err := tx.QueryRow(ctx, "select app_id, app_owner_id, encrypted_shared_secret, COALESCE(webhook, '') from app_registry where app_id = $1", app).
+		Scan(&app, &owner, &encryptedSecret, &appInfo.WebhookUrl); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, RiverError(protocol.Err_NOT_FOUND, "bot does not exist")
+			return nil, RiverError(protocol.Err_NOT_FOUND, "app does not exist")
 		} else {
 			return nil, WrapRiverError(protocol.Err_DB_OPERATION_FAILURE, err).
-				Message("failed to find bot in registry")
+				Message("failed to find app in registry")
 		}
 	} else {
-		botInfo.Bot = common.BytesToAddress(bot[:])
-		botInfo.Owner = common.BytesToAddress(owner[:])
-		botInfo.EncryptedSecret = encryptedSecret
+		appInfo.App = common.BytesToAddress(app[:])
+		appInfo.Owner = common.BytesToAddress(owner[:])
+		appInfo.EncryptedSecret = encryptedSecret
 	}
-	return &botInfo, nil
+	return &appInfo, nil
 }
 
-// Close removes instance record from singlenodekey table, releases the listener
-// connection, and closes the postgres connection pool
-func (s *PostgresBotRegistryStore) Close(ctx context.Context) {
+// Close closes the postgres connection pool
+func (s *PostgresAppRegistryStore) Close(ctx context.Context) {
 	s.PostgresEventStore.Close(ctx)
 }

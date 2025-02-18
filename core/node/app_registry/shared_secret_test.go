@@ -1,4 +1,4 @@
-package bot_registry
+package app_registry
 
 import (
 	"testing"
