@@ -186,9 +186,13 @@ message EmbeddedMedia {
 }
 
 message ChunkedMedia {
-
     message AESGCM {
         bytes iv = 1;
+        bytes secretKey = 2;
+    }
+
+    message ChunkedAESGCM {
+        repeated bytes iv = 1;
         bytes secretKey = 2;
     }
 
@@ -197,6 +201,7 @@ message ChunkedMedia {
     EmbeddedMedia thumbnail = 3;
     oneof encryption {
         AESGCM aesgcm = 101;
+        ChunkedAESGCM chunkedAESGCM = 102;
     }
 }
 

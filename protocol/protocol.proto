@@ -581,7 +581,7 @@ message MediaPayload {
         // Setting for enabling per chunk encryption for media payloads.
         // Meaning, the given media stream has each chunk individually encrypted
         // rather than encrypting the full data and splitting into chunks.
-        bool per_chunk_encryption = 7;
+        optional bool per_chunk_encryption = 7;
     }
 
     message Chunk {
