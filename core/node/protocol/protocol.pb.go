@@ -2695,9 +2695,10 @@ func (x *BlockchainTransactionReceipt) GetLogs() []*BlockchainTransactionReceipt
 }
 
 // *
-// Derived event is produces by server when there should be additional event to compliment
-// received event. For example, when user joins a space through event in the space stream, server will produce a derived event
-// in a user stream to indicate that user joined a particual space.
+// A derived event is produced by server when there should be additional event to compliment the
+// received event. For example, when a user joins a space through an event in the space stream,
+// the server will produce a derived event in the user stream to indicate that the user joined a
+// particual space.
 //
 // EventRef is used to reference the event that caused the derived event to be produced.
 type EventRef struct {

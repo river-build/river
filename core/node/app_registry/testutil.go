@@ -14,17 +14,21 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/towns-protocol/towns/core/node/app_registry/app_client"
 	"github.com/towns-protocol/towns/core/node/crypto"
+	"github.com/towns-protocol/towns/core/node/logging"
 	"github.com/towns-protocol/towns/core/node/testutils/testcert"
 	"github.com/towns-protocol/towns/core/node/utils"
+	"go.uber.org/zap/zapcore"
 )
 
 type TestAppServer struct {
-	t              *testing.T
-	httpServer     *http.Server
-	listener       net.Listener
-	url            string
-	appWallet      *crypto.Wallet
-	hs256SecretKey []byte
+	t                *testing.T
+	httpServer       *http.Server
+	listener         net.Listener
+	url              string
+	appWallet        *crypto.Wallet
+	hs256SecretKey   []byte
+	initialDeviceKey string
+	initialFallback  string
 }
 
 // validateSignature verifies that the incoming request has a HS256-encoded jwt auth token stored
@@ -73,15 +77,23 @@ func validateSignature(req *http.Request, secretKey []byte, appId common.Address
 	return mapClaims.Valid()
 }
 
-func NewTestAppServer(t *testing.T, appWallet *crypto.Wallet, hs256SecretKey []byte) *TestAppServer {
+func NewTestAppServer(
+	t *testing.T,
+	appWallet *crypto.Wallet,
+	hs256SecretKey []byte,
+	initialDeviceKey string,
+	initialFallback string,
+) *TestAppServer {
 	listener, url := testcert.MakeTestListener(t)
 
 	b := &TestAppServer{
-		t:              t,
-		listener:       listener,
-		url:            url,
-		appWallet:      appWallet,
-		hs256SecretKey: hs256SecretKey,
+		t:                t,
+		listener:         listener,
+		url:              url,
+		appWallet:        appWallet,
+		hs256SecretKey:   hs256SecretKey,
+		initialDeviceKey: initialDeviceKey,
+		initialFallback:  initialFallback,
 	}
 
 	return b
@@ -128,8 +140,8 @@ func (b *TestAppServer) rootHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// For demonstration, print the received payload.
-	// log := logging.DefaultZapLogger(zapcore.DebugLevel)
-	// log.Infow("Received payload", "payload", payload)
+	log := logging.DefaultZapLogger(zapcore.DebugLevel)
+	log.Infow("Received payload", "payload", payload)
 
 	// Send a response back.
 	w.Header().Set("Content-Type", "application/json")

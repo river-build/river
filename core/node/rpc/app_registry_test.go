@@ -254,6 +254,37 @@ func TestAppRegistry_RegisterWebhook(t *testing.T) {
 	tester.require.Len(resp.Msg.Hs256SharedSecret, 32, "Shared secret length should be 32 bytes")
 	tester.require.NoError(err)
 
+	// Create needed streams and add an encryption device for the bot service.
+	tc := tester.newTestClient(0)
+	_, _, err = createUser(tester.ctx, botWallet, tc.client, nil)
+	tester.require.NoError(err)
+
+	cookie, _, err := createUserMetadataStream(tester.ctx, botWallet, tc.client, nil)
+	tester.require.NoError(err)
+
+	event, err := events.MakeEnvelopeWithPayloadAndTags(
+		botWallet,
+		events.Make_UserMetadataPayload_EncryptionDevice("deviceKey", "fallback"),
+		&MiniblockRef{
+			Num:  cookie.GetMinipoolGen() - 1,
+			Hash: common.Hash(cookie.GetPrevMiniblockHash()),
+		},
+		nil,
+	)
+	tester.require.NoError(err)
+
+	addEventResp, err := tc.client.AddEvent(
+		tester.ctx,
+		&connect.Request[protocol.AddEventRequest]{
+			Msg: &protocol.AddEventRequest{
+				StreamId: cookie.StreamId,
+				Event:    event,
+			},
+		},
+	)
+	tester.require.NoError(err)
+	tester.require.Nil(addEventResp.Msg.GetError())
+
 	appServer := app_registry.NewTestAppServer(t, appWallet, resp.Msg.GetHs256SharedSecret())
 	defer appServer.Close()
 
@@ -266,6 +297,7 @@ func TestAppRegistry_RegisterWebhook(t *testing.T) {
 	tests := map[string]struct {
 		appId                []byte
 		authenticatingWallet *crypto.Wallet
+		botWallet            *crypto.Wallet
 		webhookUrl           string
 		expectedErr          string
 	}{
@@ -316,6 +348,7 @@ func TestAppRegistry_RegisterWebhook(t *testing.T) {
 				tester.ctx,
 				req,
 			)
+
 			if tc.expectedErr == "" {
 				tester.require.NoError(err)
 				tester.require.NotNil(resp)
