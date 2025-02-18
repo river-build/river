@@ -14,8 +14,8 @@ var (
 )
 
 // validatedDialContext validates that the ips resolved during dns lookup when dialing
-// a new connect are neither loopbacks or private ips. This adds some protection against
-// server-side request forgery attacks, which is needed because the bot registry service
+// a new connection are neither loopbacks or private ips. This adds some protection against
+// server-side request forgery attacks, which is needed because the app registry service
 // allows clients to register their own webhooks.
 func validatedDialContext(
 	baseDialer func(ctx context.Context, network, addr string) (net.Conn, error),
@@ -33,7 +33,7 @@ func validatedDialContext(
 			return nil, fmt.Errorf("DNS lookup failed for %q: %w", host, err)
 		}
 
-		// Validate each IP (e.g., reject loopback or private IPs).
+		// Validate each IP (reject loopback or private IPs).
 		for _, ip := range ips {
 			if ip.IsLoopback() {
 				return nil, fmt.Errorf(
@@ -42,7 +42,6 @@ func validatedDialContext(
 					ErrCannotConnectToLoopbackAddress,
 				)
 			}
-			// Add more validation as needed, for example:
 			if ip.IsPrivate() {
 				return nil, fmt.Errorf(
 					"connection to address %s is not allowed: %v",
