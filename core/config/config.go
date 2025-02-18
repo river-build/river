@@ -143,8 +143,8 @@ type Config struct {
 	// Notifications must be set when running in notification mode.
 	Notifications NotificationsConfig
 
-	// BotRegistry must be set when running in bot registry mode.
-	BotRegistry BotRegistryConfig
+	// AppRegistry must be set when running in app registry mode.
+	AppRegistry AppRegistryConfig
 
 	// Feature flags
 	// Used to disable functionality for some testing setups.
@@ -431,10 +431,10 @@ type NotificationsConfig struct {
 	Authentication AuthenticationConfig
 }
 
-type BotRegistryConfig struct {
-	// BotRegistryId is the unique identifier of the bot registry service node. It must be set for
-	// nodes running in bot registry mode.
-	BotRegistryId string
+type AppRegistryConfig struct {
+	// AppRegistryId is the unique identifier of the app registry service node. It must be set for
+	// nodes running in app registry mode.
+	AppRegistryId string
 
 	// Authentication holds configuration for the Client API authentication service.
 	Authentication AuthenticationConfig

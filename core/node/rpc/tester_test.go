@@ -1036,7 +1036,7 @@ func (tcs testClients) parallelForAllT(t require.TestingT, f func(*testClient)) 
 }
 
 // setupChannelWithClients creates a channel and returns a testClients with clients connected to it.
-// First client is creator of both space and channel.
+// First client is creator of apph space and channel.
 // Other clients join the channel.
 // Clients are connected to nodes in round-robin fashion.
 func (tcs testClients) createChannelAndJoin(spaceId StreamId) StreamId {

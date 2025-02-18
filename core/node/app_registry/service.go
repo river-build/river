@@ -1,4 +1,4 @@
-package bot_registry
+package app_registry
 
 import (
 	"context"
@@ -11,10 +11,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/towns-protocol/towns/core/config"
+	"github.com/towns-protocol/towns/core/node/app_registry/app_client"
+	"github.com/towns-protocol/towns/core/node/app_registry/sync"
 	"github.com/towns-protocol/towns/core/node/authentication"
 	"github.com/towns-protocol/towns/core/node/base"
-	"github.com/towns-protocol/towns/core/node/bot_registry/bot_client"
-	"github.com/towns-protocol/towns/core/node/bot_registry/sync"
 	"github.com/towns-protocol/towns/core/node/crypto"
 	"github.com/towns-protocol/towns/core/node/infra"
 	"github.com/towns-protocol/towns/core/node/logging"
@@ -27,34 +27,34 @@ import (
 )
 
 const (
-	botServiceChallengePrefix = "BS_AUTH:"
+	appServiceChallengePrefix = "BS_AUTH:"
 )
 
 type (
 	Service struct {
 		authentication.AuthServiceMixin
-		cfg                           config.BotRegistryConfig
-		store                         storage.BotRegistryStore
+		cfg                           config.AppRegistryConfig
+		store                         storage.AppRegistryStore
 		streamsTracker                track_streams.StreamsTracker
 		sharedSecretDataEncryptionKey [32]byte
-		botClient                     *bot_client.BotClient
+		appClient                     *app_client.AppClient
 	}
 )
 
-var _ protocolconnect.BotRegistryServiceHandler = (*Service)(nil)
+var _ protocolconnect.AppRegistryServiceHandler = (*Service)(nil)
 
 func NewService(
 	ctx context.Context,
-	cfg config.BotRegistryConfig,
+	cfg config.AppRegistryConfig,
 	onChainConfig crypto.OnChainConfiguration,
-	store storage.BotRegistryStore,
+	store storage.AppRegistryStore,
 	riverRegistry *registries.RiverRegistryContract,
 	nodes []nodes.NodeRegistry,
 	metrics infra.MetricsFactory,
 	listener track_streams.StreamEventListener,
 	httpClient *http.Client,
 ) (*Service, error) {
-	tracker, err := sync.NewBotRegistryStreamsTracker(
+	tracker, err := sync.NewAppRegistryStreamsTracker(
 		ctx,
 		cfg,
 		onChainConfig,
@@ -70,7 +70,7 @@ func NewService(
 	sharedSecretDataEncryptionKey, err := hex.DecodeString(cfg.SharedSecretDataEncryptionKey)
 	if err != nil || len(sharedSecretDataEncryptionKey) != 32 {
 		return nil, base.AsRiverError(err, Err_INVALID_ARGUMENT).
-			Message("BotRegistryConfig SharedSecretDataEncryptionKey must be a 32-byte key encoded as hex")
+			Message("AppRegistryConfig SharedSecretDataEncryptionKey must be a 32-byte key encoded as hex")
 	}
 
 	s := &Service{
@@ -78,10 +78,10 @@ func NewService(
 		store:                         store,
 		streamsTracker:                tracker,
 		sharedSecretDataEncryptionKey: [32]byte(sharedSecretDataEncryptionKey),
-		botClient:                     bot_client.NewBotClient(httpClient, cfg.AllowLoopbackWebhooks),
+		appClient:                     app_client.NewAppClient(httpClient, cfg.AllowLoopbackWebhooks),
 	}
 
-	if err := s.InitAuthentication(botServiceChallengePrefix, &cfg.Authentication); err != nil {
+	if err := s.InitAuthentication(appServiceChallengePrefix, &cfg.Authentication); err != nil {
 		return nil, err
 	}
 	return s, nil
@@ -92,7 +92,7 @@ func (s *Service) Start(ctx context.Context) {
 
 	go func() {
 		for {
-			log.Infow("Start bot registry streams tracker")
+			log.Infow("Start app registry streams tracker")
 
 			if err := s.streamsTracker.Run(ctx); err != nil {
 				log.Errorw("tracking streams failed", "err", err)
@@ -115,25 +115,25 @@ func (s *Service) Register(
 	*connect.Response[RegisterResponse],
 	error,
 ) {
-	var bot, owner common.Address
+	var app, owner common.Address
 	var err error
-	if bot, err = base.BytesToAddress(req.Msg.BotId); err != nil {
+	if app, err = base.BytesToAddress(req.Msg.AppId); err != nil {
 		return nil, base.WrapRiverError(Err_INVALID_ARGUMENT, err).
-			Message("invalid bot id").
-			Tag("bot_id", req.Msg.BotId)
+			Message("invalid app id").
+			Tag("app_id", req.Msg.AppId)
 	}
 
-	if owner, err = base.BytesToAddress(req.Msg.BotOwnerId); err != nil {
+	if owner, err = base.BytesToAddress(req.Msg.AppOwnerId); err != nil {
 		return nil, base.WrapRiverError(Err_INVALID_ARGUMENT, err).
 			Message("invalid owner id").
-			Tag("owner_id", req.Msg.BotOwnerId)
+			Tag("owner_id", req.Msg.AppOwnerId)
 	}
 
 	userId := authentication.UserFromAuthenticatedContext(ctx)
 	if owner != userId {
 		return nil, base.RiverError(
 			Err_PERMISSION_DENIED,
-			"authenticated user must be bot owner",
+			"authenticated user must be app owner",
 			"owner",
 			owner,
 			"userId",
@@ -141,24 +141,24 @@ func (s *Service) Register(
 		)
 	}
 
-	// Generate a secret, encrypt it, and store the bot record in pg.
-	botSecret, err := genHS256SharedSecret()
+	// Generate a secret, encrypt it, and store the app record in pg.
+	appSecret, err := genHS256SharedSecret()
 	if err != nil {
-		return nil, base.AsRiverError(err, Err_INTERNAL).Message("error generating shared secret for bot")
+		return nil, base.AsRiverError(err, Err_INTERNAL).Message("error generating shared secret for app")
 	}
 
-	encrypted, err := encryptSharedSecret(botSecret, s.sharedSecretDataEncryptionKey)
+	encrypted, err := encryptSharedSecret(appSecret, s.sharedSecretDataEncryptionKey)
 	if err != nil {
-		return nil, base.AsRiverError(err, Err_INTERNAL).Message("error encrypting shared secret for bot")
+		return nil, base.AsRiverError(err, Err_INTERNAL).Message("error encrypting shared secret for app")
 	}
 
-	if err := s.store.CreateBot(ctx, owner, bot, encrypted); err != nil {
+	if err := s.store.CreateApp(ctx, owner, app, encrypted); err != nil {
 		return nil, base.AsRiverError(err, Err_INTERNAL).Func("Register")
 	}
 
 	return &connect.Response[RegisterResponse]{
 		Msg: &RegisterResponse{
-			Hs256SharedSecret: botSecret[:],
+			Hs256SharedSecret: appSecret[:],
 		},
 	}, nil
 }
@@ -171,35 +171,35 @@ func (s *Service) RegisterWebhook(
 	error,
 ) {
 	// Validate input
-	var bot common.Address
-	var botInfo *storage.BotInfo
+	var app common.Address
+	var appInfo *storage.AppInfo
 	var err error
-	if bot, err = base.BytesToAddress(req.Msg.BotId); err != nil {
+	if app, err = base.BytesToAddress(req.Msg.AppId); err != nil {
 		return nil, base.WrapRiverError(Err_INVALID_ARGUMENT, err).
-			Message("invalid bot id").
-			Tag("bot_id", req.Msg.BotId)
+			Message("invalid app id").
+			Tag("app_id", req.Msg.AppId)
 	}
-	if botInfo, err = s.store.GetBotInfo(ctx, bot); err != nil {
-		return nil, base.WrapRiverError(Err_INTERNAL, err).Message("could not determine bot owner").
-			Tag("bot_id", bot)
+	if appInfo, err = s.store.GetAppInfo(ctx, app); err != nil {
+		return nil, base.WrapRiverError(Err_INTERNAL, err).Message("could not determine app owner").
+			Tag("app_id", app)
 	}
 
 	userId := authentication.UserFromAuthenticatedContext(ctx)
-	if bot != userId && botInfo.Owner != userId {
+	if app != userId && appInfo.Owner != userId {
 		return nil, base.RiverError(
 			Err_PERMISSION_DENIED,
-			"authenticated user must be either bot or owner",
+			"authenticated user must be either app or owner",
 			"owner",
-			botInfo.Owner,
-			"bot",
-			bot,
+			appInfo.Owner,
+			"app",
+			app,
 			"userId",
 			userId,
 		)
 	}
 
 	// TODO:
-	// timeout of up to 10s to support UX flow where bot user stream is just created.
+	// timeout of up to 10s to support UX flow where app user stream is just created.
 	// From the user stream, extract the device id and fallback key. Validate that it
 	// matches what is returned by the webhook when we send an initialize request to it.
 
@@ -210,24 +210,24 @@ func (s *Service) RegisterWebhook(
 	// - no redirect params allowed in the url either
 	webhook := req.Msg.WebhookUrl
 
-	decryptedSecret, err := decryptSharedSecret(botInfo.EncryptedSecret, s.sharedSecretDataEncryptionKey)
+	decryptedSecret, err := decryptSharedSecret(appInfo.EncryptedSecret, s.sharedSecretDataEncryptionKey)
 	if err != nil {
 		return nil, base.WrapRiverError(Err_INTERNAL, err).
-			Message("Unable to decrypt bot shared secret from db").
-			Tag("botId", bot)
+			Message("Unable to decrypt app shared secret from db").
+			Tag("appId", app)
 	}
 
-	if err := s.botClient.InitializeWebhook(
+	if err := s.appClient.InitializeWebhook(
 		ctx,
 		webhook,
-		bot,
+		app,
 		decryptedSecret,
 	); err != nil {
-		return nil, base.WrapRiverError(Err_UNKNOWN, err).Message("Unable to initialize bot service")
+		return nil, base.WrapRiverError(Err_UNKNOWN, err).Message("Unable to initialize app service")
 	}
 
-	// Store the bot record in pg
-	if err := s.store.RegisterWebhook(ctx, bot, webhook); err != nil {
+	// Store the app record in pg
+	if err := s.store.RegisterWebhook(ctx, app, webhook); err != nil {
 		return nil, base.AsRiverError(err, Err_INTERNAL).Func("RegisterWebhook")
 	}
 
@@ -241,18 +241,18 @@ func (s *Service) GetStatus(
 	*connect.Response[GetStatusResponse],
 	error,
 ) {
-	bot, err := base.BytesToAddress(req.Msg.BotId)
+	app, err := base.BytesToAddress(req.Msg.AppId)
 	if err != nil {
 		return nil, base.WrapRiverError(Err_INVALID_ARGUMENT, err).
-			Message("invalid bot id").
-			Tag("bot_id", req.Msg.BotId).
+			Message("invalid app id").
+			Tag("app_id", req.Msg.AppId).
 			Func("GetStatus")
 	}
 
 	// TODO: implement 2 second caching here as a security measure against
 	// DoS attacks.
-	if _, err = s.store.GetBotInfo(ctx, bot); err != nil {
-		// Bot does not exist
+	if _, err = s.store.GetAppInfo(ctx, app); err != nil {
+		// App does not exist
 		if base.IsRiverErrorCode(err, Err_NOT_FOUND) {
 			return &connect.Response[GetStatusResponse]{
 				Msg: &GetStatusResponse{
@@ -260,15 +260,15 @@ func (s *Service) GetStatus(
 				},
 			}, nil
 		} else {
-			// Error fetching bot
+			// Error fetching app
 			return nil, base.WrapRiverError(Err_INTERNAL, err).
-				Message("unable to fetch info for bot").
-				Tag("bot_id", bot).
+				Message("unable to fetch info for app").
+				Tag("app_id", app).
 				Func("GetStatus")
 		}
 	}
 
-	// TODO: issue request to bot service, confirm 200 response, and
+	// TODO: issue request to app service, confirm 200 response, and
 	// validate returned version info. Return in the response.
 	return &connect.Response[GetStatusResponse]{
 		Msg: &GetStatusResponse{

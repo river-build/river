@@ -25,9 +25,9 @@ var (
 	testSecretHexString2 = "202122232425262728292a2b2c2d2e2f101112131415161718191a1b1c1d1e1f"
 )
 
-type testBotRegistryStoreParams struct {
+type testAppRegistryStoreParams struct {
 	ctx                context.Context
-	pgBotRegistryStore *PostgresBotRegistryStore
+	pgAppRegistryStore *PostgresAppRegistryStore
 	schema             string
 	config             *config.DatabaseConfig
 	closer             func()
@@ -39,7 +39,7 @@ type testBotRegistryStoreParams struct {
 	exitSignal    chan error
 }
 
-func setupBotRegistryStorageTest(t *testing.T) *testBotRegistryStoreParams {
+func setupAppRegistryStorageTest(t *testing.T) *testAppRegistryStoreParams {
 	require := require.New(t)
 	ctx, ctxCloser := test.NewTestContext()
 
@@ -58,7 +58,7 @@ func setupBotRegistryStorageTest(t *testing.T) *testBotRegistryStoreParams {
 	require.NoError(err, "Error creating pgx pool for test")
 
 	exitSignal := make(chan error, 1)
-	store, err := NewPostgresBotRegistryStore(
+	store, err := NewPostgresAppRegistryStore(
 		ctx,
 		pool,
 		exitSignal,
@@ -66,9 +66,9 @@ func setupBotRegistryStorageTest(t *testing.T) *testBotRegistryStoreParams {
 	)
 	require.NoError(err, "Error creating new postgres stream store")
 
-	params := &testBotRegistryStoreParams{
+	params := &testAppRegistryStoreParams{
 		ctx:                ctx,
-		pgBotRegistryStore: store,
+		pgAppRegistryStore: store,
 		schema:             dbSchemaName,
 		config:             dbCfg,
 		exitSignal:         exitSignal,
@@ -84,80 +84,80 @@ func setupBotRegistryStorageTest(t *testing.T) *testBotRegistryStoreParams {
 	return params
 }
 
-func TestBotRegistryStorage_RegisterWebhook(t *testing.T) {
-	params := setupBotRegistryStorageTest(t)
+func TestAppRegistryStorage_RegisterWebhook(t *testing.T) {
+	params := setupAppRegistryStorageTest(t)
 	t.Cleanup(params.closer)
 
 	require := require.New(t)
-	store := params.pgBotRegistryStore
+	store := params.pgAppRegistryStore
 
-	var owner, bot, unregisteredBot common.Address
+	var owner, app, unregisteredApp common.Address
 	_, err := rand.Read(owner[:])
 	require.NoError(err)
-	_, err = rand.Read(bot[:])
+	_, err = rand.Read(app[:])
 	require.NoError(err)
 
-	_, err = rand.Read(unregisteredBot[:])
+	_, err = rand.Read(unregisteredApp[:])
 	require.NoError(err)
 
 	secretBytes, err := hex.DecodeString(testSecretHexString)
 	require.NoError(err)
 	secret := [32]byte(secretBytes)
 
-	err = store.CreateBot(params.ctx, owner, bot, secret)
+	err = store.CreateApp(params.ctx, owner, app, secret)
 	require.NoError(err)
 
-	info, err := store.GetBotInfo(params.ctx, bot)
+	info, err := store.GetAppInfo(params.ctx, app)
 	require.NoError(err)
-	require.Equal(bot, info.Bot)
+	require.Equal(app, info.App)
 	require.Equal(owner, info.Owner)
 	require.Equal([32]byte(secretBytes), info.EncryptedSecret)
 	require.Equal("", info.WebhookUrl)
 
 	webhook := "https://webhook.com/callme"
 	webhook2 := "http://api.org/textme"
-	err = store.RegisterWebhook(params.ctx, bot, webhook)
+	err = store.RegisterWebhook(params.ctx, app, webhook)
 	require.NoError(err)
 
-	info, err = store.GetBotInfo(params.ctx, bot)
+	info, err = store.GetAppInfo(params.ctx, app)
 	require.NoError(err)
-	require.Equal(bot, info.Bot)
+	require.Equal(app, info.App)
 	require.Equal(owner, info.Owner)
 	require.Equal([32]byte(secretBytes), info.EncryptedSecret)
 	require.Equal(webhook, info.WebhookUrl)
 
-	err = store.RegisterWebhook(params.ctx, bot, webhook2)
+	err = store.RegisterWebhook(params.ctx, app, webhook2)
 	require.NoError(err)
 
-	info, err = store.GetBotInfo(params.ctx, bot)
+	info, err = store.GetAppInfo(params.ctx, app)
 	require.NoError(err)
-	require.Equal(bot, info.Bot)
+	require.Equal(app, info.App)
 	require.Equal(owner, info.Owner)
 	require.Equal([32]byte(secretBytes), info.EncryptedSecret)
 	require.Equal(webhook2, info.WebhookUrl)
 
-	err = store.RegisterWebhook(params.ctx, unregisteredBot, webhook)
-	require.ErrorContains(err, "bot was not found in registry")
+	err = store.RegisterWebhook(params.ctx, unregisteredApp, webhook)
+	require.ErrorContains(err, "app was not found in registry")
 }
 
-func TestBotRegistryStorage(t *testing.T) {
-	params := setupBotRegistryStorageTest(t)
+func TestAppRegistryStorage(t *testing.T) {
+	params := setupAppRegistryStorageTest(t)
 	t.Cleanup(params.closer)
 
 	require := require.New(t)
-	store := params.pgBotRegistryStore
+	store := params.pgAppRegistryStore
 
 	// Generate random addresses
-	var owner, owner2, bot, bot2, bot3 common.Address
+	var owner, owner2, app, app2, app3 common.Address
 	_, err := rand.Read(owner[:])
 	require.NoError(err)
 	_, err = rand.Read(owner2[:])
 	require.NoError(err)
-	_, err = rand.Read(bot[:])
+	_, err = rand.Read(app[:])
 	require.NoError(err)
-	_, err = rand.Read(bot2[:])
+	_, err = rand.Read(app2[:])
 	require.NoError(err)
-	_, err = rand.Read(bot3[:])
+	_, err = rand.Read(app3[:])
 	require.NoError(err)
 
 	secretBytes, err := hex.DecodeString(testSecretHexString)
@@ -168,31 +168,31 @@ func TestBotRegistryStorage(t *testing.T) {
 	require.NoError(err)
 	secret2 := [32]byte(secretBytes2)
 
-	err = store.CreateBot(params.ctx, owner, bot, secret)
+	err = store.CreateApp(params.ctx, owner, app, secret)
 	require.NoError(err)
 
-	err = store.CreateBot(params.ctx, owner2, bot, secret)
-	require.ErrorContains(err, "Bot already exists")
+	err = store.CreateApp(params.ctx, owner2, app, secret)
+	require.ErrorContains(err, "App already exists")
 	require.True(base.IsRiverErrorCode(err, protocol.Err_ALREADY_EXISTS))
 
-	// Fine to have multiple bots per owner
-	err = store.CreateBot(params.ctx, owner, bot2, secret2)
+	// Fine to have multiple apps per owner
+	err = store.CreateApp(params.ctx, owner, app2, secret2)
 	require.NoError(err)
 
-	info, err := store.GetBotInfo(params.ctx, bot)
+	info, err := store.GetAppInfo(params.ctx, app)
 	require.NoError(err)
-	require.Equal(bot, info.Bot)
+	require.Equal(app, info.App)
 	require.Equal(owner, info.Owner)
 	require.Equal("", info.WebhookUrl)
 
-	info, err = store.GetBotInfo(params.ctx, bot2)
+	info, err = store.GetAppInfo(params.ctx, app2)
 	require.NoError(err)
-	require.Equal(bot2, info.Bot)
+	require.Equal(app2, info.App)
 	require.Equal(owner, info.Owner)
 	require.Equal("", info.WebhookUrl)
 
-	info, err = store.GetBotInfo(params.ctx, bot3)
+	info, err = store.GetAppInfo(params.ctx, app3)
 	require.Nil(info)
-	require.ErrorContains(err, "bot does not exist")
+	require.ErrorContains(err, "app does not exist")
 	require.True(base.IsRiverErrorCode(err, protocol.Err_NOT_FOUND))
 }
