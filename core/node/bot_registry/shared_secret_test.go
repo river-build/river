@@ -8,7 +8,7 @@ import (
 
 func TestEncryptDecryptSharedSecret(t *testing.T) {
 	require := require.New(t)
-	// The aes key and the HS256 key are the same length, so generateHSA256SharedSecret
+	// The aes256 data encryption key and the HS256 key are the same length, so generateHSA256SharedSecret
 	// can be used in tests to generate a key for aes encryption.
 	aesKey, err := genHS256SharedSecret()
 	require.NoError(err)
@@ -26,8 +26,10 @@ func TestEncryptDecryptSharedSecret(t *testing.T) {
 		require.Equal(
 			secret,
 			decrypted,
-			"Expected encrypted/decrypted to match original secret, encrypted %v",
+			"Expected encrypted/decrypted to match original secret, original %v, encrypted %v, decrypted %v",
+			secret,
 			encrypted,
+			decrypted,
 		)
 	}
 }

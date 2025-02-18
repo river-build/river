@@ -24,7 +24,7 @@ type BotClient struct {
 
 func NewBotClient(httpClient *http.Client, allowLoopback bool) *BotClient {
 	if !allowLoopback {
-		httpClient = NewExternalRequestHttpClient(httpClient)
+		httpClient = NewExternalHttpClient(httpClient)
 	}
 	return &BotClient{
 		httpClient: httpClient,

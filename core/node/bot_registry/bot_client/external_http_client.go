@@ -56,11 +56,11 @@ func validatedDialContext(
 	}
 }
 
-// NewExternalRequestHttpClient creates a new HTTP client that wraps an existing one,
+// NewExternalHttpClient creates a new HTTP client that wraps an existing one,
 // injecting a validated dial context which requires all resolved ip addresses to be
 // external - meaning, neither loopback nor private. This is a security measure that
 // contributes to protection against server-side forgery attacks.
-func NewExternalRequestHttpClient(base *http.Client) *http.Client {
+func NewExternalHttpClient(base *http.Client) *http.Client {
 	// Ensure the base client's Transport is of type *http.Transport.
 	var transport *http.Transport
 	if t, ok := base.Transport.(*http.Transport); ok {

@@ -27,6 +27,8 @@ type TestBotServer struct {
 	hs256SecretKey []byte
 }
 
+// validateSignature verifies that the incoming request has a HS256-encoded jwt auth token stored
+// in the header with the appropriate audience, signed by the expected secret key.
 func validateSignature(req *http.Request, secretKey []byte, botId common.Address) error {
 	authorization := req.Header.Get("Authorization")
 	if authorization == "" {
@@ -46,7 +48,6 @@ func validateSignature(req *http.Request, secretKey []byte, botId common.Address
 	token, err := jwt.Parse(
 		tokenStr,
 		func(token *jwt.Token) (interface{}, error) {
-			// Ensure the signing method is HMAC and HS256
 			return secretKey, nil
 		},
 		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}),

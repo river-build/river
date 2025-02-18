@@ -307,7 +307,7 @@ func TestBotRegistry_RegisterWebhook(t *testing.T) {
 				},
 			}
 
-			// Unauthenticated request should fail
+			// Unauthenticated requests should fail
 			if tc.authenticatingWallet != nil {
 				authenticateBS(tester.ctx, tester.require, authClient, tc.authenticatingWallet, req)
 			}

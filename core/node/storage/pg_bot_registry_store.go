@@ -72,8 +72,8 @@ func (pa *PGAddress) ScanText(v pgtype.Text) error {
 	return nil
 }
 
-// PGSecret is a type alias for addresses that automatically serializes and deserializes
-// 32-byte shared secrets into and out of pg fixed-length character sequences.
+// PGSecret is a type alias for 32-length byte arrays that automatically serializes and deserializes
+// these shared secrets into and out of pg fixed-length character sequences.
 type PGSecret [32]byte
 
 func (pa PGSecret) TextValue() (pgtype.Text, error) {

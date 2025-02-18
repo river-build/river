@@ -199,9 +199,15 @@ func (s *Service) RegisterWebhook(
 	}
 
 	// TODO:
-	// wait up to 10s for bot user stream to be created
+	// timeout of up to 10s to support UX flow where bot user stream is just created.
+	// From the user stream, extract the device id and fallback key. Validate that it
+	// matches what is returned by the webhook when we send an initialize request to it.
 
-	// TODO: Validate URL by sending a request to the webhook
+	// TODO: Validate URL
+	// - https only
+	// - no private ips or loopback directly quoted in the webhook url, as these are def.
+	// invalid
+	// - no redirect params allowed in the url either
 	webhook := req.Msg.WebhookUrl
 
 	decryptedSecret, err := decryptSharedSecret(botInfo.EncryptedSecret, s.sharedSecretDataEncryptionKey)
@@ -243,7 +249,8 @@ func (s *Service) GetStatus(
 			Func("GetStatus")
 	}
 
-	// TODO: implement 2 second caching here
+	// TODO: implement 2 second caching here as a security measure against
+	// DoS attacks.
 	if _, err = s.store.GetBotInfo(ctx, bot); err != nil {
 		// Bot does not exist
 		if base.IsRiverErrorCode(err, Err_NOT_FOUND) {
