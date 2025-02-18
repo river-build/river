@@ -689,7 +689,7 @@ describe('clientTest', () => {
             'Weather nice?',
             'Sun and rain!',
             'Coffee or tea?',
-            'Apph!',
+            'Both!',
         ]
 
         alicesClient.on(
@@ -720,7 +720,7 @@ describe('clientTest', () => {
                             } else if (body === 'Weather nice?') {
                                 await alicesClient.sendMessage(channelId, 'Sun and rain!')
                             } else if (body === 'Coffee or tea?') {
-                                await alicesClient.sendMessage(channelId, 'Apph!')
+                                await alicesClient.sendMessage(channelId, 'Both!')
                                 aliceGetsMessage.done()
                             }
                         }
@@ -760,7 +760,7 @@ describe('clientTest', () => {
                                 await bobsClient.sendMessage(channelId, 'Weather nice?')
                             } else if (body === 'Sun and rain!') {
                                 await bobsClient.sendMessage(channelId, 'Coffee or tea?')
-                            } else if (body === 'Apph!') {
+                            } else if (body === 'Both!') {
                                 bobGetsMessage.done()
                             }
                         }
