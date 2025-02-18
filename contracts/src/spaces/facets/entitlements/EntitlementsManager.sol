@@ -5,7 +5,7 @@ pragma solidity ^0.8.23;
 import {IEntitlementsManager} from "./IEntitlementsManager.sol";
 
 // libraries
-import {InstallLib} from "../install/InstallLib.sol";
+
 // contracts
 import {EntitlementsManagerBase} from "./EntitlementsManagerBase.sol";
 import {Entitled} from "../Entitled.sol";
