@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS bot_registry (
     bot_id CHAR(40) NOT NULL PRIMARY KEY,
     bot_owner_id CHAR(40) NOT NULL,
+    encrypted_shared_secret CHAR(64) NOT NULL,
     webhook VARCHAR
 );
 

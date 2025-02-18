@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"hash/fnv"
 	"io"
@@ -87,15 +86,8 @@ type serviceTesterOpts struct {
 	printTestLogs     bool
 }
 
-func makeTestListenerNoCleanup(t *testing.T) (net.Listener, string) {
-	listener, err := net.Listen("tcp", "localhost:0")
-	require.NoError(t, err)
-	listener = tls.NewListener(listener, testcert.GetHttp2LocalhostTLSConfig())
-	return listener, "https://" + listener.Addr().String()
-}
-
 func makeTestListener(t *testing.T) (net.Listener, string) {
-	l, url := makeTestListenerNoCleanup(t)
+	l, url := testcert.MakeTestListener(t)
 	t.Cleanup(func() { _ = l.Close() })
 	return l, url
 }
@@ -218,7 +210,7 @@ func (st *serviceTester) cleanup(f any) {
 }
 
 func (st *serviceTester) makeTestListener() (net.Listener, string) {
-	l, url := makeTestListenerNoCleanup(st.t)
+	l, url := testcert.MakeTestListener(st.t)
 	st.cleanup(l.Close)
 	return l, url
 }
@@ -1074,7 +1066,17 @@ func (tcs testClients) compareNowImpl(t require.TestingT, streamId StreamId) []*
 	if testfmt.Enabled() {
 		testfmt.Println(tcs[0].t, "compareNowImpl: Got all streams")
 		for i, stream := range streams {
-			testfmt.Println(tcs[0].t, "    ", i, "MBs:", len(stream.Miniblocks), "Gen:", stream.NextSyncCookie.MinipoolGen, "Events:", len(stream.Events))
+			testfmt.Println(
+				tcs[0].t,
+				"    ",
+				i,
+				"MBs:",
+				len(stream.Miniblocks),
+				"Gen:",
+				stream.NextSyncCookie.MinipoolGen,
+				"Events:",
+				len(stream.Events),
+			)
 		}
 	}
 	first := streams[0]
