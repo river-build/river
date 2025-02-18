@@ -12,7 +12,7 @@ option go_package = "github.com/towns-protocol/towns/core/node/protocol";
 service BotRegistryService {
     rpc Register(RegisterRequest) returns (RegisterResponse);
     rpc RegisterWebhook(RegisterWebhookRequest) returns (RegisterWebhookResponse);
-    // rpc GetRegisteredBotInfo(GetRegisteredBotInfoRequest) returns (GetRegisteredBotInfoResponse);
+    // rpc GetInfo(GetInfoRequest) returns (GetInfoResponse);
     // rpc RotateSecret(RotateSecretRequest) returns (RotateSecretResponse);
     rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
 }
