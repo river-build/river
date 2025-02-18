@@ -173,7 +173,7 @@ func (j *mbJob) processRemoteProposals(ctx context.Context) ([]*mbProposal, *Str
 
 	// if one of the nodes returned MINIBLOCK_TOO_OLD it indicates that this node has fallen behind, sync to catch up.
 	if slices.ContainsFunc(errs, func(err error) bool { return IsRiverErrorCode(err, Err_MINIBLOCK_TOO_OLD) }) {
-		j.cache.submitSyncStreamTask(ctx, j.stream.streamId)
+		j.cache.submitSyncStreamTask(ctx, j.stream)
 	}
 
 	if len(errs) > 0 {

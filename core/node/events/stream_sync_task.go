@@ -3,7 +3,6 @@ package events
 import (
 	"context"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gammazero/workerpool"
 
@@ -15,9 +14,9 @@ import (
 
 func (s *StreamCache) submitSyncStreamTask(
 	ctx context.Context,
-	streamId StreamId,
+	stream *Stream,
 ) {
-	s.submitSyncStreamTaskToPool(ctx, s.onlineSyncWorkerPool, streamId, nil)
+	s.submitSyncStreamTaskToPool(ctx, s.onlineSyncWorkerPool, stream, nil)
 }
 
 func (s *StreamCache) submitSyncStreamTaskToPool(
@@ -30,8 +29,7 @@ func (s *StreamCache) submitSyncStreamTaskToPool(
 		if err := s.syncStreamFromPeers(
 			ctx,
 			stream,
-			int64(streamRecord.LastMiniblockNum),
-			streamRecord.IsSealed,
+			streamRecord,
 		); err != nil {
 			logging.FromCtx(ctx).
 				Errorw("Unable to sync stream from peers",
@@ -48,30 +46,19 @@ func (s *StreamCache) submitSyncStreamTaskToPool(
 func (s *StreamCache) syncStreamFromPeers(
 	ctx context.Context,
 	stream *Stream,
-	lastMbInContract *MiniblockRef,
-	isSealed bool,
+	streamRecord *registries.GetStreamResult,
 ) error {
-	if lastMbInContract == nil {
-		contractStream, err := s.params.Registry.StreamRegistry.GetStream(&bind.CallOpts{
-			Context: ctx,
-		}, streamId)
+	var err error
+	if streamRecord == nil {
+		streamRecord, err = s.params.Registry.GetStreamOnLatestBlock(ctx, stream.streamId)
 		if err != nil {
 			return err
 		}
-		lastMbInContract = &MiniblockRef{
-			Hash: contractStream.LastMiniblockHash,
-			Num:  int64(contractStream.LastMiniblockNum),
-		}
 	}
 
-	// TODO: is it correct to do this here?
+	// TODO: double check if this is correct to normalize here
 	// Try to normalize the given stream if needed.
-	err := s.normalizeEphemeralStream(ctx, stream, lastContractMbNum, isSealed)
-	if err != nil {
-		return err
-	}
-
-	stream, err := s.getStreamImpl(ctx, streamId, false)
+	err = s.normalizeEphemeralStream(ctx, stream, int64(streamRecord.LastMiniblockNum), streamRecord.IsSealed)
 	if err != nil {
 		return err
 	}
@@ -85,12 +72,12 @@ func (s *StreamCache) syncStreamFromPeers(
 		}
 	}
 
-	if lastContractMbNum <= lastMiniblockNum {
+	if int64(streamRecord.LastMiniblockNum) <= lastMiniblockNum {
 		return nil
 	}
 
 	fromInclusive := lastMiniblockNum + 1
-	toExclusive := lastContractMbNum + 1
+	toExclusive := int64(streamRecord.LastMiniblockNum) + 1
 
 	remotes, _ := stream.GetRemotesAndIsLocal()
 	if len(remotes) == 0 {
