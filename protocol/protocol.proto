@@ -577,6 +577,11 @@ message MediaPayload {
         StreamSettings settings = 4;
         optional bytes space_id = 5;
         optional bytes user_id = 6;
+
+        // Setting for enabling per chunk encryption for media payloads.
+        // Meaning, the given media stream has each chunk individually encrypted
+        // rather than encrypting the full data and splitting into chunks.
+        bool per_chunk_encryption = 7;
     }
 
     message Chunk {
@@ -669,11 +674,6 @@ message EventRef {
 message StreamSettings {
     // Test setting for testing with manual miniblock creation through Info debug request. 
     bool disable_miniblock_creation = 1;
-
-    // Setting for enabling per chunk encryption for media payloads.
-    // Meaning, the given media stream has each chunk individually encrypted
-    // rather than encrypting the full data and splitting into chunks.
-    bool per_chunk_encryption = 2;
 }
 
 /**
