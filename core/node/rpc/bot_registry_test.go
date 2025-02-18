@@ -234,7 +234,7 @@ func TestBotRegistry_RegisterWebhook(t *testing.T) {
 		httpClient, serviceAddr,
 	)
 
-	// unregisteredBotWallet := safeNewWallet(tester.ctx, tester.require)
+	unregisteredBotWallet := safeNewWallet(tester.ctx, tester.require)
 	botWallet := safeNewWallet(tester.ctx, tester.require)
 	ownerWallet := safeNewWallet(tester.ctx, tester.require)
 
@@ -274,28 +274,28 @@ func TestBotRegistry_RegisterWebhook(t *testing.T) {
 			authenticatingWallet: botWallet,
 			webhookUrl:           botServer.Url(),
 		},
-		// "Success (owner wallet signer)": {
-		// 	botId:                botWallet.Address[:],
-		// 	authenticatingWallet: ownerWallet,
-		// 	webhookUrl:           botServer.Url(),
-		// },
-		// "Unregistered bot": {
-		// 	botId:                unregisteredBotWallet.Address[:],
-		// 	authenticatingWallet: unregisteredBotWallet,
-		// 	webhookUrl:           "http://www.test.com/callme",
-		// 	expectedErr:          "bot does not exist",
-		// },
-		// "Missing authentication": {
-		// 	botId:       botWallet.Address[:],
-		// 	webhookUrl:  "http://www.test.com/callme",
-		// 	expectedErr: "missing session token",
-		// },
-		// "Unauthorized user": {
-		// 	botId:                botWallet.Address[:],
-		// 	authenticatingWallet: unregisteredBotWallet,
-		// 	webhookUrl:           "http://www.test.com/callme",
-		// 	expectedErr:          "authenticated user must be either bot or owner",
-		// },
+		"Success (owner wallet signer)": {
+			botId:                botWallet.Address[:],
+			authenticatingWallet: ownerWallet,
+			webhookUrl:           botServer.Url(),
+		},
+		"Unregistered bot": {
+			botId:                unregisteredBotWallet.Address[:],
+			authenticatingWallet: unregisteredBotWallet,
+			webhookUrl:           "http://www.test.com/callme",
+			expectedErr:          "bot does not exist",
+		},
+		"Missing authentication": {
+			botId:       botWallet.Address[:],
+			webhookUrl:  "http://www.test.com/callme",
+			expectedErr: "missing session token",
+		},
+		"Unauthorized user": {
+			botId:                botWallet.Address[:],
+			authenticatingWallet: unregisteredBotWallet,
+			webhookUrl:           "http://www.test.com/callme",
+			expectedErr:          "authenticated user must be either bot or owner",
+		},
 	}
 
 	for name, tc := range tests {

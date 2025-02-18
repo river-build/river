@@ -33,9 +33,9 @@ func NewBotClient(httpClient *http.Client, allowLoopback bool) *BotClient {
 
 // InitializeWebhook calls "initialize" on a bot service specified by the webhook url
 // with a jwt token included in the request header that was generated from the shared
-// secret returned to the bot upon registration. The caller should verify that should
-// verify that we can see a device_id and fallback key in the user stream that matches
-// the device id and fallback key returned in the status message.
+// secret returned to the bot upon registration. The caller should verify that we can
+// see a device_id and fallback key in the user stream that matches the device id and
+// fallback key returned in the status message.
 func (b *BotClient) InitializeWebhook(
 	ctx context.Context,
 	webhookUrl string,
@@ -59,13 +59,13 @@ func (b *BotClient) InitializeWebhook(
 			Tag("botId", botId)
 	}
 
+	// Add authorization header based on the shared secret for this bot.
 	if err := signRequest(req, hs256SharedSecret[:], botId); err != nil {
 		return base.WrapRiverError(protocol.Err_INTERNAL, err).
 			Message("Error signing request to initialize webhook").
 			Tag("botId", botId)
 	}
 
-	// Set headers
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := b.httpClient.Do(req)

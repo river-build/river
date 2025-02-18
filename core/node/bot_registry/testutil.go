@@ -91,10 +91,12 @@ func (b *TestBotServer) Url() string {
 }
 
 func (b *TestBotServer) Close() {
+	if b.httpServer != nil {
+		b.httpServer.Close()
+	}
 	if b.listener != nil {
 		b.listener.Close()
 	}
-	b.httpServer.Close()
 }
 
 func (b *TestBotServer) rootHandler(w http.ResponseWriter, r *http.Request) {
@@ -151,5 +153,8 @@ func (b *TestBotServer) Serve(ctx context.Context) error {
 		ErrorLog: utils.NewHttpLogger(ctx),
 	}
 
-	return b.httpServer.Serve(b.listener)
+	if err := b.httpServer.Serve(b.listener); err != http.ErrServerClosed {
+		return err
+	}
+	return nil
 }
