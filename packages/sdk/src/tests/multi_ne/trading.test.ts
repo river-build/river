@@ -1,6 +1,6 @@
 import { Client } from '../../client'
 import { makeUniqueChannelStreamId } from '../../id'
-import { makeTestClient, makeUniqueSpaceStreamId } from '../testUtils'
+import { makeTestClient, makeUniqueSpaceStreamId, waitFor } from '../testUtils'
 import { ContractReceipt } from '../../types'
 import { PlainMessage } from '@bufbuild/protobuf'
 
@@ -52,7 +52,13 @@ describe('Trading', () => {
             channelId: bin_fromHexString(channelId),
         }
 
-        const res = await bobsClient.addTransaction_Transfer(84532, receipt, transferEvent)
-        expect(res).toBeDefined()
+        const { eventId } = await bobsClient.addTransaction_Transfer(84532, receipt, transferEvent)
+        expect(eventId).toBeDefined()
+
+        await waitFor(() =>
+            expect(
+                bobsClient.streams.get(channelId)?.view.timeline.some((m) => m.hashStr === eventId),
+            ).toBeDefined(),
+        )
     })
 })
