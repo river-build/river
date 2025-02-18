@@ -19,6 +19,7 @@ import (
 
 	"github.com/towns-protocol/towns/core/node/authentication"
 	"github.com/towns-protocol/towns/core/node/base"
+	"github.com/towns-protocol/towns/core/node/bot_registry"
 	"github.com/towns-protocol/towns/core/node/crypto"
 	"github.com/towns-protocol/towns/core/node/events"
 	"github.com/towns-protocol/towns/core/node/logging"
@@ -94,15 +95,21 @@ func initBotRegistryService(
 	bc := tester.btc.NewWalletAndBlockchain(tester.ctx)
 	listener, _ := makeTestListener(tester.t)
 
-	var key [32]byte
-	_, err := rand.Read(key[:])
-	tester.require.NoError(err)
-
 	config := tester.getConfig()
 	config.BotRegistry.BotRegistryId = base.GenShortNanoid()
 
+	var key [32]byte
+	_, err := rand.Read(key[:])
+	tester.require.NoError(err)
+	config.BotRegistry.SharedSecretDataEncryptionKey = hex.EncodeToString(key[:])
+
+	_, err = rand.Read(key[:])
+	tester.require.NoError(err)
 	config.BotRegistry.Authentication.SessionToken.Key.Algorithm = "HS256"
 	config.BotRegistry.Authentication.SessionToken.Key.Key = hex.EncodeToString(key[:])
+
+	// Allow loopback webhooks for local testing
+	config.BotRegistry.AllowLoopbackWebhooks = true
 
 	ctx = logging.CtxWithLog(ctx, logging.FromCtx(ctx).With("service", "bot-registry"))
 	streamEventListener = &MockStreamEventListener{}
@@ -136,8 +143,7 @@ func TestBotRegistry_ForwardsChannelEvents(t *testing.T) {
 	tester := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
 	_, listener := initBotRegistryService(tester.ctx, tester)
 
-	wallet, err := crypto.NewWallet(tester.ctx)
-	tester.require.NoError(err)
+	wallet := safeNewWallet(tester.ctx, tester.require)
 
 	require := tester.require
 	client := tester.testClient(0)
@@ -215,20 +221,11 @@ func safeNewWallet(ctx context.Context, require *require.Assertions) *crypto.Wal
 	return wallet
 }
 
-func TestBotRegistry_RegisterWebhookAuthentication(t *testing.T) {
+func TestBotRegistry_RegisterWebhook(t *testing.T) {
 	tester := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
 	service, _ := initBotRegistryService(tester.ctx, tester)
 
-	botWallet := safeNewWallet(tester.ctx, tester.require)
-	ownerWallet := safeNewWallet(tester.ctx, tester.require)
-	bot2Wallet := safeNewWallet(tester.ctx, tester.require)
-	owner2Wallet := safeNewWallet(tester.ctx, tester.require)
-	bot3Wallet := safeNewWallet(tester.ctx, tester.require)
-	owner3Wallet := safeNewWallet(tester.ctx, tester.require)
-	unrelatedWallet := safeNewWallet(tester.ctx, tester.require)
-
 	httpClient, _ := testcert.GetHttp2LocalhostTLSClient(tester.ctx, tester.getConfig())
-
 	serviceAddr := "https://" + service.listener.Addr().String()
 	authClient := protocolconnect.NewAuthenticationServiceClient(
 		httpClient, serviceAddr,
@@ -237,71 +234,100 @@ func TestBotRegistry_RegisterWebhookAuthentication(t *testing.T) {
 		httpClient, serviceAddr,
 	)
 
-	req := &connect.Request[protocol.RegisterWebhookRequest]{
-		Msg: &protocol.RegisterWebhookRequest{
+	unregisteredBotWallet := safeNewWallet(tester.ctx, tester.require)
+	botWallet := safeNewWallet(tester.ctx, tester.require)
+	ownerWallet := safeNewWallet(tester.ctx, tester.require)
+
+	req := &connect.Request[protocol.RegisterRequest]{
+		Msg: &protocol.RegisterRequest{
 			BotId:      botWallet.Address[:],
 			BotOwnerId: ownerWallet.Address[:],
-			WebhookUrl: "localhost:1234/abc",
 		},
 	}
-
-	// Unauthenticated request should fail
-	resp, err := botRegistryClient.RegisterWebhook(
+	authenticateBS(tester.ctx, tester.require, authClient, ownerWallet, req)
+	resp, err := botRegistryClient.Register(
 		tester.ctx,
 		req,
 	)
 
-	tester.require.ErrorContains(
-		err,
-		"missing session token",
-	)
-	tester.require.Nil(resp)
-
-	// Request authenticated by bot should succeed
-	authenticateBS(tester.ctx, tester.require, authClient, botWallet, req)
-	resp, err = botRegistryClient.RegisterWebhook(
-		tester.ctx,
-		req,
-	)
-	tester.require.NoError(err)
 	tester.require.NotNil(resp)
-
-	// Request authenticated by bot owner should succeed
-	req = &connect.Request[protocol.RegisterWebhookRequest]{
-		Msg: &protocol.RegisterWebhookRequest{
-			BotId:      bot2Wallet.Address[:],
-			BotOwnerId: owner2Wallet.Address[:],
-			WebhookUrl: "localhost:1234/abc",
-		},
-	}
-	authenticateBS(tester.ctx, tester.require, authClient, owner2Wallet, req)
-
-	resp, err = botRegistryClient.RegisterWebhook(
-		tester.ctx,
-		req,
-	)
+	tester.require.Len(resp.Msg.Hs256SharedSecret, 32, "Shared secret length should be 32 bytes")
 	tester.require.NoError(err)
-	tester.require.NotNil(resp)
 
-	// Request authenticated by neither the bot or bot owner should fail
-	req = &connect.Request[protocol.RegisterWebhookRequest]{
-		Msg: &protocol.RegisterWebhookRequest{
-			BotId:      bot3Wallet.Address[:],
-			BotOwnerId: owner3Wallet.Address[:],
-			WebhookUrl: "localhost:1234/abc",
+	botServer := bot_registry.NewTestBotServer(t, botWallet, resp.Msg.GetHs256SharedSecret())
+	defer botServer.Close()
+
+	go func() {
+		if err := botServer.Serve(tester.ctx); err != nil {
+			t.Errorf("Error starting bot service: %v", err)
+		}
+	}()
+
+	tests := map[string]struct {
+		botId                []byte
+		authenticatingWallet *crypto.Wallet
+		webhookUrl           string
+		expectedErr          string
+	}{
+		"Success (bot wallet signer)": {
+			botId:                botWallet.Address[:],
+			authenticatingWallet: botWallet,
+			webhookUrl:           botServer.Url(),
+		},
+		"Success (owner wallet signer)": {
+			botId:                botWallet.Address[:],
+			authenticatingWallet: ownerWallet,
+			webhookUrl:           botServer.Url(),
+		},
+		"Unregistered bot": {
+			botId:                unregisteredBotWallet.Address[:],
+			authenticatingWallet: unregisteredBotWallet,
+			webhookUrl:           "http://www.test.com/callme",
+			expectedErr:          "bot does not exist",
+		},
+		"Missing authentication": {
+			botId:       botWallet.Address[:],
+			webhookUrl:  "http://www.test.com/callme",
+			expectedErr: "missing session token",
+		},
+		"Unauthorized user": {
+			botId:                botWallet.Address[:],
+			authenticatingWallet: unregisteredBotWallet,
+			webhookUrl:           "http://www.test.com/callme",
+			expectedErr:          "authenticated user must be either bot or owner",
 		},
 	}
-	authenticateBS(tester.ctx, tester.require, authClient, unrelatedWallet, req)
 
-	resp, err = botRegistryClient.RegisterWebhook(
-		tester.ctx,
-		req,
-	)
-	tester.require.ErrorContains(err, "Registering user is neither bot nor owner")
-	tester.require.Nil(resp)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			req := &connect.Request[protocol.RegisterWebhookRequest]{
+				Msg: &protocol.RegisterWebhookRequest{
+					BotId:      tc.botId,
+					WebhookUrl: tc.webhookUrl,
+				},
+			}
+
+			// Unauthenticated requests should fail
+			if tc.authenticatingWallet != nil {
+				authenticateBS(tester.ctx, tester.require, authClient, tc.authenticatingWallet, req)
+			}
+
+			resp, err := botRegistryClient.RegisterWebhook(
+				tester.ctx,
+				req,
+			)
+			if tc.expectedErr == "" {
+				tester.require.NoError(err)
+				tester.require.NotNil(resp)
+			} else {
+				tester.require.Nil(resp)
+				tester.require.ErrorContains(err, tc.expectedErr)
+			}
+		})
+	}
 }
 
-func TestBotRegistry(t *testing.T) {
+func TestBotRegistry_Status(t *testing.T) {
 	tester := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
 	service, _ := initBotRegistryService(tester.ctx, tester)
 
@@ -320,60 +346,136 @@ func TestBotRegistry(t *testing.T) {
 
 	botWallet, err := crypto.NewWallet(tester.ctx)
 	tester.require.NoError(err)
+
 	ownerWallet, err := crypto.NewWallet(tester.ctx)
 	tester.require.NoError(err)
 
-	req := &connect.Request[protocol.RegisterWebhookRequest]{
-		Msg: &protocol.RegisterWebhookRequest{
+	req := &connect.Request[protocol.RegisterRequest]{
+		Msg: &protocol.RegisterRequest{
 			BotId:      botWallet.Address[:],
 			BotOwnerId: ownerWallet.Address[:],
-			WebhookUrl: "localhost:1234/abc",
 		},
 	}
-	authenticateBS(tester.ctx, tester.require, authClient, botWallet, req)
-	resp, err := botRegistryClient.RegisterWebhook(
-		tester.ctx, req,
-	)
-
-	tester.require.NoError(err)
-	tester.require.NotNil(resp)
-
-	req = &connect.Request[protocol.RegisterWebhookRequest]{
-		Msg: &protocol.RegisterWebhookRequest{
-			BotId:      invalidAddressBytes,
-			BotOwnerId: ownerWallet.Address[:],
-			WebhookUrl: "localhost:1234/abc",
-		},
-	}
-	authenticateBS(tester.ctx, tester.require, authClient, botWallet, req)
-	resp, err = botRegistryClient.RegisterWebhook(
+	authenticateBS(tester.ctx, tester.require, authClient, ownerWallet, req)
+	resp, err := botRegistryClient.Register(
 		tester.ctx,
 		req,
 	)
-	tester.require.Nil(resp)
-	tester.require.ErrorContains(err, "Invalid bot id")
 
-	status, err := botRegistryClient.GetStatus(
-		tester.ctx,
-		&connect.Request[protocol.GetStatusRequest]{
-			Msg: &protocol.GetStatusRequest{
-				BotId: botWallet.Address[:],
-			},
-		},
-	)
+	tester.require.NotNil(resp)
 	tester.require.NoError(err)
-	tester.require.NotNil(status)
-	tester.require.True(status.Msg.IsRegistered)
+	statusTests := map[string]struct {
+		botId                []byte
+		expectedIsRegistered bool
+	}{
+		"Registered bot": {
+			botId:                botWallet.Address[:],
+			expectedIsRegistered: true,
+		},
+		"Unregistered bot": {
+			botId:                unregisteredBot[:],
+			expectedIsRegistered: false,
+		},
+	}
 
-	status, err = botRegistryClient.GetStatus(
-		tester.ctx,
-		&connect.Request[protocol.GetStatusRequest]{
-			Msg: &protocol.GetStatusRequest{
-				BotId: unregisteredBot[:],
-			},
-		},
+	for name, tc := range statusTests {
+		t.Run(name, func(t *testing.T) {
+			status, err := botRegistryClient.GetStatus(
+				tester.ctx,
+				&connect.Request[protocol.GetStatusRequest]{
+					Msg: &protocol.GetStatusRequest{
+						BotId: tc.botId,
+					},
+				},
+			)
+			tester.require.NoError(err)
+			tester.require.NotNil(status)
+			tester.require.Equal(tc.expectedIsRegistered, status.Msg.IsRegistered)
+		})
+	}
+}
+
+func TestBotRegistry_Register(t *testing.T) {
+	tester := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
+	service, _ := initBotRegistryService(tester.ctx, tester)
+
+	httpClient, _ := testcert.GetHttp2LocalhostTLSClient(tester.ctx, tester.getConfig())
+	serviceAddr := "https://" + service.listener.Addr().String()
+	authClient := protocolconnect.NewAuthenticationServiceClient(
+		httpClient, serviceAddr,
 	)
+	botRegistryClient := protocolconnect.NewBotRegistryServiceClient(
+		httpClient, serviceAddr,
+	)
+
+	var unregisteredBot common.Address
+	_, err := rand.Read(unregisteredBot[:])
 	tester.require.NoError(err)
-	tester.require.NotNil(status)
-	tester.require.False(status.Msg.IsRegistered)
+
+	botWallet := safeNewWallet(tester.ctx, tester.require)
+	ownerWallet := safeNewWallet(tester.ctx, tester.require)
+
+	tests := map[string]struct {
+		botId                []byte
+		ownerId              []byte
+		authenticatingWallet *crypto.Wallet
+		expectedErr          string
+	}{
+		"Success": {
+			botId:                botWallet.Address[:],
+			ownerId:              ownerWallet.Address[:],
+			authenticatingWallet: ownerWallet,
+		},
+		"Invalid bot id": {
+			botId:                invalidAddressBytes,
+			ownerId:              ownerWallet.Address[:],
+			authenticatingWallet: ownerWallet,
+			expectedErr:          "invalid bot id",
+		},
+		"Invalid owner id": {
+			botId:                botWallet.Address[:],
+			ownerId:              invalidAddressBytes,
+			authenticatingWallet: ownerWallet,
+			expectedErr:          "invalid owner id",
+		},
+		"Invalid authorization": {
+			botId:                botWallet.Address[:],
+			ownerId:              ownerWallet.Address[:],
+			authenticatingWallet: botWallet,
+			expectedErr:          "authenticated user must be bot owner",
+		},
+		"Missing authorization": {
+			botId:       botWallet.Address[:],
+			ownerId:     ownerWallet.Address[:],
+			expectedErr: "missing session token",
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			req := &connect.Request[protocol.RegisterRequest]{
+				Msg: &protocol.RegisterRequest{
+					BotId:      tc.botId,
+					BotOwnerId: tc.ownerId,
+				},
+			}
+
+			if tc.authenticatingWallet != nil {
+				authenticateBS(tester.ctx, tester.require, authClient, tc.authenticatingWallet, req)
+			}
+
+			resp, err := botRegistryClient.Register(
+				tester.ctx,
+				req,
+			)
+
+			if tc.expectedErr == "" {
+				tester.require.NotNil(resp)
+				tester.require.Len(resp.Msg.GetHs256SharedSecret(), 32)
+				tester.require.NoError(err)
+			} else {
+				tester.require.Nil(resp)
+				tester.require.ErrorContains(err, tc.expectedErr)
+			}
+		})
+	}
 }

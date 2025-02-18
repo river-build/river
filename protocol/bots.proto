@@ -10,22 +10,46 @@ option go_package = "github.com/towns-protocol/towns/core/node/protocol";
 // This session token can be obtained from the AuthenticationService. If the session token is missing or invalid an
 // Err_UNAUTHENTICATED (code=16) is returned.
 service BotRegistryService {
+    rpc Register(RegisterRequest) returns (RegisterResponse);
     rpc RegisterWebhook(RegisterWebhookRequest) returns (RegisterWebhookResponse);
+    // rpc GetInfo(GetInfoRequest) returns (GetInfoResponse);
+    // rpc RotateSecret(RotateSecretRequest) returns (RotateSecretResponse);
     rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+}
+
+message RegisterRequest {
+    // public key of the bot
+    bytes bot_id = 1;
+
+    // public key of the bot owner
+    bytes bot_owner_id = 2;
+}
+
+message RegisterResponse {
+    // The shared secret used to sign the jwt the bot registry will use to authenticate to the
+    // bot service. This secret should be exactly 32 bytes.
+    bytes hs256_shared_secret = 1;
 }
 
 message RegisterWebhookRequest {
     // public key of the bot
     bytes bot_id = 1;
 
-    // public key of the bot owner
-    bytes bot_owner_id = 2;
-
     // Webhook for sending requests to the bot service
-    string webhook_url = 3;
+    string webhook_url = 2;
 }
 
 message RegisterWebhookResponse { }
+
+message RotateSecretRequest {
+        // public key of the bot
+        bytes bot_id = 1;
+}
+
+message RotateSecretResponse {
+    // the updated shared secret used to generate the hmac the bot registry will send to the bot service
+    string hmac_shared_secret = 1;
+}
 
 message GetStatusRequest {
     // public key of the bot
