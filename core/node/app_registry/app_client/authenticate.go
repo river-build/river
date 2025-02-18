@@ -19,7 +19,7 @@ func signRequest(req *http.Request, secretKey []byte, appId common.Address) erro
 	claims["iat"] = time.Now().Unix()                    // issued at
 	claims["aud"] = hex.EncodeToString(appId[:])
 
-	// A app server may optionally use the jti to prevent replay attacks
+	// An app server may optionally use the jti to prevent replay attacks
 	claims["jti"] = uuid.NewString()
 
 	tokenString, err := token.SignedString(secretKey)

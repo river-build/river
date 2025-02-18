@@ -31,7 +31,7 @@ func NewAppClient(httpClient *http.Client, allowLoopback bool) *AppClient {
 	}
 }
 
-// InitializeWebhook calls "initialize" on a app service specified by the webhook url
+// InitializeWebhook calls "initialize" on an app service specified by the webhook url
 // with a jwt token included in the request header that was generated from the shared
 // secret returned to the app upon registration. The caller should verify that we can
 // see a device_id and fallback key in the user stream that matches the device id and

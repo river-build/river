@@ -55,7 +55,7 @@ func NewTrackedStreamForAppRegistryService(
 	}
 
 	// TODO: capture returned view above and update cache / storage with all new key fulfillments,
-	// iff this is a app user inbox stream.
+	// iff this is an app user inbox stream.
 
 	return trackedView, nil
 }
