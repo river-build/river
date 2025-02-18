@@ -326,17 +326,20 @@ deploy-omega-mainnet :;
 #*                      DEPLOYMENTS V2                        */
 #*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
+deploy-any-wallet :;
+	@echo "Running $(contract) on remote network"
+	@SAVE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
+	forge script scripts/deployments/${type}/${contract}.s.sol:${contract} --ffi \
+	--ledger --hd-paths ${hd_path} --sender ${sender} \
+	--rpc-url ${rpc} --broadcast --verify --verifier-url ${verifier-url} --verifier ${verifier} ${args}
+
 deploy-any-account :;
 	@echo "Running $(contract) on remote network"
 	@SAVE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
-	forge script scripts/deployments/${type}/${contract}.s.sol:${contract} \
-	--ffi --rpc-url ${rpc} --account ${account} --password ${password} --sender ${sender} --broadcast --verify --verifier-url ${verifier-url} --verifier ${verifier} ${args}
-
-resume-any-account :;
-	@$(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
-	forge script scripts/deployments/${type}/${contract}.s.sol:${contract} \
-	--ffi --rpc-url ${rpc} --account ${account} --sender ${sender} --password ${password} --broadcast --verify --verifier-url ${verifier-url} --verifier ${verifier} --resume ${args}
+	forge script scripts/deployments/${type}/${contract}.s.sol:${contract} --ffi \
+	--account ${account} --password ${password} --sender ${sender} \
+	--rpc-url ${rpc} --broadcast --verify --verifier-url ${verifier-url} --verifier ${verifier} ${args}
 
 deploy-base-sepolia-with-account :;
 	@$(MAKE) deploy-any-account rpc=base_sepolia verifier=etherscan verifier-url=${BASESCAN_SEPOLIA_URL} args="--etherscan-api-key ${BASESCAN_SEPOLIA_API_KEY}"
-	@$(MAKE) resume-any-account rpc=base_sepolia verifier=blockscout verifier-url=${BLOCKSCOUT_SEPOLIA_URL}
+	@$(MAKE) deploy-any-account rpc=base_sepolia verifier=blockscout verifier-url=${BLOCKSCOUT_SEPOLIA_URL} args="--resume"
