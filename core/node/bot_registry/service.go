@@ -3,6 +3,7 @@ package bot_registry
 import (
 	"context"
 	"encoding/hex"
+	"net/http"
 	"time"
 
 	"connectrpc.com/connect"
@@ -12,6 +13,7 @@ import (
 	"github.com/towns-protocol/towns/core/config"
 	"github.com/towns-protocol/towns/core/node/authentication"
 	"github.com/towns-protocol/towns/core/node/base"
+	"github.com/towns-protocol/towns/core/node/bot_registry/bot_client"
 	"github.com/towns-protocol/towns/core/node/bot_registry/sync"
 	"github.com/towns-protocol/towns/core/node/crypto"
 	"github.com/towns-protocol/towns/core/node/infra"
@@ -34,7 +36,8 @@ type (
 		cfg                           config.BotRegistryConfig
 		store                         storage.BotRegistryStore
 		streamsTracker                track_streams.StreamsTracker
-		sharedSecretDataEncryptionKey [32]byte `json:"-" yaml:"-"` // Just in case, protect this from being logged
+		sharedSecretDataEncryptionKey [32]byte
+		botClient                     *bot_client.BotClient
 	}
 )
 
@@ -49,6 +52,7 @@ func NewService(
 	nodes []nodes.NodeRegistry,
 	metrics infra.MetricsFactory,
 	listener track_streams.StreamEventListener,
+	httpClient *http.Client,
 ) (*Service, error) {
 	tracker, err := sync.NewBotRegistryStreamsTracker(
 		ctx,
@@ -74,6 +78,7 @@ func NewService(
 		store:                         store,
 		streamsTracker:                tracker,
 		sharedSecretDataEncryptionKey: [32]byte(sharedSecretDataEncryptionKey),
+		botClient:                     bot_client.NewBotClient(httpClient, cfg.AllowLoopbackWebhooks),
 	}
 
 	if err := s.InitAuthentication(botServiceChallengePrefix, &cfg.Authentication); err != nil {
@@ -193,8 +198,27 @@ func (s *Service) RegisterWebhook(
 		)
 	}
 
+	// TODO:
+	// wait up to 10s for bot user stream to be created
+
 	// TODO: Validate URL by sending a request to the webhook
 	webhook := req.Msg.WebhookUrl
+
+	decryptedSecret, err := decryptSharedSecret(botInfo.EncryptedSecret, s.sharedSecretDataEncryptionKey)
+	if err != nil {
+		return nil, base.WrapRiverError(Err_INTERNAL, err).
+			Message("Unable to decrypt bot shared secret from db").
+			Tag("botId", bot)
+	}
+
+	if err := s.botClient.InitializeWebhook(
+		ctx,
+		webhook,
+		bot,
+		decryptedSecret,
+	); err != nil {
+		return nil, base.WrapRiverError(Err_UNKNOWN, err).Message("Unable to initialize bot service")
+	}
 
 	// Store the bot record in pg
 	if err := s.store.RegisterWebhook(ctx, bot, webhook); err != nil {

@@ -70,6 +70,7 @@ func (s *Service) startBotRegistryMode(opts *ServerStartOpts) error {
 		registries,
 		s.metrics,
 		opts.StreamEventListener,
+		httpClient,
 	); err != nil {
 		return AsRiverError(err).Message("Failed to instantiate bot registry service").LogError(s.defaultLogger)
 	}

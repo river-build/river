@@ -443,6 +443,11 @@ type BotRegistryConfig struct {
 	// storage via AES256. This key is stored as a string in hex format, with an expected length of 64
 	// characters, plus an optional '0x' prefix.
 	SharedSecretDataEncryptionKey string `json:"-" yaml:"-"` // Omit sensitive field from logging
+
+	// AllowLoopbackWebhooks allows webhooks that resolve to a loopback address via DNS. This setting
+	// was added for local/unit testing only and is highly discouraged to enable for production environments,
+	// in order to prevent server side request forgery attacks.
+	AllowLoopbackWebhooks bool
 }
 
 type LogConfig struct {
