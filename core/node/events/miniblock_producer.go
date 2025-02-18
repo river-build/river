@@ -84,6 +84,7 @@ func NewMiniblockProducer(
 	mb := &miniblockProducer{
 		streamCache:      streamCache,
 		localNodeAddress: streamCache.Params().Wallet.Address,
+		jobs:             xsync.NewMapOf[StreamId, *mbJob](),
 	}
 
 	if opts != nil {
@@ -102,7 +103,7 @@ type miniblockProducer struct {
 	opts             MiniblockProducerOpts
 	localNodeAddress common.Address
 
-	jobs xsync.MapOf[StreamId, *mbJob]
+	jobs *xsync.MapOf[StreamId, *mbJob]
 
 	candidates candidateTracker
 
