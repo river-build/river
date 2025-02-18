@@ -33,6 +33,7 @@ import {
     CreateStreamResponse,
     ChannelProperties,
     CreationCookie,
+    BlockchainTransaction_Transfer,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -2147,6 +2148,23 @@ export class Client
                 },
             },
             tags,
+        )
+    }
+
+    async addTransaction_Transfer(
+        chainId: number,
+        receipt: ContractReceipt,
+        event: PlainMessage<BlockchainTransaction_Transfer>,
+        _opts?: SendBlockchainTransactionOptions,
+    ): Promise<{ eventId: string }> {
+        return this.addTransaction(
+            chainId,
+            receipt,
+            {
+                case: 'transfer',
+                value: event,
+            },
+            undefined,
         )
     }
 

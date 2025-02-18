@@ -628,15 +628,12 @@ message BlockchainTransaction {
         bytes toUserAddress = 2; // user that received funds
     }
 
-    message Trade {
-        message Event {
-            bytes from_token_address = 1;
-            bytes to_token_address = 2;
-            uint64 from_amount = 3;
-            uint64 to_amount = 4;
-            bytes message_id = 5;
-            bytes channel_id = 6;
-        }
+    message Transfer {
+        bytes address = 1;
+        string amount = 2; // uint64 isn't big enough
+        bytes sender = 3;
+        bytes message_id = 4;
+        bytes channel_id = 5;
     }
 
     // required fields
@@ -644,7 +641,7 @@ message BlockchainTransaction {
     // optional metadata to be verified by the node
     oneof content {
         Tip tip = 101;
-        Trade trade = 102;
+        Transfer transfer = 102;
     }
 }
 
@@ -1036,6 +1033,7 @@ enum MessageInteractionType {
     MESSAGE_INTERACTION_TYPE_EDIT = 4;
     MESSAGE_INTERACTION_TYPE_REDACTION = 5;
     MESSAGE_INTERACTION_TYPE_TIP = 6;
+    MESSAGE_INTERACTION_TYPE_TRADE = 7;
 }
 
 enum GroupMentionType {

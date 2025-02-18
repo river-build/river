@@ -751,6 +751,10 @@ func (ru *aeBlockchainTransactionRules) validBlockchainTransaction_CheckReceiptM
 			Err_INVALID_ARGUMENT,
 			"matching tip event not found in receipt logs",
 		)
+	case *BlockchainTransaction_Transfer_:
+		// noop for now
+		return true, nil
+
 	default:
 		return false, RiverError(
 			Err_INVALID_ARGUMENT,
@@ -815,6 +819,24 @@ func (ru *aeReceivedBlockchainTransactionRules) parentEventForReceivedBlockchain
 			StreamId: streamId,
 			Tags:     ru.params.parsedEvent.Event.Tags, // forward tags
 		}, nil
+	case *BlockchainTransaction_Transfer_:
+		if content.Transfer.GetChannelId() == nil {
+			return nil, RiverError(Err_INVALID_ARGUMENT, "transaction channel id is nil")
+		}
+		// convert to stream id
+		streamId, err := shared.StreamIdFromBytes(content.Transfer.GetChannelId())
+		if err != nil {
+			return nil, err
+		}
+		// forward the transfer to the stream as a member event, preserving the original sender as the from address
+		return &DerivedEvent{
+			Payload: events.Make_MemberPayload_BlockchainTransaction(
+				ru.receivedTransaction.FromUserAddress,
+				transaction,
+			),
+			StreamId: streamId,
+			Tags:     ru.params.parsedEvent.Event.Tags, // forward tags
+		}, nil
 	default:
 		return nil, RiverError(Err_INVALID_ARGUMENT, "unknown transaction content", "content", content)
 	}
@@ -847,13 +869,14 @@ func (ru *aeBlockchainTransactionRules) parentEventForBlockchainTransaction() (*
 				Tags:     ru.params.parsedEvent.Event.Tags, // forward tags
 			}, nil
 		}
-
 		return nil, RiverError(
 			Err_INVALID_ARGUMENT,
 			"tip transaction streamId is not a valid channel/dm/gdm stream id",
 			"streamId",
 			toStreamId,
 		)
+	case *BlockchainTransaction_Transfer_:
+		return nil, nil
 	default:
 		return nil, RiverError(
 			Err_INVALID_ARGUMENT,
@@ -886,6 +909,11 @@ func (ru *aeBlockchainTransactionRules) blockchainTransaction_ChainAuth() (*auth
 		return auth.NewChainAuthArgsForIsWalletLinked(
 			ru.params.parsedEvent.Event.CreatorAddress,
 			content.Tip.GetEvent().GetSender(),
+		), nil
+	case *BlockchainTransaction_Transfer_:
+		return auth.NewChainAuthArgsForIsWalletLinked(
+			ru.params.parsedEvent.Event.CreatorAddress, 
+			content.Transfer.GetSender(),
 		), nil
 	default:
 		return nil, RiverError(
