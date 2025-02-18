@@ -23,7 +23,7 @@ describe('Trading', () => {
         channelId = makeUniqueChannelStreamId(spaceId)
         await bobsClient.createChannel(spaceId, 'Channel', 'Topic', channelId)
 
-        const result = await bobsClient.sendMessage(channelId, 'Very bad message!')
+        const result = await bobsClient.sendMessage(channelId, 'try out this token: $yo!')
         threadParentId = result.eventId
     })
 

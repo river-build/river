@@ -9,6 +9,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/holiman/uint256"
 	"github.com/towns-protocol/towns/core/config"
 	baseContracts "github.com/towns-protocol/towns/core/contracts/base"
 	"github.com/towns-protocol/towns/core/node/auth"
@@ -752,8 +754,27 @@ func (ru *aeBlockchainTransactionRules) validBlockchainTransaction_CheckReceiptM
 			"matching tip event not found in receipt logs",
 		)
 	case *BlockchainTransaction_Transfer_:
-		// noop for now
-		return true, nil
+		topicHash := ethCrypto.Keccak256Hash([]byte("Transfer(address,address,uint256)"))
+		amount, err := uint256.FromDecimal(content.Transfer.GetAmount())
+		if (err != nil) {
+			return false, err
+		}
+		
+		for _, receiptLog := range receipt.Logs {
+			if len(receiptLog.Topics) < 3 {
+				continue
+			}
+			
+			if !bytes.Equal(receiptLog.GetTopics()[0], topicHash.Bytes()) {
+				continue
+			}
+
+			if amount.Bytes32() == [32]byte(receiptLog.Data) {
+				return true, nil
+			}
+		}
+		
+		return false, RiverError(Err_INVALID_ARGUMENT, "matching transfer event not found in receipt logs")
 
 	default:
 		return false, RiverError(
