@@ -11,21 +11,21 @@ import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
 import {Entitled} from "contracts/src/spaces/facets/Entitled.sol";
 
 contract InstallFacet is Entitled {
-  function installApp(uint256 appId, bytes32 channelId) external {
+  function installApp(uint256 appId, bytes32[] memory channelIds) external {
     _isEntitled(
-      channelId,
+      IN_TOWN,
       msg.sender,
       bytes32(abi.encodePacked(Permissions.InstallApp))
     );
-    InstallLib.installApp(appId, channelId);
+    InstallLib.installApp(appId, channelIds);
   }
 
-  function uninstallApp(uint256 appId, bytes32 channelId) external {
+  function uninstallApp(uint256 appId, bytes32[] memory channelIds) external {
     _isEntitled(
-      channelId,
+      IN_TOWN,
       msg.sender,
       bytes32(abi.encodePacked(Permissions.UninstallApp))
     );
-    InstallLib.uninstallApp(appId, channelId);
+    InstallLib.uninstallApp(appId, channelIds);
   }
 }

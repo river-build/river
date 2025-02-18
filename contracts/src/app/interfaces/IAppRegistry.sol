@@ -16,6 +16,14 @@ interface IAppRegistryBase {
     string symbol;
     bytes32[] permissions;
     IAppHooks hooks;
+    bool disabled;
+  }
+
+  struct UpdateRegistration {
+    string uri;
+    bytes32[] permissions;
+    IAppHooks hooks;
+    bool disabled;
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -29,12 +37,22 @@ interface IAppRegistryBase {
     Registration registration
   );
 
+  event AppUpdated(
+    address indexed owner,
+    address indexed appAddress,
+    uint256 indexed appId,
+    UpdateRegistration registration
+  );
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           Errors                           */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   error AppAlreadyRegistered();
   error AppNotRegistered();
+  error AppNotOwnedBySender();
+  error AppDisabled();
+  error AppPermissionsMissing();
 }
 
 interface IAppRegistry is IAppRegistryBase {

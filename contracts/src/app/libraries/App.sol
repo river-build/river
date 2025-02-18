@@ -16,6 +16,7 @@ library App {
   using CustomRevert for bytes4;
   using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
   struct Config {
+    bool disabled;
     uint256 tokenId;
     address appAddress;
     address owner;
@@ -67,5 +68,37 @@ library App {
     Config storage self
   ) internal view returns (bytes32[] memory) {
     return self.permissions.values();
+  }
+
+  function update(
+    Config storage self,
+    string memory uri,
+    bytes32[] memory permissions,
+    bool disabled,
+    IAppHooks hooks
+  ) internal {
+    self.uri = uri;
+    self.hooks = hooks;
+    self.disabled = disabled;
+
+    uint256 currentPermissionsLen = self.permissions.length();
+    uint256 permissionsLen = permissions.length;
+    if (permissionsLen > 0) {
+      bytes32[] memory valuesToRemove = new bytes32[](currentPermissionsLen);
+
+      unchecked {
+        for (uint256 i; i < currentPermissionsLen; ++i) {
+          valuesToRemove[i] = self.permissions.at(i);
+        }
+
+        for (uint256 i; i < currentPermissionsLen; ++i) {
+          self.permissions.remove(valuesToRemove[i]);
+        }
+
+        for (uint256 i; i < permissionsLen; ++i) {
+          self.permissions.add(permissions[i]);
+        }
+      }
+    }
   }
 }

@@ -4,6 +4,9 @@ pragma solidity ^0.8.23;
 //interfaces
 import {IDiamond} from "@river-build/diamond/src/IDiamond.sol";
 
+// libraries
+import {Implementations} from "contracts/src/spaces/facets/Implementations.sol";
+
 //contracts
 import {DiamondHelper} from "contracts/test/diamond/Diamond.t.sol";
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
@@ -11,7 +14,6 @@ import {Diamond} from "@river-build/diamond/src/Diamond.sol";
 
 // facets
 import {MultiInit} from "@river-build/diamond/src/initializers/MultiInit.sol";
-
 import {DeployMultiInit} from "contracts/scripts/deployments/utils/DeployMultiInit.s.sol";
 import {DeployDiamondCut} from "contracts/scripts/deployments/facets/DeployDiamondCut.s.sol";
 import {DeployDiamondLoupe} from "contracts/scripts/deployments/facets/DeployDiamondLoupe.s.sol";
@@ -19,6 +21,7 @@ import {DeployIntrospection} from "contracts/scripts/deployments/facets/DeployIn
 import {DeployOwnable} from "contracts/scripts/deployments/facets/DeployOwnable.s.sol";
 import {DeployAppInstaller} from "contracts/scripts/deployments/facets/DeployAppInstaller.s.sol";
 import {DeployAppRegistry} from "contracts/scripts/deployments/facets/DeployAppRegistry.s.sol";
+import {DeployMetadata} from "contracts/scripts/deployments/facets/DeployMetadata.s.sol";
 
 contract DeployAppStore is DiamondHelper, Deployer {
   DeployMultiInit deployMultiInit = new DeployMultiInit();
@@ -28,6 +31,7 @@ contract DeployAppStore is DiamondHelper, Deployer {
   DeployOwnable ownableHelper = new DeployOwnable();
   DeployAppInstaller appInstallerHelper = new DeployAppInstaller();
   DeployAppRegistry appRegistryHelper = new DeployAppRegistry();
+  DeployMetadata metadataHelper = new DeployMetadata();
 
   address multiInit;
   address diamondCut;
@@ -36,6 +40,7 @@ contract DeployAppStore is DiamondHelper, Deployer {
   address ownable;
   address appInstaller;
   address appRegistry;
+  address metadata;
 
   function versionName() public pure override returns (string memory) {
     return "appStore";
@@ -47,7 +52,7 @@ contract DeployAppStore is DiamondHelper, Deployer {
     diamondLoupe = diamondLoupeHelper.deploy(deployer);
     introspection = introspectionHelper.deploy(deployer);
     ownable = ownableHelper.deploy(deployer);
-
+    metadata = metadataHelper.deploy(deployer);
     addFacet(
       diamondCutHelper.makeCut(diamondCut, IDiamond.FacetCutAction.Add),
       diamondCut,
@@ -67,6 +72,11 @@ contract DeployAppStore is DiamondHelper, Deployer {
       ownableHelper.makeCut(ownable, IDiamond.FacetCutAction.Add),
       ownable,
       ownableHelper.makeInitData(deployer)
+    );
+    addFacet(
+      metadataHelper.makeCut(metadata, IDiamond.FacetCutAction.Add),
+      metadata,
+      metadataHelper.makeInitData(Implementations.APP_REGISTRY, "")
     );
   }
 

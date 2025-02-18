@@ -10,14 +10,14 @@ import {Implementations} from "contracts/src/spaces/facets/Implementations.sol";
 // contracts
 
 library InstallLib {
-  function installApp(uint256 appId, bytes32 channelId) internal {
+  function installApp(uint256 appId, bytes32[] memory channelIds) internal {
     address appRegistry = Implementations.appRegistry();
-    IAppInstaller(appRegistry).install(appId, channelId);
+    IAppInstaller(appRegistry).install(appId, channelIds);
   }
 
-  function uninstallApp(uint256 appId, bytes32 channelId) internal {
+  function uninstallApp(uint256 appId, bytes32[] memory channelIds) internal {
     address appRegistry = Implementations.appRegistry();
-    IAppInstaller(appRegistry).uninstall(appId, channelId);
+    IAppInstaller(appRegistry).uninstall(appId, channelIds);
   }
 
   function isEntitled(
@@ -26,7 +26,6 @@ library InstallLib {
     bytes32 permission
   ) internal view returns (bool) {
     address appRegistry = Implementations.appRegistry();
-
     return
       IAppInstaller(appRegistry).isEntitled(channelId, appAddress, permission);
   }

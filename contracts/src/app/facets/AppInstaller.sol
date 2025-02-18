@@ -20,6 +20,7 @@ contract AppInstaller is ERC6909, IAppInstaller {
   using App for App.Config;
   using Account for Account.Installation;
   using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
+
   function name(uint256 id) public view override returns (string memory) {
     return AppRegistryStore.layout().registrations[id].name;
   }
@@ -32,7 +33,7 @@ contract AppInstaller is ERC6909, IAppInstaller {
     return AppRegistryStore.layout().registrations[id].uri;
   }
 
-  function install(uint256 appId, bytes32 channelId) external {
+  function install(uint256 appId, bytes32[] memory channelIds) external {
     App.Config storage config = AppRegistryStore.layout().registrations[appId];
 
     if (!config.exists())
@@ -42,17 +43,17 @@ contract AppInstaller is ERC6909, IAppInstaller {
       .layout()
       .installations[msg.sender];
 
-    if (installation.installed(appId, channelId))
+    if (installation.installed(appId, channelIds))
       AppAlreadyInstalled.selector.revertWith();
 
-    installation.install(appId, channelId, config.permissions.values());
+    installation.install(appId, channelIds, config.permissions.values());
 
     if (balanceOf(msg.sender, appId) == 0) _mint(msg.sender, appId, 1);
 
-    emit AppInstalled(msg.sender, appId, config.appAddress);
+    emit AppInstalled(msg.sender, appId, channelIds);
   }
 
-  function uninstall(uint256 appId, bytes32 channelId) external {
+  function uninstall(uint256 appId, bytes32[] memory channelIds) external {
     App.Config storage config = AppRegistryStore.layout().registrations[appId];
 
     if (!config.exists())
@@ -62,11 +63,15 @@ contract AppInstaller is ERC6909, IAppInstaller {
       .layout()
       .installations[msg.sender];
 
-    bool burnNFT = installation.uninstall(appId, channelId);
-    if (burnNFT && balanceOf(msg.sender, appId) == 1)
+    if (!installation.installed(appId, channelIds))
+      AppNotInstalled.selector.revertWith();
+
+    bool burnNFT = installation.uninstall(appId, channelIds);
+
+    if (burnNFT && balanceOf(msg.sender, appId) >= 1)
       _burn(msg.sender, appId, 1);
 
-    emit AppUninstalled(msg.sender, appId, config.appAddress);
+    emit AppUninstalled(msg.sender, appId, channelIds);
   }
 
   function installedApps(
@@ -75,18 +80,28 @@ contract AppInstaller is ERC6909, IAppInstaller {
     Account.Installation storage installation = AppRegistryStore
       .layout()
       .installations[account];
-    return installation.apps();
+    return installation.getApps();
+  }
+
+  function permissions(
+    address account,
+    uint256 appId
+  ) external view returns (bytes32[] memory) {
+    Account.Installation storage app = AppRegistryStore.layout().installations[
+      account
+    ];
+    return app.getPermissions(appId);
   }
 
   function isInstalled(
     address account,
     uint256 appId,
-    bytes32 channelId
+    bytes32[] memory channelIds
   ) external view returns (bool) {
     Account.Installation storage installation = AppRegistryStore
       .layout()
       .installations[account];
-    return installation.installed(appId, channelId);
+    return installation.installed(appId, channelIds);
   }
 
   function isEntitled(

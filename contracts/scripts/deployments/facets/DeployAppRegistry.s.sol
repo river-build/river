@@ -13,6 +13,9 @@ import {FacetHelper} from "contracts/test/diamond/Facet.t.sol";
 contract DeployAppRegistry is FacetHelper, Deployer {
   constructor() {
     addSelector(AppRegistry.register.selector);
+    addSelector(AppRegistry.isRegistered.selector);
+    addSelector(AppRegistry.updateRegistration.selector);
+    addSelector(AppRegistry.getRegistration.selector);
   }
 
   function versionName() public pure override returns (string memory) {

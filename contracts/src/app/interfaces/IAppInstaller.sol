@@ -7,25 +7,32 @@ pragma solidity ^0.8.23;
 
 // contracts
 interface IAppInstallerBase {
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                        Events                              */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
   event AppInstalled(
     address indexed account,
     uint256 indexed appId,
-    address indexed appAddress
+    bytes32[] channelIds
   );
 
   event AppUninstalled(
     address indexed account,
     uint256 indexed appId,
-    address indexed appAddress
+    bytes32[] channelIds
   );
 
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                         Errors                             */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
   error AppAlreadyInstalled();
+  error AppNotInstalled();
 }
 
 interface IAppInstaller is IAppInstallerBase {
-  function install(uint256 appId, bytes32 channelId) external;
+  function install(uint256 appId, bytes32[] memory channelIds) external;
 
-  function uninstall(uint256 appId, bytes32 channelId) external;
+  function uninstall(uint256 appId, bytes32[] memory channelIds) external;
 
   function installedApps(
     address account
@@ -34,7 +41,7 @@ interface IAppInstaller is IAppInstallerBase {
   function isInstalled(
     address account,
     uint256 appId,
-    bytes32 channelId
+    bytes32[] memory channelIds
   ) external view returns (bool);
 
   function isEntitled(
