@@ -42,7 +42,7 @@ func authenticateBS[T any](
 ) {
 	authentication.Authenticate(
 		ctx,
-		"BS_AUTH:",
+		"AS_AUTH:",
 		req,
 		authClient,
 		primaryWallet,

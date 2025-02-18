@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	appServiceChallengePrefix = "BS_AUTH:"
+	appServiceChallengePrefix = "AS_AUTH:"
 )
 
 type (
