@@ -95,6 +95,13 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
             }
         }
 
+        const onStreamSyncActive = (active: boolean) => {
+            this.log.info('onStreamSyncActive', active)
+            if (!active) {
+                this.resetUpToDateStreams()
+            }
+        }
+
         client.on('streamUpToDate', onStreamUpToDate)
         client.on('newGroupSessions', onNewGroupSessions)
         client.on('newEncryptedContent', onNewEncryptedContent)
@@ -103,6 +110,7 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
         client.on('initKeySolicitations', onInitKeySolicitations)
         client.on('streamNewUserJoined', onMembershipChange)
         client.on('streamInitialized', onStreamInitialized)
+        client.on('streamSyncActive', onStreamSyncActive)
 
         this._onStopFn = () => {
             client.off('streamUpToDate', onStreamUpToDate)
@@ -113,6 +121,7 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
             client.off('initKeySolicitations', onInitKeySolicitations)
             client.off('streamNewUserJoined', onMembershipChange)
             client.off('streamInitialized', onStreamInitialized)
+            client.off('streamSyncActive', onStreamSyncActive)
         }
         this.log.debug('new ClientDecryptionExtensions', { userDevice })
     }
@@ -165,16 +174,6 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
         const waitTime = maxWaitTimeSeconds * 1000 * Math.random() // this could be much better
         //this.log.debug('getRespondDelayMSForKeySolicitation', { streamId, userId, waitTime })
         return waitTime * multiplier
-    }
-
-    public hasUnprocessedSession(item: EncryptedContentItem): boolean {
-        check(isDefined(this.client.userInboxStreamId), 'userInboxStreamId not found')
-        const inboxStream = this.client.stream(this.client.userInboxStreamId)
-        check(isDefined(inboxStream), 'inboxStream not found')
-        return inboxStream.view.userInboxContent.hasPendingSessionId(
-            this.userDevice.deviceKey,
-            item.encryptedData.sessionId,
-        )
     }
 
     public async isUserEntitledToKeyExchange(

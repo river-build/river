@@ -2,21 +2,19 @@ package sync
 
 import (
 	"context"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 	"time"
-
-	"github.com/towns-protocol/towns/core/node/logging"
 
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
-
 	. "github.com/towns-protocol/towns/core/node/base"
 	. "github.com/towns-protocol/towns/core/node/events"
+	"github.com/towns-protocol/towns/core/node/logging"
 	"github.com/towns-protocol/towns/core/node/nodes"
 	. "github.com/towns-protocol/towns/core/node/protocol"
 	"github.com/towns-protocol/towns/core/node/rpc/sync/client"
 	"github.com/towns-protocol/towns/core/node/shared"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type (
@@ -97,21 +95,45 @@ func (syncOp *StreamSyncOperation) Run(
 ) error {
 	log := logging.FromCtx(syncOp.ctx).With("syncId", syncOp.SyncID)
 
-	cookies, err := client.ValidateAndGroupSyncCookies(req.Msg.GetSyncPos())
-	if err != nil {
-		return err
-	}
+	messagesSendToClient := 0
+
+	log.Debug("Stream sync operation start")
+	defer log.Debugw("Stream sync operation stopped", "send", messagesSendToClient)
 
 	syncers, messages, err := client.NewSyncers(
 		syncOp.ctx, syncOp.cancel, syncOp.SyncID, syncOp.streamCache,
-		syncOp.nodeRegistry, syncOp.thisNodeAddress, cookies, syncOp.otelTracer)
+		syncOp.nodeRegistry, syncOp.thisNodeAddress, nil, syncOp.otelTracer)
 	if err != nil {
 		return err
 	}
 
-	syncers.AddInitialStreams()
-
 	go syncers.Run()
+
+	go func() {
+		for _, cookie := range req.Msg.GetSyncPos() {
+			cmd := &subCommand{
+				Ctx: syncOp.ctx,
+				AddStreamReq: &connect.Request[AddStreamToSyncRequest]{
+					Msg: &AddStreamToSyncRequest{
+						SyncId:  syncOp.SyncID,
+						SyncPos: cookie,
+					},
+				},
+				reply: make(chan error, 1),
+			}
+			if err := syncOp.process(cmd); err != nil {
+				select {
+				case messages <- &SyncStreamsResponse{
+					SyncOp:   SyncOp_SYNC_DOWN,
+					StreamId: cookie.GetStreamId(),
+				}:
+					continue
+				case <-syncOp.ctx.Done():
+					return
+				}
+			}
+		}
+	}()
 
 	for {
 		select {
@@ -125,10 +147,14 @@ func (syncOp *StreamSyncOperation) Run(
 			}
 
 			msg.SyncId = syncOp.SyncID
-			if err = res.Send(msg); err != nil {
+			if err := res.Send(msg); err != nil {
 				log.Errorw("Unable to send sync stream update to client", "err", err)
 				return err
 			}
+
+			messagesSendToClient++
+
+			log.Debug("Pending messages in sync operation", "count", len(messages))
 
 		case <-syncOp.ctx.Done():
 			// clientErr non-nil indicates client hung up, get the error from the root ctx.
@@ -146,6 +172,7 @@ func (syncOp *StreamSyncOperation) Run(
 					cmd.Reply(err)
 					continue
 				}
+
 				cmd.Reply(syncers.AddStream(cmd.Ctx, nodeAddress, streamID, cmd.AddStreamReq.Msg.GetSyncPos()))
 			} else if cmd.RmStreamReq != nil {
 				streamID, err := shared.StreamIdFromBytes(cmd.RmStreamReq.Msg.GetStreamId())
@@ -155,7 +182,7 @@ func (syncOp *StreamSyncOperation) Run(
 				}
 				cmd.Reply(syncers.RemoveStream(cmd.Ctx, streamID))
 			} else if cmd.PingReq != nil {
-				err = res.Send(&SyncStreamsResponse{
+				err := res.Send(&SyncStreamsResponse{
 					SyncId:    syncOp.SyncID,
 					SyncOp:    SyncOp_SYNC_PONG,
 					PongNonce: cmd.PingReq.Msg.GetNonce(),
@@ -188,7 +215,9 @@ func (syncOp *StreamSyncOperation) AddStreamToSync(
 		var span trace.Span
 		streamID, _ := shared.StreamIdFromBytes(req.Msg.GetSyncPos().GetStreamId())
 		ctx, span = syncOp.otelTracer.Start(ctx, "addStreamToSync",
-			trace.WithAttributes(attribute.String("stream", streamID.String())))
+			trace.WithAttributes(
+				attribute.String("stream", streamID.String()),
+				attribute.String("syncId", req.Msg.GetSyncId())))
 		defer span.End()
 	}
 
@@ -217,7 +246,8 @@ func (syncOp *StreamSyncOperation) RemoveStreamFromSync(
 		var span trace.Span
 		streamID, _ := shared.StreamIdFromBytes(req.Msg.GetStreamId())
 		ctx, span = syncOp.otelTracer.Start(ctx, "removeStreamFromSync",
-			trace.WithAttributes(attribute.String("stream", streamID.String())))
+			trace.WithAttributes(attribute.String("stream", streamID.String()),
+				attribute.String("syncId", req.Msg.GetSyncId())))
 		defer span.End()
 	}
 

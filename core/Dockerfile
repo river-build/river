@@ -24,6 +24,13 @@ RUN go build \
     -ldflags="-X github.com/towns-protocol/towns/core/river_node/version.version=$VER_VERSION -X github.com/towns-protocol/towns/core/river_node/version.branch=$VER_BRANCH -X github.com/towns-protocol/towns/core/river_node/version.commit=$VER_COMMIT" \
     ./river_node
 
+RUN go build \
+    -trimpath \
+    -o /bin/river_node_race \
+    -race \
+    -ldflags="-X github.com/towns-protocol/towns/core/river_node/version.version=$VER_VERSION -X github.com/towns-protocol/towns/core/river_node/version.branch=$VER_BRANCH -X github.com/towns-protocol/towns/core/river_node/version.commit=$VER_COMMIT" \
+    ./river_node
+
 # Final stage
 FROM alpine:latest
 LABEL org.opencontainers.image.title="River Node" \
@@ -37,9 +44,11 @@ RUN adduser -D riveruser
 
 COPY docker/run.sh /etc/run.sh
 COPY --from=builder /bin/river_node /usr/bin/river_node
+COPY --from=builder /bin/river_node_race /usr/bin/river_node_race
 
 # Use setcap to allow the web server binary to bind to privileged ports
 RUN setcap 'cap_net_bind_service=+ep' /usr/bin/river_node
+RUN setcap 'cap_net_bind_service=+ep' /usr/bin/river_node_race
 
 COPY --from=builder /build/node/default_config.yaml /riveruser/river_node/config/config.yaml
 

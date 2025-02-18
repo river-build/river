@@ -732,6 +732,13 @@ message SyncCookie  {
     bytes prev_miniblock_hash = 5;
 }
 
+message CreationCookie {
+  bytes stream_id = 1;
+  repeated bytes nodes = 2;
+  int64 miniblock_num = 3;
+  bytes prev_miniblock_hash = 4;
+}
+
 message StreamAndCookie {
     repeated Envelope events = 1;
     SyncCookie next_sync_cookie = 2;
@@ -771,13 +778,23 @@ message CreateStreamRequest {
     repeated Envelope events = 1;
     bytes stream_id = 2; // stream_id should match the stream_id in the inception payload of the first event
     map<string, bytes> metadata = 3;
- }
+}
 
 message CreateStreamResponse {
     // all events in current minipool and cookie allowing to sync from the end of the stream
     StreamAndCookie stream = 1;
     // derived events created in other streams when this stream was created
     repeated EventRef derived_events = 2;
+}
+
+message CreateMediaStreamRequest {
+    repeated Envelope events = 1;
+    bytes stream_id = 2; // stream_id should match the stream_id in the inception payload of the first event
+    map<string, bytes> metadata = 3;
+}
+
+message CreateMediaStreamResponse {
+    CreationCookie next_creation_cookie = 1;
 }
 
 message GetStreamRequest {
@@ -830,6 +847,16 @@ message AddEventResponse {
     Error error = 1; 
     // all events created during this request including parent events
     repeated EventRef new_events = 2;
+}
+
+message AddMediaEventRequest {
+    Envelope event = 1;
+    CreationCookie creation_cookie = 2;
+    bool last = 3;
+}
+
+message AddMediaEventResponse {
+    CreationCookie creation_cookie = 1;
 }
 
 // SyncStreamsRequest is a request to start a streams sync session.
@@ -943,12 +970,14 @@ message GetMiniblockHeaderResponse {
 
 service StreamService {
     rpc CreateStream(CreateStreamRequest) returns (CreateStreamResponse);
+    rpc CreateMediaStream(CreateMediaStreamRequest) returns (CreateMediaStreamResponse);
     rpc GetStream(GetStreamRequest) returns (GetStreamResponse);
     rpc GetStreamEx(GetStreamExRequest) returns (stream GetStreamExResponse);
     rpc GetMiniblocks(GetMiniblocksRequest) returns (GetMiniblocksResponse);
     rpc GetLastMiniblockHash(GetLastMiniblockHashRequest) returns (GetLastMiniblockHashResponse);
     rpc GetMiniblockHeader(GetMiniblockHeaderRequest) returns (GetMiniblockHeaderResponse);
     rpc AddEvent(AddEventRequest) returns (AddEventResponse);
+    rpc AddMediaEvent(AddMediaEventRequest) returns (AddMediaEventResponse);
     rpc SyncStreams(SyncStreamsRequest) returns (stream SyncStreamsResponse);
     rpc AddStreamToSync(AddStreamToSyncRequest) returns (AddStreamToSyncResponse);
     // ModifySync adds/removes streams to/from an in progress sync session.

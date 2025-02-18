@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -x
-
 function parse_git_branch() {
     git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/'
 }
@@ -17,7 +15,7 @@ if [[ "$(git status --porcelain)" != "" ]]; then
     exit 1
 elif [[ "$(parse_git_branch)" != "main" ]]; then
     echo "You must be on the main branch to run this script."
-    # exit 1
+    exit 1
 fi
 
 # get the current git hash 
@@ -108,6 +106,7 @@ while true; do
                 exit $exit_status
             fi
         else
+            echo "Harmony CI is failing. Restart CI."
             exit $exit_status
         fi
     else 
@@ -138,4 +137,9 @@ echo "PR #${PR_NUMBER} has been merged"
 git pull --rebase
 
 # Publish the nightly version to npm
-npx lerna publish from-package --yes --no-private --force-publish --tag-version-prefix "${VERSION_PREFIX}"
+echo "Starting Lerna publish..."
+npx lerna publish from-package --yes --no-private --force-publish --tag-version-prefix "${VERSION_PREFIX}" || {
+    echo "Lerna publish failed with exit code $?"
+    exit 1
+}
+echo "Lerna publish completed successfully"

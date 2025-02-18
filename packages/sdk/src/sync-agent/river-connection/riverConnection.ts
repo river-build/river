@@ -7,6 +7,7 @@ import { PromiseQueue } from '../utils/promiseQueue'
 import {
     CryptoStore,
     EntitlementsDelegate,
+    GroupEncryptionAlgorithmId,
     type EncryptionDeviceInitOpts,
 } from '@river-build/encryption'
 import { Client } from '../../client'
@@ -34,6 +35,8 @@ export interface ClientParams {
     encryptionDevice?: EncryptionDeviceInitOpts
     onTokenExpired?: () => void
     unpackEnvelopeOpts?: UnpackEnvelopeOpts
+    defaultGroupEncryptionAlgorithm?: GroupEncryptionAlgorithmId
+    logId?: string
 }
 
 export type OnStoppedFn = () => void
@@ -177,6 +180,8 @@ export class RiverConnection extends PersistedObservable<RiverConnectionModel> {
             this.clientParams.logNamespaceFilter,
             this.clientParams.highPriorityStreamIds,
             this.clientParams.unpackEnvelopeOpts,
+            this.clientParams.defaultGroupEncryptionAlgorithm,
+            this.clientParams.logId,
         )
         client.setMaxListeners(100)
         this.client = client
@@ -236,7 +241,7 @@ export class RiverConnection extends PersistedObservable<RiverConnectionModel> {
                 } catch (err) {
                     retryCount++
                     this.loginError = err as Error
-                    logger.log('encountered exception while initializing', err)
+                    logger.error('encountered exception while initializing', err)
 
                     for (const fn of this.onStoppedFns) {
                         fn()
@@ -254,7 +259,7 @@ export class RiverConnection extends PersistedObservable<RiverConnectionModel> {
                         throw err
                     } else {
                         const retryDelay = getRetryDelay(retryCount)
-                        logger.log('retrying', { retryDelay, retryCount })
+                        logger.info('retrying', { retryDelay, retryCount })
                         // sleep
                         await new Promise((resolve) => setTimeout(resolve, retryDelay))
                     }
