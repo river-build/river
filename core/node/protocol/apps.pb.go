@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.34.1
 // 	protoc        (unknown)
-// source: bots.proto
+// source: apps.proto
 
 package protocol
 
@@ -25,16 +25,16 @@ type RegisterRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// public key of the bot
-	BotId []byte `protobuf:"bytes,1,opt,name=bot_id,json=botId,proto3" json:"bot_id,omitempty"`
-	// public key of the bot owner
-	BotOwnerId []byte `protobuf:"bytes,2,opt,name=bot_owner_id,json=botOwnerId,proto3" json:"bot_owner_id,omitempty"`
+	// public key of the app
+	AppId []byte `protobuf:"bytes,1,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
+	// public key of the app owner
+	AppOwnerId []byte `protobuf:"bytes,2,opt,name=app_owner_id,json=appOwnerId,proto3" json:"app_owner_id,omitempty"`
 }
 
 func (x *RegisterRequest) Reset() {
 	*x = RegisterRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_bots_proto_msgTypes[0]
+		mi := &file_apps_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -47,7 +47,7 @@ func (x *RegisterRequest) String() string {
 func (*RegisterRequest) ProtoMessage() {}
 
 func (x *RegisterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_bots_proto_msgTypes[0]
+	mi := &file_apps_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -60,19 +60,19 @@ func (x *RegisterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterRequest.ProtoReflect.Descriptor instead.
 func (*RegisterRequest) Descriptor() ([]byte, []int) {
-	return file_bots_proto_rawDescGZIP(), []int{0}
+	return file_apps_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *RegisterRequest) GetBotId() []byte {
+func (x *RegisterRequest) GetAppId() []byte {
 	if x != nil {
-		return x.BotId
+		return x.AppId
 	}
 	return nil
 }
 
-func (x *RegisterRequest) GetBotOwnerId() []byte {
+func (x *RegisterRequest) GetAppOwnerId() []byte {
 	if x != nil {
-		return x.BotOwnerId
+		return x.AppOwnerId
 	}
 	return nil
 }
@@ -82,15 +82,15 @@ type RegisterResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// The shared secret used to sign the jwt the bot registry will use to authenticate to the
-	// bot service. This secret should be exactly 32 bytes.
+	// The shared secret used to sign the jwt the app registry will use to authenticate to the
+	// app service. This secret should be exactly 32 bytes.
 	Hs256SharedSecret []byte `protobuf:"bytes,1,opt,name=hs256_shared_secret,json=hs256SharedSecret,proto3" json:"hs256_shared_secret,omitempty"`
 }
 
 func (x *RegisterResponse) Reset() {
 	*x = RegisterResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_bots_proto_msgTypes[1]
+		mi := &file_apps_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -103,7 +103,7 @@ func (x *RegisterResponse) String() string {
 func (*RegisterResponse) ProtoMessage() {}
 
 func (x *RegisterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_bots_proto_msgTypes[1]
+	mi := &file_apps_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -116,7 +116,7 @@ func (x *RegisterResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterResponse.ProtoReflect.Descriptor instead.
 func (*RegisterResponse) Descriptor() ([]byte, []int) {
-	return file_bots_proto_rawDescGZIP(), []int{1}
+	return file_apps_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *RegisterResponse) GetHs256SharedSecret() []byte {
@@ -131,16 +131,16 @@ type RegisterWebhookRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// public key of the bot
-	BotId []byte `protobuf:"bytes,1,opt,name=bot_id,json=botId,proto3" json:"bot_id,omitempty"`
-	// Webhook for sending requests to the bot service
+	// public key of the app
+	AppId []byte `protobuf:"bytes,1,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
+	// Webhook for sending requests to the app service
 	WebhookUrl string `protobuf:"bytes,2,opt,name=webhook_url,json=webhookUrl,proto3" json:"webhook_url,omitempty"`
 }
 
 func (x *RegisterWebhookRequest) Reset() {
 	*x = RegisterWebhookRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_bots_proto_msgTypes[2]
+		mi := &file_apps_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -153,7 +153,7 @@ func (x *RegisterWebhookRequest) String() string {
 func (*RegisterWebhookRequest) ProtoMessage() {}
 
 func (x *RegisterWebhookRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_bots_proto_msgTypes[2]
+	mi := &file_apps_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -166,12 +166,12 @@ func (x *RegisterWebhookRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterWebhookRequest.ProtoReflect.Descriptor instead.
 func (*RegisterWebhookRequest) Descriptor() ([]byte, []int) {
-	return file_bots_proto_rawDescGZIP(), []int{2}
+	return file_apps_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *RegisterWebhookRequest) GetBotId() []byte {
+func (x *RegisterWebhookRequest) GetAppId() []byte {
 	if x != nil {
-		return x.BotId
+		return x.AppId
 	}
 	return nil
 }
@@ -192,7 +192,7 @@ type RegisterWebhookResponse struct {
 func (x *RegisterWebhookResponse) Reset() {
 	*x = RegisterWebhookResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_bots_proto_msgTypes[3]
+		mi := &file_apps_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -205,7 +205,7 @@ func (x *RegisterWebhookResponse) String() string {
 func (*RegisterWebhookResponse) ProtoMessage() {}
 
 func (x *RegisterWebhookResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_bots_proto_msgTypes[3]
+	mi := &file_apps_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -218,7 +218,7 @@ func (x *RegisterWebhookResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterWebhookResponse.ProtoReflect.Descriptor instead.
 func (*RegisterWebhookResponse) Descriptor() ([]byte, []int) {
-	return file_bots_proto_rawDescGZIP(), []int{3}
+	return file_apps_proto_rawDescGZIP(), []int{3}
 }
 
 type RotateSecretRequest struct {
@@ -226,14 +226,14 @@ type RotateSecretRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// public key of the bot
-	BotId []byte `protobuf:"bytes,1,opt,name=bot_id,json=botId,proto3" json:"bot_id,omitempty"`
+	// public key of the app
+	AppId []byte `protobuf:"bytes,1,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
 }
 
 func (x *RotateSecretRequest) Reset() {
 	*x = RotateSecretRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_bots_proto_msgTypes[4]
+		mi := &file_apps_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -246,7 +246,7 @@ func (x *RotateSecretRequest) String() string {
 func (*RotateSecretRequest) ProtoMessage() {}
 
 func (x *RotateSecretRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_bots_proto_msgTypes[4]
+	mi := &file_apps_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -259,12 +259,12 @@ func (x *RotateSecretRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RotateSecretRequest.ProtoReflect.Descriptor instead.
 func (*RotateSecretRequest) Descriptor() ([]byte, []int) {
-	return file_bots_proto_rawDescGZIP(), []int{4}
+	return file_apps_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *RotateSecretRequest) GetBotId() []byte {
+func (x *RotateSecretRequest) GetAppId() []byte {
 	if x != nil {
-		return x.BotId
+		return x.AppId
 	}
 	return nil
 }
@@ -274,14 +274,14 @@ type RotateSecretResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// the updated shared secret used to generate the hmac the bot registry will send to the bot service
+	// the updated shared secret used to generate the hmac the app registry will send to the app service
 	HmacSharedSecret string `protobuf:"bytes,1,opt,name=hmac_shared_secret,json=hmacSharedSecret,proto3" json:"hmac_shared_secret,omitempty"`
 }
 
 func (x *RotateSecretResponse) Reset() {
 	*x = RotateSecretResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_bots_proto_msgTypes[5]
+		mi := &file_apps_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -294,7 +294,7 @@ func (x *RotateSecretResponse) String() string {
 func (*RotateSecretResponse) ProtoMessage() {}
 
 func (x *RotateSecretResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_bots_proto_msgTypes[5]
+	mi := &file_apps_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -307,7 +307,7 @@ func (x *RotateSecretResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RotateSecretResponse.ProtoReflect.Descriptor instead.
 func (*RotateSecretResponse) Descriptor() ([]byte, []int) {
-	return file_bots_proto_rawDescGZIP(), []int{5}
+	return file_apps_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *RotateSecretResponse) GetHmacSharedSecret() string {
@@ -322,14 +322,14 @@ type GetStatusRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// public key of the bot
-	BotId []byte `protobuf:"bytes,1,opt,name=bot_id,json=botId,proto3" json:"bot_id,omitempty"`
+	// public key of the app
+	AppId []byte `protobuf:"bytes,1,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
 }
 
 func (x *GetStatusRequest) Reset() {
 	*x = GetStatusRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_bots_proto_msgTypes[6]
+		mi := &file_apps_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -342,7 +342,7 @@ func (x *GetStatusRequest) String() string {
 func (*GetStatusRequest) ProtoMessage() {}
 
 func (x *GetStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_bots_proto_msgTypes[6]
+	mi := &file_apps_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -355,12 +355,12 @@ func (x *GetStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetStatusRequest) Descriptor() ([]byte, []int) {
-	return file_bots_proto_rawDescGZIP(), []int{6}
+	return file_apps_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *GetStatusRequest) GetBotId() []byte {
+func (x *GetStatusRequest) GetAppId() []byte {
 	if x != nil {
-		return x.BotId
+		return x.AppId
 	}
 	return nil
 }
@@ -370,7 +370,7 @@ type GetStatusResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// is_registered describes if the bot is registered with a webhook
+	// is_registered describes if the app is registered with a webhook
 	IsRegistered bool `protobuf:"varint,1,opt,name=is_registered,json=isRegistered,proto3" json:"is_registered,omitempty"`
 	// valid_response is set to true if calling the webhook results in a 200 with version
 	// info included in the response body.
@@ -382,7 +382,7 @@ type GetStatusResponse struct {
 func (x *GetStatusResponse) Reset() {
 	*x = GetStatusResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_bots_proto_msgTypes[7]
+		mi := &file_apps_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -395,7 +395,7 @@ func (x *GetStatusResponse) String() string {
 func (*GetStatusResponse) ProtoMessage() {}
 
 func (x *GetStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_bots_proto_msgTypes[7]
+	mi := &file_apps_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -408,7 +408,7 @@ func (x *GetStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetStatusResponse) Descriptor() ([]byte, []int) {
-	return file_bots_proto_rawDescGZIP(), []int{7}
+	return file_apps_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetStatusResponse) GetIsRegistered() bool {
@@ -432,36 +432,36 @@ func (x *GetStatusResponse) GetVersionInfo() string {
 	return ""
 }
 
-var File_bots_proto protoreflect.FileDescriptor
+var File_apps_proto protoreflect.FileDescriptor
 
-var file_bots_proto_rawDesc = []byte{
-	0x0a, 0x0a, 0x62, 0x6f, 0x74, 0x73, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x05, 0x72, 0x69,
+var file_apps_proto_rawDesc = []byte{
+	0x0a, 0x0a, 0x61, 0x70, 0x70, 0x73, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x05, 0x72, 0x69,
 	0x76, 0x65, 0x72, 0x22, 0x4a, 0x0a, 0x0f, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x52,
-	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x15, 0x0a, 0x06, 0x62, 0x6f, 0x74, 0x5f, 0x69, 0x64,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x62, 0x6f, 0x74, 0x49, 0x64, 0x12, 0x20, 0x0a,
-	0x0c, 0x62, 0x6f, 0x74, 0x5f, 0x6f, 0x77, 0x6e, 0x65, 0x72, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x0c, 0x52, 0x0a, 0x62, 0x6f, 0x74, 0x4f, 0x77, 0x6e, 0x65, 0x72, 0x49, 0x64, 0x22,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x15, 0x0a, 0x06, 0x61, 0x70, 0x70, 0x5f, 0x69, 0x64,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x61, 0x70, 0x70, 0x49, 0x64, 0x12, 0x20, 0x0a,
+	0x0c, 0x61, 0x70, 0x70, 0x5f, 0x6f, 0x77, 0x6e, 0x65, 0x72, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x0c, 0x52, 0x0a, 0x61, 0x70, 0x70, 0x4f, 0x77, 0x6e, 0x65, 0x72, 0x49, 0x64, 0x22,
 	0x42, 0x0a, 0x10, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x52, 0x65, 0x73, 0x70, 0x6f,
 	0x6e, 0x73, 0x65, 0x12, 0x2e, 0x0a, 0x13, 0x68, 0x73, 0x32, 0x35, 0x36, 0x5f, 0x73, 0x68, 0x61,
 	0x72, 0x65, 0x64, 0x5f, 0x73, 0x65, 0x63, 0x72, 0x65, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c,
 	0x52, 0x11, 0x68, 0x73, 0x32, 0x35, 0x36, 0x53, 0x68, 0x61, 0x72, 0x65, 0x64, 0x53, 0x65, 0x63,
 	0x72, 0x65, 0x74, 0x22, 0x50, 0x0a, 0x16, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x57,
 	0x65, 0x62, 0x68, 0x6f, 0x6f, 0x6b, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x15, 0x0a,
-	0x06, 0x62, 0x6f, 0x74, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x62,
-	0x6f, 0x74, 0x49, 0x64, 0x12, 0x1f, 0x0a, 0x0b, 0x77, 0x65, 0x62, 0x68, 0x6f, 0x6f, 0x6b, 0x5f,
+	0x06, 0x61, 0x70, 0x70, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x61,
+	0x70, 0x70, 0x49, 0x64, 0x12, 0x1f, 0x0a, 0x0b, 0x77, 0x65, 0x62, 0x68, 0x6f, 0x6f, 0x6b, 0x5f,
 	0x75, 0x72, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x77, 0x65, 0x62, 0x68, 0x6f,
 	0x6f, 0x6b, 0x55, 0x72, 0x6c, 0x22, 0x19, 0x0a, 0x17, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65,
 	0x72, 0x57, 0x65, 0x62, 0x68, 0x6f, 0x6f, 0x6b, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
 	0x22, 0x2c, 0x0a, 0x13, 0x52, 0x6f, 0x74, 0x61, 0x74, 0x65, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74,
-	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x15, 0x0a, 0x06, 0x62, 0x6f, 0x74, 0x5f, 0x69,
-	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x62, 0x6f, 0x74, 0x49, 0x64, 0x22, 0x44,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x15, 0x0a, 0x06, 0x61, 0x70, 0x70, 0x5f, 0x69,
+	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x61, 0x70, 0x70, 0x49, 0x64, 0x22, 0x44,
 	0x0a, 0x14, 0x52, 0x6f, 0x74, 0x61, 0x74, 0x65, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65,
 	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2c, 0x0a, 0x12, 0x68, 0x6d, 0x61, 0x63, 0x5f, 0x73,
 	0x68, 0x61, 0x72, 0x65, 0x64, 0x5f, 0x73, 0x65, 0x63, 0x72, 0x65, 0x74, 0x18, 0x01, 0x20, 0x01,
 	0x28, 0x09, 0x52, 0x10, 0x68, 0x6d, 0x61, 0x63, 0x53, 0x68, 0x61, 0x72, 0x65, 0x64, 0x53, 0x65,
 	0x63, 0x72, 0x65, 0x74, 0x22, 0x29, 0x0a, 0x10, 0x47, 0x65, 0x74, 0x53, 0x74, 0x61, 0x74, 0x75,
-	0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x15, 0x0a, 0x06, 0x62, 0x6f, 0x74, 0x5f,
-	0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x62, 0x6f, 0x74, 0x49, 0x64, 0x22,
+	0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x15, 0x0a, 0x06, 0x61, 0x70, 0x70, 0x5f,
+	0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x61, 0x70, 0x70, 0x49, 0x64, 0x22,
 	0x82, 0x01, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x73,
 	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x23, 0x0a, 0x0d, 0x69, 0x73, 0x5f, 0x72, 0x65, 0x67, 0x69,
 	0x73, 0x74, 0x65, 0x72, 0x65, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0c, 0x69, 0x73,
@@ -470,7 +470,7 @@ var file_bots_proto_rawDesc = []byte{
 	0x28, 0x08, 0x52, 0x0d, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
 	0x65, 0x12, 0x21, 0x0a, 0x0c, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x5f, 0x69, 0x6e, 0x66,
 	0x6f, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e,
-	0x49, 0x6e, 0x66, 0x6f, 0x32, 0xe3, 0x01, 0x0a, 0x12, 0x42, 0x6f, 0x74, 0x52, 0x65, 0x67, 0x69,
+	0x49, 0x6e, 0x66, 0x6f, 0x32, 0xe3, 0x01, 0x0a, 0x12, 0x41, 0x70, 0x70, 0x52, 0x65, 0x67, 0x69,
 	0x73, 0x74, 0x72, 0x79, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x3b, 0x0a, 0x08, 0x52,
 	0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x12, 0x16, 0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e,
 	0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
@@ -492,19 +492,19 @@ var file_bots_proto_rawDesc = []byte{
 }
 
 var (
-	file_bots_proto_rawDescOnce sync.Once
-	file_bots_proto_rawDescData = file_bots_proto_rawDesc
+	file_apps_proto_rawDescOnce sync.Once
+	file_apps_proto_rawDescData = file_apps_proto_rawDesc
 )
 
-func file_bots_proto_rawDescGZIP() []byte {
-	file_bots_proto_rawDescOnce.Do(func() {
-		file_bots_proto_rawDescData = protoimpl.X.CompressGZIP(file_bots_proto_rawDescData)
+func file_apps_proto_rawDescGZIP() []byte {
+	file_apps_proto_rawDescOnce.Do(func() {
+		file_apps_proto_rawDescData = protoimpl.X.CompressGZIP(file_apps_proto_rawDescData)
 	})
-	return file_bots_proto_rawDescData
+	return file_apps_proto_rawDescData
 }
 
-var file_bots_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
-var file_bots_proto_goTypes = []interface{}{
+var file_apps_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_apps_proto_goTypes = []interface{}{
 	(*RegisterRequest)(nil),         // 0: river.RegisterRequest
 	(*RegisterResponse)(nil),        // 1: river.RegisterResponse
 	(*RegisterWebhookRequest)(nil),  // 2: river.RegisterWebhookRequest
@@ -514,13 +514,13 @@ var file_bots_proto_goTypes = []interface{}{
 	(*GetStatusRequest)(nil),        // 6: river.GetStatusRequest
 	(*GetStatusResponse)(nil),       // 7: river.GetStatusResponse
 }
-var file_bots_proto_depIdxs = []int32{
-	0, // 0: river.BotRegistryService.Register:input_type -> river.RegisterRequest
-	2, // 1: river.BotRegistryService.RegisterWebhook:input_type -> river.RegisterWebhookRequest
-	6, // 2: river.BotRegistryService.GetStatus:input_type -> river.GetStatusRequest
-	1, // 3: river.BotRegistryService.Register:output_type -> river.RegisterResponse
-	3, // 4: river.BotRegistryService.RegisterWebhook:output_type -> river.RegisterWebhookResponse
-	7, // 5: river.BotRegistryService.GetStatus:output_type -> river.GetStatusResponse
+var file_apps_proto_depIdxs = []int32{
+	0, // 0: river.AppRegistryService.Register:input_type -> river.RegisterRequest
+	2, // 1: river.AppRegistryService.RegisterWebhook:input_type -> river.RegisterWebhookRequest
+	6, // 2: river.AppRegistryService.GetStatus:input_type -> river.GetStatusRequest
+	1, // 3: river.AppRegistryService.Register:output_type -> river.RegisterResponse
+	3, // 4: river.AppRegistryService.RegisterWebhook:output_type -> river.RegisterWebhookResponse
+	7, // 5: river.AppRegistryService.GetStatus:output_type -> river.GetStatusResponse
 	3, // [3:6] is the sub-list for method output_type
 	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -528,13 +528,13 @@ var file_bots_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_bots_proto_init() }
-func file_bots_proto_init() {
-	if File_bots_proto != nil {
+func init() { file_apps_proto_init() }
+func file_apps_proto_init() {
+	if File_apps_proto != nil {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_bots_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_apps_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*RegisterRequest); i {
 			case 0:
 				return &v.state
@@ -546,7 +546,7 @@ func file_bots_proto_init() {
 				return nil
 			}
 		}
-		file_bots_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+		file_apps_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*RegisterResponse); i {
 			case 0:
 				return &v.state
@@ -558,7 +558,7 @@ func file_bots_proto_init() {
 				return nil
 			}
 		}
-		file_bots_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+		file_apps_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*RegisterWebhookRequest); i {
 			case 0:
 				return &v.state
@@ -570,7 +570,7 @@ func file_bots_proto_init() {
 				return nil
 			}
 		}
-		file_bots_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+		file_apps_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*RegisterWebhookResponse); i {
 			case 0:
 				return &v.state
@@ -582,7 +582,7 @@ func file_bots_proto_init() {
 				return nil
 			}
 		}
-		file_bots_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+		file_apps_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*RotateSecretRequest); i {
 			case 0:
 				return &v.state
@@ -594,7 +594,7 @@ func file_bots_proto_init() {
 				return nil
 			}
 		}
-		file_bots_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+		file_apps_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*RotateSecretResponse); i {
 			case 0:
 				return &v.state
@@ -606,7 +606,7 @@ func file_bots_proto_init() {
 				return nil
 			}
 		}
-		file_bots_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+		file_apps_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetStatusRequest); i {
 			case 0:
 				return &v.state
@@ -618,7 +618,7 @@ func file_bots_proto_init() {
 				return nil
 			}
 		}
-		file_bots_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+		file_apps_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetStatusResponse); i {
 			case 0:
 				return &v.state
@@ -635,18 +635,18 @@ func file_bots_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: file_bots_proto_rawDesc,
+			RawDescriptor: file_apps_proto_rawDesc,
 			NumEnums:      0,
 			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_bots_proto_goTypes,
-		DependencyIndexes: file_bots_proto_depIdxs,
-		MessageInfos:      file_bots_proto_msgTypes,
+		GoTypes:           file_apps_proto_goTypes,
+		DependencyIndexes: file_apps_proto_depIdxs,
+		MessageInfos:      file_apps_proto_msgTypes,
 	}.Build()
-	File_bots_proto = out.File
-	file_bots_proto_rawDesc = nil
-	file_bots_proto_goTypes = nil
-	file_bots_proto_depIdxs = nil
+	File_apps_proto = out.File
+	file_apps_proto_rawDesc = nil
+	file_apps_proto_goTypes = nil
+	file_apps_proto_depIdxs = nil
 }

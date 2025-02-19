@@ -1,4 +1,4 @@
-package bot_registry
+package app_registry
 
 import (
 	"context"
@@ -12,24 +12,24 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/towns-protocol/towns/core/node/bot_registry/bot_client"
+	"github.com/towns-protocol/towns/core/node/app_registry/app_client"
 	"github.com/towns-protocol/towns/core/node/crypto"
 	"github.com/towns-protocol/towns/core/node/testutils/testcert"
 	"github.com/towns-protocol/towns/core/node/utils"
 )
 
-type TestBotServer struct {
+type TestAppServer struct {
 	t              *testing.T
 	httpServer     *http.Server
 	listener       net.Listener
 	url            string
-	botWallet      *crypto.Wallet
+	appWallet      *crypto.Wallet
 	hs256SecretKey []byte
 }
 
 // validateSignature verifies that the incoming request has a HS256-encoded jwt auth token stored
 // in the header with the appropriate audience, signed by the expected secret key.
-func validateSignature(req *http.Request, secretKey []byte, botId common.Address) error {
+func validateSignature(req *http.Request, secretKey []byte, appId common.Address) error {
 	authorization := req.Header.Get("Authorization")
 	if authorization == "" {
 		return fmt.Errorf("Unauthenticated")
@@ -66,32 +66,32 @@ func validateSignature(req *http.Request, secretKey []byte, botId common.Address
 		return fmt.Errorf("jwt token is missing claims")
 	}
 
-	if !mapClaims.VerifyAudience(hex.EncodeToString(botId[:]), true) {
-		return fmt.Errorf("invalid jwt token audience; should be bot public address")
+	if !mapClaims.VerifyAudience(hex.EncodeToString(appId[:]), true) {
+		return fmt.Errorf("invalid jwt token audience; should be app public address")
 	}
 
 	return mapClaims.Valid()
 }
 
-func NewTestBotServer(t *testing.T, botWallet *crypto.Wallet, hs256SecretKey []byte) *TestBotServer {
+func NewTestAppServer(t *testing.T, appWallet *crypto.Wallet, hs256SecretKey []byte) *TestAppServer {
 	listener, url := testcert.MakeTestListener(t)
 
-	b := &TestBotServer{
+	b := &TestAppServer{
 		t:              t,
 		listener:       listener,
 		url:            url,
-		botWallet:      botWallet,
+		appWallet:      appWallet,
 		hs256SecretKey: hs256SecretKey,
 	}
 
 	return b
 }
 
-func (b *TestBotServer) Url() string {
+func (b *TestAppServer) Url() string {
 	return b.url
 }
 
-func (b *TestBotServer) Close() {
+func (b *TestAppServer) Close() {
 	if b.httpServer != nil {
 		b.httpServer.Close()
 	}
@@ -100,14 +100,14 @@ func (b *TestBotServer) Close() {
 	}
 }
 
-func (b *TestBotServer) rootHandler(w http.ResponseWriter, r *http.Request) {
+func (b *TestAppServer) rootHandler(w http.ResponseWriter, r *http.Request) {
 	// Ensure that the request method is POST.
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	if err := validateSignature(r, b.hs256SecretKey, b.botWallet.Address); err != nil {
+	if err := validateSignature(r, b.hs256SecretKey, b.appWallet.Address); err != nil {
 		http.Error(w, "JWT Signature Invalid", http.StatusForbidden)
 	}
 
@@ -118,7 +118,7 @@ func (b *TestBotServer) rootHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Decode the JSON request body into the Payload struct.
-	var payload bot_client.BotServiceRequestPayload
+	var payload app_client.AppServiceRequestPayload
 	decoder := json.NewDecoder(r.Body)
 	defer r.Body.Close() // Ensure the body is closed once we're done.
 
@@ -135,11 +135,11 @@ func (b *TestBotServer) rootHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	response := map[string]string{"status": "ready"}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		b.t.Errorf("Error encoding bot service response: %v", err)
+		b.t.Errorf("Error encoding app service response: %v", err)
 	}
 }
 
-func (b *TestBotServer) Serve(ctx context.Context) error {
+func (b *TestAppServer) Serve(ctx context.Context) error {
 	mux := http.NewServeMux()
 
 	// Register the handler for the root path
