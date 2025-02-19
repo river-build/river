@@ -5,6 +5,7 @@ import (
 	"context"
 	"math/big"
 	"slices"
+	"sort"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -703,6 +704,15 @@ func (ru *aeBlockchainTransactionRules) validBlockchainTransaction_IsUnique() (b
 
 func (ru *aeBlockchainTransactionRules) validBlockchainTransaction_CheckReceiptMetadata() (bool, error) {
 	receipt := ru.transaction.Receipt
+	if receipt != nil {
+		return ru.validBlockchainTransaction_CheckReceiptMetadataEVM()
+	} else {
+		return ru.validBlockchainTransaction_CheckReceiptMetadataSolana()
+	}
+}
+
+func (ru *aeBlockchainTransactionRules) validBlockchainTransaction_CheckReceiptMetadataEVM() (bool, error) {	
+	receipt := ru.transaction.Receipt
 	if receipt == nil {
 		return false, RiverError(Err_INVALID_ARGUMENT, "receipt is nil")
 	}
@@ -810,6 +820,76 @@ func (ru *aeBlockchainTransactionRules) validBlockchainTransaction_CheckReceiptM
 		
 		return false, RiverError(Err_INVALID_ARGUMENT, "matching transfer event not found in receipt logs")
 
+	default:
+		return false, RiverError(
+			Err_INVALID_ARGUMENT,
+			"unknown transaction type",
+			"transactionType",
+			content,
+		)
+	}
+}
+
+func (ru *aeBlockchainTransactionRules) validBlockchainTransaction_CheckReceiptMetadataSolana() (bool, error) {	
+	receipt := ru.transaction.SolanaReceipt
+	if receipt == nil {
+		return false, RiverError(Err_INVALID_ARGUMENT, "solana receipt is nil")
+	}
+
+	switch content := ru.transaction.Content.(type) {
+	case nil:
+		// for unspecified types, we don't need to check anything specific
+		// the other checks should make sure the transaction is valid and from this user
+		return true, nil
+	case *BlockchainTransaction_Tip_:
+		return false, RiverError(Err_INVALID_ARGUMENT, "solana tip transactions are not supported")
+	case *BlockchainTransaction_Transfer_:
+		meta := receipt.GetMeta()
+		if meta == nil {
+			return false, RiverError(Err_INVALID_ARGUMENT, "solana transfer transaction meta is nil")
+		}
+
+		// get the amount _before_ the transfer
+		idx := sort.Search(len(meta.GetPreTokenBalances()), func(i int) bool {
+			return meta.GetPreTokenBalances()[i].Mint == string(content.Transfer.Address)
+		})
+		if idx == len(meta.GetPreTokenBalances()) {
+			return false, RiverError(Err_INVALID_ARGUMENT, "solana transfer transaction mint not found in preTokenBalances")
+		}
+		amountBefore, ok := new(big.Int).SetString(meta.GetPreTokenBalances()[idx].Amount.Amount, 0)
+		if (!ok) {
+			return false, RiverError(Err_INVALID_ARGUMENT, "invalid pre token balance amount")
+		}
+
+		// get the amount _after_ the transfer
+		idx = sort.Search(len(meta.GetPostTokenBalances()), func(i int) bool {
+			return meta.GetPostTokenBalances()[i].Mint == string(content.Transfer.Address)
+		})
+		if idx == len(meta.GetPreTokenBalances()) {
+			return false, RiverError(Err_INVALID_ARGUMENT, "solana transfer transaction mint not found in postTokenBalances")
+		}
+		amountAfter, ok := new(big.Int).SetString(meta.GetPostTokenBalances()[idx].Amount.Amount, 0)
+		if (!ok) {
+			return false, RiverError(Err_INVALID_ARGUMENT, "invalid post token balance amount")
+		}
+
+		// check the amount
+		expectedBalanceDiff, ok := new(big.Int).SetString(content.Transfer.Amount, 0)
+		if (!ok) {
+			return false, RiverError(Err_INVALID_ARGUMENT, "invalid balance amount")
+		}
+
+		if expectedBalanceDiff.CmpAbs(new(big.Int).Sub(amountAfter, amountBefore)) != 0 {
+			return false, RiverError(Err_INVALID_ARGUMENT, "solana transfer transaction amount not equal to balance diff")
+		}
+
+		// make sure it's a valid buy or sell
+		if content.Transfer.IsBuy && amountAfter.Cmp(amountBefore) < 0 {
+			return false, RiverError(Err_INVALID_ARGUMENT, "solana transfer transaction is buy but balance decreased")
+		} else if content.Transfer.IsBuy && amountAfter.Cmp(amountBefore) > 0 {
+			return false, RiverError(Err_INVALID_ARGUMENT, "solana transfer transaction is sell but balance increased")
+		}
+		return true, nil
 	default:
 		return false, RiverError(
 			Err_INVALID_ARGUMENT,
@@ -960,6 +1040,15 @@ func (ru *aeBlockchainTransactionRules) blockchainTransaction_GetReceipt() (*Blo
 
 // check to see that the transaction is from a wallet linked to the creator
 func (ru *aeBlockchainTransactionRules) blockchainTransaction_ChainAuth() (*auth.ChainAuthArgs, error) {
+	if ru.transaction.SolanaReceipt != nil {
+		// not applicable to Solana transactions for now
+		return nil, nil
+	}
+
+	if ru.transaction.Receipt == nil {
+		return nil, RiverError(Err_INVALID_ARGUMENT, "transaction receipt is nil")
+	}
+
 	if bytes.Equal(ru.transaction.Receipt.From, ru.params.parsedEvent.Event.CreatorAddress) {
 		return nil, nil
 	}
