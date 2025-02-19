@@ -102,6 +102,7 @@ describe('Trading', () => {
             sender: bin_fromHexString(bobsClient.userId),
             messageId: bin_fromHexString(threadParentId),
             channelId: bin_fromHexString(channelId),
+            isBuy: false,
         }
 
         await expect(
@@ -118,6 +119,7 @@ describe('Trading', () => {
             sender: bin_fromHexString(charlieClient.userId),
             messageId: bin_fromHexString(threadParentId),
             channelId: bin_fromHexString(channelId),
+            isBuy: true,
         }
 
         await expect(
@@ -125,7 +127,41 @@ describe('Trading', () => {
         ).rejects.toThrow('matching transfer event not found in receipt logs')
     })
 
-    test('should accept token transfers where the user == from', async () => {
+    test('should reject token transfers where the user claims to be the buyer but is the seller', async () => {
+        // this is a transfer event from charlie, he's barely a member of the channel
+        // and he's not the sender nor the recipient
+        const transferEvent: PlainMessage<BlockchainTransaction_Transfer> = {
+            amount: amountToTransfer.toString(),
+            address: bin_fromHexString(tokenAddress),
+            sender: bin_fromHexString(bobsClient.userId),
+            messageId: bin_fromHexString(threadParentId),
+            channelId: bin_fromHexString(channelId),
+            isBuy: true,
+        }
+
+        await expect(
+            bobsClient.addTransaction_Transfer(31337, receipt, transferEvent),
+        ).rejects.toThrow('matching transfer event not found in receipt logs')
+    })
+
+    test('should reject token transfers where the user claims to be the seller but is the seller', async () => {
+        // this is a transfer event from charlie, he's barely a member of the channel
+        // and he's not the sender nor the recipient
+        const transferEvent: PlainMessage<BlockchainTransaction_Transfer> = {
+            amount: amountToTransfer.toString(),
+            address: bin_fromHexString(tokenAddress),
+            sender: bin_fromHexString(aliceClient.userId),
+            messageId: bin_fromHexString(threadParentId),
+            channelId: bin_fromHexString(channelId),
+            isBuy: false,
+        }
+
+        await expect(
+            aliceClient.addTransaction_Transfer(31337, receipt, transferEvent),
+        ).rejects.toThrow('matching transfer event not found in receipt logs')
+    })
+
+    test('should accept token transfers where the user == from and isBuy == false', async () => {
         // this is a transfer event from bob, he's the sender (from)
         const transferEvent: PlainMessage<BlockchainTransaction_Transfer> = {
             amount: amountToTransfer.toString(),
@@ -133,6 +169,7 @@ describe('Trading', () => {
             sender: bin_fromHexString(bobsClient.userId),
             messageId: bin_fromHexString(threadParentId),
             channelId: bin_fromHexString(channelId),
+            isBuy: false,
         }
 
         const { eventId } = await bobsClient.addTransaction_Transfer(31337, receipt, transferEvent)
@@ -145,7 +182,7 @@ describe('Trading', () => {
         )
     })
 
-    test('should accept token transfers where the user == to', async () => {
+    test('should accept token transfers where the user == to and isBuy == true', async () => {
         // this is a transfer event to alice, she's the recipient (to)
         const transferEvent: PlainMessage<BlockchainTransaction_Transfer> = {
             amount: amountToTransfer.toString(),
@@ -153,6 +190,7 @@ describe('Trading', () => {
             sender: bin_fromHexString(aliceClient.userId),
             messageId: bin_fromHexString(threadParentId),
             channelId: bin_fromHexString(channelId),
+            isBuy: true,
         }
 
         const { eventId } = await aliceClient.addTransaction_Transfer(31337, receipt, transferEvent)
@@ -173,6 +211,7 @@ describe('Trading', () => {
             sender: bin_fromHexString(aliceClient.userId),
             messageId: bin_fromHexString(threadParentId),
             channelId: bin_fromHexString(channelId),
+            isBuy: true,
         }
 
         await expect(

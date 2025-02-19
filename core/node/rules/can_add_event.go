@@ -785,7 +785,11 @@ func (ru *aeBlockchainTransactionRules) validBlockchainTransaction_CheckReceiptM
 				continue
 			}
 
-			if transfer.From.Cmp(senderAddress) != 0 && transfer.To.Cmp(senderAddress) != 0 {
+			if content.Transfer.IsBuy && transfer.To.Cmp(senderAddress) != 0 {
+				continue
+			}
+
+			if !content.Transfer.IsBuy && transfer.From.Cmp(senderAddress) != 0 {
 				continue
 			}
 

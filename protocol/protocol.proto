@@ -634,6 +634,7 @@ message BlockchainTransaction {
         bytes sender = 3;
         bytes message_id = 4;
         bytes channel_id = 5;
+        bool is_buy = 6;
     }
 
     // required fields
