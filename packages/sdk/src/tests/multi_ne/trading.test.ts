@@ -52,16 +52,18 @@ describe('Trading', () => {
         aliceClient.startSync()
         aliceAddress = ('0x' + bytesToHex(aliceClient.signerContext.creatorAddress)) as Address
 
-        charlieClient = await makeTestClient()
-        await charlieClient.initializeUser()
-        charlieClient.startSync()
-
         spaceId = makeUniqueSpaceStreamId()
         await bobsClient.createSpace(spaceId)
         channelId = makeUniqueChannelStreamId(spaceId)
         await bobsClient.createChannel(spaceId, 'Channel', 'Topic', channelId)
         await aliceClient.joinStream(spaceId)
         await aliceClient.joinStream(channelId)
+
+        charlieClient = await makeTestClient()
+        await charlieClient.initializeUser()
+        charlieClient.startSync()
+        await charlieClient.joinStream(spaceId)
+        await charlieClient.joinStream(channelId)
 
         const result = await bobsClient.sendMessage(channelId, 'try out this token: $yo!')
         threadParentId = result.eventId
@@ -89,6 +91,7 @@ describe('Trading', () => {
     })
 
     test('should reject token transfers where the amount doesnt match the transferred amount', async () => {
+        // this is a transfer event with an amount that doesn't match the amount transferred
         const transferEvent: PlainMessage<BlockchainTransaction_Transfer> = {
             amount: 9n.toString(),
             address: bin_fromHexString(tokenAddress),
@@ -103,6 +106,8 @@ describe('Trading', () => {
     })
 
     test('should reject token transfers where the user is neither the sender nor the recipient', async () => {
+        // this is a transfer event from charlie, he's barely a member of the channel
+        // and he's not the sender nor the recipient
         const transferEvent: PlainMessage<BlockchainTransaction_Transfer> = {
             amount: amountToTransfer.toString(),
             address: bin_fromHexString(tokenAddress),
@@ -117,6 +122,7 @@ describe('Trading', () => {
     })
 
     test('should accept token transfers where the user == from', async () => {
+        // this is a transfer event from bob, he's the sender (from)
         const transferEvent: PlainMessage<BlockchainTransaction_Transfer> = {
             amount: amountToTransfer.toString(),
             address: bin_fromHexString(tokenAddress),
@@ -136,6 +142,7 @@ describe('Trading', () => {
     })
 
     test('should accept token transfers where the user == to', async () => {
+        // this is a transfer event to alice, she's the recipient (to)
         const transferEvent: PlainMessage<BlockchainTransaction_Transfer> = {
             amount: amountToTransfer.toString(),
             address: bin_fromHexString(tokenAddress),
@@ -155,6 +162,7 @@ describe('Trading', () => {
     })
 
     test('should reject duplicate transfers', async () => {
+        // alice can't add the same transfer event twice
         const transferEvent: PlainMessage<BlockchainTransaction_Transfer> = {
             amount: amountToTransfer.toString(),
             address: bin_fromHexString(tokenAddress),
