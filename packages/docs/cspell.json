@@ -6,6 +6,7 @@
         "hotfixes",
         "riverchain",
         "basechain",
+        "celenium",
         "libusb",
         "toolkit",
         "protobuf",
@@ -51,6 +52,7 @@
         "warnf",
         "debugf",
         "errorf",
+        "Celestia",
         "POAP",
         "POAPs"
     ],
