@@ -53,6 +53,7 @@ import {
     UserReceivedBlockchainTransactionEvent,
     StreamEncryptionAlgorithmEvent,
     TipEvent,
+    SpaceReviewEvent,
 } from './timeline-types'
 import type { PlainMessage } from '@bufbuild/protobuf'
 import { userIdFromAddress, streamIdFromBytes, streamIdAsString } from '../../../id'
@@ -64,6 +65,8 @@ import {
     type RemoteTimelineEvent,
     isCiphertext,
 } from '../../../types'
+
+import { getSpaceReviewEventData } from '@river-build/web3'
 
 type SuccessResult = {
     content: TimelineEvent_OneOf
@@ -393,6 +396,25 @@ function toTownsContent_MemberPayload(
                             refEventId: bin_toHexString(tipContent.event.messageId),
                             toUserId: userIdFromAddress(tipContent.toUserAddress),
                         } satisfies TipEvent,
+                    }
+                }
+                case 'spaceReview': {
+                    const reviewContent = transaction.content.value
+                    const logs =
+                        transaction.receipt?.logs.map((log) => ({
+                            topics: log.topics.map((topic) => bin_toHexString(topic)),
+                            data: bin_toHexString(log.data),
+                        })) ?? []
+                    const senderWallet = userIdFromAddress(transaction.receipt?.from ?? '')
+                    const { comment, rating } = getSpaceReviewEventData(logs, senderWallet)
+                    return {
+                        content: {
+                            kind: RiverTimelineEvent.SpaceReview,
+                            action: reviewContent.action,
+                            rating: rating,
+                            comment: comment,
+                            fromUserId: userIdFromAddress(fromUserAddress),
+                        } satisfies SpaceReviewEvent,
                     }
                 }
                 case undefined:
@@ -996,6 +1018,8 @@ export function getFallbackContent(
             return `tip from: ${content.fromUserId} to: ${content.toUserId} refEventId: ${
                 content.refEventId
             } amount: ${content.tip.event?.amount.toString() ?? '??'}`
+        case RiverTimelineEvent.SpaceReview:
+            return `spaceReview from: ${content.fromUserId} rating: ${content.rating} comment: ${content.comment}`
         case RiverTimelineEvent.UserReceivedBlockchainTransaction:
             return `kind: ${
                 content.receivedTransaction.transaction?.content?.case ?? '??'

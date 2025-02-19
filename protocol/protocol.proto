@@ -627,11 +627,27 @@ message BlockchainTransaction {
         Event event = 1; // event emitted by the tipping facet
         bytes toUserAddress = 2; // user that received funds
     }
+    message SpaceReview {
+        message Event {
+            bytes sender = 1;
+            int32 review = 2;
+            // the comment can be found in the receipt logs
+        }
+        enum Action {
+            Add = 0;
+            Update = 1;
+            Delete = 2;
+        }
+        Event event = 1; // event emitted by the space review facet
+        bytes space_id = 2; // space that was reviewed
+        Action action = 3;
+    }
     // required fields
     BlockchainTransactionReceipt receipt = 1;
     // optional metadata to be verified by the node
     oneof content {
         Tip tip = 101;
+        SpaceReview space_review = 102;
     }
 }
 

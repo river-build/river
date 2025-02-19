@@ -20,12 +20,12 @@ describe('transaction_SpaceReview', () => {
     beforeAll(async () => {
         const log = base_log.extend('beforeAll')
         log('start')
-
+        // fund wallets
         await Promise.all([bobIdentity.fundWallet(), aliceIdentity.fundWallet()])
-
+        // make agents
         bob = await bobIdentity.makeSyncAgent()
         alice = await aliceIdentity.makeSyncAgent()
-
+        // start agents
         await Promise.all([
             bob.start(),
             alice.start(),
@@ -34,24 +34,21 @@ describe('transaction_SpaceReview', () => {
                 alicesOtherWallet,
             ),
         ])
-
         // make a space
         const { spaceId: sid1 } = await bob.spaces.createSpace(
             { spaceName: 'Lets REvieW 1' },
             bobIdentity.signer,
         )
         spaceIdWithAlice = sid1
-
+        // join the space
         await alice.spaces.joinSpace(spaceIdWithAlice, aliceIdentity.signer)
-
         // make another space
         const { spaceId: sid2 } = await bob.spaces.createSpace(
             { spaceName: 'Lets REvieW 2' },
             bobIdentity.signer,
         )
         spaceIdWithoutAlice = sid2
-
-        log('before all complete', { spaceIdWithAlice, spaceIdWithoutAlice })
+        log('complete', { spaceIdWithAlice, spaceIdWithoutAlice })
         // todo, leave a review on the without alice space
     })
 
