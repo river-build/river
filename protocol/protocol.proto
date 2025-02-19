@@ -639,6 +639,7 @@ message BlockchainTransaction {
 
     // required fields
     BlockchainTransactionReceipt receipt = 1;
+    SolanaBlockchainTransactionReceipt solana_receipt = 2;
     // optional metadata to be verified by the node
     oneof content {
         Tip tip = 101;
@@ -659,6 +660,28 @@ message BlockchainTransactionReceipt {
     bytes to = 4;
     bytes from = 5;
     repeated Log logs = 6;
+}
+
+message SolanaBlockchainTransactionReceipt {
+    message Transaction {
+        repeated string signatures = 1;
+    }
+    message Meta {
+        message TokenBalance {
+            message UITokenAmount {
+                string amount = 1;
+                uint32 decimals = 2;
+            }
+            string mint = 1;
+            string owner = 2;
+            UITokenAmount amount = 3;
+        }
+        repeated TokenBalance preTokenBalances = 1;
+        repeated TokenBalance postTokenBalances = 2;
+    }
+    uint64 slot = 1;
+    Transaction transaction = 2;
+    Meta meta = 3;
 }
 
 /**
