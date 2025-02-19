@@ -628,6 +628,16 @@ func (ru *aeMemberBlockchainTransactionRules) validMemberBlockchainTransaction_R
 			return false, RiverError(Err_INVALID_ARGUMENT, "tip transaction message id is nil")
 		}
 		return true, nil
+	case *BlockchainTransaction_Transfer_:
+		err := checkIsMember(ru.params, ru.memberTransaction.GetFromUserAddress())
+		if err != nil {
+			return false, err
+		}
+		// we need a ref event id
+		if content.Transfer.GetMessageId() == nil {
+			return false, RiverError(Err_INVALID_ARGUMENT, "transfer transaction message id is nil")
+		}
+		return true, nil
 	default:
 		return false, RiverError(
 			Err_INVALID_ARGUMENT,
@@ -863,23 +873,7 @@ func (ru *aeReceivedBlockchainTransactionRules) parentEventForReceivedBlockchain
 			Tags:     ru.params.parsedEvent.Event.Tags, // forward tags
 		}, nil
 	case *BlockchainTransaction_Transfer_:
-		if content.Transfer.GetChannelId() == nil {
-			return nil, RiverError(Err_INVALID_ARGUMENT, "transaction channel id is nil")
-		}
-		// convert to stream id
-		streamId, err := shared.StreamIdFromBytes(content.Transfer.GetChannelId())
-		if err != nil {
-			return nil, err
-		}
-		// forward the transfer to the stream as a member event, preserving the original sender as the from address
-		return &DerivedEvent{
-			Payload: events.Make_MemberPayload_BlockchainTransaction(
-				ru.receivedTransaction.FromUserAddress,
-				transaction,
-			),
-			StreamId: streamId,
-			Tags:     ru.params.parsedEvent.Event.Tags, // forward tags
-		}, nil
+		return nil, RiverError(Err_INVALID_ARGUMENT, "transfer transactions are not supported", "transaction", transaction)
 	default:
 		return nil, RiverError(Err_INVALID_ARGUMENT, "unknown transaction content", "content", content)
 	}
@@ -919,7 +913,35 @@ func (ru *aeBlockchainTransactionRules) parentEventForBlockchainTransaction() (*
 			toStreamId,
 		)
 	case *BlockchainTransaction_Transfer_:
-		return nil, nil
+		if content.Transfer.GetChannelId() == nil {
+			return nil, RiverError(Err_INVALID_ARGUMENT, "transaction channel id is nil")
+		}
+		// convert to stream id
+		toStreamId, err := shared.StreamIdFromBytes(content.Transfer.GetChannelId())
+		if err != nil {
+			return nil, err
+		}
+
+		if !shared.ValidChannelStreamId(&toStreamId) &&
+			!shared.ValidDMChannelStreamId(&toStreamId) &&
+			!shared.ValidGDMChannelStreamId(&toStreamId) {
+				return nil, RiverError(
+					Err_INVALID_ARGUMENT,
+					"tip transaction streamId is not a valid channel/dm/gdm stream id",
+					"streamId",
+					toStreamId,
+				)
+			}
+
+		// forward the transfer to the stream as a member event, preserving the original sender as the from address
+		return &DerivedEvent{
+			Payload: events.Make_MemberPayload_BlockchainTransaction(
+				ru.params.parsedEvent.Event.CreatorAddress,
+				ru.transaction,
+			),
+			StreamId: toStreamId,
+			Tags:     ru.params.parsedEvent.Event.Tags, // forward tags
+		}, nil
 	default:
 		return nil, RiverError(
 			Err_INVALID_ARGUMENT,
