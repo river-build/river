@@ -117,10 +117,13 @@ library Account {
     bytes32 channelId,
     bytes32 permission
   ) internal view returns (bool) {
-    return
-      self.installedApps.contains(appId) &&
-      (channelId == bytes32(0) ||
-        self.installation[appId].channels.contains(channelId)) &&
-      self.installation[appId].permissions.contains(permission);
+    if (!self.installedApps.contains(appId)) return false;
+    if (!self.installation[appId].permissions.contains(permission))
+      return false;
+
+    uint256 channelCount = self.installation[appId].channels.length();
+    if (channelCount > 0)
+      return self.installation[appId].channels.contains(channelId);
+    return true;
   }
 }

@@ -23,15 +23,17 @@ contract IntegrationInstallApp is
   IAppInstallerBase,
   IEntitlementBase
 {
-  InstallFacet installer;
+  InstallFacet installFacet;
   IEntitlementsManager entitlementsManager;
+
+  bytes1 internal constant CHANNEL_PREFIX = 0x20;
 
   address appAddress;
   address appOwner;
   uint256 appId;
   function setUp() public override {
     super.setUp();
-    installer = InstallFacet(space);
+    installFacet = InstallFacet(space);
     entitlementsManager = IEntitlementsManager(space);
     appAddress = _randomAddress();
     appOwner = _randomAddress();
@@ -48,7 +50,7 @@ contract IntegrationInstallApp is
     vm.prank(founder);
     vm.expectEmit(address(appInstaller));
     emit AppInstalled(space, appId, emptyChannelIds);
-    installer.installApp(appId, emptyChannelIds);
+    installFacet.installApp(appId, emptyChannelIds);
     _;
   }
 
@@ -56,6 +58,27 @@ contract IntegrationInstallApp is
     assertContains(appInstaller.installedApps(space), appId);
     assertTrue(
       entitlementsManager.isEntitledToSpace(appAddress, Permissions.Read)
+    );
+  }
+
+  function test_installApp_onChannel() public givenAppIsRegistered {
+    bytes32[] memory channelIds = new bytes32[](1);
+    bytes32 defaultChannel = bytes32(bytes.concat(CHANNEL_PREFIX, bytes20(space)));
+    channelIds[0] = defaultChannel;
+
+    vm.prank(founder);
+    installFacet.installApp(appId, channelIds);
+
+    assertFalse(
+      entitlementsManager.isEntitledToSpace(appAddress, Permissions.Read)
+    );
+
+    assertTrue(
+      entitlementsManager.isEntitledToChannel(
+        defaultChannel,
+        appAddress,
+        Permissions.Read
+      )
     );
   }
 
@@ -67,7 +90,30 @@ contract IntegrationInstallApp is
 
     vm.prank(_randomAddress());
     vm.expectRevert(Entitlement__NotAllowed.selector);
-    installer.installApp(appId, emptyChannelIds);
+    installFacet.installApp(appId, emptyChannelIds);
+  }
+
+  function test_uninstallApp() public givenAppIsRegistered givenAppIsInstalled {
+    bytes32[] memory emptyChannelIds = new bytes32[](0);
+
+    vm.prank(founder);
+    vm.expectEmit(address(appInstaller));
+    emit AppUninstalled(space, appId, emptyChannelIds);
+    installFacet.uninstallApp(appId, emptyChannelIds);
+
+    assertEq(appInstaller.installedApps(space).length, 0);
+  }
+
+  function test_uninstallApp_revertWith_Entitlement__NotAllowed()
+    public
+    givenAppIsRegistered
+    givenAppIsInstalled
+  {
+    bytes32[] memory emptyChannelIds = new bytes32[](0);
+
+    vm.prank(_randomAddress());
+    vm.expectRevert(Entitlement__NotAllowed.selector);
+    installFacet.uninstallApp(appId, emptyChannelIds);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
