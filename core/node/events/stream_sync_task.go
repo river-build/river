@@ -14,6 +14,13 @@ import (
 
 func (s *StreamCache) submitSyncStreamTask(
 	ctx context.Context,
+	stream *Stream,
+) {
+	s.submitSyncStreamTaskToPool(ctx, s.onlineSyncWorkerPool, stream, nil)
+}
+
+func (s *StreamCache) submitSyncStreamTaskToPool(
+	ctx context.Context,
 	pool *workerpool.WorkerPool,
 	stream *Stream,
 	streamRecord *registries.GetStreamResult,
@@ -22,8 +29,7 @@ func (s *StreamCache) submitSyncStreamTask(
 		if err := s.syncStreamFromPeers(
 			ctx,
 			stream,
-			int64(streamRecord.LastMiniblockNum),
-			streamRecord.IsSealed,
+			streamRecord,
 		); err != nil {
 			logging.FromCtx(ctx).
 				Errorw("Unable to sync stream from peers",
@@ -40,16 +46,19 @@ func (s *StreamCache) submitSyncStreamTask(
 func (s *StreamCache) syncStreamFromPeers(
 	ctx context.Context,
 	stream *Stream,
-	lastContractMbNum int64,
-	isSealed bool,
+	streamRecord *registries.GetStreamResult,
 ) error {
-	// Try to normalize the given stream if needed.
-	err := s.normalizeEphemeralStream(ctx, stream, lastContractMbNum, isSealed)
-	if err != nil {
-		return err
+	var err error
+	if streamRecord == nil {
+		streamRecord, err = s.params.Registry.GetStreamOnLatestBlock(ctx, stream.streamId)
+		if err != nil {
+			return err
+		}
 	}
 
-	stream, err = s.getStreamImpl(ctx, stream.streamId, false)
+	// TODO: double check if this is correct to normalize here
+	// Try to normalize the given stream if needed.
+	err = s.normalizeEphemeralStream(ctx, stream, int64(streamRecord.LastMiniblockNum), streamRecord.IsSealed)
 	if err != nil {
 		return err
 	}
@@ -63,12 +72,12 @@ func (s *StreamCache) syncStreamFromPeers(
 		}
 	}
 
-	if lastContractMbNum <= lastMiniblockNum {
+	if int64(streamRecord.LastMiniblockNum) <= lastMiniblockNum {
 		return nil
 	}
 
 	fromInclusive := lastMiniblockNum + 1
-	toExclusive := lastContractMbNum + 1
+	toExclusive := int64(streamRecord.LastMiniblockNum) + 1
 
 	remotes, _ := stream.GetRemotesAndIsLocal()
 	if len(remotes) == 0 {
