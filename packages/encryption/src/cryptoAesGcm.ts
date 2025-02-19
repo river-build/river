@@ -15,19 +15,11 @@ export async function encryptAesGcm(
     key: CryptoKey,
     data: Uint8Array,
 ): Promise<{ ciphertext: Uint8Array; iv: Uint8Array }> {
-    const iv = crypto.getRandomValues(new Uint8Array(12))
-    return encryptAesGcmWithIv(key, data, iv)
-}
-
-export async function encryptAesGcmWithIv(
-    key: CryptoKey,
-    data: Uint8Array,
-    iv: Uint8Array,
-): Promise<{ ciphertext: Uint8Array; iv: Uint8Array }> {
     // If data is empty, it's obvious what the message is from the result length.
     if (data.length === 0) {
         throw new Error('Data to encrypt cannot be empty')
     }
+    const iv = crypto.getRandomValues(new Uint8Array(12))
     const encrypted = await crypto.subtle.encrypt(
         { name: 'AES-GCM', iv, tagLength: 128 },
         key,
