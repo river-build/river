@@ -7,23 +7,20 @@ import {
     makeUserContextFromWallet,
     waitFor,
 } from '../testUtils'
-import { ContractReceipt } from '../../types'
+import { ContractReceipt, StreamTimelineEvent } from '../../types'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { bin_fromHexString } from '@river-build/dlog'
 import { ethers } from 'ethers'
 import { BlockchainTransaction_Transfer } from '@river-build/proto'
-import { Address, TestERC20 } from '@river-build/web3'
-import { bytesToHex } from 'ethereum-cryptography/utils'
+import { TestERC20 } from '@river-build/web3'
 
 describe('Trading', () => {
     const tokenName = 'Erc20 token test'
-    let bobsClient: Client
+    let bobClient: Client
     const bobWallet = ethers.Wallet.createRandom()
-    let bobAddress: Address
 
     let aliceClient: Client
     const aliceWallet = ethers.Wallet.createRandom()
-    let aliceAddress: Address
 
     let charlieClient: Client
 
@@ -31,7 +28,8 @@ describe('Trading', () => {
     let channelId!: string
     let threadParentId!: string
     let tokenAddress: string
-    let receipt: ContractReceipt
+    let buyReceipt: ContractReceipt
+    let sellReceipt: ContractReceipt
     const amountToTransfer = 10n
 
     const provider = new ethers.providers.StaticJsonRpcProvider(
@@ -41,21 +39,19 @@ describe('Trading', () => {
     beforeAll(async () => {
         // boilerplate — create clients, join streams, etc.
         const bobContext = await makeUserContextFromWallet(bobWallet)
-        bobsClient = await makeTestClient({ context: bobContext })
-        await bobsClient.initializeUser()
-        bobsClient.startSync()
-        bobAddress = ('0x' + bytesToHex(bobsClient.signerContext.creatorAddress)) as Address
+        bobClient = await makeTestClient({ context: bobContext })
+        await bobClient.initializeUser()
+        bobClient.startSync()
 
         const aliceContext = await makeUserContextFromWallet(aliceWallet)
         aliceClient = await makeTestClient({ context: aliceContext })
         await aliceClient.initializeUser()
         aliceClient.startSync()
-        aliceAddress = ('0x' + bytesToHex(aliceClient.signerContext.creatorAddress)) as Address
 
         spaceId = makeUniqueSpaceStreamId()
-        await bobsClient.createSpace(spaceId)
+        await bobClient.createSpace(spaceId)
         channelId = makeUniqueChannelStreamId(spaceId)
-        await bobsClient.createChannel(spaceId, 'Channel', 'Topic', channelId)
+        await bobClient.createChannel(spaceId, 'Channel', 'Topic', channelId)
         await aliceClient.joinStream(spaceId)
         await aliceClient.joinStream(channelId)
 
@@ -65,7 +61,7 @@ describe('Trading', () => {
         await charlieClient.joinStream(spaceId)
         await charlieClient.joinStream(channelId)
 
-        const result = await bobsClient.sendMessage(channelId, 'try out this token: $yo!')
+        const result = await bobClient.sendMessage(channelId, 'try out this token: $yo!')
         threadParentId = result.eventId
 
         /* Time to perform an on-chain transaction! We utilize the fact that transfers emit 
@@ -74,23 +70,41 @@ describe('Trading', () => {
         here we go, Bob transfers an amount of tokens to Alice.
         */
         tokenAddress = await TestERC20.getContractAddress(tokenName)
-        await TestERC20.publicMint(tokenName, bobAddress, 100)
-        const { transactionHash } = await TestERC20.transfer(
+        await TestERC20.publicMint(tokenName, bobClient.userId as `0x${string}`, 100)
+        const { transactionHash: sellTransactionHash } = await TestERC20.transfer(
             tokenName,
-            aliceAddress,
+            aliceClient.userId as `0x${string}`,
             bobWallet.privateKey as `0x${string}`,
             amountToTransfer,
         )
 
-        const transaction = await provider.getTransaction(transactionHash)
-        const transactionReceipt = await provider.getTransactionReceipt(transactionHash)
+        const sellTransaction = await provider.getTransaction(sellTransactionHash)
+        const sellTransactionReceipt = await provider.getTransactionReceipt(sellTransactionHash)
 
-        receipt = {
-            from: transaction.from,
-            to: transaction.to!,
-            transactionHash: transaction.hash,
-            blockNumber: transaction.blockNumber!,
-            logs: transactionReceipt.logs,
+        sellReceipt = {
+            from: sellTransaction.from,
+            to: sellTransaction.to!,
+            transactionHash: sellTransaction.hash,
+            blockNumber: sellTransaction.blockNumber!,
+            logs: sellTransactionReceipt.logs,
+        }
+
+        const { transactionHash: buyTransactionHash } = await TestERC20.transfer(
+            tokenName,
+            aliceClient.userId as `0x${string}`,
+            bobWallet.privateKey as `0x${string}`,
+            amountToTransfer,
+        )
+
+        const buyTransaction = await provider.getTransaction(buyTransactionHash)
+        const buyTransactionReceipt = await provider.getTransactionReceipt(buyTransactionHash)
+
+        buyReceipt = {
+            from: buyTransaction.from,
+            to: buyTransaction.to!,
+            transactionHash: buyTransaction.hash,
+            blockNumber: buyTransaction.blockNumber!,
+            logs: buyTransactionReceipt.logs,
         }
     })
 
@@ -99,14 +113,14 @@ describe('Trading', () => {
         const transferEvent: PlainMessage<BlockchainTransaction_Transfer> = {
             amount: 9n.toString(),
             address: bin_fromHexString(tokenAddress),
-            sender: bin_fromHexString(bobsClient.userId),
+            sender: bin_fromHexString(bobClient.userId),
             messageId: bin_fromHexString(threadParentId),
             channelId: bin_fromHexString(channelId),
             isBuy: false,
         }
 
         await expect(
-            bobsClient.addTransaction_Transfer(31337, receipt, transferEvent),
+            bobClient.addTransaction_Transfer(31337, sellReceipt, transferEvent),
         ).rejects.toThrow('matching transfer event not found in receipt logs')
     })
 
@@ -123,7 +137,7 @@ describe('Trading', () => {
         }
 
         await expect(
-            charlieClient.addTransaction_Transfer(31337, receipt, transferEvent),
+            charlieClient.addTransaction_Transfer(31337, buyReceipt, transferEvent),
         ).rejects.toThrow('matching transfer event not found in receipt logs')
     })
 
@@ -133,14 +147,14 @@ describe('Trading', () => {
         const transferEvent: PlainMessage<BlockchainTransaction_Transfer> = {
             amount: amountToTransfer.toString(),
             address: bin_fromHexString(tokenAddress),
-            sender: bin_fromHexString(bobsClient.userId),
+            sender: bin_fromHexString(bobClient.userId),
             messageId: bin_fromHexString(threadParentId),
             channelId: bin_fromHexString(channelId),
             isBuy: true,
         }
 
         await expect(
-            bobsClient.addTransaction_Transfer(31337, receipt, transferEvent),
+            bobClient.addTransaction_Transfer(31337, buyReceipt, transferEvent),
         ).rejects.toThrow('matching transfer event not found in receipt logs')
     })
 
@@ -157,7 +171,7 @@ describe('Trading', () => {
         }
 
         await expect(
-            aliceClient.addTransaction_Transfer(31337, receipt, transferEvent),
+            aliceClient.addTransaction_Transfer(31337, sellReceipt, transferEvent),
         ).rejects.toThrow('matching transfer event not found in receipt logs')
     })
 
@@ -166,19 +180,21 @@ describe('Trading', () => {
         const transferEvent: PlainMessage<BlockchainTransaction_Transfer> = {
             amount: amountToTransfer.toString(),
             address: bin_fromHexString(tokenAddress),
-            sender: bin_fromHexString(bobsClient.userId),
+            sender: bin_fromHexString(bobClient.userId),
             messageId: bin_fromHexString(threadParentId),
             channelId: bin_fromHexString(channelId),
             isBuy: false,
         }
 
-        const { eventId } = await bobsClient.addTransaction_Transfer(31337, receipt, transferEvent)
+        const { eventId } = await bobClient.addTransaction_Transfer(
+            31337,
+            sellReceipt,
+            transferEvent,
+        )
         expect(eventId).toBeDefined()
 
         await waitFor(() =>
-            expect(
-                bobsClient.streams.get(channelId)?.view.timeline.some((m) => m.hashStr === eventId),
-            ).toBeDefined(),
+            expect(extractMemberBlockchainTransactions(bobClient, channelId).length).toBe(1),
         )
     })
 
@@ -193,13 +209,15 @@ describe('Trading', () => {
             isBuy: true,
         }
 
-        const { eventId } = await aliceClient.addTransaction_Transfer(31337, receipt, transferEvent)
+        const { eventId } = await aliceClient.addTransaction_Transfer(
+            31337,
+            buyReceipt,
+            transferEvent,
+        )
         expect(eventId).toBeDefined()
 
         await waitFor(() =>
-            expect(
-                bobsClient.streams.get(channelId)?.view.timeline.some((m) => m.hashStr === eventId),
-            ).toBeDefined(),
+            expect(extractMemberBlockchainTransactions(aliceClient, channelId).length).toBe(2),
         )
     })
 
@@ -215,7 +233,85 @@ describe('Trading', () => {
         }
 
         await expect(
-            aliceClient.addTransaction_Transfer(31337, receipt, transferEvent),
+            aliceClient.addTransaction_Transfer(31337, buyReceipt, transferEvent),
         ).rejects.toThrow('duplicate transaction')
     })
+
+    test('alice sees transfer event in her user stream', async () => {
+        await waitFor(() => {
+            const streamId = aliceClient.userStreamId!
+            const stream = aliceClient.streams.get(streamId)
+            if (!stream) throw new Error('no stream found')
+
+            const transferEvents = extractBlockchainTransactionTransferEvents(stream.view.timeline)
+            expect(transferEvents.length).toBe(1)
+            expect(BigInt(transferEvents[0].amount)).toBe(amountToTransfer)
+        })
+    })
+
+    test('bob sees transfer event in his user stream', async () => {
+        await waitFor(() => {
+            const streamId = bobClient.userStreamId!
+            const stream = bobClient.streams.get(streamId)
+            if (!stream) throw new Error('no stream found')
+
+            const transferEvents = extractBlockchainTransactionTransferEvents(stream.view.timeline)
+            expect(transferEvents.length).toBe(1)
+            expect(BigInt(transferEvents[0].amount)).toBe(amountToTransfer)
+            expect(new Uint8Array(transferEvents[0].sender)).toEqual(
+                bin_fromHexString(bobClient.userId),
+            )
+        })
+    })
+
+    test('bob sees both transfer events in the channel stream', async () => {
+        await waitFor(() => {
+            const transferEvents = extractMemberBlockchainTransactions(aliceClient, channelId)
+            expect(transferEvents.length).toBe(2)
+            expect(BigInt(transferEvents[0].amount)).toBe(amountToTransfer)
+            expect(new Uint8Array(transferEvents[0].sender)).toEqual(
+                bin_fromHexString(bobClient.userId),
+            )
+            expect(transferEvents[0].isBuy).toBe(false)
+            expect(BigInt(transferEvents[1].amount)).toBe(amountToTransfer)
+            expect(new Uint8Array(transferEvents[1].sender)).toEqual(
+                bin_fromHexString(aliceClient.userId),
+            )
+            expect(transferEvents[1].isBuy).toBe(true)
+        })
+    })
 })
+
+function extractBlockchainTransactionTransferEvents(timeline: StreamTimelineEvent[]) {
+    return timeline
+        .map((e) => {
+            if (
+                e.remoteEvent?.event.payload.case === 'userPayload' &&
+                e.remoteEvent?.event.payload.value.content.case === 'blockchainTransaction' &&
+                e.remoteEvent?.event.payload.value.content.value.content.case === 'transfer'
+            ) {
+                return e.remoteEvent?.event.payload.value.content.value.content.value
+            }
+            return undefined
+        })
+        .filter((e) => e !== undefined)
+}
+
+function extractMemberBlockchainTransactions(client: Client, channelId: string) {
+    const stream = client.streams.get(channelId)
+    if (!stream) throw new Error('no stream found')
+
+    return stream.view.timeline
+        .map((e) => {
+            if (
+                e.remoteEvent?.event.payload.case === 'memberPayload' &&
+                e.remoteEvent?.event.payload.value.content.case === 'memberBlockchainTransaction' &&
+                e.remoteEvent.event.payload.value.content.value.transaction?.content.case ===
+                    'transfer'
+            ) {
+                return e.remoteEvent.event.payload.value.content.value.transaction.content.value
+            }
+            return undefined
+        })
+        .filter((e) => e !== undefined)
+}
