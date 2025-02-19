@@ -56,7 +56,7 @@ contract AppRegistryTest is TestUtils, IAppRegistryBase, IAppInstallerBase {
     assertEq(reg.disabled, registration.disabled);
   }
 
-  function test_revertWith_AppNotOwnedBySender(
+  function test_register_revertWith_AppNotOwnedBySender(
     address notOwner,
     Registration memory registration
   ) external givenAppIsRegistered(registration) {
@@ -66,7 +66,7 @@ contract AppRegistryTest is TestUtils, IAppRegistryBase, IAppInstallerBase {
     appRegistry.register(registration);
   }
 
-  function test_revertWith_AppAlreadyRegistered(
+  function test_register_revertWith_AppAlreadyRegistered(
     Registration memory registration
   ) external givenAppIsRegistered(registration) {
     vm.prank(registration.owner);
@@ -74,7 +74,7 @@ contract AppRegistryTest is TestUtils, IAppRegistryBase, IAppInstallerBase {
     appRegistry.register(registration);
   }
 
-  function test_revertWith_AppDisabled() external {
+  function test_register_revertWith_AppDisabled() external {
     Registration memory registration = Registration({
       appAddress: makeAddr("app"),
       owner: makeAddr("owner"),
@@ -82,7 +82,7 @@ contract AppRegistryTest is TestUtils, IAppRegistryBase, IAppInstallerBase {
       name: "name",
       symbol: "symbol",
       disabled: true,
-      permissions: new bytes32[](0),
+      permissions: new string[](0),
       hooks: IAppHooks(address(0))
     });
 
@@ -91,7 +91,7 @@ contract AppRegistryTest is TestUtils, IAppRegistryBase, IAppInstallerBase {
     appRegistry.register(registration);
   }
 
-  function test_revertWith_AppPermissionsMissing() external {
+  function test_register_revertWith_AppPermissionsMissing() external {
     Registration memory registration = Registration({
       appAddress: makeAddr("app"),
       owner: makeAddr("owner"),
@@ -99,12 +99,32 @@ contract AppRegistryTest is TestUtils, IAppRegistryBase, IAppInstallerBase {
       name: "name",
       symbol: "symbol",
       disabled: false,
-      permissions: new bytes32[](0),
+      permissions: new string[](0),
       hooks: IAppHooks(address(0))
     });
 
     vm.prank(registration.owner);
     vm.expectRevert(AppPermissionsMissing.selector);
+    appRegistry.register(registration);
+  }
+
+  function test_register_revertWith_AppPermissionNotAllowed() external {
+    string[] memory permissions = new string[](1);
+    permissions[0] = Permissions.InstallApp;
+
+    Registration memory registration = Registration({
+      appAddress: makeAddr("app"),
+      owner: makeAddr("owner"),
+      uri: "uri",
+      name: "name",
+      symbol: "symbol",
+      disabled: false,
+      permissions: permissions,
+      hooks: IAppHooks(address(0))
+    });
+
+    vm.prank(registration.owner);
+    vm.expectRevert(AppPermissionNotAllowed.selector);
     appRegistry.register(registration);
   }
 
@@ -116,7 +136,7 @@ contract AppRegistryTest is TestUtils, IAppRegistryBase, IAppInstallerBase {
 
     UpdateRegistration memory update = UpdateRegistration({
       uri: "newUri",
-      permissions: new bytes32[](0),
+      permissions: new string[](0),
       hooks: IAppHooks(address(0)),
       disabled: false
     });
@@ -127,16 +147,34 @@ contract AppRegistryTest is TestUtils, IAppRegistryBase, IAppInstallerBase {
     appRegistry.updateRegistration(appId, update);
   }
 
-  function test_revertWith_AppNotRegistered() external {
+  function test_updateRegistration_revertWith_AppNotRegistered() external {
     UpdateRegistration memory update = UpdateRegistration({
       uri: "newUri",
-      permissions: new bytes32[](0),
+      permissions: new string[](0),
       hooks: IAppHooks(address(0)),
       disabled: false
     });
 
     vm.prank(makeAddr("notOwner"));
     vm.expectRevert(AppNotRegistered.selector);
+    appRegistry.updateRegistration(1, update);
+  }
+
+  function test_updateRegistration_revertWith_AppPermissionNotAllowed(
+    Registration memory registration
+  ) external givenAppIsRegistered(registration) {
+    string[] memory permissions = new string[](1);
+    permissions[0] = Permissions.InstallApp;
+
+    UpdateRegistration memory update = UpdateRegistration({
+      uri: "newUri",
+      permissions: permissions,
+      hooks: IAppHooks(address(0)),
+      disabled: false
+    });
+
+    vm.prank(registration.owner);
+    vm.expectRevert(AppPermissionNotAllowed.selector);
     appRegistry.updateRegistration(1, update);
   }
 
@@ -280,9 +318,9 @@ contract AppRegistryTest is TestUtils, IAppRegistryBase, IAppInstallerBase {
     vm.assume(appRegistry.isRegistered(registration.appAddress) == false);
     registration.disabled = false;
 
-    bytes32[] memory permissions = new bytes32[](2);
-    permissions[0] = bytes32(abi.encodePacked(Permissions.Read));
-    permissions[1] = bytes32(abi.encodePacked(Permissions.Write));
+    string[] memory permissions = new string[](2);
+    permissions[0] = Permissions.Read;
+    permissions[1] = Permissions.Write;
 
     registration.hooks = IAppHooks(address(0));
     registration.permissions = permissions;

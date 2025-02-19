@@ -18,7 +18,7 @@ library Account {
     bool disabled;
     uint256 updatedAt;
     EnumerableSetLib.Bytes32Set channels;
-    EnumerableSetLib.Bytes32Set permissions;
+    StringSet.Set permissions;
   }
 
   struct Installation {
@@ -48,7 +48,7 @@ library Account {
     Installation storage self,
     uint256 appId,
     bytes32[] memory channelIds,
-    bytes32[] memory permissions
+    string[] memory permissions
   ) internal {
     self.installation[appId].updatedAt = block.timestamp;
     for (uint256 i; i < channelIds.length; ++i) {
@@ -74,7 +74,7 @@ library Account {
     bool isFullyUninstalled = false;
     if (self.installation[appId].channels.length() == 0) {
       uint256 permissionsLength = self.installation[appId].permissions.length();
-      bytes32[] memory permissionsToRemove = new bytes32[](permissionsLength);
+      string[] memory permissionsToRemove = new string[](permissionsLength);
       for (uint256 i; i < permissionsLength; ++i) {
         permissionsToRemove[i] = self.installation[appId].permissions.at(i);
       }
@@ -107,7 +107,7 @@ library Account {
   function getPermissions(
     Installation storage self,
     uint256 appId
-  ) internal view returns (bytes32[] memory) {
+  ) internal view returns (string[] memory) {
     return self.installation[appId].permissions.values();
   }
 
@@ -115,7 +115,7 @@ library Account {
     Installation storage self,
     uint256 appId,
     bytes32 channelId,
-    bytes32 permission
+    string memory permission
   ) internal view returns (bool) {
     if (!self.installedApps.contains(appId)) return false;
     if (!self.installation[appId].permissions.contains(permission))

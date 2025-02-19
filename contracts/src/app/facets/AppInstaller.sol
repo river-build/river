@@ -10,8 +10,8 @@ import {App} from "contracts/src/app/libraries/App.sol";
 import {Account} from "contracts/src/app/libraries/Account.sol";
 import {AppRegistryStore} from "contracts/src/app/storage/AppRegistryStore.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
-import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
-
+import {StringSet} from "contracts/src/utils/StringSet.sol";
+import {LibString} from "solady/utils/LibString.sol";
 // contracts
 import {ERC6909} from "solady/tokens/ERC6909.sol";
 
@@ -19,8 +19,7 @@ contract AppInstaller is ERC6909, IAppInstaller {
   using CustomRevert for bytes4;
   using App for App.Config;
   using Account for Account.Installation;
-  using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
-
+  using StringSet for StringSet.Set;
   function name(uint256 id) public view override returns (string memory) {
     return AppRegistryStore.layout().registrations[id].name;
   }
@@ -86,7 +85,7 @@ contract AppInstaller is ERC6909, IAppInstaller {
   function permissions(
     address account,
     uint256 appId
-  ) external view returns (bytes32[] memory) {
+  ) external view returns (string[] memory) {
     Account.Installation storage app = AppRegistryStore.layout().installations[
       account
     ];
@@ -117,6 +116,8 @@ contract AppInstaller is ERC6909, IAppInstaller {
     if (appId == 0) return false;
     if (balanceOf(msg.sender, appId) == 0) return false;
 
-    return installation.isEntitled(appId, channelId, permission);
+    string memory permissionString = LibString.fromSmallString(permission);
+
+    return installation.isEntitled(appId, channelId, permissionString);
   }
 }

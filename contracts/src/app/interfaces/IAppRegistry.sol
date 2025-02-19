@@ -14,14 +14,14 @@ interface IAppRegistryBase {
     string uri;
     string name;
     string symbol;
-    bytes32[] permissions;
-    IAppHooks hooks;
     bool disabled;
+    string[] permissions;
+    IAppHooks hooks;
   }
 
   struct UpdateRegistration {
     string uri;
-    bytes32[] permissions;
+    string[] permissions;
     IAppHooks hooks;
     bool disabled;
   }
@@ -53,10 +53,22 @@ interface IAppRegistryBase {
   error AppNotOwnedBySender();
   error AppDisabled();
   error AppPermissionsMissing();
+  error AppPermissionNotAllowed();
 }
 
 interface IAppRegistry is IAppRegistryBase {
   function register(
     Registration calldata registration
-  ) external returns (uint256);
+  ) external returns (uint256 appId);
+
+  function isRegistered(address appAddress) external view returns (bool);
+
+  function getRegistration(
+    address appAddress
+  ) external view returns (Registration memory);
+
+  function updateRegistration(
+    uint256 appId,
+    UpdateRegistration calldata registration
+  ) external;
 }

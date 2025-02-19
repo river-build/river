@@ -11,6 +11,9 @@ import {App} from "contracts/src/app/libraries/App.sol";
 import {EnumerableSetLib} from "solady/utils/EnumerableSetLib.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {Validator} from "contracts/src/utils/Validator.sol";
+import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
+import {StringSet} from "contracts/src/utils/StringSet.sol";
+import {LibString} from "solady/utils/LibString.sol";
 // contracts
 
 // structs
@@ -19,6 +22,7 @@ contract AppRegistry is IAppRegistry {
   using EnumerableSetLib for EnumerableSetLib.Uint256Set;
   using EnumerableSetLib for EnumerableSetLib.Bytes32Set;
   using App for App.Config;
+  using StringSet for StringSet.Set;
 
   function register(
     Registration calldata registration
@@ -36,6 +40,8 @@ contract AppRegistry is IAppRegistry {
 
     if (registration.permissions.length == 0)
       CustomRevert.revertWith(AppPermissionsMissing.selector);
+
+    _validatePermissions(registration.permissions);
 
     if (!HookManager.isValidHookAddress(registration.hooks))
       CustomRevert.revertWith(
@@ -55,16 +61,7 @@ contract AppRegistry is IAppRegistry {
     ds.appIdByAddress[registration.appAddress] = tokenId;
     App.Config storage config = ds.registrations[tokenId];
 
-    config.initialize(
-      tokenId,
-      registration.appAddress,
-      registration.owner,
-      registration.uri,
-      registration.name,
-      registration.symbol,
-      registration.permissions,
-      registration.hooks
-    );
+    config.initialize(tokenId, registration);
 
     emit AppRegistered(
       registration.owner,
@@ -116,13 +113,24 @@ contract AppRegistry is IAppRegistry {
     if (msg.sender != config.owner)
       CustomRevert.revertWith(AppNotOwnedBySender.selector);
 
-    config.update(
-      registration.uri,
-      registration.permissions,
-      registration.disabled,
-      registration.hooks
-    );
+    _validatePermissions(registration.permissions);
+
+    config.update(registration);
 
     emit AppUpdated(config.owner, config.appAddress, appId, registration);
+  }
+
+  function _validatePermissions(string[] memory permissions) internal pure {
+    if (permissions.length == 0) return;
+    for (uint256 i; i < permissions.length; ++i) {
+      if (
+        LibString.eq(permissions[i], Permissions.InstallApp) ||
+        LibString.eq(permissions[i], Permissions.UninstallApp) ||
+        LibString.eq(permissions[i], Permissions.ModifyBanning) ||
+        LibString.eq(permissions[i], Permissions.ModifyChannel) ||
+        LibString.eq(permissions[i], Permissions.ModifySpaceSettings) ||
+        LibString.eq(permissions[i], Permissions.JoinSpace)
+      ) CustomRevert.revertWith(AppPermissionNotAllowed.selector);
+    }
   }
 }

@@ -63,7 +63,9 @@ contract IntegrationInstallApp is
 
   function test_installApp_onChannel() public givenAppIsRegistered {
     bytes32[] memory channelIds = new bytes32[](1);
-    bytes32 defaultChannel = bytes32(bytes.concat(CHANNEL_PREFIX, bytes20(space)));
+    bytes32 defaultChannel = bytes32(
+      bytes.concat(CHANNEL_PREFIX, bytes20(space))
+    );
     channelIds[0] = defaultChannel;
 
     vm.prank(founder);
@@ -121,9 +123,9 @@ contract IntegrationInstallApp is
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function _registerApp() internal {
-    bytes32[] memory permissions = new bytes32[](2);
-    permissions[0] = bytes32(abi.encodePacked(Permissions.Read));
-    permissions[1] = bytes32(abi.encodePacked(Permissions.Write));
+    string[] memory permissions = new string[](2);
+    permissions[0] = Permissions.Read;
+    permissions[1] = Permissions.Write;
 
     Registration memory registration = Registration({
       appAddress: appAddress,
