@@ -53,6 +53,9 @@ describe('Trading', () => {
         aliceAddress = ('0x' + bytesToHex(aliceClient.signerContext.creatorAddress)) as Address
 
         charlieClient = await makeTestClient()
+        await charlieClient.initializeUser()
+        charlieClient.startSync()
+
         spaceId = makeUniqueSpaceStreamId()
         await bobsClient.createSpace(spaceId)
         channelId = makeUniqueChannelStreamId(spaceId)
@@ -85,7 +88,35 @@ describe('Trading', () => {
         }
     })
 
-    test('should accept token transfers where the user is the sender', async () => {
+    test('should reject token transfers where the amount doesnt match the transferred amount', async () => {
+        const transferEvent: PlainMessage<BlockchainTransaction_Transfer> = {
+            amount: 9n.toString(),
+            address: bin_fromHexString(tokenAddress),
+            sender: bin_fromHexString(bobsClient.userId),
+            messageId: bin_fromHexString(threadParentId),
+            channelId: bin_fromHexString(channelId),
+        }
+
+        await expect(
+            bobsClient.addTransaction_Transfer(31337, receipt, transferEvent),
+        ).rejects.toThrow('matching transfer event not found in receipt logs')
+    })
+
+    test('should reject token transfers where the user is neither the sender nor the recipient', async () => {
+        const transferEvent: PlainMessage<BlockchainTransaction_Transfer> = {
+            amount: amountToTransfer.toString(),
+            address: bin_fromHexString(tokenAddress),
+            sender: bin_fromHexString(charlieClient.userId),
+            messageId: bin_fromHexString(threadParentId),
+            channelId: bin_fromHexString(channelId),
+        }
+
+        await expect(
+            charlieClient.addTransaction_Transfer(31337, receipt, transferEvent),
+        ).rejects.toThrow('matching transfer event not found in receipt logs')
+    })
+
+    test('should accept token transfers where the user == from', async () => {
         const transferEvent: PlainMessage<BlockchainTransaction_Transfer> = {
             amount: amountToTransfer.toString(),
             address: bin_fromHexString(tokenAddress),
@@ -104,7 +135,7 @@ describe('Trading', () => {
         )
     })
 
-    test('should accept token transfers where the user is the recipient', async () => {
+    test('should accept token transfers where the user == to', async () => {
         const transferEvent: PlainMessage<BlockchainTransaction_Transfer> = {
             amount: amountToTransfer.toString(),
             address: bin_fromHexString(tokenAddress),
@@ -121,5 +152,19 @@ describe('Trading', () => {
                 bobsClient.streams.get(channelId)?.view.timeline.some((m) => m.hashStr === eventId),
             ).toBeDefined(),
         )
+    })
+
+    test('should reject duplicate transfers', async () => {
+        const transferEvent: PlainMessage<BlockchainTransaction_Transfer> = {
+            amount: amountToTransfer.toString(),
+            address: bin_fromHexString(tokenAddress),
+            sender: bin_fromHexString(aliceClient.userId),
+            messageId: bin_fromHexString(threadParentId),
+            channelId: bin_fromHexString(channelId),
+        }
+
+        await expect(
+            aliceClient.addTransaction_Transfer(31337, receipt, transferEvent),
+        ).rejects.toThrow('duplicate transaction')
     })
 })
