@@ -476,7 +476,6 @@ message UserInboxPayload {
         Inception inception = 1;
         Ack ack = 2;
         GroupEncryptionSessions group_encryption_sessions = 3;
-        
     }
 }
 
@@ -1166,4 +1165,11 @@ enum Err {
 
     // App webhook could not successfully be called.
     CANNOT_CALL_WEBHOOK = 66;
+
+    // App webhook response was unparsable as JSON or did not match expected schema.
+    MALFORMED_WEBHOOK_RESPONSE = 67;
+
+    // The encryption device returned by the app service webhook does not match the first
+    // encryption device found in the app's user metadata stream.
+    BAD_ENCRYPTION_DEVICE = 68;
 }

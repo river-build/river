@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/towns-protocol/towns/core/node/app_registry"
+	"github.com/towns-protocol/towns/core/node/app_registry/app_client"
 	"github.com/towns-protocol/towns/core/node/authentication"
 	"github.com/towns-protocol/towns/core/node/base"
 	"github.com/towns-protocol/towns/core/node/crypto"
@@ -221,6 +222,32 @@ func safeNewWallet(ctx context.Context, require *require.Assertions) *crypto.Wal
 	return wallet
 }
 
+func register(
+	ctx context.Context,
+	require *require.Assertions,
+	appAddress []byte,
+	ownerAddress []byte,
+	signer *crypto.Wallet,
+	authClient protocolconnect.AuthenticationServiceClient,
+	appRegistryClient protocolconnect.AppRegistryServiceClient,
+) (sharedSecret []byte) {
+	req := &connect.Request[protocol.RegisterRequest]{
+		Msg: &protocol.RegisterRequest{
+			AppId:      appAddress,
+			AppOwnerId: ownerAddress,
+		},
+	}
+	authenticateBS(ctx, require, authClient, signer, req)
+	resp, err := appRegistryClient.Register(
+		ctx,
+		req,
+	)
+	require.NoError(err)
+	require.NotNil(resp)
+	require.Len(resp.Msg.Hs256SharedSecret, 32, "Shared secret length should be 32 bytes")
+	return resp.Msg.GetHs256SharedSecret()
+}
+
 func TestAppRegistry_RegisterWebhook(t *testing.T) {
 	tester := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
 	service, _ := initAppRegistryService(tester.ctx, tester)
@@ -237,34 +264,49 @@ func TestAppRegistry_RegisterWebhook(t *testing.T) {
 	unregisteredAppWallet := safeNewWallet(tester.ctx, tester.require)
 	appWallet := safeNewWallet(tester.ctx, tester.require)
 	ownerWallet := safeNewWallet(tester.ctx, tester.require)
+	app2Wallet := safeNewWallet(tester.ctx, tester.require)
 
-	req := &connect.Request[protocol.RegisterRequest]{
-		Msg: &protocol.RegisterRequest{
-			AppId:      appWallet.Address[:],
-			AppOwnerId: ownerWallet.Address[:],
-		},
-	}
-	authenticateBS(tester.ctx, tester.require, authClient, ownerWallet, req)
-	resp, err := AppRegistryClient.Register(
+	// Register 2 apps. One will have a user metadata stream created with an ecryption device populated,
+	// and one will not.
+	appSharedSecret := register(
 		tester.ctx,
-		req,
+		tester.require,
+		appWallet.Address.Bytes(),
+		ownerWallet.Address.Bytes(),
+		ownerWallet,
+		authClient,
+		AppRegistryClient,
 	)
 
-	tester.require.NotNil(resp)
-	tester.require.Len(resp.Msg.Hs256SharedSecret, 32, "Shared secret length should be 32 bytes")
-	tester.require.NoError(err)
+	app2SharedSecret := register(
+		tester.ctx,
+		tester.require,
+		app2Wallet.Address.Bytes(),
+		ownerWallet.Address.Bytes(),
+		ownerWallet,
+		authClient,
+		AppRegistryClient,
+	)
 
-	// Create needed streams and add an encryption device for the bot service.
+	// Create needed streams and add an encryption device to the user metadata stream for the app service.
 	tc := tester.newTestClient(0)
-	_, _, err = createUser(tester.ctx, botWallet, tc.client, nil)
+	_, _, err := createUser(tester.ctx, appWallet, tc.client, nil)
 	tester.require.NoError(err)
 
-	cookie, _, err := createUserMetadataStream(tester.ctx, botWallet, tc.client, nil)
+	cookie, _, err := createUserMetadataStream(tester.ctx, appWallet, tc.client, nil)
 	tester.require.NoError(err)
+
+	defaultEncryptionDevice := app_client.EncryptionDevice{
+		DeviceKey:   "deviceKey",
+		FallbackKey: "fallbackKey",
+	}
 
 	event, err := events.MakeEnvelopeWithPayloadAndTags(
-		botWallet,
-		events.Make_UserMetadataPayload_EncryptionDevice("deviceKey", "fallback"),
+		appWallet,
+		events.Make_UserMetadataPayload_EncryptionDevice(
+			defaultEncryptionDevice.DeviceKey,
+			defaultEncryptionDevice.FallbackKey,
+		),
 		&MiniblockRef{
 			Num:  cookie.GetMinipoolGen() - 1,
 			Hash: common.Hash(cookie.GetPrevMiniblockHash()),
@@ -285,7 +327,10 @@ func TestAppRegistry_RegisterWebhook(t *testing.T) {
 	tester.require.NoError(err)
 	tester.require.Nil(addEventResp.Msg.GetError())
 
-	appServer := app_registry.NewTestAppServer(t, appWallet, resp.Msg.GetHs256SharedSecret())
+	appServer := app_registry.NewTestAppServer(
+		t,
+		appWallet,
+	)
 	defer appServer.Close()
 
 	go func() {
@@ -295,11 +340,12 @@ func TestAppRegistry_RegisterWebhook(t *testing.T) {
 	}()
 
 	tests := map[string]struct {
-		appId                []byte
-		authenticatingWallet *crypto.Wallet
-		botWallet            *crypto.Wallet
-		webhookUrl           string
-		expectedErr          string
+		appId                    []byte
+		authenticatingWallet     *crypto.Wallet
+		webhookUrl               string
+		expectedErr              string
+		overrideEncryptionDevice app_client.EncryptionDevice
+		overrideSharedSecret     []byte
 	}{
 		"Success (app wallet signer)": {
 			appId:                appWallet.Address[:],
@@ -311,27 +357,64 @@ func TestAppRegistry_RegisterWebhook(t *testing.T) {
 			authenticatingWallet: ownerWallet,
 			webhookUrl:           appServer.Url(),
 		},
-		"Unregistered app": {
+		"Failure: unregistered app": {
 			appId:                unregisteredAppWallet.Address[:],
 			authenticatingWallet: unregisteredAppWallet,
 			webhookUrl:           "http://www.test.com/callme",
 			expectedErr:          "app does not exist",
 		},
-		"Missing authentication": {
+		"Failure: missing authentication": {
 			appId:       appWallet.Address[:],
 			webhookUrl:  "http://www.test.com/callme",
 			expectedErr: "missing session token",
 		},
-		"Unauthorized user": {
+		"Failure: unauthorized user": {
 			appId:                appWallet.Address[:],
 			authenticatingWallet: unregisteredAppWallet,
 			webhookUrl:           "http://www.test.com/callme",
 			expectedErr:          "authenticated user must be either app or owner",
 		},
+		"Failure: webhook returns incorrect encryption device": {
+			appId:                appWallet.Address[:],
+			authenticatingWallet: appWallet,
+			webhookUrl:           appServer.Url(),
+			overrideEncryptionDevice: app_client.EncryptionDevice{
+				DeviceKey:   "wrongDeviceKey",
+				FallbackKey: "wrongFallbackKey",
+			},
+			expectedErr: "webhook encryption device does not match default device detected by app registy service",
+		},
+		"Failure: bad webhook response": {
+			appId:                appWallet.Address[:],
+			authenticatingWallet: appWallet,
+			webhookUrl:           appServer.Url(),
+			// Bork the test app server response by providing a mistmached shared secret
+			overrideSharedSecret: safeNewWallet(tester.ctx, tester.require).Address.Bytes(),
+			expectedErr:          "webhook response non-OK status",
+		},
+		"Failure: missing user metadata stream for app": {
+			appId:                app2Wallet.Address[:],
+			authenticatingWallet: app2Wallet,
+			webhookUrl:           appServer.Url(),
+			overrideSharedSecret: app2SharedSecret,
+			expectedErr:          "encryption device for app not found",
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			if tc.overrideSharedSecret == nil {
+				appServer.SetHS256SecretKey(appSharedSecret)
+			} else {
+				appServer.SetHS256SecretKey(tc.overrideSharedSecret)
+			}
+
+			if tc.overrideEncryptionDevice == (app_client.EncryptionDevice{}) {
+				appServer.SetEncryptionDevice(defaultEncryptionDevice)
+			} else {
+				appServer.SetEncryptionDevice(tc.overrideEncryptionDevice)
+			}
+
 			req := &connect.Request[protocol.RegisterWebhookRequest]{
 				Msg: &protocol.RegisterWebhookRequest{
 					AppId:      tc.appId,

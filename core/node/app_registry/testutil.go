@@ -27,8 +27,7 @@ type TestAppServer struct {
 	url              string
 	appWallet        *crypto.Wallet
 	hs256SecretKey   []byte
-	initialDeviceKey string
-	initialFallback  string
+	encryptionDevice app_client.EncryptionDevice
 }
 
 // validateSignature verifies that the incoming request has a HS256-encoded jwt auth token stored
@@ -80,20 +79,14 @@ func validateSignature(req *http.Request, secretKey []byte, appId common.Address
 func NewTestAppServer(
 	t *testing.T,
 	appWallet *crypto.Wallet,
-	hs256SecretKey []byte,
-	initialDeviceKey string,
-	initialFallback string,
 ) *TestAppServer {
 	listener, url := testcert.MakeTestListener(t)
 
 	b := &TestAppServer{
-		t:                t,
-		listener:         listener,
-		url:              url,
-		appWallet:        appWallet,
-		hs256SecretKey:   hs256SecretKey,
-		initialDeviceKey: initialDeviceKey,
-		initialFallback:  initialFallback,
+		t:         t,
+		listener:  listener,
+		url:       url,
+		appWallet: appWallet,
 	}
 
 	return b
@@ -101,6 +94,14 @@ func NewTestAppServer(
 
 func (b *TestAppServer) Url() string {
 	return b.url
+}
+
+func (b *TestAppServer) SetHS256SecretKey(secretKey []byte) {
+	b.hs256SecretKey = secretKey
+}
+
+func (b *TestAppServer) SetEncryptionDevice(encryptionDevice app_client.EncryptionDevice) {
+	b.encryptionDevice = encryptionDevice
 }
 
 func (b *TestAppServer) Close() {
@@ -145,7 +146,20 @@ func (b *TestAppServer) rootHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Send a response back.
 	w.Header().Set("Content-Type", "application/json")
-	response := map[string]string{"status": "ready"}
+	var response any
+	switch payload.Command {
+	case "initialize":
+		response = app_client.InitializeResponse{
+			DefaultEncryptionDevice: app_client.EncryptionDevice{
+				DeviceKey:   b.encryptionDevice.DeviceKey,
+				FallbackKey: b.encryptionDevice.FallbackKey,
+			},
+		}
+	default:
+		http.Error(w, fmt.Sprintf("Unrecognized payload type: %v", payload.Command), http.StatusBadRequest)
+		return
+	}
+
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		b.t.Errorf("Error encoding app service response: %v", err)
 	}
