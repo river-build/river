@@ -159,7 +159,7 @@ import { SyncedStream } from './syncedStream'
 import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
 import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from './crypto_utils'
-import { makeTags, makeTipTags } from './tags'
+import { makeTags, makeTipTags, makeTransferTags } from './tags'
 import { TipEventObject } from '@river-build/generated/dev/typings/ITipping'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
@@ -2155,8 +2155,11 @@ export class Client
         chainId: number,
         receipt: ContractReceipt,
         event: PlainMessage<BlockchainTransaction_Transfer>,
-        _opts?: SendBlockchainTransactionOptions,
+        opts?: SendBlockchainTransactionOptions,
     ): Promise<{ eventId: string }> {
+        const stream = this.stream(streamIdAsString(event.channelId))
+        const tags =
+            opts?.disableTags || !stream?.view ? undefined : makeTransferTags(event, stream.view)
         return this.addTransaction(
             chainId,
             receipt,
@@ -2164,7 +2167,7 @@ export class Client
                 case: 'transfer',
                 value: event,
             },
-            undefined,
+            tags,
         )
     }
 
