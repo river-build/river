@@ -2,7 +2,6 @@ import { Client } from '../../client'
 import { makeUniqueChannelStreamId } from '../../id'
 import {
     getXchainConfigForTesting,
-    makeRandomUserAddress,
     makeTestClient,
     makeUniqueSpaceStreamId,
     makeUserContextFromWallet,
@@ -40,6 +39,7 @@ describe('Trading', () => {
     )
 
     beforeAll(async () => {
+        // boilerplate — create clients, join streams, etc.
         const bobContext = await makeUserContextFromWallet(bobWallet)
         bobsClient = await makeTestClient({ context: bobContext })
         await bobsClient.initializeUser()
@@ -68,8 +68,12 @@ describe('Trading', () => {
         const result = await bobsClient.sendMessage(channelId, 'try out this token: $yo!')
         threadParentId = result.eventId
 
+        /* Time to perform an on-chain transaction! We utilize the fact that transfers emit 
+        a Transfer event, Transfer(address,address,amount) to be precise. Regardless of how 
+        the tx was made (dex, transfer etc), an event will be available in the tx logs!
+        here we go, Bob transfers an amount of tokens to Alice.
+        */
         tokenAddress = await TestERC20.getContractAddress(tokenName)
-
         await TestERC20.publicMint(tokenName, bobAddress, 100)
         const { transactionHash } = await TestERC20.transfer(
             tokenName,
