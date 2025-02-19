@@ -3,8 +3,8 @@
  **************************************************************************/
 export * from './gen/auth_connect'
 export * from './gen/auth_pb'
-export * from './gen/bots_connect'
-export * from './gen/bots_pb'
+export * from './gen/apps_connect'
+export * from './gen/apps_pb'
 export * from './gen/internal_pb'
 export * from './gen/notifications_connect'
 export * from './gen/notifications_pb'
