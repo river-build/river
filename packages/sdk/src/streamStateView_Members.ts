@@ -338,6 +338,10 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
                         )
                         break
                     }
+                    case 'spaceReview': {
+                        // todo
+                        break
+                    }
                     default:
                         logNever(transactionContent)
                 }
