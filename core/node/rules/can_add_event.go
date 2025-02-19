@@ -776,7 +776,9 @@ func (ru *aeBlockchainTransactionRules) validBlockchainTransaction_CheckReceiptM
 		senderAddress := common.BytesToAddress(content.Transfer.GetSender())
 		
 		for _, receiptLog := range receipt.Logs {
-
+			if !bytes.Equal(receiptLog.GetAddress(), content.Transfer.GetAddress()) {
+				continue
+			}
 			topics := make([]common.Hash, len(receiptLog.Topics))
 			for i, topic := range receiptLog.Topics {
 				topics[i] = common.BytesToHash(topic)

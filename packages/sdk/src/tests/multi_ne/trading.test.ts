@@ -175,6 +175,20 @@ describe('Trading', () => {
         ).rejects.toThrow('matching transfer event not found in receipt logs')
     })
 
+    test('should reject token transfers where the token address doesnt match', async () => {
+        const transferEvent: PlainMessage<BlockchainTransaction_Transfer> = {
+            amount: amountToTransfer.toString(),
+            address: bin_fromHexString(tokenAddress).toReversed(), // mess up the token address
+            sender: bin_fromHexString(bobClient.userId),
+            messageId: bin_fromHexString(threadParentId),
+            channelId: bin_fromHexString(channelId),
+            isBuy: false,
+        }
+        await expect(
+            aliceClient.addTransaction_Transfer(31337, sellReceipt, transferEvent),
+        ).rejects.toThrow('matching transfer event not found in receipt logs')
+    })
+
     test('should accept token transfers where the user == from and isBuy == false', async () => {
         // this is a transfer event from bob, he's the sender (from)
         const transferEvent: PlainMessage<BlockchainTransaction_Transfer> = {
