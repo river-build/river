@@ -122,6 +122,7 @@ contract RewardsDistributionV2 is
         uint256,
         bytes calldata
     ) external returns (uint256 depositId) {
+        if (owner == address(this)) RewardsDistribution__CannotStakeToSelf.selector.revertWith();
         depositId = _stake(amount, delegatee, beneficiary, owner, false);
     }
 

@@ -357,6 +357,18 @@ contract RewardsDistributionV2Test is BaseRegistryTest, IOwnableBase, IDiamond {
         verifyStake(owner, depositId, amount, operator, commissionRate, beneficiary);
     }
 
+    function test_stakeOnBehalf_revertIf_ownerIsSelf() public givenOperator(OPERATOR, 0) {
+        vm.expectRevert(RewardsDistribution__CannotStakeToSelf.selector);
+        rewardsDistributionFacet.stakeOnBehalf(
+            1,
+            OPERATOR,
+            address(this),
+            address(rewardsDistributionFacet),
+            block.timestamp,
+            ""
+        );
+    }
+
     function test_increaseStake_revertIf_notDepositor() public {
         uint256 depositId = test_stake();
 
