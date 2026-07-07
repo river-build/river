@@ -622,7 +622,7 @@ contract MockMainnetDelegation is MainnetDelegation {
         address operator,
         uint256 quantity
     ) external onlyCrossDomainMessenger {
-        _setDelegation(delegator, operator, quantity);
+        _setDelegation(delegator, operator, quantity, _findValidOperator());
     }
 
     function setAuthorizedClaimer(

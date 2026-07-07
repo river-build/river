@@ -5,6 +5,8 @@ pragma solidity ^0.8.23;
 import {IMainnetDelegationBase} from "src/base/registry/facets/mainnet/IMainnetDelegation.sol";
 
 // libraries
+import {NodeOperatorStatus} from "src/base/registry/facets/operator/NodeOperatorStorage.sol";
+import {StakingRewards} from "src/base/registry/facets/distribution/v2/StakingRewards.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 // contracts
@@ -232,6 +234,182 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
             uint256 depositId = mainnetDelegationFacet.getDepositIdByDelegator(delegators[i]);
             verifyRemoval(delegators[i], depositId);
         }
+    }
+
+    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /*                       FALLBACK OPERATOR                     */
+    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+    function test_relayDelegations_fallbackWhenOperatorInvalid(
+        address delegator,
+        address invalidOperator
+    ) public {
+        vm.assume(delegator != address(0) && delegator != baseRegistry);
+        vm.assume(invalidOperator != address(0) && invalidOperator != delegator);
+        vm.assume(invalidOperator != OPERATOR);
+
+        uint96 amount = 1 ether;
+        totalStaked += amount;
+
+        (
+            address[] memory delegators,
+            address[] memory claimers,
+            uint256[] memory quantities,
+            address[] memory operators
+        ) = singleDelegationBatch(delegator, invalidOperator, amount);
+
+        // OPERATOR (registered + Active in setUp) is the sole eligible fallback
+        relayDelegations(delegators, claimers, quantities, operators);
+
+        uint256 depositId = mainnetDelegationFacet.getDepositIdByDelegator(delegator);
+        assertGt(depositId, 0, "depositId");
+
+        Delegation memory delegation = mainnetDelegationFacet.getDelegationByDelegator(delegator);
+        assertEq(delegation.operator, invalidOperator, "recorded chosen operator");
+
+        StakingRewards.Deposit memory deposit = rewardsDistributionFacet.depositById(depositId);
+        assertEq(deposit.delegatee, OPERATOR, "staked to fallback operator");
+        assertEq(deposit.amount, amount, "amount");
+    }
+
+    function test_relayDelegations_selfHealsWhenChosenOperatorBecomesValid(
+        address delegator,
+        address chosenOperator
+    ) public {
+        vm.assume(delegator != address(0) && delegator != baseRegistry && delegator != OPERATOR);
+        vm.assume(chosenOperator != address(0) && chosenOperator != OPERATOR);
+        vm.assume(chosenOperator != delegator);
+        registerOperator(chosenOperator);
+        setOperatorCommissionRate(chosenOperator, 0);
+        // chosenOperator is left in Standby (invalid) after registration
+
+        uint96 amount = 1 ether;
+        totalStaked += amount;
+
+        (
+            address[] memory delegators,
+            address[] memory claimers,
+            uint256[] memory quantities,
+            address[] memory operators
+        ) = singleDelegationBatch(delegator, chosenOperator, amount);
+
+        relayDelegations(delegators, claimers, quantities, operators);
+
+        uint256 depositId = mainnetDelegationFacet.getDepositIdByDelegator(delegator);
+        assertEq(
+            rewardsDistributionFacet.depositById(depositId).delegatee,
+            OPERATOR,
+            "staked to fallback while chosen operator is invalid"
+        );
+
+        setOperatorStatus(chosenOperator, NodeOperatorStatus.Approved);
+        setOperatorStatus(chosenOperator, NodeOperatorStatus.Active);
+
+        // re-relay the same, unchanged delegation
+        relayDelegations(delegators, claimers, quantities, operators);
+
+        assertEq(
+            rewardsDistributionFacet.depositById(depositId).delegatee,
+            chosenOperator,
+            "healed back to the chosen operator"
+        );
+    }
+
+    function test_relayDelegations_restakesPreviouslyFailedDelegation(
+        address delegator,
+        address invalidOperator
+    ) public {
+        vm.assume(delegator != address(0) && delegator != baseRegistry);
+        vm.assume(invalidOperator != address(0) && invalidOperator != OPERATOR);
+        vm.assume(invalidOperator != delegator);
+
+        setOperatorStatus(OPERATOR, NodeOperatorStatus.Exiting);
+
+        uint96 amount = 1 ether;
+        totalStaked += amount;
+
+        (
+            address[] memory delegators,
+            address[] memory claimers,
+            uint256[] memory quantities,
+            address[] memory operators
+        ) = singleDelegationBatch(delegator, invalidOperator, amount);
+
+        // no operator is eligible: the delegation is recorded but nothing is staked
+        relayDelegations(delegators, claimers, quantities, operators);
+        assertEq(mainnetDelegationFacet.getDepositIdByDelegator(delegator), 0, "no deposit yet");
+
+        setOperatorStatus(OPERATOR, NodeOperatorStatus.Standby);
+        setOperatorStatus(OPERATOR, NodeOperatorStatus.Approved);
+        setOperatorStatus(OPERATOR, NodeOperatorStatus.Active);
+
+        // re-relaying the same delegation now stakes it against the fallback
+        relayDelegations(delegators, claimers, quantities, operators);
+
+        uint256 depositId = mainnetDelegationFacet.getDepositIdByDelegator(delegator);
+        assertGt(depositId, 0, "deposit created on retry");
+        assertEq(
+            rewardsDistributionFacet.depositById(depositId).delegatee,
+            OPERATOR,
+            "staked to fallback operator"
+        );
+        assertEq(rewardsDistributionFacet.depositById(depositId).amount, amount, "amount");
+    }
+
+    function test_relayDelegations_noEligibleOperator_doesNotCreateOrZeroDeposits(
+        address delegator,
+        address invalidOperator
+    ) public {
+        vm.assume(delegator != address(0) && delegator != baseRegistry);
+        vm.assume(invalidOperator != address(0) && invalidOperator != OPERATOR);
+        vm.assume(invalidOperator != delegator);
+
+        setOperatorStatus(OPERATOR, NodeOperatorStatus.Exiting);
+
+        uint96 amount = 1 ether;
+        totalStaked += amount;
+
+        (
+            address[] memory delegators,
+            address[] memory claimers,
+            uint256[] memory quantities,
+            address[] memory operators
+        ) = singleDelegationBatch(delegator, invalidOperator, amount);
+
+        relayDelegations(delegators, claimers, quantities, operators);
+
+        assertEq(
+            mainnetDelegationFacet.getDepositIdByDelegator(delegator),
+            0,
+            "no deposit created"
+        );
+
+        Delegation memory delegation = mainnetDelegationFacet.getDelegationByDelegator(delegator);
+        assertEq(delegation.operator, invalidOperator, "delegation still recorded");
+        assertEq(delegation.quantity, amount, "quantity recorded");
+    }
+
+    function singleDelegationBatch(
+        address delegator,
+        address operator,
+        uint256 quantity
+    )
+        internal
+        pure
+        returns (
+            address[] memory delegators,
+            address[] memory claimers,
+            uint256[] memory quantities,
+            address[] memory operators
+        )
+    {
+        delegators = new address[](1);
+        delegators[0] = delegator;
+        claimers = new address[](1);
+        quantities = new uint256[](1);
+        quantities[0] = quantity;
+        operators = new address[](1);
+        operators[0] = operator;
     }
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/

@@ -16,7 +16,7 @@ library DeployRewardsDistributionV2 {
     using DynamicArrayLib for DynamicArrayLib.DynamicArray;
 
     function selectors() internal pure returns (bytes4[] memory res) {
-        DynamicArrayLib.DynamicArray memory arr = DynamicArrayLib.p().reserve(27);
+        DynamicArrayLib.DynamicArray memory arr = DynamicArrayLib.p().reserve(28);
         arr.p(IRewardsDistribution.upgradeDelegationProxy.selector);
         arr.p(IRewardsDistribution.setRewardNotifier.selector);
         arr.p(IRewardsDistribution.setPeriodRewardAmount.selector);
@@ -26,6 +26,7 @@ library DeployRewardsDistributionV2 {
         arr.p(IRewardsDistribution.increaseStake.selector);
         arr.p(IRewardsDistribution.permitAndIncreaseStake.selector);
         arr.p(IRewardsDistribution.redelegate.selector);
+        arr.p(IRewardsDistribution.redelegateStaleDeposit.selector);
         arr.p(IRewardsDistribution.changeBeneficiary.selector);
         arr.p(IRewardsDistribution.initiateWithdraw.selector);
         arr.p(IRewardsDistribution.withdraw.selector);

@@ -41,6 +41,8 @@ interface IRewardsDistributionBase {
     error RewardsDistribution__CannotWithdrawFromSelf();
     error RewardsDistribution__NoPendingWithdrawal();
     error RewardsDistribution__CannotStakeToSelf();
+    error RewardsDistribution__DelegateeStillValid();
+    error RewardsDistribution__CannotRedelegate();
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                           EVENTS                           */
@@ -235,6 +237,16 @@ interface IRewardsDistribution is IRewardsDistributionBase {
     /// @param depositId The ID of the deposit
     /// @param delegatee The address of the new delegatee
     function redelegate(uint256 depositId, address delegatee) external;
+
+    /// @notice Permissionlessly redelegates a deposit whose current delegatee is no longer a
+    /// valid operator (or a space backed by one) to a new delegatee
+    /// @dev Callable by anyone; reverts if the deposit's current delegatee is still valid, if the
+    /// deposit has no delegatee (e.g. a pending withdrawal), or if the deposit is a
+    /// mainnet-delegation deposit (owner is this contract). The caller chooses `delegatee`, which
+    /// must itself be a valid operator or space
+    /// @param depositId The ID of the deposit
+    /// @param delegatee The address of the new delegatee
+    function redelegateStaleDeposit(uint256 depositId, address delegatee) external;
 
     /// @notice Changes the beneficiary of a deposit
     /// @dev The caller must be the owner of the deposit

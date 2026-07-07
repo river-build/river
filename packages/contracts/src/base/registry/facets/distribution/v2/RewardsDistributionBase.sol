@@ -112,6 +112,47 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
         emit IncreaseStake(depositId, amount);
     }
 
+    /// @notice Redelegates an existing deposit to a new delegatee or reactivates a pending
+    /// withdrawal
+    /// @dev Shared by the owner-gated `redelegate` and the permissionless
+    /// `redelegateStaleDeposit`; callers are responsible for their own access control
+    function _redelegate(
+        RewardsDistributionStorage.Layout storage ds,
+        StakingRewards.Deposit storage deposit,
+        uint256 depositId,
+        address delegatee
+    ) internal {
+        _revertIfNotOperatorOrSpace(delegatee);
+
+        address owner = deposit.owner;
+        uint96 pendingWithdrawal = deposit.pendingWithdrawal;
+        uint256 commissionRate = _getCommissionRate(delegatee);
+
+        if (pendingWithdrawal == 0) {
+            ds.staking.redelegate(deposit, delegatee, commissionRate);
+        } else {
+            ds.staking.increaseStake(
+                deposit,
+                owner,
+                pendingWithdrawal,
+                delegatee,
+                deposit.beneficiary,
+                commissionRate
+            );
+            deposit.delegatee = delegatee;
+            deposit.pendingWithdrawal = 0;
+        }
+
+        _sweepSpaceRewardsIfNecessary(delegatee);
+
+        if (owner != address(this)) {
+            address proxy = ds.proxyById[depositId];
+            DelegationProxy(proxy).redelegate(delegatee);
+        }
+
+        emit Redelegate(depositId, delegatee);
+    }
+
     /**
      * @notice Executes a Permit2 transfer using signed permit for stake token authorization
      * @dev This function uses Uniswap's Permit2 protocol instead of EIP-2612 to enable
@@ -200,6 +241,15 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
         if (!nos.operators.contains(delegatee)) return false;
         NodeOperatorStatus status = nos.statusByOperator[delegatee];
         return status == NodeOperatorStatus.Approved || status == NodeOperatorStatus.Active;
+    }
+
+    /// @dev A delegatee is valid if it is an active/approved operator, or a space
+    /// whose mapped operator is active/approved
+    function _isValidDelegatee(address delegatee) internal view returns (bool) {
+        address operator = _getOperatorBySpace(delegatee);
+        // not a space: the delegatee is (or should be) the operator itself
+        if (operator == address(0)) operator = delegatee;
+        return _isValidOperator(operator);
     }
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/

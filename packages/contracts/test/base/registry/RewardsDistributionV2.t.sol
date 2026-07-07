@@ -9,6 +9,7 @@ import {IDiamondCut} from "@towns-protocol/diamond/src/facets/cut/IDiamondCut.so
 import {IOwnableBase} from "@towns-protocol/diamond/src/facets/ownable/IERC173.sol";
 
 // libraries
+import {NodeOperatorStatus} from "src/base/registry/facets/operator/NodeOperatorStorage.sol";
 import {RewardsDistributionStorage} from "src/base/registry/facets/distribution/v2/RewardsDistributionStorage.sol";
 import {StakingRewards} from "src/base/registry/facets/distribution/v2/StakingRewards.sol";
 import {stdError} from "forge-std/StdError.sol";
@@ -529,6 +530,88 @@ contract RewardsDistributionV2Test is BaseRegistryTest, IOwnableBase, IDiamond {
         emit Redelegate(depositId, operator1);
 
         rewardsDistributionFacet.redelegate(depositId, operator1);
+
+        assertEq(rewardsDistributionFacet.treasureByBeneficiary(operator0).earningPower, 0);
+
+        verifyStake(address(this), depositId, amount, operator1, commissionRate1, address(this));
+    }
+
+    function test_fuzz_redelegateStaleDeposit_revertIf_delegateeStillValid(
+        address caller
+    ) public {
+        uint256 depositId = test_stake();
+
+        vm.prank(caller);
+        vm.expectRevert(RewardsDistribution__DelegateeStillValid.selector);
+        rewardsDistributionFacet.redelegateStaleDeposit(depositId, OPERATOR);
+    }
+
+    function test_fuzz_redelegateStaleDeposit_revertIf_newDelegateeInvalid(
+        address caller,
+        address newDelegatee
+    ) public {
+        vm.assume(newDelegatee != OPERATOR);
+
+        uint256 depositId = test_stake();
+        setOperatorStatus(OPERATOR, NodeOperatorStatus.Exiting);
+
+        vm.prank(caller);
+        vm.expectRevert(RewardsDistribution__NotOperatorOrSpace.selector);
+        rewardsDistributionFacet.redelegateStaleDeposit(depositId, newDelegatee);
+    }
+
+    function test_fuzz_redelegateStaleDeposit_revertIf_withdrawalInitiated(
+        address caller
+    ) public {
+        uint256 depositId = test_stake();
+        rewardsDistributionFacet.initiateWithdraw(depositId);
+
+        vm.prank(caller);
+        vm.expectRevert(RewardsDistribution__CannotRedelegate.selector);
+        rewardsDistributionFacet.redelegateStaleDeposit(depositId, OPERATOR);
+    }
+
+    function test_redelegateStaleDeposit_revertIf_ownerIsSelf() public {
+        // a mainnet-delegation deposit is just a deposit whose owner is the facet itself;
+        // that's reachable directly, no need to go through the full L1 relay flow
+        vm.prank(address(rewardsDistributionFacet));
+        uint256 depositId = rewardsDistributionFacet.stake(1 ether, OPERATOR, address(this));
+
+        setOperatorStatus(OPERATOR, NodeOperatorStatus.Exiting);
+
+        vm.expectRevert(RewardsDistribution__CannotRedelegate.selector);
+        rewardsDistributionFacet.redelegateStaleDeposit(depositId, OPERATOR);
+    }
+
+    function test_fuzz_redelegateStaleDeposit(
+        uint96 amount,
+        address operator0,
+        uint256 commissionRate0,
+        address operator1,
+        uint256 commissionRate1,
+        address caller
+    ) public givenOperator(operator1, commissionRate1) {
+        vm.assume(operator0 != operator1);
+        vm.assume(operator0 != address(this) && operator1 != address(this));
+        commissionRate1 = bound(commissionRate1, 0, 10_000);
+
+        uint256 depositId = test_fuzz_stake(
+            address(this),
+            amount,
+            operator0,
+            commissionRate0,
+            address(this)
+        );
+
+        // operator0 exits and becomes an invalid delegatee
+        setOperatorStatus(operator0, NodeOperatorStatus.Exiting);
+
+        vm.expectEmit(address(rewardsDistributionFacet));
+        emit Redelegate(depositId, operator1);
+
+        // callable by anyone, not just the deposit owner
+        vm.prank(caller);
+        rewardsDistributionFacet.redelegateStaleDeposit(depositId, operator1);
 
         assertEq(rewardsDistributionFacet.treasureByBeneficiary(operator0).earningPower, 0);
 

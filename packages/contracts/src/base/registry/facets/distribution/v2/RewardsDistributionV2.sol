@@ -147,37 +147,29 @@ contract RewardsDistributionV2 is
     function redelegate(uint256 depositId, address delegatee) external {
         RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage.layout();
         StakingRewards.Deposit storage deposit = ds.staking.depositById[depositId];
-        address owner = deposit.owner;
+        _revertIfNotDepositOwner(deposit.owner);
+        _redelegate(ds, deposit, depositId, delegatee);
+    }
 
-        _revertIfNotDepositOwner(owner);
-        _revertIfNotOperatorOrSpace(delegatee);
+    /// @inheritdoc IRewardsDistribution
+    function redelegateStaleDeposit(uint256 depositId, address delegatee) external {
+        RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage.layout();
+        StakingRewards.Deposit storage deposit = ds.staking.depositById[depositId];
 
-        uint96 pendingWithdrawal = deposit.pendingWithdrawal;
-        uint256 commissionRate = _getCommissionRate(delegatee);
-
-        if (pendingWithdrawal == 0) {
-            ds.staking.redelegate(deposit, delegatee, commissionRate);
-        } else {
-            ds.staking.increaseStake(
-                deposit,
-                owner,
-                pendingWithdrawal,
-                delegatee,
-                deposit.beneficiary,
-                commissionRate
-            );
-            deposit.delegatee = delegatee;
-            deposit.pendingWithdrawal = 0;
+        // mainnet-delegation deposits are governed by the L1 relay, not this path
+        if (deposit.owner == address(this)) {
+            RewardsDistribution__CannotRedelegate.selector.revertWith();
         }
 
-        _sweepSpaceRewardsIfNecessary(delegatee);
-
-        if (owner != address(this)) {
-            address proxy = ds.proxyById[depositId];
-            DelegationProxy(proxy).redelegate(delegatee);
+        address current = deposit.delegatee;
+        // withdrawal-initiated or dead deposits (delegatee == 0) are not redelegatable here
+        if (current == address(0)) RewardsDistribution__CannotRedelegate.selector.revertWith();
+        // only orphaned positions may be moved permissionlessly
+        if (_isValidDelegatee(current)) {
+            RewardsDistribution__DelegateeStillValid.selector.revertWith();
         }
 
-        emit Redelegate(depositId, delegatee);
+        _redelegate(ds, deposit, depositId, delegatee);
     }
 
     /// @inheritdoc IRewardsDistribution

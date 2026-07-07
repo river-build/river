@@ -8,6 +8,7 @@ import {IMainnetDelegationBase} from "./IMainnetDelegation.sol";
 
 // libraries
 import {MainnetDelegationStorage} from "./MainnetDelegationStorage.sol";
+import {NodeOperatorStatus, NodeOperatorStorage} from "../operator/NodeOperatorStorage.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
 
@@ -25,10 +26,19 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
 
         DelegationMsg[] calldata msgs = _decodeDelegations(encodedMsgs);
 
+        // computed once for the whole batch: where delegations to an invalid operator are
+        // staked instead, so delegators keep earning without re-delegating on L1
+        address fallbackOperator = _findValidOperator();
+
         // process the delegation messages
         for (uint256 i; i < msgs.length; ++i) {
             DelegationMsg calldata delegation = msgs[i];
-            _setDelegation(delegation.delegator, delegation.delegatee, delegation.quantity);
+            _setDelegation(
+                delegation.delegator,
+                delegation.delegatee,
+                delegation.quantity,
+                fallbackOperator
+            );
             _setAuthorizedClaimer(delegation.delegator, delegation.claimer);
         }
 
@@ -71,7 +81,8 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
         address currentOperator,
         address delegator,
         address operator,
-        uint256 quantity
+        uint256 quantity,
+        address fallbackOperator
     ) internal {
         MainnetDelegationStorage.Layout storage ds = MainnetDelegationStorage.layout();
 
@@ -85,8 +96,12 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
         }
         delegation.quantity = quantity;
 
-        _unstake(delegator);
-        _stake(delegator, operator, quantity);
+        // never zero an existing position when no eligible operator can be found
+        address target = _isEligibleOperator(operator) ? operator : fallbackOperator;
+        if (target != address(0)) {
+            _unstake(delegator);
+            _stake(delegator, target, quantity);
+        }
 
         emit DelegationSet(delegator, operator, quantity);
     }
@@ -95,7 +110,8 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
         Delegation storage delegation,
         address delegator,
         address operator,
-        uint256 quantity
+        uint256 quantity,
+        address fallbackOperator
     ) internal {
         MainnetDelegationStorage.Layout storage ds = MainnetDelegationStorage.layout();
 
@@ -108,12 +124,18 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
             delegation.delegationTime
         ) = (operator, quantity, delegator, block.timestamp);
 
-        _stake(delegator, operator, quantity);
+        address target = _isEligibleOperator(operator) ? operator : fallbackOperator;
+        if (target != address(0)) _stake(delegator, target, quantity);
 
         emit DelegationSet(delegator, operator, quantity);
     }
 
-    function _setDelegation(address delegator, address operator, uint256 quantity) internal {
+    function _setDelegation(
+        address delegator,
+        address operator,
+        uint256 quantity,
+        address fallbackOperator
+    ) internal {
         MainnetDelegationStorage.Layout storage ds = MainnetDelegationStorage.layout();
 
         Delegation storage delegation = ds.delegationByDelegator[delegator];
@@ -122,9 +144,16 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
         if (operator == address(0) || quantity == 0) {
             _removeDelegation(delegator);
         } else if (currentOperator == address(0)) {
-            _addDelegation(delegation, delegator, operator, quantity);
+            _addDelegation(delegation, delegator, operator, quantity, fallbackOperator);
         } else {
-            _replaceDelegation(delegation, currentOperator, delegator, operator, quantity);
+            _replaceDelegation(
+                delegation,
+                currentOperator,
+                delegator,
+                operator,
+                quantity,
+                fallbackOperator
+            );
         }
     }
 
@@ -257,6 +286,26 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
 
         bytes32 digest = keccak256(abi.encode(keccak256(encodedMsgs)));
         require(digest == ds.delegationDigest);
+    }
+
+    /// @dev Checks if the operator is registered and Approved or Active
+    function _isEligibleOperator(address operator) internal view returns (bool) {
+        NodeOperatorStorage.Layout storage nos = NodeOperatorStorage.layout();
+        if (!nos.operators.contains(operator)) return false;
+        NodeOperatorStatus status = nos.statusByOperator[operator];
+        return status == NodeOperatorStatus.Approved || status == NodeOperatorStatus.Active;
+    }
+
+    /// @dev First eligible operator found, or address(0) if none. Meant to be computed once
+    /// per relay batch and used as a fallback for delegations to an invalid operator
+    function _findValidOperator() internal view returns (address) {
+        NodeOperatorStorage.Layout storage nos = NodeOperatorStorage.layout();
+        uint256 length = nos.operators.length();
+        for (uint256 i; i < length; ++i) {
+            address operator = nos.operators.at(i);
+            if (_isEligibleOperator(operator)) return operator;
+        }
+        return address(0);
     }
 
     /// @dev equivalent: abi.decode(encodedMsgs, (DelegationMsg[]));
